@@ -1,0 +1,54 @@
+.table tbody tr:hover{
+    background-color: #e2e6ea !important;
+    cursor: pointer;
+    transition: background-color .15s ease-in-out;
+}
+.table tbody tr{
+    transition: all .15s ease;
+}
+
+.table tbody tr:hover{
+    background-color: #dee2e6 !important;
+}
+.btn,
+.nav-link,
+.page-link{
+    cursor: pointer;
+}
+.table-striped tbody tr:nth-of-type(odd){
+    background-color: rgba(0,0,0,.02);
+}
+.card{
+    border-radius: 10px;
+}
+
+.card-header{
+    font-weight: 600;
+}
+.form-control:focus{
+
+    border-color: #007bff;
+
+    box-shadow:
+        0 0 0 .2rem
+        rgba(0,123,255,.15);
+
+}
+.dataTables_wrapper .dataTables_filter input{
+    margin-left: 5px;
+}
+
+.dataTables_wrapper .dataTables_length select{
+    margin: 0 5px;
+}
+.badge-success{
+    padding: 6px 10px;
+}
+
+.badge-danger{
+    padding: 6px 10px;
+}
+
+.badge-warning{
+    padding: 6px 10px;
+}
