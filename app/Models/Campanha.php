@@ -49,6 +49,7 @@ class Campanha
                 CAM_Nome,
                 CAM_Descricao,
                 CAM_Status,
+                CAM_DataAgendamento,
                 CAM_TotalContatos,
                 CAM_TotalEnviados,
                 CAM_TotalErros,
@@ -57,7 +58,8 @@ class Campanha
             ) VALUES (
 
                 ?, ?, ?, ?,
-                'rascunho',
+                'agendada',
+                ?,
                 0,0,0,
                 NOW()
 
@@ -70,7 +72,8 @@ class Campanha
             $dados['cliente_id'],
             $dados['template_id'],
             $dados['nome'],
-            $dados['descricao']
+            $dados['descricao'],
+            $dados['data_agendamento']
 
         ]);
 
@@ -97,6 +100,73 @@ class Campanha
             $total,
             $campanhaId
 
+        ]);
+    }
+
+    public function buscar($id)
+    {
+        $sql = $this->db->prepare("
+
+            SELECT
+                c.*,
+                t.TMP_Nome
+
+            FROM campanhas c
+
+            LEFT JOIN templates_meta t
+            ON t.TMP_ID = c.TMP_ID
+
+            WHERE c.CAM_ID = ?
+
+        ");
+
+        $sql->execute([$id]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function listarFila($campanhaId)
+    {
+        $sql = $this->db->prepare("
+
+            SELECT
+                f.*,
+                c.CON_Nome,
+                c.CON_Telefone
+
+            FROM fila_envio f
+
+            INNER JOIN contatos c
+            ON c.CON_ID = f.CON_ID
+
+            WHERE f.CAM_ID = ?
+
+            ORDER BY f.FIL_ID ASC
+
+        ");
+
+        $sql->execute([$campanhaId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    public function cancelar($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+
+            UPDATE campanhas
+
+            SET CAM_Status = 'cancelada'
+
+            WHERE CAM_ID = ?
+            AND CLI_ID = ?
+            AND CAM_Status IN ('rascunho','agendada','processando')
+
+        ");
+
+        return $sql->execute([
+            $id,
+            $clienteId
         ]);
     }
 

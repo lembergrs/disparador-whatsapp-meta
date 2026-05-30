@@ -53,7 +53,36 @@
                 </td>
 
                 <td>
-                    <?= $campanha['CAM_Status']; ?>
+
+                <?php
+
+                $status = $campanha['CAM_Status'];
+
+                $badges = [
+                    'rascunho' => 'secondary',
+                    'agendada' => 'warning',
+                    'processando' => 'info',
+                    'finalizada' => 'success',
+                    'cancelada' => 'danger'
+                ];
+
+                $labels = [
+                    'rascunho' => 'Rascunho',
+                    'agendada' => 'Agendada',
+                    'processando' => 'Processando',
+                    'finalizada' => 'Finalizada',
+                    'cancelada' => 'Cancelada'
+                ];
+
+                $classe = $badges[$status] ?? 'secondary';
+                $label = $labels[$status] ?? ucfirst($status);
+
+                ?>
+
+                <span class="badge badge-<?= $classe; ?>">
+                    <?= $label; ?>
+                </span>
+
                 </td>
 
                 <td>
@@ -70,11 +99,12 @@
 
                 <td>
 
-                    <button
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=campanha/detalhes&id=<?= $campanha['CAM_ID']; ?>"
                     class="btn btn-info btn-sm"
                     >
                         Detalhes
-                    </button>
+                    </a>
 
                 </td>
 
@@ -163,6 +193,19 @@ value="<?= $template['TMP_ID']; ?>"
 <?php } ?>
 
 </select>
+
+</div>
+
+<div class="form-group">
+
+    <label>Data/Hora do envio</label>
+
+    <input
+        type="datetime-local"
+        name="data_agendamento"
+        class="form-control"
+        required
+    >
 
 </div>
 
