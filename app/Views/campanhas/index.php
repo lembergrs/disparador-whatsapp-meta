@@ -1,3 +1,35 @@
+<div class="alert alert-info">
+
+    <h5>
+        <i class="fas fa-info-circle"></i>
+        Como usar as variáveis
+    </h5>
+
+    <p>
+        As variáveis do template são os campos que aparecem como
+        <strong>{{1}}</strong>, <strong>{{2}}</strong>, <strong>{{3}}</strong>.
+    </p>
+
+    <p>
+        Ao criar a campanha, escolha qual coluna da sua planilha será usada em cada variável.
+    </p>
+
+    <p>
+        Exemplo:
+    </p>
+
+    <ul>
+        <li><strong>{{1}}</strong> → Nome</li>
+        <li><strong>{{2}}</strong> → Valor</li>
+        <li><strong>{{3}}</strong> → Vencimento</li>
+    </ul>
+
+    <p class="mb-0">
+        Se sua planilha tiver as colunas Nome, Telefone, Valor e Vencimento,
+        o sistema usará esses dados automaticamente para cada contato.
+    </p>
+
+</div>
 <div class="card">
 
     <div class="card-header">
@@ -172,6 +204,7 @@ rows="3"
 
 <select
 name="template"
+id="templateCampanha"
 class="form-control"
 required
 >
@@ -184,7 +217,10 @@ Selecione
 
 <option
 value="<?= $template['TMP_ID']; ?>"
+data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes']), ENT_QUOTES); ?>"
 >
+    <?= $template['TMP_Nome']; ?>
+</option>
 
 <?= $template['TMP_Nome']; ?>
 
@@ -193,6 +229,19 @@ value="<?= $template['TMP_ID']; ?>"
 <?php } ?>
 
 </select>
+
+<div
+id="areaMapeamentoVariaveis"
+class="mt-3"
+style="display:none;"
+>
+
+    <div class="alert alert-warning">
+        <strong>Mapeamento das variáveis</strong><br>
+        Escolha qual campo da planilha será usado em cada variável do template.
+    </div>
+
+    <div id="camposVariaveis"></div>
 
 </div>
 
@@ -231,3 +280,8 @@ Criar Campanha
 </div>
 
 </div>
+
+<script>
+window.CAMPOS_CONTATO =
+<?= json_encode($camposContato, JSON_UNESCAPED_UNICODE); ?>;
+</script>

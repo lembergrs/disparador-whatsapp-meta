@@ -536,6 +536,107 @@ $(document).ready(function(){
         }
     );
 
+    $(document).on('change', '#templateCampanha', function(){
+
+        let option = $(this).find(':selected');
+
+        let componentesBase64 = option.attr('data-componentes');
+
+        $('#camposVariaveis').html('');
+        $('#areaMapeamentoVariaveis').hide();
+
+        if(!componentesBase64){
+            return;
+        }
+
+        let componentes = [];
+
+        try{
+
+            componentes = JSON.parse(
+                atob(componentesBase64)
+            );
+
+        }catch(e){
+
+            console.log(e);
+            return;
+
+        }
+
+        let variaveis = [];
+
+        componentes.forEach(function(comp){
+
+            if(comp.text){
+
+                let matches = comp.text.match(/{{(.*?)}}/g);
+
+                if(matches){
+
+                    matches.forEach(function(v){
+
+                        v = v.replace('{{','').replace('}}','');
+
+                        if(!variaveis.includes(v)){
+                            variaveis.push(v);
+                        }
+
+                    });
+
+                }
+
+            }
+
+        });
+
+        if(variaveis.length == 0){
+            return;
+        }
+
+        let html = '';
+
+        variaveis.forEach(function(v){
+
+            html += `
+                <div class="form-group">
+
+                    <label>Variável {{${v}}}</label>
+
+                    <select
+                    name="variaveis[${v}]"
+                    class="form-control"
+                    required
+                    >
+
+                        <option value="">
+                            Selecione o campo da planilha
+                        </option>
+            `;
+
+            window.CAMPOS_CONTATO.forEach(function(campo){
+
+                html += `
+                    <option value="${campo}">
+                        ${campo}
+                    </option>
+                `;
+
+            });
+
+            html += `
+                    </select>
+
+                </div>
+            `;
+
+        });
+
+        $('#camposVariaveis').html(html);
+        $('#areaMapeamentoVariaveis').show();
+
+    });
+
 });
 
 

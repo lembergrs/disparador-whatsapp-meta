@@ -44,12 +44,20 @@ class CampanhaController extends Controller
                 $usuario['cliente_id']
             );
 
+        $contatoModel = new Contato();
+
+        $camposContato =
+            $contatoModel->camposJsonPorCliente(
+                $usuario['cliente_id']
+            );
+
         $this->view(
             'campanhas/index',
             [
                 'titulo' => 'Campanhas',
                 'campanhas' => $campanhas,
-                'templates' => $templates
+                'templates' => $templates,
+                'camposContato' => $camposContato
             ]
         );
     }
