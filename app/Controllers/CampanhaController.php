@@ -201,4 +201,133 @@ class CampanhaController extends Controller
         $this->redirect('campanha/detalhes&id=' . $id);
     }
 
+    public function preview()
+    {
+        $id = $_GET['id'];
+
+        $campanha =
+            $this->campanhaModel
+            ->buscar($id);
+
+
+
+
+
+        $contato =
+            $this->campanhaModel
+            ->buscarContatoExemplo($id);
+
+
+
+
+
+        $variavelModel =
+            new CampanhaVariavel();
+
+
+
+
+
+        $variaveis =
+            $variavelModel
+            ->listarPorCampanha($id);
+
+
+
+
+
+        $dadosContato =
+            json_decode(
+                $contato['CON_DadosJson'],
+                true
+            );
+
+
+
+
+
+        $componentes =
+            json_decode(
+                $campanha['TMP_Componentes'],
+                true
+            );
+
+
+
+
+
+        $body = '';
+
+        foreach($componentes as $comp){
+
+            if(
+                strtoupper($comp['type'])
+                == 'BODY'
+            ){
+
+                $body =
+                    $comp['text'];
+
+            }
+
+        }
+
+
+
+
+
+
+        foreach($variaveis as $var){
+
+            $valor =
+                $dadosContato[
+                    $var['CPV_Campo']
+                ] ?? '';
+
+            $body =
+                str_replace(
+
+                    '{{'
+                    . $var['CPV_Variavel']
+                    . '}}',
+
+                    $valor,
+
+                    $body
+
+                );
+
+        }
+
+
+
+
+
+
+        $this->view(
+
+            'campanhas/preview',
+
+            [
+
+                'titulo' =>
+                    'Pré-visualização',
+
+                'campanha' =>
+                    $campanha,
+
+                'contato' =>
+                    $contato,
+
+                'variaveis' =>
+                    $variaveis,
+
+                'mensagem' =>
+                    $body
+
+            ]
+
+        );
+    }
+
 }

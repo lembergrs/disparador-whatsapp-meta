@@ -109,12 +109,15 @@ class Campanha
 
             SELECT
                 c.*,
-                t.TMP_Nome
+                t.TMP_Nome,
+                t.TMP_Componentes,
+                t.TMP_Idioma,
+                t.MTA_ID
 
             FROM campanhas c
 
             LEFT JOIN templates_meta t
-            ON t.TMP_ID = c.TMP_ID
+                ON t.TMP_ID = c.TMP_ID
 
             WHERE c.CAM_ID = ?
 
@@ -168,6 +171,31 @@ class Campanha
             $id,
             $clienteId
         ]);
+    }
+
+    public function buscarContatoExemplo($campanhaId)
+    {
+        $sql = $this->db->prepare("
+
+            SELECT
+                c.*
+
+            FROM fila_envio f
+
+            INNER JOIN contatos c
+                ON c.CON_ID = f.CON_ID
+
+            WHERE f.CAM_ID = ?
+
+            LIMIT 1
+
+        ");
+
+        $sql->execute([
+            $campanhaId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
 }

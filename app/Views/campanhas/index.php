@@ -138,6 +138,15 @@
                         Detalhes
                     </a>
 
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=campanha/preview&id=<?= $campanha['CAM_ID']; ?>"
+                    class="btn btn-warning btn-sm"
+                    >
+
+                    Preview
+
+                    </a>
+
                 </td>
 
             </tr>
