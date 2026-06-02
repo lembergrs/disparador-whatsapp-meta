@@ -9,6 +9,7 @@ use Models\Campanha;
 use Models\TemplateMeta;
 use Models\Contato;
 use Models\FilaEnvio;
+use Models\CampanhaVariavel;
 
 class CampanhaController extends Controller
 {
@@ -81,6 +82,21 @@ class CampanhaController extends Controller
 
             ]);
 
+        $variavelModel = new CampanhaVariavel();
+
+        if(!empty($_POST['variaveis'])){
+
+            foreach($_POST['variaveis'] as $variavel => $campo){
+
+                $variavelModel->salvar(
+                    $campanhaId,
+                    $variavel,
+                    $campo
+                );
+
+            }
+
+        }
 
         $contatoModel = new Contato();
 

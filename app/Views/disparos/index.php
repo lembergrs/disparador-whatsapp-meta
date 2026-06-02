@@ -63,28 +63,12 @@ name="template"
 id="template"
 class="form-control"
 required
+disabled
 >
 
 <option value="">
-Selecione
+Selecione primeiro a Conta Meta
 </option>
-
-<?php foreach($templates as $template){ ?>
-
-<option
-
-value="<?= $template['TMP_ID']; ?>"
-
-data-componentes="<?= htmlspecialchars(
-base64_encode($template['TMP_Componentes'])
-); ?>"
->
-
-<?= $template['TMP_Nome']; ?>
-
-</option>
-
-<?php } ?>
 
 </select>
 
@@ -146,6 +130,8 @@ Enviar Template
 </div>
 
 <script>
+
+window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
 
 $('#template').change(function(){
 

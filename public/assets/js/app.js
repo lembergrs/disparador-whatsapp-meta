@@ -637,6 +637,57 @@ $(document).ready(function(){
 
     });
 
+    $(document).on('change', '#meta', function(){
+
+        let metaId = $(this).val();
+
+        let templateSelect = $('#template');
+
+        templateSelect.html('');
+
+        $('#areaVariaveis').html('');
+
+        if(metaId == ''){
+
+            templateSelect.append(`
+                <option value="">
+                    Selecione primeiro a Conta Meta
+                </option>
+            `);
+
+            templateSelect.prop('disabled', true);
+
+            return;
+
+        }
+
+        templateSelect.append(`
+            <option value="">
+                Selecione
+            </option>
+        `);
+
+        window.TEMPLATES_DISPARO.forEach(function(template){
+
+            if(template.MTA_ID == metaId){
+
+                templateSelect.append(`
+                    <option
+                        value="${template.TMP_ID}"
+                        data-componentes="${btoa(template.TMP_Componentes)}"
+                    >
+                        ${template.TMP_Nome}
+                    </option>
+                `);
+
+            }
+
+        });
+
+        templateSelect.prop('disabled', false);
+
+    });
+
 });
 
 
