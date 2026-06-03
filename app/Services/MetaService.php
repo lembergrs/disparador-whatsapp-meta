@@ -590,46 +590,50 @@ class MetaService
         curl_setopt_array($curl, [
 
             CURLOPT_URL => $url,
-
             CURLOPT_RETURNTRANSFER => true,
-
             CURLOPT_POST => true,
-
-            CURLOPT_POSTFIELDS =>
-                json_encode($payload),
-
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            //CURLOPT_SSL_VERIFYPEER => false,    //Para teste local, descomentar essa linha
+            //CURLOPT_SSL_VERIFYHOST => false,    //Para teste local, descomentar essa linha
             CURLOPT_HTTPHEADER => [
-
                 'Authorization: Bearer '
                 . $this->conta['MTA_Token'],
-
                 'Content-Type: application/json'
-
             ]
-
         ]);
 
 
+        $response = curl_exec($curl);
 
+        $curlError = curl_error($curl);
 
-
-        $response =
-            curl_exec($curl);
-
-
-
-
+        $httpCode = curl_getinfo(
+            $curl,
+            CURLINFO_HTTP_CODE
+        );
 
         curl_close($curl);
 
+        if($curlError){
 
+            return [
+                'error' => [
+                    'message' => $curlError
+                ],
+                'http_code' => $httpCode
+            ];
 
+        }
 
-
-        return json_decode(
+        $retorno = json_decode(
             $response,
             true
         );
+
+        $retorno['http_code'] = $httpCode;
+        $retorno['raw_response'] = $response;
+
+        return $retorno;
     }
 
 }

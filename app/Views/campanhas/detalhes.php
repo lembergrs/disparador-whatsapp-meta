@@ -173,6 +173,8 @@ function dataBR($data)
                     <th>Tentativas</th>
                     <th>Envio</th>
                     <th>Erro</th>
+                    <th>Message ID</th>
+                    <th>Retorno</th>
                 </tr>
 
             </thead>
@@ -190,7 +192,65 @@ function dataBR($data)
                     <td><?= $item['FIL_Tentativas']; ?></td>
                     <td><?= dataBR($item['FIL_DataEnvio']); ?></td>
                     <td><?= $item['FIL_Erro'] ?: '-'; ?></td>
+                    <td>
+                        <?= $item['FIL_MessageId'] ?: '-'; ?>
+                    </td>
 
+                    <td>
+                        <?php if(!empty($item['FIL_Retorno'])){ ?>
+
+                            <button
+                            type="button"
+                            class="btn btn-secondary btn-sm"
+                            data-toggle="modal"
+                            data-target="#retorno<?= $item['FIL_ID']; ?>"
+                            >
+                                Ver
+                            </button>
+
+                            <div
+                            class="modal fade"
+                            id="retorno<?= $item['FIL_ID']; ?>"
+                            >
+
+                                <div class="modal-dialog modal-lg">
+
+                                    <div class="modal-content">
+
+                                        <div class="modal-header">
+
+                                            <h4 class="modal-title">
+                                                Retorno Meta
+                                            </h4>
+
+                                            <button
+                                            type="button"
+                                            class="close"
+                                            data-dismiss="modal"
+                                            >
+                                                <span>&times;</span>
+                                            </button>
+
+                                        </div>
+
+                                        <div class="modal-body">
+
+                                            <pre><?= htmlspecialchars($item['FIL_Retorno']); ?></pre>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        <?php }else{ ?>
+
+                            -
+
+                        <?php } ?>
+                    </td>
                 </tr>
 
                 <?php } ?>
@@ -223,6 +283,104 @@ onclick="return confirm('Deseja cancelar esta campanha?')"
 </a>
 
 <?php } ?>
+
+<?php if(in_array($campanha['CAM_Status'], ['finalizada','cancelada','agendada'])){ ?>
+
+<button
+type="button"
+class="btn btn-warning"
+data-toggle="modal"
+data-target="#modalReagendar"
+>
+
+    <i class="fas fa-redo"></i>
+    Reagendar / Reenviar
+
+</button>
+
+<?php } ?>
+
+<div
+class="modal fade"
+id="modalReagendar"
+>
+
+<div class="modal-dialog">
+
+<div class="modal-content">
+
+<form
+method="POST"
+action="<?= BASE_URL; ?>/index.php?url=campanha/reagendar"
+>
+
+<input
+type="hidden"
+name="id"
+value="<?= $campanha['CAM_ID']; ?>"
+>
+
+<div class="modal-header">
+
+<h4 class="modal-title">
+Reagendar Campanha
+</h4>
+
+<button
+type="button"
+class="close"
+data-dismiss="modal"
+>
+
+<span>&times;</span>
+
+</button>
+
+</div>
+
+<div class="modal-body">
+
+<div class="alert alert-warning">
+
+Ao confirmar, a fila de envio será reiniciada e a campanha será enviada novamente para todos os contatos.
+
+</div>
+
+<div class="form-group">
+
+<label>Nova data/hora de envio</label>
+
+<input
+type="datetime-local"
+name="data_agendamento"
+class="form-control"
+required
+>
+
+</div>
+
+</div>
+
+<div class="modal-footer">
+
+<button
+type="submit"
+class="btn btn-warning"
+>
+
+Confirmar Reagendamento
+
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
 
 <script>
 

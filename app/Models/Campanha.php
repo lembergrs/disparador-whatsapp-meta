@@ -198,4 +198,55 @@ class Campanha
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function reagendar($id, $clienteId, $dataAgendamento)
+    {
+        $sql = $this->db->prepare("
+
+            UPDATE campanhas
+
+            SET
+                CAM_Status = 'agendada',
+                CAM_DataAgendamento = ?,
+                CAM_TotalEnviados = 0,
+                CAM_TotalErros = 0
+
+            WHERE CAM_ID = ?
+            AND CLI_ID = ?
+
+        ");
+
+        return $sql->execute([
+
+            $dataAgendamento,
+            $id,
+            $clienteId
+
+        ]);
+    }
+
+
+
+
+
+    public function resetarFila($campanhaId)
+    {
+        $sql = $this->db->prepare("
+
+            UPDATE fila_envio
+
+            SET
+                FIL_Status = 'pendente',
+                FIL_Tentativas = 0,
+                FIL_Erro = NULL,
+                FIL_DataEnvio = NULL
+
+            WHERE CAM_ID = ?
+
+        ");
+
+        return $sql->execute([
+            $campanhaId
+        ]);
+    }
+
 }

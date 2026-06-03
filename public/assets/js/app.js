@@ -544,6 +544,8 @@ $(document).ready(function(){
 
         $('#camposVariaveis').html('');
         $('#areaMapeamentoVariaveis').hide();
+        $('#conteudoPreviewTemplate').html('');
+        $('#previewTemplateCampanha').hide();
 
         if(!componentesBase64){
             return;
@@ -556,6 +558,76 @@ $(document).ready(function(){
             componentes = JSON.parse(
                 atob(componentesBase64)
             );
+
+            let previewHtml = '';
+
+            componentes.forEach(function(comp){
+
+                if(comp.type == 'HEADER' && comp.text){
+
+                    previewHtml += `
+                        <div class="mb-2">
+                            <strong>${comp.text}</strong>
+                        </div>
+                    `;
+
+                }
+
+                if(comp.type == 'BODY' && comp.text){
+
+                    previewHtml += `
+                        <div class="mb-2">
+                            ${comp.text}
+                        </div>
+                    `;
+
+                }
+
+                if(comp.type == 'FOOTER' && comp.text){
+
+                    previewHtml += `
+                        <div class="text-muted small mt-2">
+                            ${comp.text}
+                        </div>
+                    `;
+
+                }
+
+                if(comp.type == 'BUTTONS' && comp.buttons){
+
+                    previewHtml += `<div class="mt-3">`;
+
+                    comp.buttons.forEach(function(btn){
+
+                        previewHtml += `
+                            <button
+                            type="button"
+                            class="btn btn-outline-primary btn-sm mr-1 mb-1"
+                            disabled
+                            >
+                                ${btn.text}
+                            </button>
+                        `;
+
+                    });
+
+                    previewHtml += `</div>`;
+
+                }
+
+            });
+
+            if(previewHtml != ''){
+
+                $('#conteudoPreviewTemplate').html(previewHtml);
+                $('#previewTemplateCampanha').show();
+
+            }else{
+
+                $('#conteudoPreviewTemplate').html('');
+                $('#previewTemplateCampanha').hide();
+
+            }
 
         }catch(e){
 
@@ -637,6 +709,214 @@ $(document).ready(function(){
 
     });
 
+    $(document).on('change', '#template', function(){
+
+        let option =
+            $(this).find(':selected');
+
+        let componentesBase64 =
+            option.attr('data-componentes');
+
+        $('#areaVariaveis').html('');
+        $('#conteudoPreviewTemplateDisparo').html('');
+        $('#previewTemplateDisparo').hide();
+
+        if(!componentesBase64){
+            return;
+        }
+
+        let componentes = [];
+
+        try{
+
+            componentes =
+                JSON.parse(
+                    atob(componentesBase64)
+                );
+
+        }catch(e){
+
+            console.log(e);
+            return;
+
+        }
+
+        let previewHtml = '';
+
+        componentes.forEach(function(comp){
+
+            if(comp.type == 'HEADER' && comp.text){
+
+                previewHtml += `
+                    <div class="mb-2">
+                        <strong>${comp.text}</strong>
+                    </div>
+                `;
+
+            }
+
+            if(comp.type == 'BODY' && comp.text){
+
+                previewHtml += `
+                    <div class="mb-2">
+                        ${comp.text}
+                    </div>
+                `;
+
+            }
+
+            if(comp.type == 'FOOTER' && comp.text){
+
+                previewHtml += `
+                    <div class="text-muted small mt-2">
+                        ${comp.text}
+                    </div>
+                `;
+
+            }
+
+            if(comp.type == 'BUTTONS' && comp.buttons){
+
+                previewHtml += `<div class="mt-3">`;
+
+                comp.buttons.forEach(function(btn){
+
+                    previewHtml += `
+                        <button
+                        type="button"
+                        class="btn btn-outline-primary btn-sm mr-1 mb-1"
+                        disabled
+                        >
+                            ${btn.text}
+                        </button>
+                    `;
+
+                });
+
+                previewHtml += `</div>`;
+
+            }
+
+        });
+
+        if(previewHtml != ''){
+
+            $('#conteudoPreviewTemplateDisparo').html(
+                previewHtml
+            );
+
+            $('#previewTemplateDisparo').show();
+
+        }
+
+        let variaveis = [];
+
+        componentes.forEach(function(comp){
+
+            if(comp.text){
+
+                let matches =
+                    comp.text.match(/{{(.*?)}}/g);
+
+                if(matches){
+
+                    matches.forEach(function(v){
+
+                        v = v
+                            .replace('{{','')
+                            .replace('}}','');
+
+                        if(!variaveis.includes(v)){
+                            variaveis.push(v);
+                        }
+
+                    });
+
+                }
+
+            }
+
+        });
+
+        if(variaveis.length == 0){
+            return;
+        }
+
+        let html = '';
+
+        variaveis.forEach(function(v){
+
+            html += `
+                <div class="form-group">
+
+                    <label>
+                        Variável {{${v}}}
+                    </label>
+
+                    <input
+                    type="text"
+                    name="variaveis[${v}]"
+                    class="form-control"
+                    required
+                    >
+
+                </div>
+            `;
+
+        });
+
+        $('#areaVariaveis').html(html);
+
+    });
+
+    $(document).on('blur', '#numerosDestino', function(){
+
+        let linhas =
+            $(this)
+            .val()
+            .split(/[\n,;]+/);
+
+        let formatados = [];
+
+        linhas.forEach(function(numero){
+
+            numero =
+                numero.replace(/\D/g, '');
+
+            if(numero.length == 0){
+                return;
+            }
+
+            if(numero.startsWith('55') && numero.length > 11){
+                numero = numero.substring(2);
+            }
+
+            if(numero.length == 11){
+
+                numero =
+                    '(' + numero.substring(0,2) + ') ' +
+                    numero.substring(2,7) + '-' +
+                    numero.substring(7);
+
+            }else if(numero.length == 10){
+
+                numero =
+                    '(' + numero.substring(0,2) + ') ' +
+                    numero.substring(2,6) + '-' +
+                    numero.substring(6);
+
+            }
+
+            formatados.push(numero);
+
+        });
+
+        $(this).val(
+            formatados.join("\n")
+        );
+
+    });
+
     $(document).on('change', '#meta', function(){
 
         let metaId = $(this).val();
@@ -687,6 +967,8 @@ $(document).ready(function(){
         templateSelect.prop('disabled', false);
 
     });
+
+    $('#telefoneTeste').mask('(00) 00000-0000');
 
 });
 

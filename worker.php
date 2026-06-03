@@ -18,9 +18,10 @@ spl_autoload_register(function($class){
 use Core\Database;
 use Services\MetaService;
 
-$db = Database::getInstance();
+$modoTeste = false; // troque para false para envio real
+$limitePorExecucao = 10;
 
-$modoTeste = true;
+$db = Database::getInstance();
 
 $campanhas = $db->query("
     SELECT *
@@ -31,7 +32,7 @@ $campanhas = $db->query("
 
 foreach($campanhas as $campanha){
 
-    echo "Processando campanha {$campanha['CAM_ID']}...\n";
+    echo "Campanha {$campanha['CAM_ID']} iniciada.\n";
 
     $db->prepare("
         UPDATE campanhas
@@ -41,17 +42,33 @@ foreach($campanhas as $campanha){
         $campanha['CAM_ID']
     ]);
 
-    $template = $db->prepare("
+}
+
+
+
+
+
+$campanhas = $db->query("
+    SELECT *
+    FROM campanhas
+    WHERE CAM_Status = 'processando'
+")->fetchAll(PDO::FETCH_ASSOC);
+
+foreach($campanhas as $campanha){
+
+    echo "Processando campanha {$campanha['CAM_ID']}...\n";
+
+    $stmt = $db->prepare("
         SELECT *
         FROM templates_meta
         WHERE TMP_ID = ?
     ");
 
-    $template->execute([
+    $stmt->execute([
         $campanha['TMP_ID']
     ]);
 
-    $template = $template->fetch(PDO::FETCH_ASSOC);
+    $template = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if(!$template){
 
@@ -66,24 +83,20 @@ foreach($campanhas as $campanha){
         continue;
     }
 
-    $metaId = $template['MTA_ID'];
-
-    $meta = new MetaService($metaId);
-
-    $variaveis = $db->prepare("
+    $stmt = $db->prepare("
         SELECT *
         FROM campanha_variaveis
         WHERE CAM_ID = ?
-        ORDER BY CPV_Variavel ASC
+        ORDER BY CAST(CPV_Variavel AS UNSIGNED) ASC
     ");
 
-    $variaveis->execute([
+    $stmt->execute([
         $campanha['CAM_ID']
     ]);
 
-    $variaveis = $variaveis->fetchAll(PDO::FETCH_ASSOC);
+    $variaveis = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $fila = $db->prepare("
+    $stmt = $db->prepare("
         SELECT
             f.*,
             c.CON_Nome,
@@ -95,20 +108,34 @@ foreach($campanhas as $campanha){
         WHERE f.CAM_ID = ?
         AND f.FIL_Status = 'pendente'
         ORDER BY f.FIL_ID ASC
-        LIMIT 20
+        LIMIT {$limitePorExecucao}
     ");
 
-    $fila->execute([
+    $stmt->execute([
         $campanha['CAM_ID']
     ]);
 
-    $itens = $fila->fetchAll(PDO::FETCH_ASSOC);
+    $fila = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach($itens as $item){
+    if(empty($fila)){
+
+        finalizarSeConcluida($db, $campanha['CAM_ID']);
+
+        continue;
+    }
+
+    $meta = null;
+
+    if(!$modoTeste){
+        $meta = new MetaService($template['MTA_ID']);
+    }
+
+    foreach($fila as $item){
 
         $db->prepare("
             UPDATE fila_envio
-            SET FIL_Status = 'processando',
+            SET
+                FIL_Status = 'processando',
                 FIL_Tentativas = FIL_Tentativas + 1
             WHERE FIL_ID = ?
         ")->execute([
@@ -128,8 +155,7 @@ foreach($campanhas as $campanha){
 
         foreach($variaveis as $var){
 
-            $campo =
-                $var['CPV_Campo'];
+            $campo = $var['CPV_Campo'];
 
             $parametros[] =
                 $dadosContato[$campo]
@@ -141,14 +167,14 @@ foreach($campanhas as $campanha){
 
             if($modoTeste){
 
-                echo "\n";
-                echo "Telefone: " .
-                    $item['CON_Telefone'];
-                echo "\n";
-
+                echo "SIMULAÇÃO\n";
+                echo "Campanha: {$campanha['CAM_ID']}\n";
+                echo "Contato: {$item['CON_Nome']}\n";
+                echo "Telefone: {$item['CON_Telefone']}\n";
+                echo "Template: {$template['TMP_Nome']}\n";
+                echo "Parâmetros:\n";
                 print_r($parametros);
-
-                echo "\n";
+                echo "-------------------------\n";
 
                 $retorno = [
                     'messages' => [
@@ -159,24 +185,30 @@ foreach($campanhas as $campanha){
                 ];
 
             }else{
-                /*
-                $retorno = $meta->enviarTemplate(
-                    $item['CON_Telefone'],
-                    $template,
-                    $parametros
-                );
-                */
+
+                $retorno =
+                    $meta->enviarTemplate(
+                        $item['CON_Telefone'],
+                        $template,
+                        $parametros
+                    );
+
             }
 
             if(isset($retorno['messages'][0]['id'])){
 
                 $db->prepare("
                     UPDATE fila_envio
-                    SET FIL_Status = 'enviado',
+                    SET
+                        FIL_Status = 'enviado',
                         FIL_DataEnvio = NOW(),
-                        FIL_Erro = NULL
+                        FIL_Erro = NULL,
+                        FIL_MessageId = ?,
+                        FIL_Retorno = ?
                     WHERE FIL_ID = ?
                 ")->execute([
+                    $retorno['messages'][0]['id'],
+                    json_encode($retorno, JSON_UNESCAPED_UNICODE),
                     $item['FIL_ID']
                 ]);
 
@@ -190,83 +222,98 @@ foreach($campanhas as $campanha){
 
             }else{
 
-                $erro =
+                registrarErro(
+                    $db,
+                    $campanha['CAM_ID'],
+                    $item['FIL_ID'],
                     $retorno['error']['message']
-                    ?? json_encode($retorno);
+                    ?? json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                    $retorno
+                );
 
-                $db->prepare("
-                    UPDATE fila_envio
-                    SET FIL_Status = 'erro',
-                        FIL_Erro = ?
-                    WHERE FIL_ID = ?
-                ")->execute([
-                    $erro,
-                    $item['FIL_ID']
-                ]);
-
-                $db->prepare("
-                    UPDATE campanhas
-                    SET CAM_TotalErros = CAM_TotalErros + 1
-                    WHERE CAM_ID = ?
-                ")->execute([
-                    $campanha['CAM_ID']
-                ]);
             }
 
         }catch(Exception $e){
 
-            $db->prepare("
-                UPDATE fila_envio
-                SET FIL_Status = 'erro',
-                    FIL_Erro = ?
-                WHERE FIL_ID = ?
-            ")->execute([
-                $e->getMessage(),
-                $item['FIL_ID']
-            ]);
+            registrarErro(
+                $db,
+                $campanha['CAM_ID'],
+                $item['FIL_ID'],
+                $e->getMessage()
+            );
 
-            $db->prepare("
-                UPDATE campanhas
-                SET CAM_TotalErros = CAM_TotalErros + 1
-                WHERE CAM_ID = ?
-            ")->execute([
-                $campanha['CAM_ID']
-            ]);
         }
 
         sleep(1);
     }
 
-    $pendentes = $db->prepare("
+    finalizarSeConcluida($db, $campanha['CAM_ID']);
+
+}
+
+
+
+
+
+function registrarErro($db, $campanhaId, $filaId, $erro, $retorno = null)
+{
+    $db->prepare("
+        UPDATE fila_envio
+        SET
+            FIL_Status = 'erro',
+            FIL_Erro = ?,
+            FIL_Retorno = ?
+        WHERE FIL_ID = ?
+    ")->execute([
+        $erro,
+        json_encode($retorno, JSON_UNESCAPED_UNICODE),
+        $filaId
+    ]);
+
+    $db->prepare("
+        UPDATE campanhas
+        SET CAM_TotalErros = CAM_TotalErros + 1
+        WHERE CAM_ID = ?
+    ")->execute([
+        $campanhaId
+    ]);
+}
+
+
+
+
+
+function finalizarSeConcluida($db, $campanhaId)
+{
+    $stmt = $db->prepare("
         SELECT COUNT(*) total
         FROM fila_envio
         WHERE CAM_ID = ?
         AND FIL_Status IN ('pendente','processando')
     ");
 
-    $pendentes->execute([
-        $campanha['CAM_ID']
+    $stmt->execute([
+        $campanhaId
     ]);
 
-    $pendentes =
-        $pendentes->fetch(PDO::FETCH_ASSOC)['total'];
+    $total =
+        $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-    if($pendentes == 0){
+    if($total == 0){
 
         $db->prepare("
             UPDATE campanhas
             SET CAM_Status = 'finalizada'
             WHERE CAM_ID = ?
         ")->execute([
-            $campanha['CAM_ID']
+            $campanhaId
         ]);
 
-        echo "Campanha {$campanha['CAM_ID']} finalizada.\n";
+        echo "Campanha {$campanhaId} finalizada.\n";
 
     }else{
 
-        echo "Campanha {$campanha['CAM_ID']} ainda possui {$pendentes} pendentes.\n";
+        echo "Campanha {$campanhaId} ainda possui {$total} pendentes.\n";
 
     }
-
 }

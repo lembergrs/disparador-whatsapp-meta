@@ -10,6 +10,7 @@ use Models\TemplateMeta;
 use Models\Contato;
 use Models\FilaEnvio;
 use Models\CampanhaVariavel;
+use Services\MetaService;
 
 class CampanhaController extends Controller
 {
@@ -327,6 +328,143 @@ class CampanhaController extends Controller
 
             ]
 
+        );
+    }
+
+    public function reagendar()
+    {
+        $usuario = Auth::usuario();
+
+        $id =
+            $_POST['id'] ?? null;
+
+        $dataAgendamento =
+            $_POST['data_agendamento'] ?? null;
+
+        if(!$id || !$dataAgendamento){
+
+            \Core\Session::flash(
+                'error',
+                'Informe a campanha e a nova data de envio.'
+            );
+
+            $this->redirect('campanha');
+
+            return;
+        }
+
+        $this->campanhaModel->reagendar(
+            $id,
+            $usuario['CLI_ID'],
+            $dataAgendamento
+        );
+
+        $this->campanhaModel->resetarFila(
+            $id
+        );
+
+        \Core\Session::flash(
+            'success',
+            'Campanha reagendada com sucesso.'
+        );
+
+        $this->redirect(
+            'campanha/detalhes&id=' . $id
+        );
+    }
+
+    public function enviarTeste()
+    {
+        $campanhaId =
+            $_POST['campanha_id'];
+
+        $telefone =
+            $_POST['telefone'];
+
+        $campanha =
+            $this->campanhaModel->buscar($campanhaId);
+
+        $contato =
+            $this->campanhaModel->buscarContatoExemplo($campanhaId);
+
+        $variavelModel =
+            new \Models\CampanhaVariavel();
+
+        $variaveis =
+            $variavelModel->listarPorCampanha($campanhaId);
+
+        $dadosContato =
+            json_decode(
+                $contato['CON_DadosJson'],
+                true
+            );
+
+        if(!is_array($dadosContato)){
+            $dadosContato = [];
+        }
+
+        $parametros = [];
+
+        foreach($variaveis as $var){
+
+            $campo =
+                $var['CPV_Campo'];
+
+            $parametros[] =
+                $dadosContato[$campo] ?? '';
+
+        }
+
+        try{
+            $telefone =
+                preg_replace(
+                    '/\D/',
+                    '',
+                    $_POST['telefone']
+                );
+                
+            $telefone = '55' . $telefone;
+
+            $meta =
+                new MetaService(
+                    $campanha['MTA_ID']
+                );
+
+            $retorno =
+                $meta->enviarTemplate(
+                    $telefone,
+                    $campanha,
+                    $parametros
+                );
+
+            if(isset($retorno['messages'][0]['id'])){
+
+                \Core\Session::flash(
+                    'success',
+                    'Mensagem de teste enviada com sucesso.'
+                );
+
+            }else{
+
+                \Core\Session::flash(
+                    'error',
+                    $retorno['error']['message']
+                    ?? 'Erro ao enviar teste.'
+                );
+
+            }
+
+        }catch(\Exception $e){
+
+            \Core\Session::flash(
+                'error',
+                $e->getMessage()
+            );
+
+        }
+
+        $this->redirect(
+            'campanha/preview&id=' . $campanhaId
         );
     }
 

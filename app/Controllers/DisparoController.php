@@ -83,140 +83,168 @@ class DisparoController extends Controller
         $usuario =
             Auth::usuario();
 
-
-
-
-
         $template =
             $this->templateModel
             ->buscar(
                 $_POST['template']
             );
 
-
-
-
-
         $meta =
             new MetaService(
                 $_POST['meta']
             );
 
+        $entradaNumeros =
+            $_POST['numeros']
+            ?? '';
 
-
-
-
-        $response =
-            $meta->enviarTemplate(
-
-                $_POST['numero'],
-
-                $template,
-
-                $_POST['variaveis']
-                ?? []
-
+        $numeros =
+            preg_split(
+                '/[\r\n,;]+/',
+                $entradaNumeros
             );
 
+        $numerosLimpos = [];
 
+        foreach($numeros as $numero){
 
+            $numero =
+                preg_replace(
+                    '/\D/',
+                    '',
+                    $numero
+                );
 
+            if(empty($numero)){
+                continue;
+            }
 
+            if(substr($numero, 0, 2) != '55'){
+                $numero = '55' . $numero;
+            }
 
-        $messageId = null;
-
-        $status = 'erro';
-
-
-
-
-
-        if(isset($response['messages'][0]['id'])){
-
-            $messageId =
-                $response['messages'][0]['id'];
-
-            $status = 'enviado';
-
+            $numerosLimpos[] = $numero;
         }
 
+        $numerosLimpos =
+            array_unique($numerosLimpos);
 
+        if(empty($numerosLimpos)){
 
+            \Core\Session::flash(
+                'error',
+                'Informe pelo menos um número válido.'
+            );
 
+            $this->redirect(
+                'disparo'
+            );
 
+            return;
+        }
 
-        $disparo =
-            new Disparo();
+        $totalEnviados = 0;
+        $totalErros = 0;
+        $erros = [];
 
+        foreach($numerosLimpos as $numero){
 
+            $response =
+                $meta->enviarTemplate(
 
+                    $numero,
 
+                    $template,
 
-        $disparo->salvar([
+                    $_POST['variaveis']
+                    ?? []
 
-            'cliente' =>
-                $usuario['CLI_ID'],
+                );
 
-            'meta' =>
-                $_POST['meta'],
+            $messageId = null;
 
-            'template_id' =>
-                $_POST['template'],
+            $status = 'erro';
 
-            'numero' =>
-                $_POST['numero'],
+            if(isset($response['messages'][0]['id'])){
 
-            'template' =>
-                $template['TMP_Nome'],
+                $messageId =
+                    $response['messages'][0]['id'];
 
-            'variaveis' =>
-                $_POST['variaveis']
-                ?? [],
+                $status = 'enviado';
 
-            'message_id' =>
-                $messageId,
+                $totalEnviados++;
 
-            'status' =>
-                $status,
+            }else{
 
-            'retorno' =>
-                $response
+                $totalErros++;
 
-        ]);
+                $erros[] =
+                    $numero
+                    . ': '
+                    . (
+                        $response['error']['message']
+                        ??
+                        'Erro ao enviar mensagem'
+                    );
+            }
 
+            $disparo =
+                new Disparo();
 
+            $disparo->salvar([
 
+                'cliente' =>
+                    $usuario['CLI_ID'],
 
+                'meta' =>
+                    $_POST['meta'],
 
+                'template_id' =>
+                    $_POST['template'],
 
-        if($status == 'enviado'){
+                'numero' =>
+                    $numero,
+
+                'template' =>
+                    $template['TMP_Nome'],
+
+                'variaveis' =>
+                    $_POST['variaveis']
+                    ?? [],
+
+                'message_id' =>
+                    $messageId,
+
+                'status' =>
+                    $status,
+
+                'retorno' =>
+                    $response
+
+            ]);
+        }
+
+        if($totalErros == 0){
 
             \Core\Session::flash(
                 'success',
-                'Mensagem enviada com sucesso.'
+                'Envio concluído. '
+                . $totalEnviados
+                . ' mensagem(ns) enviada(s).'
             );
 
         }else{
 
-            $erro =
-                $response['error']['message']
-                ??
-                'Erro ao enviar mensagem';
-
-
-
-
-
             \Core\Session::flash(
                 'error',
-                $erro
+                'Envio concluído com erros. Enviadas: '
+                . $totalEnviados
+                . ' | Erros: '
+                . $totalErros
+                . '. '
+                . implode(' | ', $erros)
             );
         }
-
-
-
-
-
 
         $this->redirect(
             'disparo'

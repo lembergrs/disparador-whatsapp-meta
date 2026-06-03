@@ -130,6 +130,65 @@
     </div>
 
 </div>
+
+<div class="card">
+
+    <div class="card-header">
+
+        <h3 class="card-title">
+            Enviar teste
+        </h3>
+
+    </div>
+
+    <div class="card-body">
+
+        <form
+        method="POST"
+        action="<?= BASE_URL; ?>/index.php?url=campanha/enviarTeste"
+        >
+
+            <input
+            type="hidden"
+            name="campanha_id"
+            value="<?= $campanha['CAM_ID']; ?>"
+            >
+
+            <div class="form-group">
+
+                <label>Número para teste</label>
+
+                <input
+                type="text"
+                name="telefone"
+                id="telefoneTeste"
+                class="form-control"
+                placeholder="(41) 99999-9999"
+                required
+                >
+                <small class="text-muted">
+                Informe apenas DDD + número. O código do Brasil (55) será adicionado automaticamente.
+                </small>
+
+            </div>
+
+            <button
+            type="submit"
+            class="btn btn-success"
+            onclick="return confirm('Enviar teste para este número?')"
+            >
+
+                <i class="fas fa-paper-plane"></i>
+                Enviar Teste
+
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
 <div class="mt-3">
 
     <a

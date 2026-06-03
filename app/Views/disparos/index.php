@@ -78,26 +78,52 @@ Selecione primeiro a Conta Meta
 
 </div>
 
+<div
+id="previewTemplateDisparo"
+class="mt-3"
+style="display:none;"
+>
 
+    <div class="card card-outline card-success">
+
+        <div class="card-header">
+
+            <h3 class="card-title">
+                Prévia da mensagem
+            </h3>
+
+        </div>
+
+        <div class="card-body">
+
+            <div
+            id="conteudoPreviewTemplateDisparo"
+            style="white-space: pre-line;"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
 
 
 
 <div class="form-group">
 
-<label>Número Destino</label>
+<label>Número(s) Destino</label>
 
-<input
-type="text"
-name="numero"
-class="form-control telefone"
+<textarea
+name="numeros"
+id="numerosDestino"
+class="form-control"
+rows="5"
+placeholder="(41) 99999-9999&#10;(41) 98888-8888"
 required
->
+></textarea>
 
 <small class="text-muted">
-
-Ex:
-5544999999999
-
+Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. Use apenas DDD + número.
 </small>
 
 </div>

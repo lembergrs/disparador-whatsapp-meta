@@ -254,6 +254,35 @@ style="display:none;"
 
 </div>
 
+<div
+id="previewTemplateCampanha"
+class="mt-3"
+style="display:none;"
+>
+
+    <div class="card card-outline card-success">
+
+        <div class="card-header">
+
+            <h3 class="card-title">
+                Prévia da mensagem
+            </h3>
+
+        </div>
+
+        <div class="card-body">
+
+            <div
+            id="conteudoPreviewTemplate"
+            style="white-space: pre-line;"
+            ></div>
+
+        </div>
+
+    </div>
+
+</div>
+
 <div class="form-group">
 
     <label>Data/Hora do envio</label>
