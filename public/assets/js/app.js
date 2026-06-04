@@ -1107,6 +1107,23 @@ $(document).ready(function(){
         enviarProximo();
     });
 
+    $(document).on('change', '#lista_id', function(){
+
+        if($(this).val() == 'nova'){
+
+            $('#areaNovaLista').show();
+            $('#nova_lista').attr('required', true);
+
+        }else{
+
+            $('#areaNovaLista').hide();
+            $('#nova_lista').attr('required', false);
+            $('#nova_lista').val('');
+
+        }
+
+    });
+
 });
 
 

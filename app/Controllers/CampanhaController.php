@@ -11,6 +11,8 @@ use Models\Contato;
 use Models\FilaEnvio;
 use Models\CampanhaVariavel;
 use Services\MetaService;
+use Models\ListaContato;
+use Models\ListaContatoItem;
 
 class CampanhaController extends Controller
 {
@@ -46,6 +48,14 @@ class CampanhaController extends Controller
                 $usuario['cliente_id']
             );
 
+        $listaModel =
+            new ListaContato();
+
+        $listas =
+            $listaModel->listarPorCliente(
+                $usuario['CLI_ID']
+            );
+
         $contatoModel = new Contato();
 
         $camposContato =
@@ -59,7 +69,8 @@ class CampanhaController extends Controller
                 'titulo' => 'Campanhas',
                 'campanhas' => $campanhas,
                 'templates' => $templates,
-                'camposContato' => $camposContato
+                'camposContato' => $camposContato,
+                'listas' => $listas
             ]
         );
     }
@@ -74,6 +85,7 @@ class CampanhaController extends Controller
 
                 'cliente_id' => $usuario['CLI_ID'],
                 'template_id' => $_POST['template'],
+                'lista_id' => $_POST['lista'],
                 'nome' => trim($_POST['nome']),
                 'descricao' => trim($_POST['descricao']),
                 'data_agendamento' =>
@@ -103,10 +115,13 @@ class CampanhaController extends Controller
 
         $filaModel = new FilaEnvio();
 
+        $listaItemModel =
+            new ListaContatoItem();
+
         $contatos =
-            $contatoModel
-            ->listarIdsPorCliente(
-                $usuario['CLI_ID']
+            $listaItemModel
+            ->listarIdsDaLista(
+                $_POST['lista']
             );
 
         foreach($contatos as $contato){

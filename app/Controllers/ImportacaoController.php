@@ -8,28 +8,35 @@ use Core\Upload;
 use Core\Spreadsheet;
 
 use Models\Contato;
+use Models\ListaContato;
+use Models\ListaContatoItem;
 
-class ImportacaoController
-extends Controller
+class ImportacaoController extends Controller
 {
     private $contatoModel;
+    private $listaModel;
+    private $listaItemModel;
 
     public function __construct()
     {
         Auth::check();
 
-        $this->contatoModel =
-            new Contato();
+        $this->contatoModel = new Contato();
+        $this->listaModel = new ListaContato();
+        $this->listaItemModel = new ListaContatoItem();
     }
 
     public function index()
     {
-        $usuario =
-            Auth::usuario();
+        $usuario = Auth::usuario();
 
         $contatos =
-            $this->contatoModel
-            ->listarPorCliente(
+            $this->contatoModel->listarPorCliente(
+                $usuario['cliente_id']
+            );
+
+        $listas =
+            $this->listaModel->listarPorCliente(
                 $usuario['cliente_id']
             );
 
@@ -37,7 +44,8 @@ extends Controller
             'importacao/index',
             [
                 'titulo' => 'Importação',
-                'contatos' => $contatos
+                'contatos' => $contatos,
+                'listas' => $listas
             ]
         );
     }
@@ -46,8 +54,42 @@ extends Controller
     {
         try{
 
-            $usuario =
-                Auth::usuario();
+            $usuario = Auth::usuario();
+
+            $clienteId = $usuario['cliente_id'];
+
+            $listaId = $_POST['lista_id'] ?? '';
+
+            if($listaId == 'nova'){
+
+                $nomeLista = trim($_POST['nova_lista'] ?? '');
+
+                if($nomeLista == ''){
+                    throw new \Exception('Informe o nome da nova lista.');
+                }
+
+                $listaId =
+                    $this->listaModel->criar(
+                        $clienteId,
+                        $nomeLista
+                    );
+
+            }else{
+
+                if(empty($listaId)){
+                    throw new \Exception('Selecione uma lista de contatos.');
+                }
+
+                $lista =
+                    $this->listaModel->buscar(
+                        $listaId,
+                        $clienteId
+                    );
+
+                if(!$lista){
+                    throw new \Exception('Lista inválida.');
+                }
+            }
 
             $arquivo =
                 Upload::arquivo(
@@ -59,9 +101,15 @@ extends Controller
                     $arquivo
                 );
 
-            $importados = 0;
+            if(empty($linhas[0])){
+                throw new \Exception('Arquivo sem cabeçalho.');
+            }
 
             $cabecalho = $linhas[0];
+
+            $importados = 0;
+            $vinculados = 0;
+            $ignorados = 0;
 
             foreach($linhas as $index => $linha){
 
@@ -69,15 +117,11 @@ extends Controller
                     continue;
                 }
 
-                $nome = trim(
-                    $linha[0] ?? ''
-                );
-
-                $telefone = trim(
-                    $linha[1] ?? ''
-                );
+                $nome = trim($linha[0] ?? '');
+                $telefone = trim($linha[1] ?? '');
 
                 if(empty($telefone)){
+                    $ignorados++;
                     continue;
                 }
 
@@ -88,47 +132,70 @@ extends Controller
                         $telefone
                     );
 
-                if(
-                    strlen($telefone) < 10
-                ){
+                if(strlen($telefone) < 10){
+                    $ignorados++;
                     continue;
                 }
 
-                $existe =
-                    $this->contatoModel
-                    ->telefoneExiste(
-                        $usuario['cliente_id'],
-                        $telefone
-                    );
-
-                if($existe){
-                    continue;
+                if(substr($telefone, 0, 2) != '55'){
+                    $telefone = '55' . $telefone;
                 }
 
                 $dadosContato = [];
 
                 foreach($cabecalho as $coluna => $nomeCampo){
 
+                    $nomeCampo = trim($nomeCampo);
+
+                    if($nomeCampo == ''){
+                        continue;
+                    }
+
                     $dadosContato[$nomeCampo] =
                         $linha[$coluna] ?? '';
-
                 }
 
-                $this->contatoModel->salvar([
-                    'cliente_id' => $usuario['cliente_id'],
-                    'nome' => $nome,
-                    'telefone' => $telefone,
-                    'dados_json' => json_encode(
-                        $dadosContato,
-                        JSON_UNESCAPED_UNICODE
-                    )
-                ]);
+                $dadosContato['Telefone'] = $telefone;
 
-                $importados++;
+                $contatoExistente =
+                    $this->contatoModel->buscarPorTelefone(
+                        $clienteId,
+                        $telefone
+                    );
+
+                if($contatoExistente){
+
+                    $contatoId =
+                        $contatoExistente['CON_ID'];
+
+                }else{
+
+                    $contatoId =
+                        $this->contatoModel->salvar([
+                            'cliente_id' => $clienteId,
+                            'nome' => $nome,
+                            'telefone' => $telefone,
+                            'dados_json' => json_encode(
+                                $dadosContato,
+                                JSON_UNESCAPED_UNICODE
+                            )
+                        ]);
+
+                    $importados++;
+                }
+
+                $this->listaItemModel->adicionar(
+                    $listaId,
+                    $contatoId
+                );
+
+                $vinculados++;
             }
 
             $_SESSION['sucesso'] =
-                "{$importados} contatos importados.";
+                "{$importados} novo(s) contato(s) importado(s). "
+                . "{$vinculados} contato(s) vinculado(s) à lista. "
+                . "{$ignorados} linha(s) ignorada(s).";
 
         }catch(\Exception $e){
 
@@ -137,8 +204,6 @@ extends Controller
 
         }
 
-        $this->redirect(
-            'importacao'
-        );
+        $this->redirect('importacao');
     }
 }

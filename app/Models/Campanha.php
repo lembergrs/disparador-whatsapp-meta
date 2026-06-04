@@ -46,6 +46,7 @@ class Campanha
 
                 CLI_ID,
                 TMP_ID,
+                LST_ID,
                 CAM_Nome,
                 CAM_Descricao,
                 CAM_Status,
@@ -57,7 +58,7 @@ class Campanha
 
             ) VALUES (
 
-                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
                 'agendada',
                 ?,
                 0,0,0,
@@ -69,11 +70,12 @@ class Campanha
 
         $sql->execute([
 
-            $dados['cliente_id'],
-            $dados['template_id'],
-            $dados['nome'],
-            $dados['descricao'],
-            $dados['data_agendamento']
+        $dados['cliente_id'],
+        $dados['template_id'],
+        $dados['lista_id'],
+        $dados['nome'],
+        $dados['descricao'],
+        $dados['data_agendamento']
 
         ]);
 

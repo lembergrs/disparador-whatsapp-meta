@@ -1,9 +1,7 @@
 <?php if(isset($_SESSION['sucesso'])){ ?>
 
 <div class="alert alert-success">
-
 <?= $_SESSION['sucesso']; ?>
-
 </div>
 
 <?php unset($_SESSION['sucesso']); ?>
@@ -13,9 +11,7 @@
 <?php if(isset($_SESSION['erro'])){ ?>
 
 <div class="alert alert-danger">
-
 <?= $_SESSION['erro']; ?>
-
 </div>
 
 <?php unset($_SESSION['erro']); ?>
@@ -34,7 +30,69 @@ enctype="multipart/form-data"
 
 <div class="row">
 
-<div class="col-md-6">
+<div class="col-md-4">
+
+<div class="form-group">
+
+<label>Lista de Contatos</label>
+
+<select
+name="lista_id"
+id="lista_id"
+class="form-control"
+required
+>
+
+<option value="">
+Selecione uma lista
+</option>
+
+<?php foreach($listas as $lista){ ?>
+
+<option value="<?= $lista['LST_ID']; ?>">
+<?= $lista['LST_Nome']; ?>
+(<?= $lista['total_contatos']; ?> contatos)
+</option>
+
+<?php } ?>
+
+<option value="nova">
++ Criar nova lista
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+<div
+class="col-md-4"
+id="areaNovaLista"
+style="display:none;"
+>
+
+<div class="form-group">
+
+<label>Nome da Nova Lista</label>
+
+<input
+type="text"
+name="nova_lista"
+id="nova_lista"
+class="form-control"
+placeholder="Ex: Clientes Junho"
+>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="form-group">
+
+<label>Arquivo</label>
 
 <div class="custom-file">
 
@@ -53,7 +111,9 @@ Escolher arquivo
 
 </div>
 
-<div class="col-md-3">
+</div>
+
+</div>
 
 <button
 type="submit"
@@ -61,14 +121,9 @@ class="btn btn-success"
 >
 
 <i class="fas fa-upload"></i>
-
 Importar
 
 </button>
-
-</div>
-
-</div>
 
 </form>
 
@@ -84,12 +139,10 @@ class="table table-bordered table-striped"
 <thead>
 
 <tr>
-
 <th>ID</th>
 <th>Nome</th>
 <th>Telefone</th>
 <th>Importação</th>
-
 </tr>
 
 </thead>
@@ -100,27 +153,19 @@ class="table table-bordered table-striped"
 
 <tr>
 
-<td>
-<?= $contato['CON_ID']; ?>
-</td>
+<td><?= $contato['CON_ID']; ?></td>
+
+<td><?= $contato['CON_Nome']; ?></td>
+
+<td><?= $contato['CON_Telefone']; ?></td>
 
 <td>
-<?= $contato['CON_Nome']; ?>
-</td>
-
-<td>
-<?= $contato['CON_Telefone']; ?>
-</td>
-
-<td>
-
 <?= date(
     'd/m/Y H:i',
     strtotime(
         $contato['CON_DataImportacao']
     )
 ); ?>
-
 </td>
 
 </tr>

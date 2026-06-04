@@ -158,6 +158,32 @@
         </table>
 
     </div>
+    
+    <div class="form-group">
+
+    <label>Lista de Contatos</label>
+
+    <select
+    name="lista"
+    class="form-control"
+    required
+    >
+
+    <option value="">
+    Selecione
+    </option>
+
+    <?php foreach($listas as $lista){ ?>
+
+    <option value="<?= $lista['LST_ID']; ?>">
+    <?= $lista['LST_Nome']; ?> (<?= $lista['total_contatos']; ?> contatos)
+    </option>
+
+    <?php } ?>
+
+    </select>
+
+    </div>
 
 </div>
 <div
