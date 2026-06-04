@@ -3,6 +3,7 @@
 require __DIR__ . '/config/config.php';
 require __DIR__ . '/vendor/autoload.php';
 
+
 spl_autoload_register(function($class){
 
     $class = str_replace('\\', '/', $class);
@@ -17,6 +18,7 @@ spl_autoload_register(function($class){
 
 use Core\Database;
 use Services\MetaService;
+use Models\Conversa;
 
 $modoTeste = false; // troque para false para envio real
 $limitePorExecucao = 10;
@@ -218,6 +220,45 @@ foreach($campanhas as $campanha){
                     WHERE CAM_ID = ?
                 ")->execute([
                     $campanha['CAM_ID']
+                ]);
+
+                $conversaModel =
+                    new Conversa();
+
+                $conversaId =
+                    $conversaModel->buscarOuCriar(
+                        $campanha['CLI_ID'],
+                        $template['MTA_ID'],
+                        $item['CON_Telefone'],
+                        $item['CON_Nome']
+                    );
+
+                $conversaModel->salvarMensagem([
+
+                    'conversa_id' =>
+                        $conversaId,
+
+                    'direcao' =>
+                        'enviada',
+
+                    'tipo' =>
+                        'template',
+
+                    'texto' =>
+                        $template['TMP_Nome'],
+
+                    'message_id' =>
+                        $retorno['messages'][0]['id'],
+
+                    'status' =>
+                        'enviado',
+
+                    'retorno' =>
+                        $retorno,
+
+                    'data_mensagem' =>
+                        date('Y-m-d H:i:s')
+
                 ]);
 
             }else{

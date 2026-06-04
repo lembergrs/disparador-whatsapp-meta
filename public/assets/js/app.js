@@ -970,6 +970,143 @@ $(document).ready(function(){
 
     $('#telefoneTeste').mask('(00) 00000-0000');
 
+    $(document).on('submit', '#formDisparo', function(e){
+
+        e.preventDefault();
+
+        let form =
+            $(this);
+
+        let numerosTexto =
+            $('#numerosDestino').val();
+
+        let numeros =
+            numerosTexto.split(/[\n,;]+/);
+
+        let numerosLimpos = [];
+
+        numeros.forEach(function(numero){
+
+            numero =
+                numero.replace(/\D/g, '');
+
+            if(numero.length == 0){
+                return;
+            }
+
+            if(numero.substring(0,2) != '55'){
+                numero = '55' + numero;
+            }
+
+            if(!numerosLimpos.includes(numero)){
+                numerosLimpos.push(numero);
+            }
+
+        });
+
+        if(numerosLimpos.length == 0){
+
+            alert('Informe pelo menos um número válido.');
+            return;
+
+        }
+
+        $('#areaProgressoDisparo').show();
+
+        $('#btnEnviarDisparo')
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
+
+        let total = numerosLimpos.length;
+        let enviados = 0;
+        let erros = 0;
+        let atual = 0;
+
+        function atualizarProgresso()
+        {
+            let percentual =
+                Math.round(
+                    (atual / total) * 100
+                );
+
+            $('#barraProgressoDisparo')
+                .css('width', percentual + '%')
+                .html(percentual + '%');
+
+            $('#textoProgressoDisparo')
+                .html(
+                    'Processando '
+                    + atual
+                    + ' de '
+                    + total
+                    + ' | Enviados: '
+                    + enviados
+                    + ' | Erros: '
+                    + erros
+                );
+        }
+
+        function enviarProximo()
+        {
+            if(atual >= total){
+
+                $('#btnEnviarDisparo')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-paper-plane"></i> Enviar Template');
+
+                $('#textoProgressoDisparo')
+                    .html(
+                        'Envio concluído. Enviados: '
+                        + enviados
+                        + ' | Erros: '
+                        + erros
+                    );
+
+                return;
+            }
+
+            let numero =
+                numerosLimpos[atual];
+
+            let dados =
+                form.serializeArray();
+                
+            dados.push({
+                name: 'numero',
+                value: numero
+            });
+
+            $.ajax({
+                url: BASE_URL + '/index.php?url=disparo/enviarAjax',
+                method: 'POST',
+                data: dados,
+                dataType:
+                    'json',
+
+                success: function(retorno){
+                    if(retorno.sucesso){
+                        enviados++;
+                    }else{
+                        erros++;
+                    }
+                },
+                error: function(){
+                    erros++;
+                },
+                complete: function(){
+                    atual++;
+                    atualizarProgresso();
+                    setTimeout(
+                        enviarProximo,
+                        500
+                    );
+                }
+            });
+        }
+        atualizarProgresso();
+        enviarProximo();
+    });
+
 });
 
 

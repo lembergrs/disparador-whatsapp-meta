@@ -14,6 +14,7 @@ Novo Disparo
 
 <form
 method="POST"
+id="formDisparo"
 action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 >
 
@@ -134,19 +135,39 @@ Informe um número por linha. Também pode separar por vírgula ou ponto e vírg
 
 <div id="areaVariaveis"></div>
 
+<div
+id="areaProgressoDisparo"
+style="display:none;"
+class="mb-3"
+>
 
+    <strong id="textoProgressoDisparo">
+        Preparando envio...
+    </strong>
+
+    <div class="progress mt-2">
+
+        <div
+        id="barraProgressoDisparo"
+        class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+        style="width:0%"
+        >
+            0%
+        </div>
+
+    </div>
+
+</div>
 
 
 
 <button
 type="submit"
+id="btnEnviarDisparo"
 class="btn btn-success"
 >
-
-<i class="fas fa-paper-plane"></i>
-
-Enviar Template
-
+    <i class="fas fa-paper-plane"></i>
+    Enviar Template
 </button>
 
 </form>

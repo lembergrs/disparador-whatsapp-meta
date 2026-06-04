@@ -8,6 +8,7 @@ use Models\MetaConta;
 use Models\TemplateMeta;
 use Models\Disparo;
 use Services\MetaService;
+use Models\Conversa;
 
 class DisparoController extends Controller
 {
@@ -222,6 +223,46 @@ class DisparoController extends Controller
                     $response
 
             ]);
+
+            $conversaModel =
+                new Conversa();
+
+            $conversaId =
+                $conversaModel->buscarOuCriar(
+                    $usuario['CLI_ID'],
+                    $_POST['meta'],
+                    $numero,
+                    null
+                );
+
+            $conversaModel->salvarMensagem([
+
+                'conversa_id' =>
+                    $conversaId,
+
+                'direcao' =>
+                    'enviada',
+
+                'tipo' =>
+                    'template',
+
+                'texto' =>
+                    $template['TMP_Nome'],
+
+                'message_id' =>
+                    $messageId,
+
+                'status' =>
+                    $status,
+
+                'retorno' =>
+                    $response,
+
+                'data_mensagem' =>
+                    date('Y-m-d H:i:s')
+
+            ]);
+
         }
 
         if($totalErros == 0){
@@ -249,6 +290,164 @@ class DisparoController extends Controller
         $this->redirect(
             'disparo'
         );
+    }
+
+    public function enviarAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+
+            $usuario =
+                Auth::usuario();
+
+            $template =
+                $this->templateModel
+                ->buscar(
+                    $_POST['template']
+                );
+
+            $meta =
+                new \Services\MetaService(
+                    $_POST['meta']
+                );
+
+            $numero =
+                preg_replace(
+                    '/\D/',
+                    '',
+                    $_POST['numero']
+                );
+
+            if(substr($numero, 0, 2) != '55'){
+                $numero = '55' . $numero;
+            }
+
+            $response =
+                $meta->enviarTemplate(
+
+                    $numero,
+
+                    $template,
+
+                    $_POST['variaveis']
+                    ?? []
+
+                );
+
+            $messageId = null;
+            $status = 'erro';
+
+            if(isset($response['messages'][0]['id'])){
+
+                $messageId =
+                    $response['messages'][0]['id'];
+
+                $status = 'enviado';
+
+            }
+
+            $disparo =
+                new \Models\Disparo();
+
+            $disparo->salvar([
+
+                'cliente' =>
+                    $usuario['CLI_ID'],
+
+                'meta' =>
+                    $_POST['meta'],
+
+                'template_id' =>
+                    $_POST['template'],
+
+                'numero' =>
+                    $numero,
+
+                'template' =>
+                    $template['TMP_Nome'],
+
+                'variaveis' =>
+                    $_POST['variaveis']
+                    ?? [],
+
+                'message_id' =>
+                    $messageId,
+
+                'status' =>
+                    $status,
+
+                'retorno' =>
+                    $response
+
+            ]);
+
+            $conversaModel =
+                new Conversa();
+
+            $conversaId =
+                $conversaModel->buscarOuCriar(
+                    $usuario['CLI_ID'],
+                    $_POST['meta'],
+                    $numero,
+                    null
+                );
+
+            $conversaModel->salvarMensagem([
+
+                'conversa_id' =>
+                    $conversaId,
+
+                'direcao' =>
+                    'enviada',
+
+                'tipo' =>
+                    'template',
+
+                'texto' =>
+                    $template['TMP_Nome'],
+
+                'message_id' =>
+                    $messageId,
+
+                'status' =>
+                    $status,
+
+                'retorno' =>
+                    $response,
+
+                'data_mensagem' =>
+                    date('Y-m-d H:i:s')
+
+            ]);
+
+            if($status == 'enviado'){
+
+                echo json_encode([
+                    'sucesso' => true,
+                    'numero' => $numero,
+                    'message_id' => $messageId
+                ]);
+
+                return;
+            }
+
+            echo json_encode([
+                'sucesso' => false,
+                'numero' => $numero,
+                'erro' =>
+                    $response['error']['message']
+                    ?? 'Erro ao enviar mensagem'
+            ]);
+
+        }catch(\Exception $e){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ]);
+
+        }
     }
 
 }

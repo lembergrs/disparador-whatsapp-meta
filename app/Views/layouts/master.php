@@ -216,6 +216,21 @@ class="nav-link <?= str_contains($url, 'campanha') ? 'active' : ''; ?>"
 
 </li>
 
+<li class="nav-item">
+
+<a
+href="<?= BASE_URL; ?>/index.php?url=conversa"
+class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
+>
+
+<i class="nav-icon fas fa-comments"></i>
+
+<p>Conversas</p>
+
+</a>
+
+</li>
+
 <?php } ?>
 
 </ul>
