@@ -1,25 +1,322 @@
 <?php
 
-require '../../config/config.php';
-require '../../vendor/autoload.php';
+require_once __DIR__ . '/../../config/config.php';
+require_once __DIR__ . '/../../vendor/autoload.php';
 
+spl_autoload_register(function($class){
+
+    $class = str_replace('\\', '/', $class);
+
+    $file = __DIR__ . '/../../app/' . $class . '.php';
+
+    if(file_exists($file)){
+        require_once $file;
+    }
+
+});
+
+use Core\Database;
+use Models\Conversa;
+
+$db = Database::getInstance();
+
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Validação do webhook pela Meta
+|--------------------------------------------------------------------------
+*/
+if($_SERVER['REQUEST_METHOD'] == 'GET'){
+
+    $mode =
+        $_GET['hub_mode']
+        ?? $_GET['hub.mode']
+        ?? null;
+
+    $token =
+        $_GET['hub_verify_token']
+        ?? $_GET['hub.verify_token']
+        ?? null;
+
+    $challenge =
+        $_GET['hub_challenge']
+        ?? $_GET['hub.challenge']
+        ?? null;
+
+    if($mode == 'subscribe' && $token){
+
+        $sql = $db->prepare("
+            SELECT MTA_ID
+            FROM meta_contas
+            WHERE MTA_WebhookVerifyToken = ?
+            AND MTA_Ativo = 'S'
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $token
+        ]);
+
+        $conta =
+            $sql->fetch(PDO::FETCH_ASSOC);
+
+        if($conta){
+
+            http_response_code(200);
+            echo $challenge;
+            exit;
+
+        }
+    }
+
+    http_response_code(403);
+    echo 'Token inválido';
+    exit;
+}
+
+
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Recebimento dos eventos
+|--------------------------------------------------------------------------
+*/
 $input =
     file_get_contents(
         'php://input'
     );
 
 file_put_contents(
-
     __DIR__ . '/meta.log',
-
     date('Y-m-d H:i:s')
     . "\n"
     . $input
     . "\n\n",
-
     FILE_APPEND
-
 );
+
+$payload =
+    json_decode(
+        $input,
+        true
+    );
+
+if(empty($payload)){
+
+    http_response_code(200);
+    echo 'EVENT_RECEIVED';
+    exit;
+}
+
+
+
+
+
+$conversaModel =
+    new Conversa();
+
+$entries =
+    $payload['entry']
+    ?? [];
+
+foreach($entries as $entry){
+
+    $changes =
+        $entry['changes']
+        ?? [];
+
+    foreach($changes as $change){
+
+        $value =
+            $change['value']
+            ?? [];
+
+        $phoneNumberId =
+            $value['metadata']['phone_number_id']
+            ?? null;
+
+        if(!$phoneNumberId){
+            continue;
+        }
+
+        $sql = $db->prepare("
+            SELECT *
+            FROM meta_contas
+            WHERE MTA_PhoneNumberId = ?
+            AND MTA_Ativo = 'S'
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $phoneNumberId
+        ]);
+
+        $metaConta =
+            $sql->fetch(PDO::FETCH_ASSOC);
+
+        if(!$metaConta){
+            continue;
+        }
+
+
+
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Mensagens recebidas
+        |--------------------------------------------------------------------------
+        */
+        if(!empty($value['messages'])){
+
+            foreach($value['messages'] as $msg){
+
+                $numero =
+                    $msg['from']
+                    ?? null;
+
+                if(!$numero){
+                    continue;
+                }
+
+                $tipo =
+                    $msg['type']
+                    ?? 'text';
+
+                $texto = '';
+
+                if($tipo == 'text'){
+
+                    $texto =
+                        $msg['text']['body']
+                        ?? '';
+
+                }elseif($tipo == 'button'){
+
+                    $texto =
+                        $msg['button']['text']
+                        ?? '[Botão]';
+
+                }elseif($tipo == 'interactive'){
+
+                    $texto =
+                        $msg['interactive']['button_reply']['title']
+                        ??
+                        $msg['interactive']['list_reply']['title']
+                        ??
+                        '[Interativo]';
+
+                }else{
+
+                    $texto =
+                        '[' . strtoupper($tipo) . ']';
+
+                }
+
+                $nomeContato =
+                    $value['contacts'][0]['profile']['name']
+                    ?? null;
+
+                $messageId =
+                    $msg['id']
+                    ?? null;
+
+                $dataMensagem =
+                    !empty($msg['timestamp'])
+                    ? date('Y-m-d H:i:s', $msg['timestamp'])
+                    : date('Y-m-d H:i:s');
+
+                $conversaId =
+                    $conversaModel->buscarOuCriar(
+                        $metaConta['CLI_ID'],
+                        $metaConta['MTA_ID'],
+                        $numero,
+                        $nomeContato
+                    );
+
+                $conversaModel->salvarMensagem([
+
+                    'conversa_id' =>
+                        $conversaId,
+
+                    'direcao' =>
+                        'recebida',
+
+                    'tipo' =>
+                        $tipo,
+
+                    'texto' =>
+                        $texto,
+
+                    'message_id' =>
+                        $messageId,
+
+                    'status' =>
+                        'recebida',
+
+                    'retorno' =>
+                        $msg,
+
+                    'data_mensagem' =>
+                        $dataMensagem
+
+                ]);
+
+            }
+
+        }
+
+
+
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status das mensagens enviadas
+        |--------------------------------------------------------------------------
+        */
+        if(!empty($value['statuses'])){
+
+            foreach($value['statuses'] as $status){
+
+                $messageId =
+                    $status['id']
+                    ?? null;
+
+                $statusMsg =
+                    $status['status']
+                    ?? null;
+
+                if(!$messageId || !$statusMsg){
+                    continue;
+                }
+
+                $sql = $db->prepare("
+                    UPDATE conversa_mensagens
+                    SET
+                        MSG_Status = ?,
+                        MSG_Retorno = ?
+                    WHERE MSG_MetaMessageId = ?
+                ");
+
+                $sql->execute([
+                    $statusMsg,
+                    json_encode($status, JSON_UNESCAPED_UNICODE),
+                    $messageId
+                ]);
+
+            }
+
+        }
+
+    }
+
+}
 
 http_response_code(200);
 

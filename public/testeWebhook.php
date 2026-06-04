@@ -12,15 +12,40 @@ $json = [
 
                     'value' => [
 
+                        'metadata' => [
+
+                            'phone_number_id' =>
+                                '1012186325321264'
+
+                        ],
+
+                        'contacts' => [
+
+                            [
+
+                                'profile' => [
+
+                                    'name' =>
+                                        'Cliente Teste'
+
+                                ],
+
+                                'wa_id' =>
+                                    '5541999999999'
+
+                            ]
+
+                        ],
+
                         'messages' => [
 
                             [
 
                                 'from' =>
-                                    '5541998121080',
+                                    '5541999999999',
 
                                 'id' =>
-                                    'wamid.TESTE123',
+                                    'wamid.TESTE_RECEBIDA_001',
 
                                 'timestamp' =>
                                     time(),
@@ -31,7 +56,7 @@ $json = [
                                 'text' => [
 
                                     'body' =>
-                                        'Olá, gostaria de saber mais informações.'
+                                        'Olá, estou respondendo a mensagem de teste.'
 
                                 ]
 
@@ -50,10 +75,6 @@ $json = [
     ]
 
 ];
-
-
-
-
 
 $curl = curl_init();
 
