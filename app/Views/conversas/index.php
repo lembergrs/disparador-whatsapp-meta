@@ -1,26 +1,80 @@
+<?php
+
+function formatarNumeroBR($numero)
+{
+    $numero = preg_replace('/\D/', '', $numero);
+
+    if(substr($numero, 0, 2) == '55'){
+        $numero = substr($numero, 2);
+    }
+
+    if(strlen($numero) == 11){
+
+        return '(' . substr($numero, 0, 2) . ') '
+            . substr($numero, 2, 5)
+            . '-'
+            . substr($numero, 7);
+
+    }
+
+    if(strlen($numero) == 10){
+
+        return '(' . substr($numero, 0, 2) . ') '
+            . substr($numero, 2, 4)
+            . '-'
+            . substr($numero, 6);
+
+    }
+
+    return $numero;
+}
+
+?>
 <div class="row">
 
 <div class="col-md-4">
 
-<div class="card">
+<div
+class="card"
+style="height:75vh;"
+>
 
-<div class="card-header">
-<strong>Conversas</strong>
+<div class="card-header bg-light">
+
+<strong>
+<i class="fas fa-comments"></i>
+Conversas
+</strong>
+
 </div>
 
-<div class="list-group list-group-flush">
+<div
+class="list-group list-group-flush"
+style="overflow-y:auto;"
+>
 
 <?php foreach($conversas as $conversa){ ?>
 
+<?php
+
+$nome =
+    $conversa['CVS_Nome'] ?: formatarNumeroBR($conversa['CVS_Numero'])
+    ?: formatarNumeroBR($conversa['CVS_Numero']);
+
+$numeroFormatado =
+    formatarNumeroBR($conversa['CVS_Numero']);
+
+?>
+
 <a
 href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
-class="list-group-item list-group-item-action"
+class="list-group-item list-group-item-action <?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'active' : ''; ?>"
 >
 
 <div class="d-flex justify-content-between">
 
 <strong>
-<?= $conversa['CVS_Nome'] ?: $conversa['CVS_Numero']; ?>
+<?= $nome; ?>
 </strong>
 
 <?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
@@ -33,7 +87,13 @@ Novo
 
 </div>
 
-<small class="text-muted">
+<small class="<?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'text-white' : 'text-muted'; ?>">
+<?= $numeroFormatado; ?>
+</small>
+
+<br>
+
+<small class="<?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'text-white' : 'text-muted'; ?>">
 <?= $conversa['CVS_UltimaMensagem']; ?>
 </small>
 
@@ -49,29 +109,44 @@ Novo
 
 <div class="col-md-8">
 
-<div class="card" style="height: 75vh;">
+<div
+class="card"
+style="height:75vh;"
+>
 
 <?php if($conversaSelecionada){ ?>
 
-<div class="card-header">
+<?php
+
+$nomeSelecionado =
+    $conversaSelecionada['CVS_Nome']
+    ?: formatarNumeroBR($conversaSelecionada['CVS_Numero']);
+
+?>
+
+<div class="card-header bg-light">
 
 <strong>
-<?= $conversaSelecionada['CVS_Nome'] ?: $conversaSelecionada['CVS_Numero']; ?>
+<?= $nomeSelecionado; ?>
 </strong>
 
 <br>
 
 <small class="text-muted">
-<?= $conversaSelecionada['CVS_Numero']; ?>
+<?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
 </small>
 
 </div>
 
 <div
-class="card-body"
+class="card-body conversa-bg"
 style="
     overflow-y:auto;
-    background:#e5ddd5;
+    background-color:#efeae2;
+    background-image:
+        radial-gradient(circle at 25px 25px, rgba(0,0,0,0.04) 2px, transparent 0),
+        radial-gradient(circle at 75px 75px, rgba(0,0,0,0.03) 2px, transparent 0);
+    background-size:100px 100px;
 "
 >
 
@@ -82,10 +157,11 @@ style="
 <div class="d-flex justify-content-end mb-2">
 
     <div
-    class="p-2 rounded"
+    class="p-2 rounded shadow-sm"
     style="
-        background:#dcf8c6;
+        background:#d9fdd3;
         max-width:70%;
+        border-radius:8px;
     "
     >
 
@@ -106,10 +182,11 @@ style="
 <div class="d-flex justify-content-start mb-2">
 
     <div
-    class="p-2 rounded"
+    class="p-2 rounded shadow-sm"
     style="
-        background:#fff;
+        background:#ffffff;
         max-width:70%;
+        border-radius:8px;
     "
     >
 
@@ -131,7 +208,7 @@ style="
 
 </div>
 
-<div class="card-footer">
+<div class="card-footer bg-light">
 
 <?php if($janelaAberta){ ?>
 
@@ -177,8 +254,8 @@ type="submit"
 
 <div class="alert alert-warning mb-0">
 
-    A janela de atendimento de 24 horas está fechada.
-    Para falar com este contato novamente, envie um template aprovado.
+A janela de atendimento de 24 horas está fechada.
+Para falar com este contato novamente, envie um template aprovado.
 
 </div>
 

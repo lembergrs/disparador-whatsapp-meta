@@ -125,11 +125,18 @@ class Conversa
     public function listarConversas($clienteId)
     {
         $sql = $this->db->prepare("
+
             SELECT *
+
             FROM conversas
+
             WHERE CLI_ID = ?
             AND CVS_Ativo = 'S'
+
             ORDER BY CVS_DataUltimaMensagem DESC
+
+            LIMIT 100
+
         ");
 
         $sql->execute([$clienteId]);
@@ -140,15 +147,24 @@ class Conversa
     public function listarMensagens($conversaId)
     {
         $sql = $this->db->prepare("
+
             SELECT *
+
             FROM conversa_mensagens
+
             WHERE CVS_ID = ?
-            ORDER BY MSG_ID ASC
+
+            ORDER BY MSG_ID DESC
+
+            LIMIT 100
+
         ");
 
         $sql->execute([$conversaId]);
 
-        return $sql->fetchAll(PDO::FETCH_ASSOC);
+        $mensagens = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+        return array_reverse($mensagens);
     }
 
     public function buscar($conversaId, $clienteId)
