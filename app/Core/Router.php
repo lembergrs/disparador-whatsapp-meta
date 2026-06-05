@@ -6,7 +6,7 @@ class Router
 {
     public function dispatch()
     {
-        $url = $_GET['url'] ?? 'login';
+        $url = $_GET['url'] ?? 'site';
 
         $url = explode('/', $url);
 

@@ -1,4 +1,21 @@
-<div class="alert alert-info">
+<div class="mb-3">
+
+    <button
+    type="button"
+    class="btn btn-outline-info btn-sm"
+    id="btnAjudaVariaveis"
+    >
+        <i class="fas fa-question-circle"></i>
+        Como usar variáveis
+    </button>
+
+</div>
+
+<div
+class="alert alert-info"
+id="cardAjudaVariaveis"
+style="display:none;"
+>
 
     <h5>
         <i class="fas fa-info-circle"></i>
@@ -30,6 +47,7 @@
     </p>
 
 </div>
+
 <div class="card">
 
     <div class="card-header">
@@ -232,10 +250,6 @@ data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes'
     <?= $template['TMP_Nome']; ?>
 </option>
 
-<?= $template['TMP_Nome']; ?>
-
-</option>
-
 <?php } ?>
 
 </select>
@@ -351,6 +365,34 @@ Criar Campanha
 </div>
 
 <script>
+
 window.CAMPOS_CONTATO =
 <?= json_encode($camposContato, JSON_UNESCAPED_UNICODE); ?>;
+
+document.addEventListener('click', function(e){
+
+    var botao =
+        e.target.closest('#btnAjudaVariaveis');
+
+    if(!botao){
+        return;
+    }
+
+    e.preventDefault();
+
+    var card =
+        document.getElementById('cardAjudaVariaveis');
+
+    if(!card){
+        return;
+    }
+
+    if(card.style.display === 'none' || card.style.display === ''){
+        card.style.display = 'block';
+    }else{
+        card.style.display = 'none';
+    }
+
+});
+
 </script>

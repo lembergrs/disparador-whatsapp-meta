@@ -159,6 +159,23 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
     <a
+    href="<?= BASE_URL; ?>/index.php?url=configuracao/meta"
+    class="nav-link <?= str_contains($url, 'configuracao') ? 'active' : ''; ?>"
+    >
+
+        <i class="nav-icon fab fa-whatsapp"></i>
+
+        <p>
+            Números WhatsApp
+        </p>
+
+    </a>
+
+</li>
+
+<li class="nav-item">
+
+    <a
     href="<?= BASE_URL; ?>/index.php?url=listacontato"
     class="nav-link <?= str_contains($url, 'listacontato') ? 'active' : ''; ?>""
     >

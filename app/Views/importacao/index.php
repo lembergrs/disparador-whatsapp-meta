@@ -1,3 +1,35 @@
+<?php
+
+if(!function_exists('formatarTelefone')){
+
+    function formatarTelefone($telefone)
+    {
+        $telefone = preg_replace('/\D/', '', $telefone);
+
+        if(substr($telefone, 0, 2) == '55'){
+            $telefone = substr($telefone, 2);
+        }
+
+        if(strlen($telefone) == 11){
+            return '(' . substr($telefone, 0, 2) . ') '
+                . substr($telefone, 2, 5)
+                . '-'
+                . substr($telefone, 7);
+        }
+
+        if(strlen($telefone) == 10){
+            return '(' . substr($telefone, 0, 2) . ') '
+                . substr($telefone, 2, 4)
+                . '-'
+                . substr($telefone, 6);
+        }
+
+        return $telefone;
+    }
+
+}
+
+?>
 <?php if(isset($_SESSION['sucesso'])){ ?>
 
 <div class="alert alert-success">
@@ -160,7 +192,7 @@ class="table table-bordered table-striped table-hover datatable"
 
 <td><?= $contato['CON_Nome']; ?></td>
 
-<td><?= $contato['CON_Telefone']; ?></td>
+<td><?= formatarTelefone($contato['CON_Telefone']); ?></td>
 
 <td>
 <?= date(
