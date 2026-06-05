@@ -61,11 +61,11 @@
 
                     <button
                     type="button"
-                    class="btn btn-primary btn-sm btnEditarLista"
-                    data-id="<?= $lista['LST_ID']; ?>"
-                    data-nome="<?= htmlspecialchars($lista['LST_Nome']); ?>"
-                    data-toggle="modal"
-                    data-target="#modalEditarLista"
+                    class="btn btn-primary btn-sm"
+                    onclick="abrirModalEditarLista(
+                        '<?= $lista['LST_ID']; ?>',
+                        '<?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?>'
+                    )"
                     >
                         <i class="fas fa-edit"></i>
                         Editar
@@ -77,6 +77,15 @@
                     >
                         <i class="fas fa-upload"></i>
                         Importar
+                    </a>
+
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=listacontato/duplicar&id=<?= $lista['LST_ID']; ?>"
+                    class="btn btn-warning btn-sm"
+                    onclick="return confirm('Deseja duplicar esta lista?')"
+                    >
+                        <i class="fas fa-copy"></i>
+                        Duplicar
                     </a>
 
                     <a
@@ -105,6 +114,8 @@
 <div
 class="modal fade"
 id="modalEditarLista"
+data-backdrop="static"
+data-keyboard="false"
 >
 
 <div class="modal-dialog">
@@ -130,10 +141,9 @@ Editar Lista
 
 <button
 type="button"
-class="close"
-data-dismiss="modal"
+class="close btnFecharModalEditarLista"
 >
-<span>&times;</span>
+    <span>&times;</span>
 </button>
 
 </div>
@@ -186,17 +196,25 @@ $(document).ready(function(){
         }
     });
 
-    $(document).on('click', '.btnEditarLista', function(){
+});
 
-        $('#lista_id_editar').val(
-            $(this).data('id')
-        );
+function abrirModalEditarLista(id, nome)
+{
+    $('#lista_id_editar').val(id);
+    $('#lista_nome_editar').val(nome);
 
-        $('#lista_nome_editar').val(
-            $(this).data('nome')
-        );
-
+    $('#modalEditarLista').modal({
+        backdrop: 'static',
+        keyboard: false
     });
+
+    $('#modalEditarLista').modal('show');
+}
+
+$('#modalEditarLista').on('hidden.bs.modal', function(){
+
+    $('#lista_id_editar').val('');
+    $('#lista_nome_editar').val('');
 
 });
 

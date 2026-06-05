@@ -134,4 +134,45 @@ class ListaContato
         ]);
     }
 
+    public function duplicar(
+        $listaId,
+        $clienteId
+    )
+    {
+        $lista =
+            $this->buscar(
+                $listaId,
+                $clienteId
+            );
+
+        if(!$lista){
+            return false;
+        }
+
+        $sql = $this->db->prepare("
+
+            INSERT INTO listas_contatos
+            (
+                CLI_ID,
+                LST_Nome,
+                LST_Descricao
+            )
+            VALUES
+            (
+                ?, ?, ?
+            )
+
+        ");
+
+        $sql->execute([
+
+            $clienteId,
+            'Cópia - ' . $lista['LST_Nome'],
+            $lista['LST_Descricao']
+
+        ]);
+
+        return $this->db->lastInsertId();
+    }
+
 }

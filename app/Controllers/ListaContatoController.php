@@ -8,11 +8,13 @@ use Core\Session;
 
 use Models\ListaContato;
 use Models\ListaContatoItem;
+use Models\Contato;
 
 class ListaContatoController extends Controller
 {
     private $listaModel;
     private $listaItemModel;
+    private $contatoModel;
 
     public function __construct()
     {
@@ -23,6 +25,9 @@ class ListaContatoController extends Controller
 
         $this->listaItemModel =
             new ListaContatoItem();
+        
+        $this->contatoModel = 
+            new Contato();
     }
 
     public function index()
@@ -120,16 +125,26 @@ class ListaContatoController extends Controller
                 ?? ''
             );
 
-        if(!$id || $nome == ''){
+        if(!$id){
+
+            Session::flash(
+                'error',
+                'Lista não informada.'
+            );
+
+            $this->redirect('listacontato');
+
+            return;
+        }
+
+        if($nome == ''){
 
             Session::flash(
                 'error',
                 'Informe o nome da lista.'
             );
 
-            $this->redirect(
-                'listacontato'
-            );
+            $this->redirect('listacontato');
 
             return;
         }
@@ -231,4 +246,262 @@ class ListaContatoController extends Controller
             'listacontato'
         );
     }
+
+    private function normalizarTelefone($telefone)
+    {
+        $telefone =
+            preg_replace('/\D/', '', $telefone);
+
+        if(substr($telefone, 0, 2) != '55'){
+            $telefone =
+                '55' . $telefone;
+        }
+
+        return $telefone;
+    }
+
+    public function removerContato()
+    {
+        $usuario =
+            Auth::usuario();
+
+        $listaId =
+            $_GET['lista'] ?? null;
+
+        $contatoId =
+            $_GET['contato'] ?? null;
+
+        if(!$listaId || !$contatoId){
+
+            Session::flash(
+                'error',
+                'Dados inválidos.'
+            );
+
+            $this->redirect(
+                'listacontato'
+            );
+
+            return;
+        }
+
+        $lista =
+            $this->listaModel->buscar(
+                $listaId,
+                $usuario['cliente_id']
+            );
+
+        if(!$lista){
+
+            Session::flash(
+                'error',
+                'Lista não encontrada.'
+            );
+
+            $this->redirect(
+                'listacontato'
+            );
+
+            return;
+        }
+
+        $this->listaItemModel
+            ->removerContato(
+                $listaId,
+                $contatoId
+            );
+
+        Session::flash(
+            'success',
+            'Contato removido da lista.'
+        );
+
+        $this->redirect(
+            'listacontato/visualizar&id='
+            . $listaId
+        );
+    }
+
+    public function adicionarContato()
+    {
+        $usuario =
+            Auth::usuario();
+
+        $listaId =
+            $_POST['lista_id'] ?? null;
+
+        $nome =
+            trim($_POST['nome'] ?? '');
+
+        $telefone =
+            trim($_POST['telefone'] ?? '');
+
+        if(
+            !$listaId
+            ||
+            $nome == ''
+            ||
+            $telefone == ''
+        ){
+
+            Session::flash(
+                'error',
+                'Preencha todos os campos.'
+            );
+
+            $this->redirect(
+                'listacontato/visualizar&id='
+                . $listaId
+            );
+
+            return;
+        }
+
+        $lista =
+            $this->listaModel->buscar(
+                $listaId,
+                $usuario['cliente_id']
+            );
+
+        if(!$lista){
+
+            Session::flash(
+                'error',
+                'Lista não encontrada.'
+            );
+
+            $this->redirect(
+                'listacontato'
+            );
+
+            return;
+        }
+
+        $telefone =
+            $this->normalizarTelefone(
+                $telefone
+            );
+
+        $contato =
+            $this->contatoModel
+            ->telefoneExiste(
+                $usuario['cliente_id'],
+                $telefone
+            );
+
+        if($contato){
+
+            $contatoId =
+                $contato['CON_ID'];
+
+        }else{
+
+            $contatoId =
+                $this->contatoModel
+                ->salvar([
+
+                    'cliente_id' =>
+                        $usuario['cliente_id'],
+
+                    'nome' =>
+                        $nome,
+
+                    'telefone' =>
+                        $telefone,
+
+                    'dados_json' =>
+                        null
+
+                ]);
+        }
+
+        $this->listaItemModel
+            ->adicionar(
+                $listaId,
+                $contatoId
+            );
+
+        Session::flash(
+            'success',
+            'Contato adicionado com sucesso.'
+        );
+
+        $this->redirect(
+            'listacontato/visualizar&id='
+            . $listaId
+        );
+    }
+
+    public function duplicar()
+    {
+        $usuario =
+            Auth::usuario();
+
+        $id =
+            $_GET['id'] ?? null;
+
+        if(!$id){
+
+            Session::flash(
+                'error',
+                'Lista não informada.'
+            );
+
+            $this->redirect(
+                'listacontato'
+            );
+
+            return;
+        }
+
+        $lista =
+            $this->listaModel->buscar(
+                $id,
+                $usuario['cliente_id']
+            );
+
+        if(!$lista){
+
+            Session::flash(
+                'error',
+                'Lista não encontrada.'
+            );
+
+            $this->redirect(
+                'listacontato'
+            );
+
+            return;
+        }
+
+        $novaListaId =
+            $this->listaModel->duplicar(
+                $id,
+                $usuario['cliente_id']
+            );
+
+        $contatos =
+            $this->listaItemModel
+            ->listarIdsDaLista($id);
+
+        foreach($contatos as $contato){
+
+            $this->listaItemModel
+                ->adicionar(
+                    $novaListaId,
+                    $contato['CON_ID']
+                );
+
+        }
+
+        Session::flash(
+            'success',
+            'Lista duplicada com sucesso.'
+        );
+
+        $this->redirect(
+            'listacontato'
+        );
+    }
+
 }
