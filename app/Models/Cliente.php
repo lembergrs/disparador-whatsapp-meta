@@ -19,19 +19,31 @@ class Cliente
 
 
 
-    public function listar()
+    public function listar($status = null)
     {
-        $sql = $this->db->query("
+        if($status){
 
-            SELECT *
+            $sql = $this->db->prepare("
+                SELECT *
+                FROM clientes
+                WHERE CLI_StatusCadastro = :status
+                ORDER BY CLI_ID DESC
+            ");
 
-            FROM clientes
+            $sql->execute([
+                ':status' => $status
+            ]);
 
-            WHERE CLI_Ativo = 'S'
+        }else{
 
-            ORDER BY CLI_ID DESC
+            $sql = $this->db->query("
+                SELECT *
+                FROM clientes
+                WHERE CLI_StatusCadastro IN ('pendente','ativo')
+                ORDER BY CLI_ID DESC
+            ");
 
-        ");
+        }
 
         return $sql->fetchAll(
             PDO::FETCH_ASSOC

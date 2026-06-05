@@ -16,6 +16,30 @@ Novo Cliente
 
 </a>
 
+<div class="mt-3">
+
+    <a href="<?= BASE_URL; ?>/index.php?url=cliente"
+    class="btn btn-sm <?= empty($statusFiltro) ? 'btn-primary' : 'btn-outline-primary'; ?>">
+        Ativos/Pendentes
+    </a>
+
+    <a href="<?= BASE_URL; ?>/index.php?url=cliente/index/pendente"
+    class="btn btn-sm <?= $statusFiltro == 'pendente' ? 'btn-warning' : 'btn-outline-warning'; ?>">
+        Pendentes
+    </a>
+
+    <a href="<?= BASE_URL; ?>/index.php?url=cliente/index/ativo"
+    class="btn btn-sm <?= $statusFiltro == 'ativo' ? 'btn-success' : 'btn-outline-success'; ?>">
+        Ativos
+    </a>
+
+    <a href="<?= BASE_URL; ?>/index.php?url=cliente/index/inativo"
+    class="btn btn-sm <?= $statusFiltro == 'inativo' ? 'btn-danger' : 'btn-outline-danger'; ?>">
+        Inativos
+    </a>
+
+</div>
+
 </div>
 
 <div class="card-body">
@@ -34,7 +58,8 @@ class="table table-bordered table-striped table-hover datatable"
 <th>CPF/CNPJ</th>
 <th>Email</th>
 <th>Telefone</th>
-<th>Status</th>
+<th>Cadastro</th>
+<th>Pagamento</th>
 <th>Ações</th>
 
 </tr>
@@ -83,26 +108,60 @@ class="table table-bordered table-striped table-hover datatable"
 
 <td>
 
+    <?php
+    switch($cliente['CLI_StatusCadastro']){
+
+        case 'ativo':
+            echo '<span class="badge badge-success">Ativo</span>';
+            break;
+
+        case 'pendente':
+            echo '<span class="badge badge-warning">Pendente</span>';
+            break;
+
+        case 'inativo':
+            echo '<span class="badge badge-danger">Inativo</span>';
+            break;
+    }
+    ?>
+
+</td>
+
+<td>
+
 <?php if(
-    $cliente['CLI_StatusPagamento']
-    == 'pago'
+    $cliente['CLI_StatusPagamento'] == 'pago'
 ){ ?>
 
-<span class="badge badge-success">
-Pago
-</span>
+    <span class="badge badge-success">
+        Pago
+    </span>
 
 <?php } else { ?>
 
-<span class="badge badge-danger">
-Pendente
-</span>
+    <span class="badge badge-danger">
+        Pendente
+    </span>
 
 <?php } ?>
 
 </td>
 
 <td>
+
+<?php if($cliente['CLI_Ativo'] == 'N'){ ?>
+
+<a
+href="<?= BASE_URL; ?>/index.php?url=cliente/aprovar&id=<?= $cliente['CLI_ID']; ?>"
+class="btn btn-success btn-sm"
+onclick="return confirm('Deseja aprovar este cadastro?')"
+>
+
+<i class="fas fa-check"></i>
+
+</a>
+
+<?php } ?>
 
 <button
 type="button"
@@ -137,6 +196,8 @@ data-observacoes="<?= htmlspecialchars($cliente['CLI_Observacoes']); ?>"
 
 </a>
 
+<?php if($cliente['CLI_StatusCadastro'] != 'inativo'){ ?>
+
 <a
 href="<?= BASE_URL; ?>/index.php?url=cliente/inativar&id=<?= $cliente['CLI_ID']; ?>"
 class="btn btn-danger btn-sm"
@@ -146,6 +207,22 @@ onclick="return confirm('Deseja inativar?')"
 <i class="fas fa-trash"></i>
 
 </a>
+
+<?php } ?>
+
+<?php if($cliente['CLI_StatusCadastro'] == 'inativo'){ ?>
+
+<a
+href="<?= BASE_URL; ?>/index.php?url=cliente/reativar&id=<?= $cliente['CLI_ID']; ?>"
+class="btn btn-success btn-sm"
+onclick="return confirm('Deseja reativar este cliente?')"
+>
+
+<i class="fas fa-undo"></i>
+
+</a>
+
+<?php } ?>
 
 </td>
 

@@ -31,18 +31,28 @@ class ClienteController extends Controller
 
     public function index()
     {
+        $url = $_GET['url'] ?? 'cliente';
+
+        $partes = explode('/', $url);
+
+        $statusFiltro = $partes[2] ?? null;
+
+        if(!in_array($statusFiltro, ['pendente','ativo','inativo'])){
+            $statusFiltro = null;
+        }
+
         $clientes =
-            $this->clienteModel->listar();
+            $this->clienteModel->listar($statusFiltro);
 
         $this->view(
             'clientes/index',
             [
                 'titulo' => 'Clientes',
-                'clientes' => $clientes
+                'clientes' => $clientes,
+                'statusFiltro' => $statusFiltro
             ]
         );
     }
-
 
 
 
@@ -223,35 +233,148 @@ class ClienteController extends Controller
             );
 
             $this->redirect('cliente');
-
             return;
         }
 
-
-
-
-
         $id = (int) $_GET['id'];
 
+        $db = Database::getInstance();
 
+        $sql = "
+            UPDATE clientes
+            SET 
+                CLI_Ativo = 'N',
+                CLI_StatusCadastro = 'inativo'
+            WHERE CLI_ID = :id
+        ";
 
+        $stmt = $db->prepare($sql);
 
+        $stmt->execute([
+            ':id' => $id
+        ]);
 
-        $this->clienteModel->inativar($id);
+        $sql = "
+            UPDATE usuarios
+            SET USU_Ativo = 'N'
+            WHERE CLI_ID = :id
+        ";
 
+        $stmt = $db->prepare($sql);
 
-
-
+        $stmt->execute([
+            ':id' => $id
+        ]);
 
         Session::flash(
             'success',
             'Cliente inativado com sucesso.'
         );
 
+        $this->redirect('cliente');
+    }
 
+    public function reativar()
+    {
+        if(empty($_GET['id'])){
 
+            Session::flash(
+                'error',
+                'Cliente não informado.'
+            );
 
+            $this->redirect('cliente');
+            return;
+        }
+
+        $id = (int) $_GET['id'];
+
+        $db = Database::getInstance();
+
+        $sql = "
+            UPDATE clientes
+            SET 
+                CLI_Ativo = 'S',
+                CLI_StatusCadastro = 'ativo'
+            WHERE CLI_ID = :id
+        ";
+
+        $stmt = $db->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        $sql = "
+            UPDATE usuarios
+            SET USU_Ativo = 'S'
+            WHERE CLI_ID = :id
+        ";
+
+        $stmt = $db->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        Session::flash(
+            'success',
+            'Cliente reativado com sucesso.'
+        );
+
+        $this->redirect('cliente?status=inativo');
+    }
+
+    public function aprovar()
+    {
+        if (empty($_GET['id'])) {
+
+            Session::flash(
+                'error',
+                'Cliente não informado.'
+            );
+
+            $this->redirect('cliente');
+
+            return;
+        }
+
+        $id = (int) $_GET['id'];
+
+        $db = Database::getInstance();
+
+        $sql = "
+            UPDATE clientes
+            SET 
+                CLI_Ativo = 'S',
+                CLI_StatusCadastro = 'ativo'
+            WHERE CLI_ID = :id
+        ";
+
+        $stmt = $db->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        $sql = "
+            UPDATE usuarios
+            SET USU_Ativo = 'S'
+            WHERE CLI_ID = :id
+        ";
+
+        $stmt = $db->prepare($sql);
+
+        $stmt->execute([
+            ':id' => $id
+        ]);
+
+        Session::flash(
+            'success',
+            'Cliente aprovado com sucesso.'
+        );
 
         $this->redirect('cliente');
     }
+
 }
