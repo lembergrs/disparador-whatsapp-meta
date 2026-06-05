@@ -17,7 +17,7 @@ Nova Conta Meta
 
 <div class="card-body">
 
-<table class="table table-bordered">
+<table class="table table-bordered table-striped table-hover datatable">
 
 <thead>
 

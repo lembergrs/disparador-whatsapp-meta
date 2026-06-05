@@ -233,4 +233,228 @@ class ConversaController extends Controller
 
         return time() <= $limite;
     }
+
+    public function verificarAtualizacao()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario =
+            Auth::usuario();
+
+        $ultimaLocal =
+            $_GET['ultima']
+            ?? '';
+
+        $dados =
+            $this->conversaModel
+            ->ultimaAtualizacaoCliente(
+                $usuario['CLI_ID']
+            );
+
+        $ultimaBanco =
+            $dados['ultima']
+            ?? '';
+
+        echo json_encode([
+            'atualizar' =>
+                $ultimaBanco != $ultimaLocal,
+
+            'ultima' =>
+                $ultimaBanco
+        ]);
+    }
+
+    public function ajaxLista()
+    {
+        $usuario =
+            Auth::usuario();
+
+        $conversas =
+            $this->conversaModel
+            ->listarConversas(
+                $usuario['CLI_ID']
+            );
+
+        $conversaSelecionada = null;
+
+        if(!empty($_GET['id'])){
+
+            $conversaSelecionada =
+                $this->conversaModel
+                ->buscar(
+                    $_GET['id'],
+                    $usuario['CLI_ID']
+                );
+        }
+
+        require '../app/Views/conversas/partials/lista.php';
+    }
+
+    public function ajaxMensagens()
+    {
+        $usuario =
+            Auth::usuario();
+
+        $id =
+            $_GET['id']
+            ?? null;
+
+        if(!$id){
+            exit;
+        }
+
+        $conversa =
+            $this->conversaModel
+            ->buscar(
+                $id,
+                $usuario['CLI_ID']
+            );
+
+        if(!$conversa){
+            exit;
+        }
+
+        $mensagens =
+            $this->conversaModel
+            ->listarMensagens(
+                $id
+            );
+
+        $this->conversaModel
+            ->marcarComoLida(
+                $id,
+                $usuario['CLI_ID']
+            );
+
+        require '../app/Views/conversas/partials/mensagens.php';
+    }
+
+    public function enviarAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+
+            $usuario = Auth::usuario();
+
+            $conversaId =
+                $_POST['conversa_id'] ?? null;
+
+            $mensagem =
+                trim($_POST['mensagem'] ?? '');
+
+            if(!$conversaId || $mensagem == ''){
+
+                echo json_encode([
+                    'sucesso' => false,
+                    'erro' => 'Informe a mensagem.'
+                ]);
+
+                return;
+            }
+
+            $conversa =
+                $this->conversaModel->buscar(
+                    $conversaId,
+                    $usuario['CLI_ID']
+                );
+
+            if(!$conversa){
+
+                echo json_encode([
+                    'sucesso' => false,
+                    'erro' => 'Conversa não encontrada.'
+                ]);
+
+                return;
+            }
+
+            if(!$this->janelaAtendimentoAberta($conversaId)){
+
+                echo json_encode([
+                    'sucesso' => false,
+                    'erro' => 'A janela de atendimento de 24 horas está fechada. Use um template aprovado para iniciar nova conversa.'
+                ]);
+
+                return;
+            }
+
+            $meta =
+                new MetaService(
+                    $conversa['MTA_ID']
+                );
+
+            $response =
+                $meta->enviarTexto(
+                    $conversa['CVS_Numero'],
+                    $mensagem
+                );
+
+            $messageId = null;
+            $status = 'erro';
+
+            if(isset($response['response']['messages'][0]['id'])){
+
+                $messageId =
+                    $response['response']['messages'][0]['id'];
+
+                $status = 'enviado';
+
+            }
+
+            $this->conversaModel->salvarMensagem([
+
+                'conversa_id' =>
+                    $conversaId,
+
+                'direcao' =>
+                    'enviada',
+
+                'tipo' =>
+                    'text',
+
+                'texto' =>
+                    $mensagem,
+
+                'message_id' =>
+                    $messageId,
+
+                'status' =>
+                    $status,
+
+                'retorno' =>
+                    $response,
+
+                'data_mensagem' =>
+                    date('Y-m-d H:i:s')
+
+            ]);
+
+            if($status == 'enviado'){
+
+                echo json_encode([
+                    'sucesso' => true,
+                    'message_id' => $messageId
+                ]);
+
+                return;
+            }
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' =>
+                    $response['response']['error']['message']
+                    ?? 'Erro ao enviar mensagem.'
+            ]);
+
+        }catch(\Exception $e){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ]);
+
+        }
+    }
+
 }

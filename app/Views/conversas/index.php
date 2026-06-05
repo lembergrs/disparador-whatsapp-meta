@@ -9,35 +9,29 @@ function formatarNumeroBR($numero)
     }
 
     if(strlen($numero) == 11){
-
         return '(' . substr($numero, 0, 2) . ') '
             . substr($numero, 2, 5)
             . '-'
             . substr($numero, 7);
-
     }
 
     if(strlen($numero) == 10){
-
         return '(' . substr($numero, 0, 2) . ') '
             . substr($numero, 2, 4)
             . '-'
             . substr($numero, 6);
-
     }
 
     return $numero;
 }
 
 ?>
+
 <div class="row">
 
 <div class="col-md-4">
 
-<div
-class="card"
-style="height:75vh;"
->
+<div class="card" style="height:75vh;">
 
 <div class="card-header bg-light">
 
@@ -49,57 +43,12 @@ Conversas
 </div>
 
 <div
+id="listaConversas"
 class="list-group list-group-flush"
 style="overflow-y:auto;"
 >
 
-<?php foreach($conversas as $conversa){ ?>
-
-<?php
-
-$nome =
-    $conversa['CVS_Nome'] ?: formatarNumeroBR($conversa['CVS_Numero'])
-    ?: formatarNumeroBR($conversa['CVS_Numero']);
-
-$numeroFormatado =
-    formatarNumeroBR($conversa['CVS_Numero']);
-
-?>
-
-<a
-href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
-class="list-group-item list-group-item-action <?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'active' : ''; ?>"
->
-
-<div class="d-flex justify-content-between">
-
-<strong>
-<?= $nome; ?>
-</strong>
-
-<?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
-
-<span class="badge badge-success">
-Novo
-</span>
-
-<?php } ?>
-
-</div>
-
-<small class="<?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'text-white' : 'text-muted'; ?>">
-<?= $numeroFormatado; ?>
-</small>
-
-<br>
-
-<small class="<?= isset($conversaSelecionada['CVS_ID']) && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'] ? 'text-white' : 'text-muted'; ?>">
-<?= $conversa['CVS_UltimaMensagem']; ?>
-</small>
-
-</a>
-
-<?php } ?>
+<?php require '../app/Views/conversas/partials/lista.php'; ?>
 
 </div>
 
@@ -109,10 +58,7 @@ Novo
 
 <div class="col-md-8">
 
-<div
-class="card"
-style="height:75vh;"
->
+<div class="card" style="height:75vh;">
 
 <?php if($conversaSelecionada){ ?>
 
@@ -139,6 +85,7 @@ $nomeSelecionado =
 </div>
 
 <div
+id="areaMensagens"
 class="card-body conversa-bg"
 style="
     overflow-y:auto;
@@ -150,61 +97,7 @@ style="
 "
 >
 
-<?php foreach($mensagens as $msg){ ?>
-
-<?php if($msg['MSG_Direcao'] == 'enviada'){ ?>
-
-<div class="d-flex justify-content-end mb-2">
-
-    <div
-    class="p-2 rounded shadow-sm"
-    style="
-        background:#d9fdd3;
-        max-width:70%;
-        border-radius:8px;
-    "
-    >
-
-        <?= nl2br($msg['MSG_Texto']); ?>
-
-        <br>
-
-        <small class="text-muted">
-            <?= date('d/m/Y H:i', strtotime($msg['MSG_DataMensagem'])); ?>
-        </small>
-
-    </div>
-
-</div>
-
-<?php }else{ ?>
-
-<div class="d-flex justify-content-start mb-2">
-
-    <div
-    class="p-2 rounded shadow-sm"
-    style="
-        background:#ffffff;
-        max-width:70%;
-        border-radius:8px;
-    "
-    >
-
-        <?= nl2br($msg['MSG_Texto']); ?>
-
-        <br>
-
-        <small class="text-muted">
-            <?= date('d/m/Y H:i', strtotime($msg['MSG_DataMensagem'])); ?>
-        </small>
-
-    </div>
-
-</div>
-
-<?php } ?>
-
-<?php } ?>
+<?php require '../app/Views/conversas/partials/mensagens.php'; ?>
 
 </div>
 
@@ -214,7 +107,8 @@ style="
 
 <form
 method="POST"
-action="<?= BASE_URL; ?>/index.php?url=conversa/enviar"
+id="formEnviarMensagem"
+action="<?= BASE_URL; ?>/index.php?url=conversa/enviarAjax"
 >
 
 <input
@@ -228,6 +122,7 @@ value="<?= $conversaSelecionada['CVS_ID']; ?>"
 <input
 type="text"
 name="mensagem"
+id="campoMensagem"
 class="form-control"
 placeholder="Digite uma mensagem..."
 required
@@ -236,6 +131,7 @@ required
 <div class="input-group-append">
 
 <button
+id="btnEnviarMensagem"
 class="btn btn-success"
 type="submit"
 >
@@ -278,3 +174,154 @@ Selecione uma conversa para visualizar as mensagens.
 </div>
 
 </div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function(){
+
+    let conversaAberta =
+        '<?= $conversaSelecionada['CVS_ID'] ?? ''; ?>';
+
+    let ultimaAtualizacaoConversas = '';
+
+    function rolarMensagensParaFinal()
+    {
+        let area =
+            document.getElementById('areaMensagens');
+
+        if(area){
+            area.scrollTop =
+                area.scrollHeight;
+        }
+    }
+
+    function atualizarListaConversas()
+    {
+        $('#listaConversas').load(
+            '<?= BASE_URL; ?>/index.php?url=conversa/ajaxLista&id='
+            + conversaAberta
+        );
+    }
+
+    function atualizarMensagens()
+    {
+        if(conversaAberta == ''){
+            return;
+        }
+
+        $('#areaMensagens').load(
+            '<?= BASE_URL; ?>/index.php?url=conversa/ajaxMensagens&id='
+            + conversaAberta,
+            function(){
+                rolarMensagensParaFinal();
+            }
+        );
+    }
+
+    rolarMensagensParaFinal();
+    
+    setInterval(function(){
+
+        $.getJSON(
+
+            '<?= BASE_URL; ?>/index.php?url=conversa/verificarAtualizacao',
+
+            {
+                ultima: ultimaAtualizacaoConversas
+            },
+
+            function(retorno){
+
+                if(retorno.atualizar){
+
+                    ultimaAtualizacaoConversas =
+                        retorno.ultima;
+
+                    atualizarListaConversas();
+                    atualizarMensagens();
+
+                }
+
+            }
+
+        );
+
+    }, 3000);
+
+    $(document).on('submit', '#formEnviarMensagem', function(e){
+
+        e.preventDefault();
+
+        let form =
+            $(this);
+
+        let mensagem =
+            $('#campoMensagem').val().trim();
+
+        if(mensagem == ''){
+            return;
+        }
+
+        $('#btnEnviarMensagem')
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+
+            url:
+                form.attr('action'),
+
+            method:
+                'POST',
+
+            data:
+                form.serialize(),
+
+            dataType:
+                'json',
+
+            success: function(retorno){
+
+                if(retorno.sucesso){
+
+                    $('#campoMensagem').val('');
+
+                    atualizarMensagens();
+                    atualizarListaConversas();
+
+                }else{
+
+                    alert(
+                        retorno.erro
+                        || 'Erro ao enviar mensagem.'
+                    );
+
+                }
+
+            },
+
+            error: function(){
+
+                alert(
+                    'Erro de comunicação com o servidor.'
+                );
+
+            },
+
+            complete: function(){
+
+                $('#btnEnviarMensagem')
+                    .prop('disabled', false)
+                    .html('<i class="fas fa-paper-plane"></i>');
+
+                $('#campoMensagem').focus();
+
+            }
+
+        });
+
+    });
+    
+});
+
+</script>

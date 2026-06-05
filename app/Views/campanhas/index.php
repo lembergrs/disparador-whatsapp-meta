@@ -50,7 +50,7 @@
     <div class="card-body">
 
         <table
-        class="table table-bordered"
+        class="table table-bordered table-striped table-hover datatable"
         id="tabelaCampanhas"
         >
 
@@ -155,37 +155,12 @@
 
             </tbody>
 
-        </table>
-
-    </div>
-    
-    <div class="form-group">
-
-    <label>Lista de Contatos</label>
-
-    <select
-    name="lista"
-    class="form-control"
-    required
-    >
-
-    <option value="">
-    Selecione
-    </option>
-
-    <?php foreach($listas as $lista){ ?>
-
-    <option value="<?= $lista['LST_ID']; ?>">
-    <?= $lista['LST_Nome']; ?> (<?= $lista['total_contatos']; ?> contatos)
-    </option>
-
-    <?php } ?>
-
-    </select>
+        </table>  
 
     </div>
 
 </div>
+
 <div
 class="modal fade"
 id="modalCampanha"
@@ -264,6 +239,36 @@ data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes'
 <?php } ?>
 
 </select>
+
+<div class="form-group">
+
+<label>Lista de Contatos</label>
+
+<select
+name="lista"
+class="form-control"
+required
+>
+
+<option value="">
+Selecione uma lista
+</option>
+
+<?php foreach($listas as $lista){ ?>
+
+<option value="<?= $lista['LST_ID']; ?>">
+
+<?= $lista['LST_Nome']; ?>
+
+(<?= $lista['total_contatos']; ?> contatos)
+
+</option>
+
+<?php } ?>
+
+</select>
+
+</div>
 
 <div
 id="areaMapeamentoVariaveis"

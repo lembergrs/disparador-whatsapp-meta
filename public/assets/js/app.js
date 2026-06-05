@@ -12,29 +12,8 @@ $(document).ready(function(){
 
     }
 
-    if($('#tabelaClientes').length){
-
-        $('#tabelaClientes').DataTable({
-
-            language: {
-
-                url:
-                '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-
-            }
-
-        });
-
-    }
-
-
-
-
 
     aplicarMascaras();
-
-
-
 
 
     $('#gerarSenha').click(function(){
@@ -1122,6 +1101,61 @@ $(document).ready(function(){
 
         }
 
+    });
+
+    $(document).on('change', '.custom-file-input', function(){
+
+        let fileName =
+            $(this)
+            .val()
+            .split('\\')
+            .pop();
+
+        if(fileName == ''){
+            fileName = 'Escolher arquivo';
+        }
+
+        $(this)
+            .next('.custom-file-label')
+            .html(fileName);
+
+    });
+
+    $('.datatable').DataTable({
+        language: {
+
+            decimal: "",
+            emptyTable: "Nenhum registro encontrado",
+            info: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+            infoEmpty: "Mostrando 0 até 0 de 0 registros",
+            infoFiltered: "(filtrado de _MAX_ registros no total)",
+            thousands: ".",
+
+            lengthMenu: "Mostrar _MENU_ registros",
+
+            loadingRecords: "Carregando...",
+            processing: "Processando...",
+
+            search: "Pesquisar:",
+
+            zeroRecords: "Nenhum registro encontrado",
+
+            paginate: {
+                first: "Primeiro",
+                last: "Último",
+                next: "Próximo",
+                previous: "Anterior"
+            },
+
+            aria: {
+                sortAscending:
+                    ": ativar para ordenar a coluna em ordem crescente",
+                sortDescending:
+                    ": ativar para ordenar a coluna em ordem decrescente"
+            }
+
+        },
+        order: [[0, 'asc']]
     });
 
 });

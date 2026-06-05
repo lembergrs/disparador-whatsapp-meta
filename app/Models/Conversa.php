@@ -104,20 +104,39 @@ class Conversa
 
     public function atualizarResumo($conversaId, $ultimaMensagem, $direcao)
     {
-        $naoLida = $direcao == 'recebida' ? 'S' : 'N';
+        if($direcao == 'recebida'){
+
+            $sql = $this->db->prepare("
+
+                UPDATE conversas
+                SET
+                    CVS_UltimaMensagem = ?,
+                    CVS_DataUltimaMensagem = NOW(),
+                    CVS_NaoLida = 'S',
+                    CVS_QtdeNaoLidas = CVS_QtdeNaoLidas + 1
+                WHERE CVS_ID = ?
+
+            ");
+
+            return $sql->execute([
+                $ultimaMensagem,
+                $conversaId
+            ]);
+
+        }
 
         $sql = $this->db->prepare("
+
             UPDATE conversas
             SET
                 CVS_UltimaMensagem = ?,
-                CVS_DataUltimaMensagem = NOW(),
-                CVS_NaoLida = ?
+                CVS_DataUltimaMensagem = NOW()
             WHERE CVS_ID = ?
+
         ");
 
         return $sql->execute([
             $ultimaMensagem,
-            $naoLida,
             $conversaId
         ]);
     }
@@ -188,10 +207,14 @@ class Conversa
     public function marcarComoLida($conversaId, $clienteId)
     {
         $sql = $this->db->prepare("
+
             UPDATE conversas
-            SET CVS_NaoLida = 'N'
+            SET
+                CVS_NaoLida = 'N',
+                CVS_QtdeNaoLidas = 0
             WHERE CVS_ID = ?
             AND CLI_ID = ?
+
         ");
 
         return $sql->execute([
@@ -234,6 +257,26 @@ class Conversa
 
         $sql->execute([
             $conversaId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function ultimaAtualizacaoCliente($clienteId)
+    {
+        $sql = $this->db->prepare("
+
+            SELECT MAX(CVS_DataUltimaMensagem) AS ultima
+
+            FROM conversas
+
+            WHERE CLI_ID = ?
+            AND CVS_Ativo = 'S'
+
+        ");
+
+        $sql->execute([
+            $clienteId
         ]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);

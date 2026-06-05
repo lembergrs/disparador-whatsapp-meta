@@ -67,7 +67,7 @@ Novo Template
 
 <table
 id="tabelaTemplates"
-class="table table-bordered table-striped"
+class="table table-bordered table-striped table-hover datatable"
 >
 
 <thead>

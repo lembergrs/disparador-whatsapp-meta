@@ -40,12 +40,17 @@ class ImportacaoController extends Controller
                 $usuario['cliente_id']
             );
 
+        $listaSelecionada =
+            $_GET['lista']
+            ?? '';
+
         $this->view(
             'importacao/index',
             [
                 'titulo' => 'Importação',
                 'contatos' => $contatos,
-                'listas' => $listas
+                'listas' => $listas,
+                'listaSelecionada' => $listaSelecionada
             ]
         );
     }

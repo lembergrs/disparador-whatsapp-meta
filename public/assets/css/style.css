@@ -52,3 +52,116 @@
 .badge-warning{
     padding: 6px 10px;
 }
+
+.login-custom-page{
+    min-height: 100vh;
+    margin: 0;
+    background:
+        linear-gradient(
+            135deg,
+            #0f172a 0%,
+            #1d4ed8 55%,
+            #0ea5e9 100%
+        );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+}
+
+.login-custom-wrapper{
+    width: 100%;
+    max-width: 430px;
+    padding: 20px;
+}
+
+.login-custom-card{
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 35px 32px;
+    box-shadow: 0 20px 55px rgba(0,0,0,.25);
+}
+
+.login-logo-area{
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.login-image-placeholder{
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 18px auto;
+    border-radius: 24px;
+    background: #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+
+.login-image-placeholder img{
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.login-icon-fallback{
+    display: none;
+    width: 100%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    color: #22c55e;
+    font-size: 58px;
+}
+
+.login-logo-area h2{
+    font-weight: 700;
+    font-size: 25px;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+
+.login-logo-area p{
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+}
+
+.login-custom-card label{
+    font-weight: 600;
+    color: #334155;
+    font-size: 14px;
+}
+
+.login-custom-card .form-control{
+    height: 46px;
+    border-radius: 0 10px 10px 0;
+}
+
+.login-custom-card .input-group-text{
+    border-radius: 10px 0 0 10px;
+    background: #f8fafc;
+    color: #64748b;
+}
+
+.btn-login-custom{
+    height: 48px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-top: 12px;
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-login-custom:hover{
+    background: #1e40af;
+    border-color: #1e40af;
+}
+
+.login-footer{
+    text-align: center;
+    color: #94a3b8;
+    margin-top: 25px;
+}

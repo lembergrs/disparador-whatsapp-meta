@@ -22,7 +22,7 @@ Novo Cliente
 
 <table
 id="tabelaClientes"
-class="table table-bordered table-striped"
+class="table table-bordered table-striped table-hover datatable"
 >
 
 <thead>

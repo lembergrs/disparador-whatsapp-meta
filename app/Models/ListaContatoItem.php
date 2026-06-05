@@ -72,4 +72,54 @@ class ListaContatoItem
         );
     }
 
+    public function removerContato(
+        $listaId,
+        $contatoId
+    )
+    {
+        $sql = $this->db->prepare("
+
+            DELETE FROM lista_contatos_itens
+
+            WHERE LST_ID = ?
+            AND CON_ID = ?
+
+        ");
+
+        return $sql->execute([
+
+            $listaId,
+            $contatoId
+
+        ]);
+    }
+
+    public function contatoExisteNaLista(
+        $listaId,
+        $contatoId
+    )
+    {
+        $sql = $this->db->prepare("
+
+            SELECT 1
+
+            FROM lista_contatos_itens
+
+            WHERE LST_ID = ?
+            AND CON_ID = ?
+
+            LIMIT 1
+
+        ");
+
+        $sql->execute([
+
+            $listaId,
+            $contatoId
+
+        ]);
+
+        return $sql->fetchColumn();
+    }
+
 }

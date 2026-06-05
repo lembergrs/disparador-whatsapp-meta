@@ -49,7 +49,10 @@ Selecione uma lista
 
 <?php foreach($listas as $lista){ ?>
 
-<option value="<?= $lista['LST_ID']; ?>">
+<option
+value="<?= $lista['LST_ID']; ?>"
+<?= isset($listaSelecionada) && $listaSelecionada == $lista['LST_ID'] ? 'selected' : ''; ?>
+>
 <?= $lista['LST_Nome']; ?>
 (<?= $lista['total_contatos']; ?> contatos)
 </option>
@@ -133,7 +136,7 @@ Importar
 
 <table
 id="tabelaContatos"
-class="table table-bordered table-striped"
+class="table table-bordered table-striped table-hover datatable"
 >
 
 <thead>
@@ -190,23 +193,6 @@ $(document).ready(function(){
             '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
         }
     });
-
-    $('.custom-file-input').on(
-        'change',
-        function(){
-
-            let fileName =
-                $(this)
-                .val()
-                .split('\\')
-                .pop();
-
-            $(this)
-                .next('.custom-file-label')
-                .html(fileName);
-
-        }
-    );
 
 });
 

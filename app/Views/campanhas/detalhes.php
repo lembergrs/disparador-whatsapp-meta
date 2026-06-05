@@ -159,7 +159,7 @@ function dataBR($data)
     <div class="card-body">
 
         <table
-        class="table table-bordered table-striped table-hover"
+        class="table table-bordered table-striped table-hover datatable"
         id="tabelaFila"
         >
 

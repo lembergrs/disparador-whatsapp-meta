@@ -11,15 +11,26 @@ class LoginController extends Controller
 {
     public function index()
     {
-		$this->view(
-			'auth/login',
-			[],
-			false
-		);
+        $this->view(
+            'auth/login',
+            [],
+            false
+        );
     }
 
     public function autenticar()
     {
+        if(!$this->validarCaptcha()){
+
+            Session::flash(
+                'error',
+                'Confirme que você não é um robô.'
+            );
+
+            $this->redirect('login');
+            return;
+        }
+
         $db = Database::getInstance();
 
         $sql = $db->prepare("
@@ -34,10 +45,6 @@ class LoginController extends Controller
         ]);
 
         $usuario = $sql->fetch(PDO::FETCH_ASSOC);
-
-        // echo '<pre>';
-        // print_r($usuario);
-        // exit;
 
         if(
             $usuario &&
@@ -59,7 +66,8 @@ class LoginController extends Controller
 
             $this->redirect('dashboard');
 
-        } else {
+        }else{
+
             Session::flash(
                 'error',
                 'Usuário ou senha inválidos.'
@@ -69,16 +77,87 @@ class LoginController extends Controller
         }
     }
 
+    private function validarCaptcha()
+    {
+        /*
+            Configure em config/config.php:
+
+            define('RECAPTCHA_SITE_KEY', 'sua_site_key');
+            define('RECAPTCHA_SECRET_KEY', 'sua_secret_key');
+
+            Se não configurar, o captcha não será obrigatório.
+        */
+
+        if(
+            !defined('RECAPTCHA_SECRET_KEY') ||
+            RECAPTCHA_SECRET_KEY == ''
+        ){
+            return true;
+        }
+
+        $captcha =
+            $_POST['g-recaptcha-response']
+            ?? '';
+
+        if(empty($captcha)){
+            return false;
+        }
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+
+            CURLOPT_URL =>
+                'https://www.google.com/recaptcha/api/siteverify',
+
+            CURLOPT_RETURNTRANSFER => true,
+
+            CURLOPT_POST => true,
+
+            CURLOPT_POSTFIELDS => http_build_query([
+
+                'secret' =>
+                    RECAPTCHA_SECRET_KEY,
+
+                'response' =>
+                    $captcha,
+
+                'remoteip' =>
+                    $_SERVER['REMOTE_ADDR']
+                    ?? null
+
+            ])
+
+        ]);
+
+        $response =
+            curl_exec($curl);
+
+        curl_close($curl);
+
+        $resultado =
+            json_decode(
+                $response,
+                true
+            );
+
+        return !empty($resultado['success']);
+    }
+
+    public function esqueciSenha()
+    {
+        $this->view(
+            'auth/esqueci_senha',
+            [],
+            false
+        );
+    }
+
     public function sair()
     {
         session_destroy();
 
         session_start();
-
-        // Session::flash(
-        //     'success',
-        //     'Logout realizado com sucesso.'
-        // );
 
         $this->redirect('login');
     }

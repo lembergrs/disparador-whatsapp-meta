@@ -78,7 +78,7 @@ Sair
 
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
 
-<a href="<?= BASE_URL; ?>/dashboard" class="brand-link">
+<a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link">
 
 <span class="brand-text font-weight-light">
 Disparador
@@ -155,6 +155,23 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <?php } ?>
 
 <?php if($usuario['nivel'] == 'cliente'){ ?>
+
+<li class="nav-item">
+
+    <a
+    href="<?= BASE_URL; ?>/index.php?url=listacontato"
+    class="nav-link <?= str_contains($url, 'listacontato') ? 'active' : ''; ?>""
+    >
+
+        <i class="nav-icon fas fa-list"></i>
+
+        <p>
+            Listas de Contatos
+        </p>
+
+    </a>
+
+</li>
 
 <li class="nav-item">
 
