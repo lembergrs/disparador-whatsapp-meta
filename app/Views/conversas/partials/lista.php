@@ -49,37 +49,101 @@ $ativa =
     isset($conversaSelecionada['CVS_ID'])
     && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'];
 
+$itemClass =
+    $ativa
+    ? 'active'
+    : '';
+
+if(!$ativa && $conversa['CVS_NaoLida'] == 'S'){
+    $itemClass .= ' font-weight-bold';
+}
+
 ?>
 
 <a
 href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
-class="list-group-item list-group-item-action <?= $ativa ? 'active' : ''; ?>"
+class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
+data-id="<?= $conversa['CVS_ID']; ?>"
 >
 
-<div class="d-flex justify-content-between">
+<div class="d-flex justify-content-between align-items-start">
 
-<strong>
-<?= $nome; ?>
-</strong>
+    <div style="max-width:75%;">
 
-<?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
+        <strong>
+            <?= htmlspecialchars($nome); ?>
+        </strong>
 
-<span class="badge badge-success">
-<?= $conversa['CVS_QtdeNaoLidas'] > 0 ? $conversa['CVS_QtdeNaoLidas'] : 'Novo'; ?>
-</span>
+        <br>
 
-<?php } ?>
+        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
+            <?= htmlspecialchars($numeroFormatado); ?>
+        </small>
+
+    </div>
+
+    <div class="text-right">
+
+        <?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
+
+            <span class="badge badge-success mb-1">
+                <?= $conversa['CVS_QtdeNaoLidas'] > 0 ? $conversa['CVS_QtdeNaoLidas'] : 'Novo'; ?>
+            </span>
+
+            <br>
+
+        <?php } ?>
+
+        <button
+            type="button"
+            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-secondary'; ?> btn-marcar-nao-lida"
+            data-id="<?= $conversa['CVS_ID']; ?>"
+            title="Marcar como não lida"
+        >
+            <i class="far fa-envelope"></i>
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-primary'; ?> btn-etiquetas"
+            data-id="<?= $conversa['CVS_ID']; ?>"
+            title="Etiquetas"
+        >
+            <i class="fas fa-tags"></i>
+        </button>
+
+    </div>
 
 </div>
 
-<small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-<?= $numeroFormatado; ?>
-</small>
+<?php if(!empty($conversa['Etiquetas'])){ ?>
+
+    <div class="mt-1">
+        <?php foreach(explode('|', $conversa['Etiquetas']) as $etiquetaTexto){ ?>
+
+            <?php
+            $partes = explode('#', $etiquetaTexto);
+            $nomeEtiqueta = $partes[0] ?? '';
+            $corEtiqueta = $partes[1] ?? 'secondary';
+            ?>
+
+            <?php if($nomeEtiqueta != ''){ ?>
+
+                <span class="badge badge-<?= htmlspecialchars($corEtiqueta); ?>">
+                    <?= htmlspecialchars($nomeEtiqueta); ?>
+                </span>
+
+            <?php } ?>
+
+        <?php } ?>
+    </div>
+
+<?php } ?>
 
 <br>
 
 <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-<?= $conversa['CVS_UltimaMensagem']; ?>
+    <?= htmlspecialchars($conversa['CVS_UltimaMensagem']); ?>
 </small>
 
 </a>

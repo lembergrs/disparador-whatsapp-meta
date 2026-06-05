@@ -292,20 +292,20 @@ class ConversaController extends Controller
 
     public function ajaxMensagens()
     {
-        $usuario =
-            Auth::usuario();
+        $usuario = Auth::usuario();
 
         $id =
-            $_GET['id']
-            ?? null;
+            $_GET['id'] ?? null;
+
+        $marcarLida =
+            $_GET['marcar_lida'] ?? 'N';
 
         if(!$id){
             exit;
         }
 
         $conversa =
-            $this->conversaModel
-            ->buscar(
+            $this->conversaModel->buscar(
                 $id,
                 $usuario['CLI_ID']
             );
@@ -315,16 +315,18 @@ class ConversaController extends Controller
         }
 
         $mensagens =
-            $this->conversaModel
-            ->listarMensagens(
+            $this->conversaModel->listarMensagens(
                 $id
             );
 
-        $this->conversaModel
-            ->marcarComoLida(
+        if($marcarLida == 'S'){
+
+            $this->conversaModel->marcarComoLida(
                 $id,
                 $usuario['CLI_ID']
             );
+
+        }
 
         require '../app/Views/conversas/partials/mensagens.php';
     }
@@ -455,6 +457,158 @@ class ConversaController extends Controller
             ]);
 
         }
+    }
+
+    public function marcarNaoLidaAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+
+        $id =
+            $_POST['conversa_id'] ?? null;
+
+        if(!$id){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Conversa não informada.'
+            ]);
+
+            return;
+        }
+
+        $ok =
+            $this->conversaModel->marcarComoNaoLida(
+                $id,
+                $usuario['CLI_ID']
+            );
+
+        echo json_encode([
+            'sucesso' => $ok
+        ]);
+    }
+
+    public function etiquetasAjax()
+    {
+        $usuario = Auth::usuario();
+
+        $id =
+            $_GET['conversa_id'] ?? null;
+
+        if(!$id){
+            exit;
+        }
+
+        $conversa =
+            $this->conversaModel->buscar(
+                $id,
+                $usuario['CLI_ID']
+            );
+
+        if(!$conversa){
+            exit;
+        }
+
+        $etiquetas =
+            $this->conversaModel->listarEtiquetas(
+                $usuario['CLI_ID']
+            );
+
+        $etiquetasConversa =
+            $this->conversaModel->etiquetasDaConversa(
+                $id,
+                $usuario['CLI_ID']
+            );
+
+        require '../app/Views/conversas/partials/etiquetas.php';
+    }
+
+    public function salvarEtiquetasAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+
+        $id =
+            $_POST['conversa_id'] ?? null;
+
+        $etiquetas =
+            $_POST['etiquetas'] ?? [];
+
+        if(!$id){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Conversa não informada.'
+            ]);
+
+            return;
+        }
+
+        if(!is_array($etiquetas)){
+            $etiquetas = [];
+        }
+
+        $ok =
+            $this->conversaModel->salvarEtiquetasConversa(
+                $id,
+                $usuario['CLI_ID'],
+                $etiquetas
+            );
+
+        echo json_encode([
+            'sucesso' => $ok
+        ]);
+    }
+
+    public function criarEtiquetaAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+
+        $nome =
+            trim($_POST['nome'] ?? '');
+
+        $cor =
+            $_POST['cor'] ?? 'secondary';
+
+        $coresPermitidas = [
+            'secondary',
+            'primary',
+            'success',
+            'danger',
+            'warning',
+            'info',
+            'dark'
+        ];
+
+        if(!in_array($cor, $coresPermitidas)){
+            $cor = 'secondary';
+        }
+
+        if($nome == ''){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Informe o nome da etiqueta.'
+            ]);
+
+            return;
+        }
+
+        $id =
+            $this->conversaModel->criarEtiqueta(
+                $usuario['CLI_ID'],
+                $nome,
+                $cor
+            );
+
+        echo json_encode([
+            'sucesso' => true,
+            'id' => $id
+        ]);
     }
 
 }

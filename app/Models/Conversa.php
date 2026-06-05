@@ -144,18 +144,24 @@ class Conversa
     public function listarConversas($clienteId)
     {
         $sql = $this->db->prepare("
-
-            SELECT *
-
-            FROM conversas
-
-            WHERE CLI_ID = ?
-            AND CVS_Ativo = 'S'
-
-            ORDER BY CVS_DataUltimaMensagem DESC
-
+            SELECT 
+                c.*,
+                GROUP_CONCAT(
+                    CONCAT(e.ETQ_Nome, '#', e.ETQ_Cor)
+                    ORDER BY e.ETQ_Nome ASC
+                    SEPARATOR '|'
+                ) AS Etiquetas
+            FROM conversas c
+            LEFT JOIN conversa_etiqueta_vinculos v
+                ON v.CVS_ID = c.CVS_ID
+            LEFT JOIN conversa_etiquetas e
+                ON e.ETQ_ID = v.ETQ_ID
+                AND e.ETQ_Ativo = 'S'
+            WHERE c.CLI_ID = ?
+            AND c.CVS_Ativo = 'S'
+            GROUP BY c.CVS_ID
+            ORDER BY c.CVS_DataUltimaMensagem DESC
             LIMIT 100
-
         ");
 
         $sql->execute([$clienteId]);
@@ -227,7 +233,12 @@ class Conversa
     {
         $sql = $this->db->prepare("
             UPDATE conversas
-            SET CVS_NaoLida = 'S'
+            SET 
+                CVS_NaoLida = 'S',
+                CVS_QtdeNaoLidas = CASE 
+                    WHEN CVS_QtdeNaoLidas <= 0 THEN 1 
+                    ELSE CVS_QtdeNaoLidas 
+                END
             WHERE CVS_ID = ?
             AND CLI_ID = ?
         ");
@@ -280,6 +291,138 @@ class Conversa
         ]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function listarEtiquetas($clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM conversa_etiquetas
+            WHERE CLI_ID = ?
+            AND ETQ_Ativo = 'S'
+            ORDER BY ETQ_Nome ASC
+        ");
+
+        $sql->execute([
+            $clienteId
+        ]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function etiquetasDaConversa($conversaId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT e.*
+            FROM conversa_etiquetas e
+            INNER JOIN conversa_etiqueta_vinculos v
+                ON v.ETQ_ID = e.ETQ_ID
+            INNER JOIN conversas c
+                ON c.CVS_ID = v.CVS_ID
+            WHERE v.CVS_ID = ?
+            AND e.CLI_ID = ?
+            AND c.CLI_ID = ?
+            AND e.ETQ_Ativo = 'S'
+            ORDER BY e.ETQ_Nome ASC
+        ");
+
+        $sql->execute([
+            $conversaId,
+            $clienteId,
+            $clienteId
+        ]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function salvarEtiquetasConversa($conversaId, $clienteId, $etiquetas)
+    {
+        $conversa =
+            $this->buscar(
+                $conversaId,
+                $clienteId
+            );
+
+        if(!$conversa){
+            return false;
+        }
+
+        $sql = $this->db->prepare("
+            DELETE v
+            FROM conversa_etiqueta_vinculos v
+            INNER JOIN conversa_etiquetas e
+                ON e.ETQ_ID = v.ETQ_ID
+            WHERE v.CVS_ID = ?
+            AND e.CLI_ID = ?
+        ");
+
+        $sql->execute([
+            $conversaId,
+            $clienteId
+        ]);
+
+        if(!empty($etiquetas)){
+
+            $insert = $this->db->prepare("
+                INSERT IGNORE INTO conversa_etiqueta_vinculos
+                (
+                    CVS_ID,
+                    ETQ_ID
+                )
+                SELECT
+                    ?,
+                    ETQ_ID
+                FROM conversa_etiquetas
+                WHERE ETQ_ID = ?
+                AND CLI_ID = ?
+                AND ETQ_Ativo = 'S'
+                LIMIT 1
+            ");
+
+            foreach($etiquetas as $etqId){
+
+                $etqId =
+                    (int) $etqId;
+
+                if($etqId <= 0){
+                    continue;
+                }
+
+                $insert->execute([
+                    $conversaId,
+                    $etqId,
+                    $clienteId
+                ]);
+
+            }
+
+        }
+
+        return true;
+    }
+
+    public function criarEtiqueta($clienteId, $nome, $cor = 'secondary')
+    {
+        $sql = $this->db->prepare("
+            INSERT INTO conversa_etiquetas
+            (
+                CLI_ID,
+                ETQ_Nome,
+                ETQ_Cor
+            )
+            VALUES
+            (
+                ?, ?, ?
+            )
+        ");
+
+        $sql->execute([
+            $clienteId,
+            $nome,
+            $cor
+        ]);
+
+        return $this->db->lastInsertId();
     }
 
 }

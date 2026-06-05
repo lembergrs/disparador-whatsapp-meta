@@ -29,155 +29,169 @@ function formatarNumeroBR($numero)
 
 <div class="row">
 
-<div class="col-md-4">
+    <div class="col-md-4">
 
-<div class="card" style="height:75vh;">
+        <div class="card" style="height:75vh;">
 
-<div class="card-header bg-light">
+            <div class="card-header bg-light">
+                <strong>
+                    <i class="fas fa-comments"></i>
+                    Conversas
+                </strong>
+            </div>
 
-<strong>
-<i class="fas fa-comments"></i>
-Conversas
-</strong>
+            <div
+                id="listaConversas"
+                class="list-group list-group-flush"
+                style="overflow-y:auto;"
+            >
+                <?php require '../app/Views/conversas/partials/lista.php'; ?>
+            </div>
 
-</div>
+        </div>
 
-<div
-id="listaConversas"
-class="list-group list-group-flush"
-style="overflow-y:auto;"
->
+    </div>
 
-<?php require '../app/Views/conversas/partials/lista.php'; ?>
+    <div class="col-md-8">
 
-</div>
+        <div class="card" style="height:75vh;">
 
-</div>
+            <?php if($conversaSelecionada){ ?>
 
-</div>
+                <?php
 
-<div class="col-md-8">
+                $nomeSelecionado =
+                    $conversaSelecionada['CVS_Nome']
+                    ?: formatarNumeroBR($conversaSelecionada['CVS_Numero']);
 
-<div class="card" style="height:75vh;">
+                ?>
 
-<?php if($conversaSelecionada){ ?>
+                <div class="card-header bg-light">
 
-<?php
+                    <strong>
+                        <?= htmlspecialchars($nomeSelecionado); ?>
+                    </strong>
 
-$nomeSelecionado =
-    $conversaSelecionada['CVS_Nome']
-    ?: formatarNumeroBR($conversaSelecionada['CVS_Numero']);
+                    <br>
 
-?>
+                    <small class="text-muted">
+                        <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
+                    </small>
 
-<div class="card-header bg-light">
+                </div>
 
-<strong>
-<?= $nomeSelecionado; ?>
-</strong>
+                <div
+                    id="areaMensagens"
+                    class="card-body conversa-bg"
+                    style="
+                        overflow-y:auto;
+                        background-color:#efeae2;
+                        background-image:
+                            radial-gradient(circle at 25px 25px, rgba(0,0,0,0.04) 2px, transparent 0),
+                            radial-gradient(circle at 75px 75px, rgba(0,0,0,0.03) 2px, transparent 0);
+                        background-size:100px 100px;
+                    "
+                >
+                    <?php require '../app/Views/conversas/partials/mensagens.php'; ?>
+                </div>
 
-<br>
+                <div class="card-footer bg-light">
 
-<small class="text-muted">
-<?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
-</small>
+                    <?php if($janelaAberta){ ?>
 
-</div>
+                        <form
+                            method="POST"
+                            id="formEnviarMensagem"
+                            action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarAjax"
+                        >
 
-<div
-id="areaMensagens"
-class="card-body conversa-bg"
-style="
-    overflow-y:auto;
-    background-color:#efeae2;
-    background-image:
-        radial-gradient(circle at 25px 25px, rgba(0,0,0,0.04) 2px, transparent 0),
-        radial-gradient(circle at 75px 75px, rgba(0,0,0,0.03) 2px, transparent 0);
-    background-size:100px 100px;
-"
->
+                            <input
+                                type="hidden"
+                                name="conversa_id"
+                                value="<?= $conversaSelecionada['CVS_ID']; ?>"
+                            >
 
-<?php require '../app/Views/conversas/partials/mensagens.php'; ?>
+                            <div class="input-group">
 
-</div>
+                                <input
+                                    type="text"
+                                    name="mensagem"
+                                    id="campoMensagem"
+                                    class="form-control"
+                                    placeholder="Digite uma mensagem..."
+                                    autocomplete="off"
+                                    required
+                                >
 
-<div class="card-footer bg-light">
+                                <div class="input-group-append">
 
-<?php if($janelaAberta){ ?>
+                                    <button
+                                        id="btnEnviarMensagem"
+                                        class="btn btn-success"
+                                        type="submit"
+                                    >
+                                        <i class="fas fa-paper-plane"></i>
+                                    </button>
 
-<form
-method="POST"
-id="formEnviarMensagem"
-action="<?= BASE_URL; ?>/index.php?url=conversa/enviarAjax"
->
+                                </div>
 
-<input
-type="hidden"
-name="conversa_id"
-value="<?= $conversaSelecionada['CVS_ID']; ?>"
->
+                            </div>
 
-<div class="input-group">
+                        </form>
 
-<input
-type="text"
-name="mensagem"
-id="campoMensagem"
-class="form-control"
-placeholder="Digite uma mensagem..."
-required
->
+                    <?php }else{ ?>
 
-<div class="input-group-append">
+                        <div class="alert alert-warning mb-0">
+                            A janela de atendimento de 24 horas está fechada.
+                            Para falar com este contato novamente, envie um template aprovado.
+                        </div>
 
-<button
-id="btnEnviarMensagem"
-class="btn btn-success"
-type="submit"
->
+                    <?php } ?>
 
-<i class="fas fa-paper-plane"></i>
+                </div>
 
-</button>
+            <?php }else{ ?>
 
-</div>
+                <div class="card-body text-center text-muted d-flex align-items-center justify-content-center">
+                    Selecione uma conversa para visualizar as mensagens.
+                </div>
 
-</div>
+            <?php } ?>
 
-</form>
+        </div>
 
-<?php }else{ ?>
-
-<div class="alert alert-warning mb-0">
-
-A janela de atendimento de 24 horas está fechada.
-Para falar com este contato novamente, envie um template aprovado.
-
-</div>
-
-<?php } ?>
-
-</div>
-
-<?php }else{ ?>
-
-<div class="card-body text-center text-muted">
-
-Selecione uma conversa para visualizar as mensagens.
+    </div>
 
 </div>
 
-<?php } ?>
+<div class="modal fade" id="modalEtiquetas" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
 
-</div>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    Etiquetas da conversa
+                </h5>
 
-</div>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
 
+            <div class="modal-body" id="conteudoEtiquetas">
+                Carregando...
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <script>
 
 document.addEventListener('DOMContentLoaded', function(){
+
+    const urlBase =
+        '<?= rtrim(BASE_URL, '/'); ?>/index.php?url=';
 
     let conversaAberta =
         '<?= $conversaSelecionada['CVS_ID'] ?? ''; ?>';
@@ -198,20 +212,26 @@ document.addEventListener('DOMContentLoaded', function(){
     function atualizarListaConversas()
     {
         $('#listaConversas').load(
-            '<?= BASE_URL; ?>/index.php?url=conversa/ajaxLista&id='
-            + conversaAberta
+            urlBase + 'conversa/ajaxLista&id=' + conversaAberta
         );
     }
 
-    function atualizarMensagens()
+    function atualizarMensagens(marcarLida)
     {
         if(conversaAberta == ''){
             return;
         }
 
+        if($('#areaMensagens').length == 0){
+            return;
+        }
+
         $('#areaMensagens').load(
-            '<?= BASE_URL; ?>/index.php?url=conversa/ajaxMensagens&id='
-            + conversaAberta,
+            urlBase
+                + 'conversa/ajaxMensagens&id='
+                + conversaAberta
+                + '&marcar_lida='
+                + (marcarLida || 'N'),
             function(){
                 rolarMensagensParaFinal();
             }
@@ -219,12 +239,12 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     rolarMensagensParaFinal();
-    
+
     setInterval(function(){
 
         $.getJSON(
 
-            '<?= BASE_URL; ?>/index.php?url=conversa/verificarAtualizacao',
+            urlBase + 'conversa/verificarAtualizacao',
 
             {
                 ultima: ultimaAtualizacaoConversas
@@ -238,7 +258,7 @@ document.addEventListener('DOMContentLoaded', function(){
                         retorno.ultima;
 
                     atualizarListaConversas();
-                    atualizarMensagens();
+                    atualizarMensagens('N');
 
                 }
 
@@ -286,7 +306,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                     $('#campoMensagem').val('');
 
-                    atualizarMensagens();
+                    atualizarMensagens('N');
                     atualizarListaConversas();
 
                 }else{
@@ -321,7 +341,174 @@ document.addEventListener('DOMContentLoaded', function(){
         });
 
     });
-    
+
+    $(document).on('click', '.item-conversa', function(e){
+
+        if($(e.target).closest('button, a.btn, .btn-marcar-nao-lida, .btn-etiquetas').length){
+            return;
+        }
+
+        let conversaId =
+            $(this).data('id');
+
+        if(!conversaId){
+            return;
+        }
+
+        window.location.href =
+            urlBase + 'conversa&id=' + conversaId;
+
+    });
+
+    $(document).on('click', '.btn-marcar-nao-lida', function(e){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let conversaId =
+            $(this).data('id');
+
+        if(!conversaId){
+            return;
+        }
+
+        $.post(
+
+            urlBase + 'conversa/marcarNaoLidaAjax',
+
+            {
+                conversa_id: conversaId
+            },
+
+            function(retorno){
+
+                if(retorno.sucesso){
+
+                    atualizarListaConversas();
+
+                }else{
+
+                    alert(
+                        retorno.erro
+                        || 'Erro ao marcar conversa como não lida.'
+                    );
+
+                }
+
+            },
+
+            'json'
+
+        );
+
+    });
+
+    $(document).on('click', '.btn-etiquetas', function(e){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        let conversaId =
+            $(this).data('id');
+
+        if(!conversaId){
+            return;
+        }
+
+        $('#conteudoEtiquetas').html('Carregando...');
+        $('#modalEtiquetas').modal('show');
+
+        $('#conteudoEtiquetas').load(
+            urlBase + 'conversa/etiquetasAjax&conversa_id=' + conversaId
+        );
+
+    });
+
+    $(document).on('submit', '#formEtiquetasConversa', function(e){
+
+        e.preventDefault();
+
+        $.post(
+
+            urlBase + 'conversa/salvarEtiquetasAjax',
+
+            $(this).serialize(),
+
+            function(retorno){
+
+                if(retorno.sucesso){
+
+                    $('#modalEtiquetas').modal('hide');
+                    atualizarListaConversas();
+
+                }else{
+
+                    alert(
+                        retorno.erro
+                        || 'Erro ao salvar etiquetas.'
+                    );
+
+                }
+
+            },
+
+            'json'
+
+        );
+
+    });
+
+    $(document).on('click', '#btnCriarEtiqueta', function(){
+
+        let nome =
+            $('#novaEtiquetaNome').val().trim();
+
+        let cor =
+            $('#novaEtiquetaCor').val();
+
+        let conversaId =
+            $('#formEtiquetasConversa input[name="conversa_id"]').val();
+
+        if(nome == ''){
+            alert('Informe o nome da etiqueta.');
+            $('#novaEtiquetaNome').focus();
+            return;
+        }
+
+        $.post(
+
+            urlBase + 'conversa/criarEtiquetaAjax',
+
+            {
+                nome: nome,
+                cor: cor
+            },
+
+            function(retorno){
+
+                if(retorno.sucesso){
+
+                    $('#conteudoEtiquetas').load(
+                        urlBase + 'conversa/etiquetasAjax&conversa_id=' + conversaId
+                    );
+
+                }else{
+
+                    alert(
+                        retorno.erro
+                        || 'Erro ao criar etiqueta.'
+                    );
+
+                }
+
+            },
+
+            'json'
+
+        );
+
+    });
+
 });
 
 </script>
