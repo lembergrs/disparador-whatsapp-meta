@@ -40,6 +40,69 @@ function formatarNumeroBR($numero)
                 </strong>
             </div>
 
+            <div class="border-bottom p-2">
+
+                <input
+                    type="text"
+                    id="filtroBusca"
+                    class="form-control form-control-sm mb-2"
+                    placeholder="Buscar nome ou telefone..."
+                    value="<?= htmlspecialchars($busca ?? ''); ?>"
+                    autocomplete="off"
+                >
+
+                <div class="row">
+
+                    <div class="col-6">
+
+                        <select
+                            id="filtroStatus"
+                            class="form-control form-control-sm"
+                        >
+                            <option value="" <?= empty($status) ? 'selected' : ''; ?>>
+                                Todas
+                            </option>
+
+                            <option value="N" <?= ($status ?? '') == 'N' ? 'selected' : ''; ?>>
+                                Não lidas
+                            </option>
+
+                            <option value="L" <?= ($status ?? '') == 'L' ? 'selected' : ''; ?>>
+                                Lidas
+                            </option>
+                        </select>
+
+                    </div>
+
+                    <div class="col-6">
+
+                        <select
+                            id="filtroEtiqueta"
+                            class="form-control form-control-sm"
+                        >
+                            <option value="" <?= empty($etiqueta) ? 'selected' : ''; ?>>
+                                Todas etiquetas
+                            </option>
+
+                            <?php foreach(($etiquetas ?? []) as $etq){ ?>
+
+                                <option
+                                    value="<?= $etq['ETQ_ID']; ?>"
+                                    <?= (($etiqueta ?? '') == $etq['ETQ_ID']) ? 'selected' : ''; ?>
+                                >
+                                    <?= htmlspecialchars($etq['ETQ_Nome']); ?>
+                                </option>
+
+                            <?php } ?>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+            </div>
+
             <div
                 id="listaConversas"
                 class="list-group list-group-flush"
@@ -54,109 +117,13 @@ function formatarNumeroBR($numero)
 
     <div class="col-md-8">
 
-        <div class="card" style="height:75vh;">
+        <div
+            id="painelConversa"
+            class="card"
+            style="height:75vh;"
+        >
 
-            <?php if($conversaSelecionada){ ?>
-
-                <?php
-
-                $nomeSelecionado =
-                    $conversaSelecionada['CVS_Nome']
-                    ?: formatarNumeroBR($conversaSelecionada['CVS_Numero']);
-
-                ?>
-
-                <div class="card-header bg-light">
-
-                    <strong>
-                        <?= htmlspecialchars($nomeSelecionado); ?>
-                    </strong>
-
-                    <br>
-
-                    <small class="text-muted">
-                        <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
-                    </small>
-
-                </div>
-
-                <div
-                    id="areaMensagens"
-                    class="card-body conversa-bg"
-                    style="
-                        overflow-y:auto;
-                        background-color:#efeae2;
-                        background-image:
-                            radial-gradient(circle at 25px 25px, rgba(0,0,0,0.04) 2px, transparent 0),
-                            radial-gradient(circle at 75px 75px, rgba(0,0,0,0.03) 2px, transparent 0);
-                        background-size:100px 100px;
-                    "
-                >
-                    <?php require '../app/Views/conversas/partials/mensagens.php'; ?>
-                </div>
-
-                <div class="card-footer bg-light">
-
-                    <?php if($janelaAberta){ ?>
-
-                        <form
-                            method="POST"
-                            id="formEnviarMensagem"
-                            action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarAjax"
-                        >
-
-                            <input
-                                type="hidden"
-                                name="conversa_id"
-                                value="<?= $conversaSelecionada['CVS_ID']; ?>"
-                            >
-
-                            <div class="input-group">
-
-                                <input
-                                    type="text"
-                                    name="mensagem"
-                                    id="campoMensagem"
-                                    class="form-control"
-                                    placeholder="Digite uma mensagem..."
-                                    autocomplete="off"
-                                    required
-                                >
-
-                                <div class="input-group-append">
-
-                                    <button
-                                        id="btnEnviarMensagem"
-                                        class="btn btn-success"
-                                        type="submit"
-                                    >
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-
-                                </div>
-
-                            </div>
-
-                        </form>
-
-                    <?php }else{ ?>
-
-                        <div class="alert alert-warning mb-0">
-                            A janela de atendimento de 24 horas está fechada.
-                            Para falar com este contato novamente, envie um template aprovado.
-                        </div>
-
-                    <?php } ?>
-
-                </div>
-
-            <?php }else{ ?>
-
-                <div class="card-body text-center text-muted d-flex align-items-center justify-content-center">
-                    Selecione uma conversa para visualizar as mensagens.
-                </div>
-
-            <?php } ?>
+            <?php require '../app/Views/conversas/partials/painel.php'; ?>
 
         </div>
 
@@ -198,6 +165,17 @@ document.addEventListener('DOMContentLoaded', function(){
 
     let ultimaAtualizacaoConversas = '';
 
+    let filtroBusca =
+        $('#filtroBusca').val() || '';
+
+    let filtroStatus =
+        $('#filtroStatus').val() || '';
+
+    let filtroEtiqueta =
+        $('#filtroEtiqueta').val() || '';
+
+    let timerBusca = null;
+
     function rolarMensagensParaFinal()
     {
         let area =
@@ -212,7 +190,12 @@ document.addEventListener('DOMContentLoaded', function(){
     function atualizarListaConversas()
     {
         $('#listaConversas').load(
-            urlBase + 'conversa/ajaxLista&id=' + conversaAberta
+            urlBase
+                + 'conversa/ajaxLista'
+                + '&id=' + conversaAberta
+                + '&busca=' + encodeURIComponent(filtroBusca)
+                + '&status=' + encodeURIComponent(filtroStatus)
+                + '&etiqueta=' + encodeURIComponent(filtroEtiqueta)
         );
     }
 
@@ -239,8 +222,34 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     rolarMensagensParaFinal();
+    
+    let intervaloAtualizacao = null;
+    let atualizandoConversas = false;
 
-    setInterval(function(){
+    function deveAtualizarConversas()
+    {
+        if(document.hidden){
+            return false;
+        }
+
+        if(conversaAberta == ''){
+            return false;
+        }
+
+        return true;
+    }
+
+    function verificarAtualizacoes()
+    {
+        if(!deveAtualizarConversas()){
+            return;
+        }
+
+        if(atualizandoConversas){
+            return;
+        }
+
+        atualizandoConversas = true;
 
         $.getJSON(
 
@@ -258,15 +267,79 @@ document.addEventListener('DOMContentLoaded', function(){
                         retorno.ultima;
 
                     atualizarListaConversas();
-                    atualizarMensagens('N');
+
+                    if(conversaAberta != ''){
+                        atualizarMensagens('N');
+                    }
 
                 }
 
             }
 
-        );
+        ).always(function(){
 
-    }, 3000);
+            atualizandoConversas = false;
+
+        });
+    }
+
+    function iniciarAtualizacaoAutomatica()
+    {
+        if(intervaloAtualizacao){
+            clearInterval(intervaloAtualizacao);
+        }
+
+        intervaloAtualizacao =
+            setInterval(function(){
+
+                verificarAtualizacoes();
+
+            }, 60000);
+    }
+
+    document.addEventListener('visibilitychange', function(){
+
+        if(!document.hidden){
+            verificarAtualizacoes();
+        }
+
+    });
+
+    iniciarAtualizacaoAutomatica();
+    
+
+    $('#filtroBusca').on('keyup', function(){
+
+        clearTimeout(timerBusca);
+
+        timerBusca = setTimeout(function(){
+
+            filtroBusca =
+                $('#filtroBusca').val() || '';
+
+            atualizarListaConversas();
+
+        }, 300);
+
+    });
+
+    $('#filtroStatus').on('change', function(){
+
+        filtroStatus =
+            $(this).val() || '';
+
+        atualizarListaConversas();
+
+    });
+
+    $('#filtroEtiqueta').on('change', function(){
+
+        filtroEtiqueta =
+            $(this).val() || '';
+
+        atualizarListaConversas();
+
+    });
 
     $(document).on('submit', '#formEnviarMensagem', function(e){
 
@@ -355,8 +428,24 @@ document.addEventListener('DOMContentLoaded', function(){
             return;
         }
 
-        window.location.href =
-            urlBase + 'conversa&id=' + conversaId;
+        conversaAberta =
+            conversaId;
+
+        $('#painelConversa').html(
+            '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">' +
+                '<i class="fas fa-spinner fa-spin mr-2"></i> Carregando conversa...' +
+            '</div>'
+        );
+
+        $('#painelConversa').load(
+            urlBase + 'conversa/ajaxConversa&id=' + conversaId,
+            function(){
+
+                rolarMensagensParaFinal();
+                atualizarListaConversas();
+
+            }
+        );
 
     });
 

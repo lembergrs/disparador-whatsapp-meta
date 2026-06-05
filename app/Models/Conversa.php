@@ -141,32 +141,115 @@ class Conversa
         ]);
     }
 
-    public function listarConversas($clienteId)
+    public function listarConversas(
+        $clienteId,
+        $busca = '',
+        $status = '',
+        $etiqueta = ''
+    )
     {
-        $sql = $this->db->prepare("
-            SELECT 
+        $where = [];
+        $params = [];
+
+        $where[] = "c.CLI_ID = ?";
+        $params[] = $clienteId;
+
+        $where[] = "c.CVS_Ativo = 'S'";
+
+        $busca = trim($busca);
+        $status = trim($status);
+        $etiqueta = (int) $etiqueta;
+
+        if($busca != ''){
+
+            $buscaNumerica =
+                preg_replace('/\D/', '', $busca);
+
+            if($buscaNumerica != ''){
+
+                $where[] = "
+                    (
+                        c.CVS_Nome LIKE ?
+                        OR c.CVS_Numero LIKE ?
+                        OR c.CVS_Numero LIKE ?
+                    )
+                ";
+
+                $params[] = '%' . $busca . '%';
+                $params[] = '%' . $busca . '%';
+                $params[] = '%' . $buscaNumerica . '%';
+
+            }else{
+
+                $where[] = "c.CVS_Nome LIKE ?";
+                $params[] = '%' . $busca . '%';
+
+            }
+        }
+
+        if($status == 'N'){
+
+            $where[] = "c.CVS_NaoLida = 'S'";
+
+        }elseif($status == 'L'){
+
+            $where[] = "c.CVS_NaoLida = 'N'";
+        }
+
+        if($etiqueta > 0){
+
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM conversa_etiqueta_vinculos vf
+                INNER JOIN conversa_etiquetas ef
+                    ON ef.ETQ_ID = vf.ETQ_ID
+                WHERE vf.CVS_ID = c.CVS_ID
+                AND ef.CLI_ID = c.CLI_ID
+                AND ef.ETQ_Ativo = 'S'
+                AND ef.ETQ_ID = ?
+            )";
+
+            $params[] = $etiqueta;
+        }
+
+        $sql = "
+            SELECT
                 c.*,
+
                 GROUP_CONCAT(
-                    CONCAT(e.ETQ_Nome, '#', e.ETQ_Cor)
+                    DISTINCT CONCAT(
+                        e.ETQ_Nome,
+                        '#',
+                        e.ETQ_Cor
+                    )
                     ORDER BY e.ETQ_Nome ASC
                     SEPARATOR '|'
                 ) AS Etiquetas
+
             FROM conversas c
+
             LEFT JOIN conversa_etiqueta_vinculos v
                 ON v.CVS_ID = c.CVS_ID
+
             LEFT JOIN conversa_etiquetas e
                 ON e.ETQ_ID = v.ETQ_ID
+                AND e.CLI_ID = c.CLI_ID
                 AND e.ETQ_Ativo = 'S'
-            WHERE c.CLI_ID = ?
-            AND c.CVS_Ativo = 'S'
+
+            WHERE " . implode(' AND ', $where) . "
+
             GROUP BY c.CVS_ID
+
             ORDER BY c.CVS_DataUltimaMensagem DESC
+
             LIMIT 100
-        ");
+        ";
 
-        $sql->execute([$clienteId]);
+        $query = $this->db->prepare($sql);
 
-        return $sql->fetchAll(PDO::FETCH_ASSOC);
+        $query->execute($params);
+
+        return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function listarMensagens($conversaId)

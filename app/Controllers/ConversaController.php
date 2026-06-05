@@ -23,8 +23,25 @@ class ConversaController extends Controller
     {
         $usuario = Auth::usuario();
 
+        $busca =
+            trim($_GET['busca'] ?? '');
+
+        $status =
+            $_GET['status'] ?? '';
+
+        $etiqueta =
+            $_GET['etiqueta'] ?? '';
+
         $conversas =
             $this->conversaModel->listarConversas(
+                $usuario['CLI_ID'],
+                $busca,
+                $status,
+                $etiqueta
+            );
+
+        $etiquetas =
+            $this->conversaModel->listarEtiquetas(
                 $usuario['CLI_ID']
             );
 
@@ -66,6 +83,10 @@ class ConversaController extends Controller
             [
                 'titulo' => 'Conversas',
                 'conversas' => $conversas,
+                'etiquetas' => $etiquetas,
+                'busca' => $busca,
+                'status' => $status,
+                'etiqueta' => $etiqueta,
                 'conversaSelecionada' => $conversaSelecionada,
                 'mensagens' => $mensagens,
                 'janelaAberta' => $janelaAberta
@@ -269,10 +290,21 @@ class ConversaController extends Controller
         $usuario =
             Auth::usuario();
 
+        $busca =
+            trim($_GET['busca'] ?? '');
+
+        $status =
+            $_GET['status'] ?? '';
+
+        $etiqueta =
+            $_GET['etiqueta'] ?? '';
+
         $conversas =
-            $this->conversaModel
-            ->listarConversas(
-                $usuario['CLI_ID']
+            $this->conversaModel->listarConversas(
+                $usuario['CLI_ID'],
+                $busca,
+                $status,
+                $etiqueta
             );
 
         $conversaSelecionada = null;
@@ -609,6 +641,49 @@ class ConversaController extends Controller
             'sucesso' => true,
             'id' => $id
         ]);
+    }
+
+    public function ajaxConversa()
+    {
+        $usuario = Auth::usuario();
+
+        $conversaSelecionada = null;
+        $mensagens = [];
+        $janelaAberta = false;
+
+        $id =
+            $_GET['id'] ?? null;
+
+        if($id){
+
+            $conversaSelecionada =
+                $this->conversaModel->buscar(
+                    $id,
+                    $usuario['CLI_ID']
+                );
+
+            if($conversaSelecionada){
+
+                $mensagens =
+                    $this->conversaModel->listarMensagens(
+                        $id
+                    );
+
+                $janelaAberta =
+                    $this->janelaAtendimentoAberta(
+                        $id
+                    );
+
+                $this->conversaModel->marcarComoLida(
+                    $id,
+                    $usuario['CLI_ID']
+                );
+
+            }
+
+        }
+
+        require '../app/Views/conversas/partials/painel.php';
     }
 
 }
