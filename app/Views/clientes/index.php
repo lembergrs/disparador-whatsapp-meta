@@ -213,7 +213,7 @@ onclick="return confirm('Deseja inativar?')"
 <?php if($cliente['CLI_StatusCadastro'] == 'inativo'){ ?>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=cliente/reativar&id=<?= $cliente['CLI_ID']; ?>"
+href="<?= rtrim(BASE_URL, '/') ?>/index.php?url=cliente/reativar&id=<?= $cliente['CLI_ID']; ?>"
 class="btn btn-success btn-sm"
 onclick="return confirm('Deseja reativar este cliente?')"
 >

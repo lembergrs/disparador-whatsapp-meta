@@ -322,7 +322,7 @@ class ClienteController extends Controller
             'Cliente reativado com sucesso.'
         );
 
-        $this->redirect('cliente?status=inativo');
+        $this->redirect('cliente/index/inativo');
     }
 
     public function aprovar()
