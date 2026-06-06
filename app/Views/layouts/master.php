@@ -176,7 +176,7 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
     <a
-    href="<?= BASE_URL; ?>/index.php?url=listacontato"
+    href="<?= BASE_URL; ?>/index.php?url=listaContato"
     class="nav-link <?= str_contains($url, 'listacontato') ? 'active' : ''; ?>""
     >
 
