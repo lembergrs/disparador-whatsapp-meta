@@ -6,14 +6,59 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/vendor/autoload.php';
+/*
+|--------------------------------------------------------------------------
+| Config
+|--------------------------------------------------------------------------
+*/
+
 require_once __DIR__ . '/config/config.php';
 
-use Core\Router;
+/*
+|--------------------------------------------------------------------------
+| Composer - se existir
+|--------------------------------------------------------------------------
+*/
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
+/*
+|--------------------------------------------------------------------------
+| Autoload manual do MVC
+|--------------------------------------------------------------------------
+*/
+
+spl_autoload_register(function ($class) {
+
+    $baseDir = __DIR__ . '/app/';
+
+    $class = str_replace('\\', '/', $class);
+
+    $file = $baseDir . $class . '.php';
+
+    if (file_exists($file)) {
+        require_once $file;
+    }
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rota padrão
+|--------------------------------------------------------------------------
+*/
 
 if (empty($_GET['url'])) {
     $_GET['url'] = 'site';
 }
 
-$router = new Router();
+/*
+|--------------------------------------------------------------------------
+| Router
+|--------------------------------------------------------------------------
+*/
+
+$router = new Core\Router();
 $router->dispatch();
