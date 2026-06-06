@@ -115,15 +115,6 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
 
             </div>
 
-            <div class="mb-3">
-
-                <div
-                class="g-recaptcha"
-                data-sitekey="SUA_SITE_KEY"
-                ></div>
-
-            </div>
-
             <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
 
             <div class="mb-3">
