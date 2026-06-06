@@ -228,3 +228,29 @@
     padding: 10px;
     font-weight: 600;
 }
+body.login-custom-page {
+    min-height: 100vh;
+    margin: 0;
+    background: #f4f6f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-custom-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-custom-card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+}
