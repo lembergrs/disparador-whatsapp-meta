@@ -7,6 +7,8 @@ define('DB_NAME', 'whatsapp_disparador');
 define('DB_USER', 'root'); 
 define('DB_PASS', ''); //4|D|+wRKp@A
 define('DB_PORT', '3306');
+ftp_user:dispMaster
+ftp_pass: 9y/TzeayV$X
 */
 
 define('DB_HOST', 'rosemegamania.com');
