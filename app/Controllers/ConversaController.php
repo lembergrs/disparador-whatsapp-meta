@@ -319,7 +319,7 @@ class ConversaController extends Controller
                 );
         }
 
-        require '../app/Views/conversas/partials/lista.php';
+        require __DIR__ . '/partials/lista.php';
     }
 
     public function ajaxMensagens()
@@ -360,7 +360,7 @@ class ConversaController extends Controller
 
         }
 
-        require '../app/Views/conversas/partials/mensagens.php';
+        require __DIR__ . '/partials/mensagens.php';
     }
 
     public function enviarAjax()
@@ -553,7 +553,7 @@ class ConversaController extends Controller
                 $usuario['CLI_ID']
             );
 
-        require '../app/Views/conversas/partials/etiquetas.php';
+        require __DIR__ . '/partials/etiquetas.php';
     }
 
     public function salvarEtiquetasAjax()
@@ -683,7 +683,7 @@ class ConversaController extends Controller
 
         }
 
-        require '../app/Views/conversas/partials/painel.php';
+        require __DIR__ . '/partials/painel.php';
     }
 
 }

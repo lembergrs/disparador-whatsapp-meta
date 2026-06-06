@@ -108,7 +108,7 @@ function formatarNumeroBR($numero)
                 class="list-group list-group-flush"
                 style="overflow-y:auto;"
             >
-                <?php require '../app/Views/conversas/partials/lista.php'; ?>
+                <?php require __DIR__ . '/partials/lista.php'; ?>
             </div>
 
         </div>
@@ -123,7 +123,7 @@ function formatarNumeroBR($numero)
             style="height:75vh;"
         >
 
-            <?php require '../app/Views/conversas/partials/painel.php'; ?>
+            <?php require __DIR__ . '/partials/painel.php'; ?>
 
         </div>
 

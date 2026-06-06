@@ -69,7 +69,7 @@ if(!function_exists('formatarNumeroBR')){
             background-size:100px 100px;
         "
     >
-        <?php require '../app/Views/conversas/partials/mensagens.php'; ?>
+        <?php require __DIR__ . '/partials/mensagens.php'; ?>
     </div>
 
     <div class="card-footer bg-light">
