@@ -1121,41 +1121,49 @@ $(document).ready(function(){
 
     });
 
-    $('.datatable').DataTable({
-        language: {
+    $('.datatable').each(function () {
 
-            decimal: "",
-            emptyTable: "Nenhum registro encontrado",
-            info: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
-            infoEmpty: "Mostrando 0 até 0 de 0 registros",
-            infoFiltered: "(filtrado de _MAX_ registros no total)",
-            thousands: ".",
+        if (!$.fn.DataTable.isDataTable(this)) {
 
-            lengthMenu: "Mostrar _MENU_ registros",
+            $(this).DataTable({
+                language: {
 
-            loadingRecords: "Carregando...",
-            processing: "Processando...",
+                    decimal: "",
+                    emptyTable: "Nenhum registro encontrado",
+                    info: "Mostrando de _START_ até _END_ de _TOTAL_ registros",
+                    infoEmpty: "Mostrando 0 até 0 de 0 registros",
+                    infoFiltered: "(filtrado de _MAX_ registros no total)",
+                    thousands: ".",
 
-            search: "Pesquisar:",
+                    lengthMenu: "Mostrar _MENU_ registros",
 
-            zeroRecords: "Nenhum registro encontrado",
+                    loadingRecords: "Carregando...",
+                    processing: "Processando...",
 
-            paginate: {
-                first: "Primeiro",
-                last: "Último",
-                next: "Próximo",
-                previous: "Anterior"
-            },
+                    search: "Pesquisar:",
 
-            aria: {
-                sortAscending:
-                    ": ativar para ordenar a coluna em ordem crescente",
-                sortDescending:
-                    ": ativar para ordenar a coluna em ordem decrescente"
-            }
+                    zeroRecords: "Nenhum registro encontrado",
 
-        },
-        order: [[0, 'asc']]
+                    paginate: {
+                        first: "Primeiro",
+                        last: "Último",
+                        next: "Próximo",
+                        previous: "Anterior"
+                    },
+
+                    aria: {
+                        sortAscending:
+                            ": ativar para ordenar a coluna em ordem crescente",
+                        sortDescending:
+                            ": ativar para ordenar a coluna em ordem decrescente"
+                    }
+
+                },
+                order: [[0, 'asc']]
+            });
+
+        }
+
     });
 
 });
