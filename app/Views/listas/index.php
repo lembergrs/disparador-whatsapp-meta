@@ -52,7 +52,7 @@
                 <td>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=listacontato/visualizar&id=<?= $lista['LST_ID']; ?>"
+                    href="<?= BASE_URL; ?>/index.php?url=listaContato/visualizar&id=<?= $lista['LST_ID']; ?>"
                     class="btn btn-info btn-sm"
                     >
                         <i class="fas fa-eye"></i>
@@ -80,7 +80,7 @@
                     </a>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=listacontato/duplicar&id=<?= $lista['LST_ID']; ?>"
+                    href="<?= BASE_URL; ?>/index.php?url=listaContato/duplicar&id=<?= $lista['LST_ID']; ?>"
                     class="btn btn-warning btn-sm"
                     onclick="return confirm('Deseja duplicar esta lista?')"
                     >
@@ -89,7 +89,7 @@
                     </a>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=listacontato/inativar&id=<?= $lista['LST_ID']; ?>"
+                    href="<?= BASE_URL; ?>/index.php?url=listaContato/inativar&id=<?= $lista['LST_ID']; ?>"
                     class="btn btn-danger btn-sm"
                     onclick="return confirm('Deseja realmente inativar esta lista?')"
                     >
@@ -124,7 +124,7 @@ data-keyboard="false"
 
 <form
 method="POST"
-action="<?= BASE_URL; ?>/index.php?url=listacontato/salvarEdicao"
+action="<?= BASE_URL; ?>/index.php?url=listaContato/salvarEdicao"
 >
 
 <input

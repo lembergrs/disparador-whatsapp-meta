@@ -67,7 +67,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -88,7 +88,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -132,7 +132,7 @@ class ListaContatoController extends Controller
                 'Lista não informada.'
             );
 
-            $this->redirect('listacontato');
+            $this->redirect('listaContato');
 
             return;
         }
@@ -144,7 +144,7 @@ class ListaContatoController extends Controller
                 'Informe o nome da lista.'
             );
 
-            $this->redirect('listacontato');
+            $this->redirect('listaContato');
 
             return;
         }
@@ -164,7 +164,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -183,7 +183,7 @@ class ListaContatoController extends Controller
         );
 
         $this->redirect(
-            'listacontato'
+            'listaContato'
         );
     }
 
@@ -204,7 +204,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -225,7 +225,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -243,7 +243,7 @@ class ListaContatoController extends Controller
         );
 
         $this->redirect(
-            'listacontato'
+            'listaContato'
         );
     }
 
@@ -279,7 +279,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -299,7 +299,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -317,7 +317,7 @@ class ListaContatoController extends Controller
         );
 
         $this->redirect(
-            'listacontato/visualizar&id='
+            'listaContato/visualizar&id='
             . $listaId
         );
     }
@@ -350,7 +350,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato/visualizar&id='
+                'listaContato/visualizar&id='
                 . $listaId
             );
 
@@ -371,7 +371,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -427,7 +427,7 @@ class ListaContatoController extends Controller
         );
 
         $this->redirect(
-            'listacontato/visualizar&id='
+            'listaContato/visualizar&id='
             . $listaId
         );
     }
@@ -448,7 +448,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -468,7 +468,7 @@ class ListaContatoController extends Controller
             );
 
             $this->redirect(
-                'listacontato'
+                'listaContato'
             );
 
             return;
@@ -500,7 +500,7 @@ class ListaContatoController extends Controller
         );
 
         $this->redirect(
-            'listacontato'
+            'listaContato'
         );
     }
 
