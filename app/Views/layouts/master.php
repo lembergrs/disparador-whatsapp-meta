@@ -293,7 +293,7 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 <div class="container-fluid">
 
-<?php require '../app/Views/components/flash.php'; ?>
+<?php require __DIR__ . '/../components/flash.php'; ?>
 
 <?php require $viewPath; ?>
 

@@ -56,7 +56,7 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
 
         </div>
 
-        <?php require '../app/Views/components/flash.php'; ?>
+        <?php require __DIR__ . '/../components/flash.php'; ?>
 
         <form
         action="<?= BASE_URL; ?>/index.php?url=login/autenticar"
