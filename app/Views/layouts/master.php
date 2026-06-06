@@ -324,7 +324,7 @@ const BASE_URL =
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
 
-<script src="<?= BASE_URL; ?>/assets/js/app.js"></script>
+<script src="<?= BASE_URL; ?>/public/assets/js/app.js"></script>
 
 </body>
 </html>
