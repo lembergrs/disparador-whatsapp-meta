@@ -3,8 +3,14 @@
 $phoneNumberId =
     '1012186325321264';
 
-$urlWebhook =
-    'http://disparador.test/webhook/meta.php';
+$host = $_SERVER['HTTP_HOST'] ?? '';
+
+if ($host === 'disparador.test') {
+    $urlWebhook = 'http://disparador.test/webhook/meta.php';
+} else {
+    $urlWebhook = 'ttps://disparador.rosemegamania.com/webhook/meta.php';
+}
+
 
 $retorno = null;
 

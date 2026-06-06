@@ -1,6 +1,13 @@
 <?php
 
-define('BASE_URL', 'http://disparador.test');
+$host = $_SERVER['HTTP_HOST'] ?? '';
+
+if ($host === 'disparador.test') {
+    define('BASE_URL', 'http://disparador.test');
+} else {
+    define('BASE_URL', 'https://disparador.rosemegamania.com');
+}
+
 /*
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'whatsapp_disparador');
