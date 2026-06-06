@@ -165,3 +165,66 @@
     color: #94a3b8;
     margin-top: 25px;
 }
+
+.login-custom-page {
+    min-height: 100vh;
+    margin: 0;
+    background: #f4f6f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-custom-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-custom-card {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+}
+
+.login-logo-area {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.login-image-placeholder {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 15px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-image-placeholder img {
+    max-width: 90px;
+    max-height: 90px;
+}
+
+.login-icon-fallback {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: #25d366;
+    color: #ffffff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 45px;
+}
+
+.btn-login-custom {
+    padding: 10px;
+    font-weight: 600;
+}
