@@ -21,7 +21,6 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <style>
-<style>
 body.login-custom-page {
     min-height: 100vh !important;
     margin: 0 !important;
@@ -48,7 +47,6 @@ body.login-custom-page {
     padding: 30px !important;
     box-shadow: 0 10px 35px rgba(0,0,0,.12) !important;
 }
-</style>
 </style>
 
 </head>
