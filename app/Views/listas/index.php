@@ -141,9 +141,11 @@ Editar Lista
 
 <button
 type="button"
-class="close btnFecharModalEditarLista"
+class="close"
+data-dismiss="modal"
+aria-label="Close"
 >
-    <span>&times;</span>
+    <span aria-hidden="true">&times;</span>
 </button>
 
 </div>
@@ -186,17 +188,6 @@ Salvar
 </div>
 
 <script>
-
-$(document).ready(function(){
-
-    $('#tabelaListas').DataTable({
-        language: {
-            url:
-            '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-        }
-    });
-
-});
 
 function abrirModalEditarLista(id, nome)
 {
