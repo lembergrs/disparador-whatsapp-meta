@@ -213,10 +213,9 @@ Visualizar Template
 type="button"
 class="close"
 data-dismiss="modal"
+aria-label="Close"
 >
-
-<span>&times;</span>
-
+    <span aria-hidden="true">&times;</span>
 </button>
 
 </div>
@@ -264,10 +263,9 @@ Visualizar Template
 type="button"
 class="close"
 data-dismiss="modal"
+aria-label="Close"
 >
-
-<span>&times;</span>
-
+    <span aria-hidden="true">&times;</span>
 </button>
 
 </div>
@@ -340,10 +338,9 @@ Novo Template
 type="button"
 class="close"
 data-dismiss="modal"
+aria-label="Close"
 >
-
-<span>&times;</span>
-
+    <span aria-hidden="true">&times;</span>
 </button>
 
 </div>

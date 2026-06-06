@@ -267,10 +267,9 @@ Novo Cliente
 type="button"
 class="close"
 data-dismiss="modal"
+aria-label="Close"
 >
-
-<span>&times;</span>
-
+    <span aria-hidden="true">&times;</span>
 </button>
 
 </div>
