@@ -16,7 +16,7 @@ href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <link rel="stylesheet"
-href="<?= BASE_URL; ?>/assets/css/style.css?v=<?= time(); ?>">
+href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
