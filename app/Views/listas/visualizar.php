@@ -128,7 +128,7 @@ function formatarTelefone($telefone)
             </button>
 
             <a
-            href="<?= BASE_URL; ?>/index.php?url=listacontato"
+            href="<?= BASE_URL; ?>/index.php?url=listaContato"
             class="btn btn-secondary btn-sm"
             >
 
@@ -185,7 +185,7 @@ function formatarTelefone($telefone)
                 <td>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=listacontato/removerContato&lista=<?= $lista['LST_ID']; ?>&contato=<?= $contato['CON_ID']; ?>"
+                    href="<?= BASE_URL; ?>/index.php?url=listaContato/removerContato&lista=<?= $lista['LST_ID']; ?>&contato=<?= $contato['CON_ID']; ?>"
                     class="btn btn-danger btn-sm"
                     onclick="return confirm('Deseja remover este contato da lista?')"
                     >
@@ -217,7 +217,7 @@ id="modalAdicionarContato"
 
 <form
 method="POST"
-action="<?= BASE_URL; ?>/index.php?url=listacontato/adicionarContato"
+action="<?= BASE_URL; ?>/index.php?url=listaContato/adicionarContato"
 >
 
 <input
