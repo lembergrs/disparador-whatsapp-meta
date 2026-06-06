@@ -20,35 +20,6 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
-<style>
-body.login-custom-page {
-    min-height: 100vh !important;
-    margin: 0 !important;
-    background: #f4f6f9 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.login-custom-wrapper {
-    width: 100% !important;
-    min-height: 100vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 20px !important;
-}
-
-.login-custom-card {
-    width: 100% !important;
-    max-width: 420px !important;
-    background: #fff !important;
-    border-radius: 12px !important;
-    padding: 30px !important;
-    box-shadow: 0 10px 35px rgba(0,0,0,.12) !important;
-}
-</style>
-
 </head>
 
 <body class="login-custom-page">
