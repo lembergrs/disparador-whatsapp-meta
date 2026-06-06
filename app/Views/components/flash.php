@@ -28,7 +28,7 @@ if($flash['type'] == 'warning'){
     <button
     type="button"
     class="close"
-    data-dismiss="modal"
+    data-dismiss="alert"
     aria-label="Close"
     >
         <span aria-hidden="true">&times;</span>

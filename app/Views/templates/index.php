@@ -48,6 +48,7 @@ Sincronizar Templates
 </button>
 
 <button
+type="button"
 class="btn btn-primary ml-2"
 data-toggle="modal"
 data-target="#modalNovoTemplate"
@@ -154,6 +155,7 @@ if($status == 'APPROVED'){
 <button
 type="button"
 class="btn btn-info btn-sm btnVisualizarTemplate"
+onclick="abrirPreviewTemplate(this)"
 
 data-nome="<?= htmlspecialchars($template['TMP_Nome'], ENT_QUOTES); ?>"
 
@@ -187,61 +189,6 @@ data-componentes="<?= htmlspecialchars(
 
 </div>
 
-
-
-
-
-<div
-class="modal fade"
-id="modalTemplate"
-tabindex="-1"
->
-
-<div class="modal-dialog modal-lg">
-
-<div class="modal-content">
-
-<div class="modal-header">
-
-<h4 class="modal-title">
-
-Visualizar Template
-
-</h4>
-
-<button
-type="button"
-class="close"
-data-dismiss="modal"
-aria-label="Close"
->
-    <span aria-hidden="true">&times;</span>
-</button>
-
-</div>
-
-<div class="modal-body">
-
-<h5 id="templateNome"></h5>
-
-<hr>
-
-<div id="templatePreview"></div>
-
-<hr>
-
-<h5>
-Variáveis
-</h5>
-
-<div id="templateVariaveis"></div>
-</div>
-
-</div>
-
-</div>
-
-</div>
 
 <div
 class="modal fade"
@@ -304,6 +251,12 @@ aria-label="Close"
 
 <div id="templatePreview"></div>
 
+<hr>
+
+<h5>Variáveis</h5>
+
+<div id="templateVariaveis"></div>
+
 </div>
 
 </div>
@@ -324,6 +277,7 @@ id="modalNovoTemplate"
 <form
 method="POST"
 action="<?= BASE_URL; ?>/index.php?url=template/criar"
+id="formNovoTemplate"
 >
 
 <div class="modal-header">
@@ -386,6 +340,7 @@ required
 <input
 type="text"
 name="nome"
+id="nome_template"
 class="form-control"
 required
 >
@@ -472,23 +427,51 @@ Inglês
 
 
 
-<div class="form-group">
+<div class="row">
 
-<label>HEADER</label>
+    <div class="col-md-4">
 
-<input
-type="text"
-name="header"
-class="form-control"
-maxlength="60"
->
+        <div class="form-group">
 
-<small class="text-muted">
+            <label>Tipo do Header</label>
 
-Opcional.
-Título da mensagem.
+            <select
+            name="header_tipo"
+            id="header_tipo"
+            class="form-control"
+            >
+                <option value="">Sem Header</option>
+                <option value="TEXT">Texto</option>
+                <option value="IMAGE" disabled>Imagem em breve</option>
+                <option value="VIDEO" disabled>Vídeo em breve</option>
+                <option value="DOCUMENT" disabled>Documento em breve</option>   
 
-</small>
+            </select>
+
+        </div>
+
+    </div>
+
+    <div
+    class="col-md-8"
+    id="areaHeaderTexto"
+    style="display:none"
+    >
+
+        <div class="form-group">
+
+            <label>Texto do Header</label>
+
+            <input
+            type="text"
+            name="header"
+            class="form-control"
+            maxlength="60"
+            >
+
+        </div>
+
+    </div>
 
 </div>
 
@@ -517,7 +500,26 @@ Use variáveis:
 </div>
 
 
+<hr>
 
+<h5>
+Botões
+</h5>
+
+<div class="form-group">
+
+    <button
+    type="button"
+    class="btn btn-primary btn-sm"
+    id="btnAdicionarBotao"
+    >
+        <i class="fas fa-plus"></i>
+        Adicionar Botão
+    </button>
+
+</div>
+
+<div id="areaBotoes"></div>
 
 
 <div class="form-group">
@@ -568,153 +570,325 @@ Criar Template
 
 $(document).ready(function(){
 
-    $('#tabelaTemplates').DataTable({
+    if (
+        $('#tabelaTemplates').length &&
+        !$.fn.DataTable.isDataTable('#tabelaTemplates')
+    ) {
 
-        language: {
+        $('#tabelaTemplates').DataTable({
+            language: {
+                url:
+                '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
+            },
+            order: [[0, 'asc']]
+        });
 
-            url:
-            '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
+    }
 
-        }
+    $('#nome_template').on('input', function(){
+
+        let valor = $(this).val();
+
+        valor = valor
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/ç/g, 'c')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .replace(/_+/g, '_');
+
+        $(this).val(valor);
 
     });
 
 });
 
+$('#header_tipo').change(function(){
 
+    let tipo = $(this).val();
 
+    if(tipo == 'TEXT'){
 
+        $('#areaHeaderTexto').show();
 
-$(document).on(
-    'click',
-    '.btnVisualizarTemplate',
-    function(){
+    }else{
 
-        let nome =
-            $(this).data('nome');
+        $('#areaHeaderTexto').hide();
 
-        let componentes =
-            $(this).data('componentes');
+    }
 
+});
 
+let contadorBotoes = 0;
 
+$('#btnAdicionarBotao').click(function(){
 
+    contadorBotoes++;
 
-        $('#templateNome').html(
-            nome
-        );
+    let html = `
 
+    <div
+    class="card mb-2"
+    id="botao_${contadorBotoes}"
+    >
 
+        <div class="card-body">
 
+            <div class="row">
 
+                <div class="col-md-4">
 
-        let html = '';
+                    <select
+                    name="botoes[${contadorBotoes}][tipo]"
+                    class="form-control tipoBotao"
+                    >
 
+                        <option value="QUICK_REPLY">
+                            Resposta Rápida
+                        </option>
 
+                        <option value="URL">
+                            URL
+                        </option>
 
+                        <option value="PHONE_NUMBER">
+                            Telefone
+                        </option>
 
+                    </select>
 
-        try{
+                </div>
 
-            componentes =
-                JSON.parse(componentes);
+                <div class="col-md-4">
 
+                    <input
+                    type="text"
+                    name="botoes[${contadorBotoes}][texto]"
+                    class="form-control"
+                    placeholder="Texto do botão"
+                    >
 
+                </div>
 
+                <div class="col-md-3">
 
+                    <input
+                    type="text"
+                    name="botoes[${contadorBotoes}][valor]"
+                    class="form-control"
+                    placeholder="URL ou telefone"
+                    >
 
-            componentes.forEach(function(comp){
+                </div>
 
-                html += `
-                    <div class="mb-3">
-                `;
+                <div class="col-md-1">
 
+                    <button
+                    type="button"
+                    class="btn btn-danger removerBotao"
+                    data-id="${contadorBotoes}"
+                    >
+                        X
+                    </button>
 
+                </div>
 
+            </div>
 
+        </div>
 
-                html += `
-                    <strong>
-                        ${comp.type}
-                    </strong>
-                    <br>
-                `;
+    </div>
 
+    `;
 
+    $('#areaBotoes').append(html);
 
+});
 
+$(document).on('submit', '#formNovoTemplate', function(e){
 
-                if(comp.text){
+    let headerTipo = $('#header_tipo').val();
 
-                    html += `
-                        <div class="border rounded p-2">
+    if(headerTipo == 'TEXT'){
 
-                            ${comp.text}
+        let headerTexto = $('[name=header]').val();
 
-                        </div>
-                    `;
+        if(headerTexto.trim() == ''){
 
-                }
+            alert('Informe o texto do Header.');
 
+            e.preventDefault();
 
-
-
-
-
-                if(comp.buttons){
-
-                    comp.buttons.forEach(function(btn){
-
-                        html += `
-                            <button
-                            class="btn btn-primary btn-sm mr-1"
-                            >
-
-                                ${btn.text}
-
-                            </button>
-                        `;
-
-                    });
-
-                }
-
-
-
-
-
-
-                html += `
-                    </div>
-                `;
-
-            });
-
-        }catch(e){
-
-            html =
-            '<div class="alert alert-danger">Erro ao carregar template.</div>';
+            return false;
 
         }
 
+    }
 
+    let totalBotoes = 0;
+    let totalUrl = 0;
+    let totalTelefone = 0;
+    let totalQuick = 0;
 
+    $('#areaBotoes .card').each(function(){
 
+        totalBotoes++;
 
+        let tipo =
+            $(this).find('[name*="[tipo]"]').val();
 
-        $('#templatePreview').html(
-            html
-        );
+        let texto =
+            $(this).find('[name*="[texto]"]').val();
 
+        let valor =
+            $(this).find('[name*="[valor]"]').val();
 
+        if(texto.trim() == ''){
 
+            alert('Informe o texto de todos os botões.');
 
+            e.preventDefault();
 
-        $('#modalTemplate').modal(
-            'show'
-        );
+            return false;
+
+        }
+
+        if(tipo == 'URL'){
+
+            totalUrl++;
+
+            if(valor.trim() == ''){
+
+                alert('Informe a URL do botão.');
+
+                e.preventDefault();
+
+                return false;
+
+            }
+
+        }
+
+        if(tipo == 'PHONE_NUMBER'){
+
+            totalTelefone++;
+
+            if(valor.trim() == ''){
+
+                alert('Informe o telefone do botão.');
+
+                e.preventDefault();
+
+                return false;
+
+            }
+
+        }
+
+        if(tipo == 'QUICK_REPLY'){
+
+            totalQuick++;
+
+        }
+
+    });
+
+    if(totalBotoes > 10){
+
+        alert('A Meta permite no máximo 10 botões.');
+
+        e.preventDefault();
+
+        return false;
+
+    }
+
+    if(totalUrl > 2){
+
+        alert('A Meta permite no máximo 2 botões de URL.');
+
+        e.preventDefault();
+
+        return false;
+
+    }
+
+    if(totalTelefone > 1){
+
+        alert('A Meta permite no máximo 1 botão de telefone.');
+
+        e.preventDefault();
+
+        return false;
+
+    }
+
+});
+
+$(document).on(
+    'click',
+    '.removerBotao',
+    function(){
+
+        $('#botao_' + $(this).data('id')).remove();
 
     }
 );
+
+function abrirPreviewTemplate(botao)
+{
+    botao = $(botao);
+
+    $('#tmpNome').html(botao.data('nome'));
+    $('#tmpStatus').html(botao.data('status'));
+    $('#tmpIdioma').html(botao.data('idioma'));
+    $('#tmpCategoria').html(botao.data('categoria'));
+
+    let componentes = [];
+
+    try{
+        componentes = JSON.parse(
+            atob(
+                botao.attr('data-componentes')
+            )
+        );
+    }catch(e){
+        componentes = [];
+    }
+
+    let html = '';
+
+    componentes.forEach(function(comp){
+
+        if(comp.type == 'HEADER' && comp.format == 'TEXT'){
+            html += '<div class="alert alert-secondary"><strong>' + comp.text + '</strong></div>';
+        }
+
+        if(comp.type == 'BODY' && comp.text){
+            html += '<div class="border rounded p-2 mb-2">' + comp.text.replace(/\n/g, '<br>') + '</div>';
+        }
+
+        if(comp.type == 'FOOTER' && comp.text){
+            html += '<small class="text-muted">' + comp.text + '</small>';
+        }
+
+        if(comp.type == 'BUTTONS' && comp.buttons){
+
+            html += '<div class="mt-3">';
+
+            comp.buttons.forEach(function(btn){
+                html += '<button type="button" class="btn btn-outline-primary btn-block btn-sm mb-1" disabled>' + btn.text + '</button>';
+            });
+
+            html += '</div>';
+        }
+
+    });
+
+    $('#templatePreview').html(html);
+
+    $('#modalTemplate').modal('show');
+}
 
 </script>

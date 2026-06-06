@@ -10,7 +10,7 @@
 href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 
 <link rel="stylesheet"
-href="<?= BASE_URL; ?>/assets/css/style.css">
+href="<?= BASE_URL; ?>/public/assets/css/style.css">
 </head>
 
 <body class="login-custom-page">

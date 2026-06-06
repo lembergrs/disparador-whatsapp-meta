@@ -355,63 +355,111 @@ $(document).ready(function(){
             componentes.forEach(function(comp){
 
                 html += `
-                    <div class="card mb-2">
-
-                        <div class="card-header">
-
-                            <strong>
-                                ${comp.type}
-                            </strong>
-
-                        </div>
-
-                        <div class="card-body">
+                    <div class="mb-3">
                 `;
 
-                if(comp.format){
+                if(comp.type == 'HEADER'){
 
-                    html += `
-                        <p>
-                            <strong>Formato:</strong>
-                            ${comp.format}
-                        </p>
-                    `;
+                    if(comp.format == 'TEXT'){
+
+                        html += `
+                            <div class="alert alert-secondary mb-2">
+                                <strong>${comp.text ?? ''}</strong>
+                            </div>
+                        `;
+
+                    }else if(comp.format == 'IMAGE'){
+
+                        html += `
+                            <div class="border rounded p-3 text-center bg-light mb-2">
+                                <i class="fas fa-image fa-2x mb-2"></i>
+                                <br>
+                                <strong>Imagem no cabeçalho</strong>
+                            </div>
+                        `;
+
+                    }else if(comp.format == 'VIDEO'){
+
+                        html += `
+                            <div class="border rounded p-3 text-center bg-light mb-2">
+                                <i class="fas fa-video fa-2x mb-2"></i>
+                                <br>
+                                <strong>Vídeo no cabeçalho</strong>
+                            </div>
+                        `;
+
+                    }else if(comp.format == 'DOCUMENT'){
+
+                        html += `
+                            <div class="border rounded p-3 text-center bg-light mb-2">
+                                <i class="fas fa-file-alt fa-2x mb-2"></i>
+                                <br>
+                                <strong>Documento no cabeçalho</strong>
+                            </div>
+                        `;
+
+                    }
 
                 }
 
-
-                if(comp.text){
+                if(comp.type == 'BODY' && comp.text){
 
                     html += `
-                        <div class="alert alert-light">
-
-                            ${comp.text}
-
+                        <div class="border rounded p-2 mb-2">
+                            ${comp.text.replace(/\n/g, '<br>')}
                         </div>
                     `;
 
                 }
 
-
-                if(comp.example){
+                if(comp.type == 'FOOTER' && comp.text){
 
                     html += `
                         <small class="text-muted">
-
-                            Exemplo disponível
-
+                            ${comp.text}
                         </small>
                     `;
 
                 }
 
+                if(comp.type == 'BUTTONS' && comp.buttons){
 
+                    html += `
+                        <div class="mt-3">
+                    `;
 
+                    comp.buttons.forEach(function(btn){
 
+                        let icone = 'fa-reply';
 
+                        if(btn.type == 'URL'){
+                            icone = 'fa-link';
+                        }
+
+                        if(btn.type == 'PHONE_NUMBER'){
+                            icone = 'fa-phone';
+                        }
+
+                        html += `
+                            <button
+                            type="button"
+                            class="btn btn-outline-primary btn-block btn-sm mb-1"
+                            disabled
+                            >
+                                <i class="fas ${icone}"></i>
+                                ${btn.text}
+                            </button>
+                        `;
+
+                    });
+
+                    html += `
+                        </div>
+                    `;
+
+                }
 
                 html += `
-                        </div>
                     </div>
                 `;
 

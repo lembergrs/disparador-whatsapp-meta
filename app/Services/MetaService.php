@@ -382,55 +382,198 @@ class MetaService
 
         $components = [];
 
+        /*
+        |--------------------------------------------------------------------------
+        | HEADER
+        |--------------------------------------------------------------------------
+        */
 
-        if(!empty($dados['header'])){
+        if(!empty($dados['header_tipo'])){
 
-            $components[] = [
+            if($dados['header_tipo'] == 'TEXT'
+                && !empty($dados['header'])){
 
-                'type' => 'HEADER',
+                $components[] = [
 
-                'format' => 'TEXT',
+                    'type'   => 'HEADER',
+                    'format' => 'TEXT',
+                    'text'   => $dados['header']
 
-                'text' => $dados['header']
+                ];
 
+            }else{
+
+                $components[] = [
+
+                    'type'   => 'HEADER',
+                    'format' => $dados['header_tipo']
+
+                ];
+
+            }
+
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | BODY
+        |--------------------------------------------------------------------------
+        */
+
+        $bodyComponent = [
+            'type' => 'BODY',
+            'text' => $dados['body']
+        ];
+
+        preg_match_all('/{{(.*?)}}/', $dados['body'], $matches);
+
+        if(!empty($matches[1])){
+
+            $exemplos = [];
+
+            foreach($matches[1] as $var){
+                $exemplos[] = 'Exemplo';
+            }
+
+            $bodyComponent['example'] = [
+                'body_text' => [
+                    $exemplos
+                ]
             ];
 
         }
 
+        $components[] = $bodyComponent;
 
-        $components[] = [
-
-            'type' => 'BODY',
-
-            'text' => $dados['body']
-
-        ];
-
-
-
-
-
+        /*
+        |--------------------------------------------------------------------------
+        | FOOTER
+        |--------------------------------------------------------------------------
+        */
 
         if(!empty($dados['footer'])){
 
             $components[] = [
 
                 'type' => 'FOOTER',
-
                 'text' => $dados['footer']
 
             ];
 
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | BUTTONS
+        |--------------------------------------------------------------------------
+        */
 
+        if(
+            isset($dados['botoes'])
+            &&
+            is_array($dados['botoes'])
+        ){
+
+            $buttons = [];
+
+            foreach($dados['botoes'] as $botao){
+
+                if(empty($botao['texto'])){
+                    continue;
+                }
+
+                switch($botao['tipo']){
+
+                    case 'QUICK_REPLY':
+
+                        $buttons[] = [
+
+                            'type' => 'QUICK_REPLY',
+                            'text' => $botao['texto']
+
+                        ];
+
+                    break;
+
+                    case 'URL':
+
+                        $buttons[] = [
+
+                            'type' => 'URL',
+                            'text' => $botao['texto'],
+
+                            'url'  =>
+                                $botao['valor']
+                                ?? ''
+
+                        ];
+
+                    break;
+
+                    case 'PHONE_NUMBER':
+
+                        $buttons[] = [
+
+                            'type' => 'PHONE_NUMBER',
+                            'text' => $botao['texto'],
+
+                            'phone_number' =>
+                                $botao['valor']
+                                ?? ''
+
+                        ];
+
+                    break;
+
+                }
+
+            }
+
+            if(count($buttons) > 0){
+
+                $components[] = [
+
+                    'type' => 'BUTTONS',
+
+                    'buttons' => $buttons
+
+                ];
+
+            }
+
+        }
+
+        $nomeTemplate = strtolower($dados['nome']);
+
+        $nomeTemplate = iconv(
+            'UTF-8',
+            'ASCII//TRANSLIT',
+            $nomeTemplate
+        );
+
+        $nomeTemplate = preg_replace(
+            '/[^a-z0-9]+/',
+            '_',
+            $nomeTemplate
+        );
+
+        $nomeTemplate = trim(
+            $nomeTemplate,
+            '_'
+        );
+
+        $nomeTemplate = preg_replace(
+            '/_+/',
+            '_',
+            $nomeTemplate
+        );
 
 
 
 
         $payload = [
 
-            'name' => $dados['nome'],
+            'name' => $nomeTemplate,
 
             'category' => $dados['categoria'],
 

@@ -3,6 +3,7 @@
 /public/uploads/
 /public/temp/
 /.env
+/ContinuacaoProjeto.txt
 
 *.log
 Thumbs.db
