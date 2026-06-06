@@ -13,11 +13,11 @@ class Controller
         extract($dados);
 
         $viewPath =
-            "../app/Views/{$view}.php";
+            __DIR__ . "/../Views/{$view}.php";
 
         if($layout){
 
-            require "../app/Views/layouts/master.php";
+            require __DIR__ . "/../Views/layouts/master.php";
 
         }else{
 
