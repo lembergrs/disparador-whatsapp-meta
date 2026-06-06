@@ -9,7 +9,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/config.php';
 
-use Core\Router;
+use App\Core\Router;
 
 if (empty($_GET['url'])) {
     $_GET['url'] = 'site';
