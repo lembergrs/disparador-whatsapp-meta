@@ -1,10 +1,17 @@
 {
-    "config": {
-        "audit": {
-            "block-insecure": false
-        }
-    },
-    "require": {
-        "phpoffice/phpspreadsheet": "1.29"
+  "config": {
+    "audit": {
+      "block-insecure": false
     }
+  },
+  "autoload": {
+    "psr-4": {
+      "Core\\": "app/Core/",
+      "Controllers\\": "app/Controllers/",
+      "Models\\": "app/Models/"
+    }
+  },
+  "require": {
+    "phpoffice/phpspreadsheet": "1.29"
+  }
 }
