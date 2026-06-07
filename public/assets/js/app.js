@@ -1031,6 +1031,27 @@ $(document).ready(function(){
 
         });
 
+        $('#resumoFinalDisparo').html('');
+
+        $('#listaStatusNumeros').html('');
+
+        numerosLimpos.forEach(function(numero, index){
+
+            $('#listaStatusNumeros').append(`
+                <tr id="linha_numero_${index}">
+                    <td>${numero}</td>
+                    <td>
+                        <span class="badge badge-secondary">
+                            Pendente
+                        </span>
+                    </td>
+                </tr>
+            `);
+
+        });
+
+        $('#areaStatusNumeros').show();
+
         if(numerosLimpos.length == 0){
 
             alert('Informe pelo menos um número válido.');
@@ -1081,19 +1102,32 @@ $(document).ready(function(){
                     .prop('disabled', false)
                     .html('<i class="fas fa-paper-plane"></i> Enviar Template');
 
+                $('#barraProgressoDisparo')
+                    .removeClass('progress-bar-animated')
+                    .css('width', '100%')
+                    .html('100%');
+
                 $('#textoProgressoDisparo')
                     .html(
-                        'Envio concluído. Enviados: '
-                        + enviados
-                        + ' | Erros: '
-                        + erros
+                        'Envio concluído.'
                     );
+
+                $('#resumoFinalDisparo').html(`
+                    <div class="alert alert-success mt-3">
+                        <strong>Envio concluído.</strong><br>
+                        Enviados: ${enviados} | Erros: ${erros}
+                    </div>
+                `);
 
                 return;
             }
 
             let numero =
                 numerosLimpos[atual];
+
+            $('#linha_numero_' + atual + ' td:eq(1)').html(
+                '<span class="badge badge-info">Enviando...</span>'
+            );
 
             let dados =
                 form.serializeArray();
@@ -1111,14 +1145,34 @@ $(document).ready(function(){
                     'json',
 
                 success: function(retorno){
+
                     if(retorno.sucesso){
+
                         enviados++;
+
+                        $('#linha_numero_' + atual + ' td:eq(1)').html(
+                            '<span class="badge badge-success">Enviado</span>'
+                        );
+
                     }else{
+
                         erros++;
+
+                        $('#linha_numero_' + atual + ' td:eq(1)').html(
+                            '<span class="badge badge-danger">Erro</span>'
+                        );
+
                     }
+
                 },
                 error: function(){
+
                     erros++;
+
+                    $('#linha_numero_' + atual + ' td:eq(1)').html(
+                        '<span class="badge badge-danger">Erro</span>'
+                    );
+
                 },
                 complete: function(){
                     atual++;

@@ -159,7 +159,27 @@ class="mb-3"
 
 </div>
 
+<div id="resumoFinalDisparo"></div>
 
+<div
+id="areaStatusNumeros"
+style="display:none"
+class="mt-3"
+>
+
+    <h5>Status dos Envios</h5>
+
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="listaStatusNumeros"></tbody>
+    </table>
+
+</div>
 
 <button
 type="submit"
@@ -204,18 +224,8 @@ $('#template').change(function(){
 
     }
 
-
-
-
-
-
     componentes =
         atob(componentes);
-
-
-
-
-
 
     try{
 
@@ -229,15 +239,7 @@ $('#template').change(function(){
     }
 
 
-
-
-
-
     let variaveis = [];
-
-
-
-
 
     componentes.forEach(function(comp){
 
@@ -247,9 +249,6 @@ $('#template').change(function(){
                 comp.text.match(
                     /{{(.*?)}}/g
                 );
-
-
-
 
 
             if(matches){
@@ -275,15 +274,7 @@ $('#template').change(function(){
     });
 
 
-
-
-
-
     let html = '';
-
-
-
-
 
     variaveis.forEach(function(v){
 
@@ -307,10 +298,6 @@ $('#template').change(function(){
         `;
 
     });
-
-
-
-
 
 
     $('#areaVariaveis').html(
