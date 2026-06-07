@@ -421,24 +421,39 @@ class MetaService
         */
 
         $bodyComponent = [
+
             'type' => 'BODY',
+
             'text' => $dados['body']
+
         ];
 
-        preg_match_all('/{{(.*?)}}/', $dados['body'], $matches);
+        preg_match_all(
+            '/{{(.*?)}}/',
+            $dados['body'],
+            $matches
+        );
 
         if(!empty($matches[1])){
 
             $exemplos = [];
 
             foreach($matches[1] as $var){
-                $exemplos[] = 'Exemplo';
+
+                $var = trim($var);
+
+                $exemplos[] =
+                    $dados['exemplos'][$var]
+                    ?? 'Exemplo';
+
             }
 
             $bodyComponent['example'] = [
+
                 'body_text' => [
                     $exemplos
                 ]
+
             ];
 
         }

@@ -499,6 +499,20 @@ Use variáveis:
 
 </div>
 
+<div
+id="areaExemplosVariaveis"
+style="display:none"
+>
+
+    <hr>
+
+    <h5>
+        Exemplos das Variáveis
+    </h5>
+
+    <div id="camposExemplosVariaveis"></div>
+
+</div>
 
 <hr>
 
@@ -594,9 +608,10 @@ $(document).ready(function(){
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/ç/g, 'c')
-            .replace(/[^a-z0-9]+/g, '_')
-            .replace(/^_+|_+$/g, '')
-            .replace(/_+/g, '_');
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_]/g, '')
+            .replace(/_+/g, '_')
+            .replace(/^_+/, '');
 
         $(this).val(valor);
 
@@ -835,6 +850,69 @@ $(document).on(
 
     }
 );
+
+$(document).on('input', '[name=body]', function(){
+
+    let texto = $(this).val();
+
+    let matches = texto.match(/{{(.*?)}}/g);
+
+    let variaveis = [];
+
+    if(matches){
+
+        matches.forEach(function(v){
+
+            v = v
+                .replace('{{', '')
+                .replace('}}', '')
+                .trim();
+
+            if(!variaveis.includes(v)){
+                variaveis.push(v);
+            }
+
+        });
+
+    }
+
+    let html = '';
+
+    if(variaveis.length > 0){
+
+        variaveis.forEach(function(v){
+
+            html += `
+                <div class="form-group">
+
+                    <label>
+                        Exemplo para {{${v}}}
+                    </label>
+
+                    <input
+                    type="text"
+                    name="exemplos[${v}]"
+                    class="form-control"
+                    placeholder="Exemplo de valor para aprovação"
+                    required
+                    >
+
+                </div>
+            `;
+
+        });
+
+        $('#camposExemplosVariaveis').html(html);
+        $('#areaExemplosVariaveis').show();
+
+    }else{
+
+        $('#camposExemplosVariaveis').html('');
+        $('#areaExemplosVariaveis').hide();
+
+    }
+
+});
 
 function abrirPreviewTemplate(botao)
 {

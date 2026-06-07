@@ -4,8 +4,10 @@ $host = $_SERVER['HTTP_HOST'] ?? '';
 
 if ($host === 'disparador.test') {
     define('BASE_URL', 'http://disparador.test');
+    define('ASSET_URL', BASE_URL . '/assets');
 } else {
     define('BASE_URL', 'https://disparador.rosemegamania.com');
+    define('ASSET_URL', BASE_URL . '/public/assets');
 }
 
 /*

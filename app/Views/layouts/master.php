@@ -27,7 +27,7 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<link rel="stylesheet" href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
+<link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=5">
 
 </head>
 
@@ -324,7 +324,7 @@ const BASE_URL =
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
 
-<script src="<?= BASE_URL; ?>/public/assets/js/app.js?v=3"></script>
+<script src="<?= ASSET_URL; ?>/js/app.js?v=5"></script>
 
 </body>
 </html>
