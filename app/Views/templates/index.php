@@ -175,6 +175,14 @@ data-componentes="<?= htmlspecialchars(
 
 </button>
 
+<a
+href="<?= BASE_URL; ?>/index.php?url=template/inativar&id=<?= $template['TMP_ID']; ?>"
+class="btn btn-danger btn-sm"
+onclick="return confirm('Deseja remover este template da listagem? Ele não será excluído da Meta.')"
+>
+    <i class="fas fa-trash"></i>
+</a>
+
 </td>
 
 </tr>

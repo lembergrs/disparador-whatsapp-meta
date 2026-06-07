@@ -189,4 +189,34 @@ class TemplateController extends Controller
             'template'
         );
     }
+
+    public function inativar()
+    {
+        $usuario = Auth::usuario();
+
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if($id <= 0){
+
+            Session::flash(
+                'error',
+                'Template não informado.'
+            );
+
+            $this->redirect('template');
+        }
+
+        $this->templateModel->inativar(
+            $id,
+            $usuario['CLI_ID']
+        );
+
+        Session::flash(
+            'success',
+            'Template removido da listagem.'
+        );
+
+        $this->redirect('template');
+    }
+
 }

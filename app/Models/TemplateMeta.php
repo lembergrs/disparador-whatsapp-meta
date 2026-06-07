@@ -63,8 +63,7 @@ class TemplateMeta
                     TMP_Idioma = ?,
                     TMP_Status = ?,
                     TMP_Componentes = ?,
-                    TMP_DataSync = NOW(),
-                    TMP_Ativo = 'S'
+                    TMP_DataSync = NOW()
 
                 WHERE TMP_ID = ?
 
@@ -311,6 +310,27 @@ class TemplateMeta
         ");
 
         $sql->execute($params);
+    }
+
+    public function inativar($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+
+            UPDATE templates_meta t
+            INNER JOIN meta_contas m
+                ON m.MTA_ID = t.MTA_ID
+
+            SET t.TMP_Ativo = 'N'
+
+            WHERE t.TMP_ID = ?
+            AND m.CLI_ID = ?
+
+        ");
+
+        return $sql->execute([
+            $id,
+            $clienteId
+        ]);
     }
 
 }
