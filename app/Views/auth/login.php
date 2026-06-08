@@ -46,10 +46,6 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
 
             </div>
 
-            <h2>
-                Disparador
-            </h2>
-
             <p>
                 Campanhas, conversas e automação em uma única plataforma.
             </p>
