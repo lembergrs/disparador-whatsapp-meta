@@ -312,8 +312,20 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 <script>
 
-const BASE_URL =
-'<?= BASE_URL; ?>';
+const BASE_URL = '<?= BASE_URL; ?>';
+const META_APP_ID = '1598345545186185';
+const META_CONFIGURATION_ID = '1493119295619741';
+
+window.fbAsyncInit = function() {
+
+    FB.init({
+        appId: META_APP_ID,
+        cookie: true,
+        xfbml: false,
+        version: 'v23.0'
+    });
+
+};
 
 </script>
 
@@ -330,6 +342,8 @@ const BASE_URL =
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
 
 <script src="<?= BASE_URL; ?>/assets/js/app.js"></script>
+
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/pt_BR/sdk.js"></script>
 
 </body>
 </html>

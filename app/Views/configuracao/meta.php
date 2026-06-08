@@ -226,16 +226,41 @@ function formatarTelefoneConfiguracao($telefone)
 document.addEventListener('click', function(e){
 
     if(
-        e.target.closest('#btnConectarWhatsApp')
-        ||
-        e.target.closest('#btnConectarWhatsAppVazio')
+        !e.target.closest('#btnConectarWhatsApp')
+        &&
+        !e.target.closest('#btnConectarWhatsAppVazio')
     ){
-
-        alert(
-            'A conexão via Embedded Signup será configurada no próximo passo, após publicar o sistema em HTTPS.'
-        );
-
+        return;
     }
+
+    if(typeof FB === 'undefined'){
+        alert('SDK da Meta não carregado.');
+        return;
+    }
+
+    FB.login(function(response){
+
+        console.log(response);
+
+        if(response.authResponse){
+
+            alert(
+                'Login realizado com sucesso. Verifique o console.'
+            );
+
+        }else{
+
+            alert(
+                'Login cancelado.'
+            );
+
+        }
+
+    }, {
+        config_id: META_CONFIGURATION_ID,
+        response_type: 'code',
+        override_default_response_type: true
+    });
 
 });
 
