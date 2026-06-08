@@ -78,6 +78,7 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
                     name="email"
                     class="form-control"
                     placeholder="seuemail@empresa.com"
+                    autocomplete="username"
                     required
                     >
 
@@ -112,7 +113,7 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
 
                 <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
 
-                <div class="mb-3">
+                <div class="mb-4 mt-3">
 
                     <div
                     class="g-recaptcha"
