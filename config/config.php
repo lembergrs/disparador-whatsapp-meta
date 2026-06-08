@@ -10,6 +10,9 @@ if ($host === 'disparador.test') {
     define('ASSET_URL', BASE_URL . '/public/assets');
 }
 
+define('RECAPTCHA_SITE_KEY', '6LdDLBQtAAAAAEp5UhSPe_cikIC5u3VDrtq1-rse');
+define('RECAPTCHA_SECRET_KEY', '6LdDLBQtAAAAAPB-YaekMjxjXwJY9V05mMJnUoZG');
+
 /*
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'whatsapp_disparador');

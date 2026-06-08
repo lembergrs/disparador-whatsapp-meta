@@ -104,53 +104,45 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
                     name="senha"
                     class="form-control"
                     placeholder="Digite sua senha"
+                    autocomplete="current-password"
                     required
                     >
 
                 </div>
 
-            </div>
+                <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
 
-            <div class="mb-3">
+                <div class="mb-3">
 
-                <div
-                class="g-recaptcha"
-                data-sitekey="SUA_SITE_KEY"
-                ></div>
+                    <div
+                    class="g-recaptcha"
+                    data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
+                    ></div>
 
-            </div>
+                </div>
 
-            <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+                <?php } ?>
 
-            <div class="mb-3">
-
-                <div
-                class="g-recaptcha"
-                data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
-                ></div>
-
-            </div>
-
-            <?php } ?>
-
-            <button
-            type="submit"
-            class="btn btn-primary btn-block btn-login-custom"
-            >
-
-                <i class="fas fa-sign-in-alt"></i>
-                Entrar
-
-            </button>
-
-            <div class="text-center mt-3">
-
-                <a
-                href="<?= BASE_URL; ?>/index.php?url=login/esqueciSenha"
-                class="text-muted"
+                <button
+                type="submit"
+                class="btn btn-primary btn-block btn-login-custom"
                 >
-                    Esqueci minha senha
-                </a>
+
+                    <i class="fas fa-sign-in-alt"></i>
+                    Entrar
+
+                </button>
+
+                <div class="text-center mt-3">
+
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=login/esqueciSenha"
+                    class="text-muted"
+                    >
+                        Esqueci minha senha
+                    </a>
+
+                </div>
 
             </div>
 
