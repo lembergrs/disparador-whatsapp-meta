@@ -254,3 +254,181 @@ body.login-custom-page {
     padding: 30px;
     box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
 }
+
+
+.site-hero{
+    background:
+        linear-gradient(
+            135deg,
+            #effff4 0%,
+            #ffffff 55%,
+            #eaf6ff 100%
+        );
+    padding-top: 120px;
+    padding-bottom: 80px;
+}
+
+.site-hero-title{
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1.12;
+    color: #0f172a;
+}
+
+.site-hero-title span{
+    color: #0a9f3d;
+}
+
+.site-hero-text{
+    font-size: 18px;
+    color: #64748b;
+}
+
+.site-card-feature{
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+
+.site-section-title{
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.site-btn-main{
+    background: #0a9f3d;
+    border-color: #0a9f3d;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 12px 24px;
+}
+
+.site-btn-main:hover{
+    background: #078032;
+    border-color: #078032;
+}
+
+.site-navbar{
+    min-height: 76px;
+}
+
+.site-logo{
+    height: 52px;
+    max-width: 230px;
+    object-fit: contain;
+}
+
+.site-hero{
+    background:
+        linear-gradient(
+            135deg,
+            #effff4 0%,
+            #ffffff 55%,
+            #eaf6ff 100%
+        );
+    padding-top: 130px;
+    padding-bottom: 85px;
+}
+
+.site-hero-title{
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1.12;
+    color: #0f172a;
+}
+
+.site-hero-title span{
+    color: #0a9f3d;
+}
+
+.site-hero-text{
+    font-size: 18px;
+    color: #64748b;
+}
+
+.site-card-feature{
+    border: 0;
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, .08);
+}
+
+.site-section-title{
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.site-btn-main{
+    background: #0a9f3d;
+    border-color: #0a9f3d;
+    border-radius: 12px;
+    font-weight: 700;
+}
+
+.site-btn-main:hover{
+    background: #078032;
+    border-color: #078032;
+}
+
+.site-check-item{
+    margin-bottom: 15px;
+    color: #334155;
+    font-size: 16px;
+}
+
+.site-check-item i{
+    margin-right: 8px;
+}
+
+.site-feature-icon{
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: #e8f8ee;
+    color: #0a9f3d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+.site-step{
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #0a9f3d;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+.site-faq-item{
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+}
+
+.site-final-cta{
+    background:
+        linear-gradient(
+            135deg,
+            #0a9f3d 0%,
+            #006aa6 100%
+        );
+    color: #ffffff;
+    padding: 70px 0;
+}
+
+@media(max-width: 767px){
+    .site-hero-title{
+        font-size: 34px;
+    }
+
+    .site-logo{
+        height: 42px;
+        max-width: 190px;
+    }
+}
