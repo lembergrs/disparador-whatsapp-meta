@@ -16,7 +16,7 @@ href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <link rel="stylesheet"
-href="<?= BASE_URL; ?>/assets/css/style.css">
+href="<?= ASSET_URL; ?>/css/style.css?v=6">
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
@@ -33,7 +33,7 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
             <div class="login-image-placeholder">
 
                 <img
-                src="<?= BASE_URL; ?>/assets/img/logoDisparador.fw.png"
+                src="<?= ASSET_URL; ?>/img/logoDisparador.fw.png"
                 alt="Disparador"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
@@ -59,7 +59,7 @@ href="<?= BASE_URL; ?>/assets/css/style.css">
         <?php require __DIR__ . '/../components/flash.php'; ?>
 
         <form
-        action="<?= BASE_URL; ?>/index.php?url=login/autenticar"
+        action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=login/autenticar"
         method="POST"
         >
 
