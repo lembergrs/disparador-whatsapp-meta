@@ -184,7 +184,8 @@ class SiteController extends Controller
             'site/politica_privacidade',
             [
                 'titulo' => 'Política de Privacidade'
-            ]
+            ],
+            false
         );
     }
 
@@ -194,8 +195,8 @@ class SiteController extends Controller
             'site/termos_uso',
             [
                 'titulo' => 'Termos de Uso'
-            ]
+            ],
+            false
         );
     }
-
 }
