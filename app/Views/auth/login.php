@@ -159,7 +159,7 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
         <div class="login-footer">
 
             <small>
-                © <?= date('Y'); ?> Rose Distribuição
+                © <?= date('Y'); ?> RL2 Net. Todos os direitos reservados.
             </small>
 
         </div>
