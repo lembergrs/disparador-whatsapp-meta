@@ -12,188 +12,212 @@ $flash = Session::getFlash();
 
     <meta charset="utf-8">
 
-    <title>
-        Cadastro | Disparador WhatsApp
-    </title>
+    <title>Cadastro | Disparador RL2 Net</title>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link
-        rel="stylesheet"
-        href="<?= BASE_URL ?>assets/adminlte/plugins/fontawesome-free/css/all.min.css"
-    >
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 
-    <link
-        rel="stylesheet"
-        href="<?= BASE_URL ?>assets/adminlte/dist/css/adminlte.min.css"
-    >
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=11">
 
 </head>
 
-<body class="hold-transition">
+<body class="site-cadastro-page">
 
 <div class="container py-5">
 
-    <div class="row justify-content-center">
+    <div class="text-center mb-4">
 
-        <div class="col-lg-7">
+        <a href="<?= BASE_URL; ?>/index.php?url=site">
+            <img
+            src="<?= ASSET_URL; ?>/img/logo-disparador.png"
+            alt="Disparador"
+            style="max-height:85px; max-width:320px;"
+            >
+        </a>
 
-            <div class="card card-primary">
+    </div>
 
-                <?php if($flash): ?>
+    <div class="row justify-content-center align-items-stretch">
 
-                    <div
-                        class="alert alert-<?= $flash['type'] === 'error'
-                            ? 'danger'
-                            : 'success' ?>"
-                    >
+        <div class="col-lg-5 mb-4 mb-lg-0">
 
-                        <?= $flash['message'] ?>
+            <div class="card site-card-feature h-100">
 
+                <div class="card-body p-4">
+
+                    <span class="badge badge-success mb-3">
+                        WhatsApp Business API
+                    </span>
+
+                    <h2 class="font-weight-bold mb-3">
+                        Solicite sua conta no Disparador
+                    </h2>
+
+                    <p class="text-muted">
+                        Cadastre sua empresa para começar a usar campanhas,
+                        listas, templates oficiais da Meta e central de conversas.
+                    </p>
+
+                    <hr>
+
+                    <p>
+                        <i class="fas fa-check-circle text-success"></i>
+                        Campanhas com templates oficiais
+                    </p>
+
+                    <p>
+                        <i class="fas fa-check-circle text-success"></i>
+                        Importação de contatos e listas
+                    </p>
+
+                    <p>
+                        <i class="fas fa-check-circle text-success"></i>
+                        Central de atendimento estilo WhatsApp
+                    </p>
+
+                    <p>
+                        <i class="fas fa-check-circle text-success"></i>
+                        Preparado para múltiplos números
+                    </p>
+
+                    <div class="alert alert-info mt-4 mb-0">
+                        Após o cadastro, sua conta ficará aguardando validação da equipe RL2 Net.
                     </div>
-
-                <?php endif; ?>
-
-                <div class="card-header">
-
-                    <h3 class="card-title">
-                        Solicitação de Cadastro
-                    </h3>
 
                 </div>
 
-                <form
-                    action="<?= BASE_URL ?>/index.php?url=site/salvar"
+            </div>
+
+        </div>
+
+        <div class="col-lg-7">
+
+            <div class="card site-card-feature">
+
+                <div class="card-body p-4">
+
+                    <h4 class="font-weight-bold mb-1">
+                        Dados de cadastro
+                    </h4>
+
+                    <p class="text-muted mb-4">
+                        Preencha os dados abaixo para solicitar seu acesso.
+                    </p>
+
+                    <?php if($flash): ?>
+
+                        <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : 'success'; ?> alert-dismissible fade show">
+
+                            <?= $flash['message']; ?>
+
+                            <button
+                            type="button"
+                            class="close"
+                            data-dismiss="alert"
+                            aria-label="Close"
+                            >
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+
+                        </div>
+
+                    <?php endif; ?>
+
+                    <form
+                    action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=site/salvar"
                     method="post"
-                >
+                    >
 
-                    <div class="card-body">
+                        <div class="row">
 
-                        <div class="form-group">
+                            <div class="col-md-6">
 
-                            <label>
-                                Tipo de Pessoa
-                            </label>
+                                <div class="form-group">
 
-                            <select
-                                name="tipo_pessoa"
-                                id="tipo_pessoa"
-                                class="form-control"
-                            >
+                                    <label>Tipo de Pessoa</label>
 
-                                <option value="PJ">
-                                    Pessoa Jurídica
-                                </option>
+                                    <select
+                                    name="tipo_pessoa"
+                                    id="tipo_pessoa"
+                                    class="form-control"
+                                    >
+                                        <option value="PJ">Pessoa Jurídica</option>
+                                        <option value="PF">Pessoa Física</option>
+                                    </select>
 
-                                <option value="PF">
-                                    Pessoa Física
-                                </option>
+                                </div>
 
-                            </select>
+                            </div>
 
-                        </div>
+                            <div class="col-md-6">
 
-                        <div class="form-group">
+                                <div class="form-group">
 
-                            <label>
-                                CPF / CNPJ
-                            </label>
+                                    <label>CPF / CNPJ</label>
 
-                            <input
-                                type="text"
-                                name="cpf_cnpj"
-                                id="cpf_cnpj"
-                                class="form-control cpf_cnpj"
-                                required
-                            >
+                                    <input
+                                    type="text"
+                                    name="cpf_cnpj"
+                                    id="cpf_cnpj"
+                                    class="form-control cpf_cnpj"
+                                    required
+                                    >
 
-                        </div>
+                                </div>
 
-                        <div class="form-group">
-
-                            <label id="label_nome">
-
-                                Nome da Empresa
-
-                            </label>
-
-                            <input
-                                type="text"
-                                name="nome"
-                                class="form-control"
-                                required
-                            >
-
-                        </div>
-
-                        <div
-                            class="form-group"
-                            id="grupo_razao_social"
-                        >
-
-                            <label>
-
-                                Razão Social
-
-                            </label>
-
-                            <input
-                                type="text"
-                                name="razao_social"
-                                class="form-control"
-                            >
-
-                        </div>
-
-                        <div
-                            class="form-group"
-                            id="grupo_nome_fantasia"
-                        >
-
-                            <label>
-
-                                Nome Fantasia
-
-                            </label>
-
-                            <input
-                                type="text"
-                                name="nome_fantasia"
-                                class="form-control"
-                            >
+                            </div>
 
                         </div>
 
                         <div class="form-group">
 
-                            <label>
-                                E-mail
-                            </label>
+                            <label id="label_nome">Nome da Empresa</label>
 
                             <input
-                                type="email"
-                                name="email"
-                                class="form-control"
-                                required
+                            type="text"
+                            name="nome"
+                            class="form-control"
+                            required
                             >
 
                         </div>
 
-                        <div class="form-group">
+                        <div class="row">
 
-                            <label>
-                                Telefone
-                            </label>
+                            <div class="col-md-6" id="grupo_razao_social">
 
-                            <input
-                                type="text"
-                                name="telefone"
-                                class="form-control telefone"
-                                required
-                            >
+                                <div class="form-group">
+
+                                    <label>Razão Social</label>
+
+                                    <input
+                                    type="text"
+                                    name="razao_social"
+                                    class="form-control"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6" id="grupo_nome_fantasia">
+
+                                <div class="form-group">
+
+                                    <label>Nome Fantasia</label>
+
+                                    <input
+                                    type="text"
+                                    name="nome_fantasia"
+                                    class="form-control"
+                                    >
+
+                                </div>
+
+                            </div>
 
                         </div>
 
@@ -203,15 +227,14 @@ $flash = Session::getFlash();
 
                                 <div class="form-group">
 
-                                    <label>
-                                        Senha
-                                    </label>
+                                    <label>E-mail</label>
 
                                     <input
-                                        type="password"
-                                        name="senha"
-                                        class="form-control"
-                                        required
+                                    type="email"
+                                    name="email"
+                                    class="form-control"
+                                    autocomplete="email"
+                                    required
                                     >
 
                                 </div>
@@ -222,15 +245,13 @@ $flash = Session::getFlash();
 
                                 <div class="form-group">
 
-                                    <label>
-                                        Confirmar Senha
-                                    </label>
+                                    <label>WhatsApp para contato</label>
 
                                     <input
-                                        type="password"
-                                        name="confirmar_senha"
-                                        class="form-control"
-                                        required
+                                    type="text"
+                                    name="telefone"
+                                    class="form-control telefone"
+                                    required
                                     >
 
                                 </div>
@@ -239,37 +260,90 @@ $flash = Session::getFlash();
 
                         </div>
 
-                        <div class="alert alert-info">
+                        <div class="row">
 
-                            Após o cadastro, sua conta ficará aguardando aprovação da equipe administrativa.
+                            <div class="col-md-6">
+
+                                <div class="form-group">
+
+                                    <label>Senha</label>
+
+                                    <input
+                                    type="password"
+                                    name="senha"
+                                    class="form-control"
+                                    autocomplete="new-password"
+                                    required
+                                    >
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="form-group">
+
+                                    <label>Confirmar Senha</label>
+
+                                    <input
+                                    type="password"
+                                    name="confirmar_senha"
+                                    class="form-control"
+                                    autocomplete="new-password"
+                                    required
+                                    >
+
+                                </div>
+
+                            </div>
 
                         </div>
 
-                    </div>
+                        <div class="form-check mb-4">
 
-                    <div class="card-footer">
+                            <input
+                            class="form-check-input"
+                            type="checkbox"
+                            required
+                            id="aceite"
+                            >
+
+                            <label
+                            class="form-check-label"
+                            for="aceite"
+                            >
+                                Li e concordo com os
+                                <a href="#" data-toggle="modal" data-target="#modalTermos">
+                                    Termos de Uso
+                                </a>
+
+                                e a
+
+                                <a href="#" data-toggle="modal" data-target="#modalPrivacidade">
+                                    Política de Privacidade
+                                </a>.
+                            </label>
+
+                        </div>
 
                         <button
-                            type="submit"
-                            class="btn btn-success"
+                        type="submit"
+                        class="btn btn-success btn-lg site-btn-main"
                         >
-
-                            Solicitar Cadastro
-
+                            Solicitar cadastro
                         </button>
 
                         <a
-                            href="<?= BASE_URL ?>/index.php?url=site"
-                            class="btn btn-secondary"
+                        href="<?= BASE_URL; ?>/index.php?url=site"
+                        class="btn btn-outline-secondary btn-lg ml-2"
                         >
-
                             Voltar
-
                         </a>
 
-                    </div>
+                    </form>
 
-                </form>
+                </div>
 
             </div>
 
@@ -279,8 +353,74 @@ $flash = Session::getFlash();
 
 </div>
 
-<script src="<?= BASE_URL ?>assets/adminlte/plugins/jquery/jquery.min.js"></script>
-<script src="<?= BASE_URL ?>assets/adminlte/plugins/inputmask/jquery.inputmask.min.js"></script>
+<div class="modal fade" id="modalTermos" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Termos de Uso</h5>
+
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <?php require __DIR__ . '/termos_uso.php'; ?>
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+                >
+                    Fechar
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalPrivacidade" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Política de Privacidade</h5>
+
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <?php require __DIR__ . '/politica_privacidade.php'; ?>
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+                >
+                    Fechar
+                </button>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 
@@ -302,37 +442,30 @@ $(function(){
         let tipo =
             $('#tipo_pessoa').val();
 
-        if(tipo === 'PF')
-        {
-            $('#label_nome')
-                .text('Nome Completo');
+        $('#cpf_cnpj').inputmask('remove');
 
-            $('#grupo_razao_social')
-                .hide();
+        if(tipo === 'PF'){
 
-            $('#grupo_nome_fantasia')
-                .hide();
+            $('#label_nome').text('Nome Completo');
 
-            $('#cpf_cnpj')
-                .inputmask(
-                    '999.999.999-99'
-                );
-        }
-        else
-        {
-            $('#label_nome')
-                .text('Nome da Empresa');
+            $('#grupo_razao_social').hide();
+            $('#grupo_nome_fantasia').hide();
 
-            $('#grupo_razao_social')
-                .show();
+            $('#cpf_cnpj').inputmask(
+                '999.999.999-99'
+            );
 
-            $('#grupo_nome_fantasia')
-                .show();
+        }else{
 
-            $('#cpf_cnpj')
-                .inputmask(
-                    '99.999.999/9999-99'
-                );
+            $('#label_nome').text('Nome da Empresa');
+
+            $('#grupo_razao_social').show();
+            $('#grupo_nome_fantasia').show();
+
+            $('#cpf_cnpj').inputmask(
+                '99.999.999/9999-99'
+            );
+
         }
     }
 

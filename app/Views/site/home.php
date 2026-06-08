@@ -1,3 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+
+    <title>Disparador | WhatsApp Business API</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"
+    >
+
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    >
+
+    <link
+    rel="stylesheet"
+    href="<?= ASSET_URL; ?>/css/style.css?v=10"
+    >
+</head>
+
+<body>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top site-navbar">
 
     <div class="container">
@@ -65,7 +91,7 @@
 
 </nav>
 
-<section class="site-hero">
+<section class="site-hero-v2">
 
     <div class="container">
 
@@ -78,12 +104,12 @@
                 </span>
 
                 <h1 class="site-hero-title">
-                    Envie campanhas e atenda clientes pelo <span>WhatsApp</span> em uma única plataforma.
+                    Transforme seu WhatsApp em uma plataforma de <span>campanhas e atendimento</span>.
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    O Disparador ajuda sua empresa a organizar contatos, criar campanhas,
-                    usar templates oficiais da Meta e centralizar conversas com seus clientes.
+                    Com o Disparador, sua empresa cria templates oficiais, organiza listas,
+                    envia campanhas e centraliza conversas em uma única ferramenta.
                 </p>
 
                 <div class="mt-4">
@@ -92,57 +118,105 @@
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
                     >
-                        Criar conta gratuita
+                        Começar agora
                     </a>
 
                     <a
-                    href="#recursos"
-                    class="btn btn-outline-secondary btn-lg ml-lg-2 mt-2 mt-lg-0"
+                    href="#como-funciona"
+                    class="btn btn-outline-secondary btn-lg site-btn-outline ml-lg-2 mt-2 mt-lg-0"
                     >
-                        Ver recursos
+                        Como funciona
                     </a>
 
                 </div>
 
-                <p class="text-muted mt-3 mb-0">
-                    Não depende de WhatsApp Web. Integração pela plataforma oficial da Meta.
-                </p>
+                <div class="mt-4 text-muted">
+
+                    <span class="mr-3">
+                        <i class="fas fa-check text-success"></i>
+                        Sem WhatsApp Web
+                    </span>
+
+                    <span class="mr-3">
+                        <i class="fas fa-check text-success"></i>
+                        Templates oficiais
+                    </span>
+
+                    <span>
+                        <i class="fas fa-check text-success"></i>
+                        Multiempresa
+                    </span>
+
+                </div>
 
             </div>
 
             <div class="col-lg-6 mt-5 mt-lg-0">
 
-                <div class="card site-card-feature">
+                <div class="site-dashboard-mockup">
 
-                    <div class="card-body p-4">
+                    <div class="site-mockup-top">
+                        Painel Disparador
+                    </div>
 
-                        <h5 class="font-weight-bold mb-4">
-                            Com o Disparador você pode:
-                        </h5>
+                    <div class="site-mockup-body">
 
-                        <div class="site-check-item">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Importar contatos e organizar por listas
+                        <div class="row">
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <small class="text-muted">Campanhas enviadas</small>
+                                    <h3 class="mb-0 text-success">1.248</h3>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <small class="text-muted">Conversas abertas</small>
+                                    <h3 class="mb-0 text-primary">86</h3>
+                                </div>
+
+                            </div>
+
                         </div>
 
-                        <div class="site-check-item">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Criar campanhas com templates aprovados
+                        <div class="site-mini-card">
+
+                            <strong>
+                                Campanha: Atualização de cadastro
+                            </strong>
+
+                            <div class="progress mt-3">
+
+                                <div
+                                class="progress-bar bg-success"
+                                style="width:78%"
+                                >
+                                    78%
+                                </div>
+
+                            </div>
+
                         </div>
 
-                        <div class="site-check-item">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Acompanhar o envio das mensagens
-                        </div>
+                        <div class="site-mini-card mb-0">
 
-                        <div class="site-check-item">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Receber e responder conversas no painel
-                        </div>
+                            <div class="d-flex align-items-center">
 
-                        <div class="site-check-item mb-0">
-                            <i class="fas fa-check-circle text-success"></i>
-                            Trabalhar com múltiplos números WhatsApp
+                                <i class="fab fa-whatsapp fa-2x text-success mr-3"></i>
+
+                                <div>
+                                    <strong>Central de Conversas</strong><br>
+                                    <small class="text-muted">
+                                        Mensagens recebidas em tempo real
+                                    </small>
+                                </div>
+
+                            </div>
+
                         </div>
 
                     </div>
@@ -591,3 +665,9 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 
 </script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>

@@ -433,3 +433,205 @@ body.login-custom-page {
         max-width: 250px;
     }
 }
+
+:root{
+    --disp-green:#08a63f;
+    --disp-green-dark:#067a31;
+    --disp-blue:#0866c6;
+    --disp-dark:#102033;
+    --disp-muted:#64748b;
+    --disp-bg:#f6fbff;
+}
+
+.site-navbar{
+    min-height: 78px;
+}
+
+.site-logo{
+    height: 62px;
+    max-width: 300px;
+    object-fit: contain;
+}
+
+.site-hero-v2{
+    padding: 140px 0 90px;
+    background:
+        radial-gradient(circle at top left, rgba(8,166,63,.14), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(8,102,198,.13), transparent 35%),
+        linear-gradient(135deg, #ffffff 0%, #f3fff7 55%, #edf7ff 100%);
+}
+
+.site-hero-title{
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1.08;
+    color: var(--disp-dark);
+}
+
+.site-hero-title span{
+    color: var(--disp-green);
+}
+
+.site-hero-text{
+    font-size: 19px;
+    color: var(--disp-muted);
+}
+
+.site-btn-main{
+    background: var(--disp-green);
+    border-color: var(--disp-green);
+    border-radius: 14px;
+    font-weight: 800;
+    padding: 12px 26px;
+}
+
+.site-btn-main:hover{
+    background: var(--disp-green-dark);
+    border-color: var(--disp-green-dark);
+}
+
+.site-btn-outline{
+    border-radius: 14px;
+    font-weight: 700;
+    padding: 12px 26px;
+}
+
+.site-dashboard-mockup{
+    background: #ffffff;
+    border-radius: 24px;
+    box-shadow: 0 25px 70px rgba(15,23,42,.14);
+    overflow: hidden;
+    border: 1px solid rgba(15,23,42,.08);
+}
+
+.site-mockup-top{
+    background: linear-gradient(135deg, var(--disp-green), var(--disp-blue));
+    color: #ffffff;
+    padding: 16px 20px;
+    font-weight: 800;
+}
+
+.site-mockup-body{
+    padding: 24px;
+}
+
+.site-mini-card{
+    background: #f8fafc;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 15px;
+    border: 1px solid #e5e7eb;
+}
+
+.site-mini-card strong{
+    color: var(--disp-dark);
+}
+
+.site-feature-card{
+    border: 0;
+    border-radius: 22px;
+    box-shadow: 0 12px 35px rgba(15,23,42,.08);
+    transition: all .2s ease;
+}
+
+.site-feature-card:hover{
+    transform: translateY(-4px);
+    box-shadow: 0 20px 45px rgba(15,23,42,.12);
+}
+
+.site-feature-icon{
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    background: #eafff0;
+    color: var(--disp-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 25px;
+    margin-bottom: 18px;
+}
+
+.site-section-title{
+    font-weight: 900;
+    color: var(--disp-dark);
+}
+
+.site-step{
+    width: 62px;
+    height: 62px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--disp-green), var(--disp-blue));
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 900;
+    margin-bottom: 18px;
+}
+
+.site-plan-card{
+    border: 0;
+    border-radius: 24px;
+    box-shadow: 0 12px 35px rgba(15,23,42,.08);
+}
+
+.site-plan-card.featured{
+    border: 2px solid var(--disp-green);
+    transform: scale(1.03);
+}
+
+.site-final-cta{
+    background: linear-gradient(135deg, var(--disp-green), var(--disp-blue));
+    color: #ffffff;
+    padding: 80px 0;
+}
+
+.site-faq-item{
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+@media(max-width: 767px){
+    .site-logo{
+        height: 48px;
+        max-width: 230px;
+    }
+
+    .site-hero-title{
+        font-size: 36px;
+    }
+
+    .site-hero-v2{
+        padding-top: 115px;
+    }
+
+    .site-plan-card.featured{
+        transform: none;
+    }
+}
+
+.site-cadastro-page{
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at top left, rgba(8,166,63,.12), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(8,102,198,.12), transparent 35%),
+        linear-gradient(135deg, #ffffff 0%, #f3fff7 55%, #edf7ff 100%);
+}
+
+.site-cadastro-page label{
+    font-weight: 600;
+    color: #334155;
+}
+
+.site-cadastro-page .form-control{
+    height: 46px;
+    border-radius: 12px;
+}
+
+.site-cadastro-page .card{
+    border-radius: 22px;
+}
+

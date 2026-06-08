@@ -181,8 +181,8 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
     <a
-    href="<?= BASE_URL; ?>/index.php?url=listacontato"
-    class="nav-link <?= str_contains($url, 'listacontato') ? 'active' : ''; ?>""
+    href="<?= BASE_URL; ?>/index.php?url=listaContato"
+    class="nav-link <?= str_contains($url, 'listaContato') ? 'active' : ''; ?>""
     >
 
         <i class="nav-icon fas fa-list"></i>
@@ -341,7 +341,7 @@ window.fbAsyncInit = function() {
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
 
-<script src="<?= BASE_URL; ?>/assets/js/app.js"></script>
+<script src="<?= ASSET_URL; ?>/js/app.js"></script>
 
 <script async defer crossorigin="anonymous" src="https://connect.facebook.net/pt_BR/sdk.js"></script>
 

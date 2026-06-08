@@ -96,8 +96,11 @@
 
             <hr>
 
-            <a href="<?= BASE_URL; ?>/index.php?url=site" class="btn btn-secondary">
-                Voltar
+            <a
+            href="<?= BASE_URL; ?>/index.php?url=site"
+            class="btn btn-secondary"
+            >
+                Voltar ao site
             </a>
 
         </div>
