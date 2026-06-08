@@ -16,7 +16,7 @@ href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <link rel="stylesheet"
-href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
+href="<?= BASE_URL; ?>/assets/css/style.css">
 
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
@@ -33,8 +33,8 @@ href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
             <div class="login-image-placeholder">
 
                 <img
-                src="<?= BASE_URL; ?>/assets/img/logo-login.png"
-                alt="Logo"
+                src="<?= BASE_URL; ?>/assets/img/logoDisparador.fw.png"
+                alt="Disparador"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
 
@@ -47,7 +47,7 @@ href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
             </div>
 
             <h2>
-                WhatsApp Disparador
+                Disparador
             </h2>
 
             <p>
@@ -56,7 +56,7 @@ href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
 
         </div>
 
-        <?php require __DIR__ . '/../components/flash.php'; ?>
+        <?php require '../app/Views/components/flash.php'; ?>
 
         <form
         action="<?= BASE_URL; ?>/index.php?url=login/autenticar"
@@ -114,6 +114,28 @@ href="<?= BASE_URL; ?>/public/assets/css/style.css?v=2">
                 </div>
 
             </div>
+
+            <div class="mb-3">
+
+                <div
+                class="g-recaptcha"
+                data-sitekey="SUA_SITE_KEY"
+                ></div>
+
+            </div>
+
+            <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+
+            <div class="mb-3">
+
+                <div
+                class="g-recaptcha"
+                data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
+                ></div>
+
+            </div>
+
+            <?php } ?>
 
             <button
             type="submit"

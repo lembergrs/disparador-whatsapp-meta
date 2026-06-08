@@ -25,9 +25,7 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css">
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=5">
+<link rel="stylesheet" href="<?= BASE_URL; ?>/assets/css/style.css">
 
 </head>
 
@@ -83,7 +81,12 @@ Sair
 <a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link">
 
 <span class="brand-text font-weight-light">
-Disparador
+<img
+    src="<?= BASE_URL; ?>/assets/img/logoDisparador.fw.png"
+    alt="Logo"
+    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    width="230"
+    >
 </span>
 
 </a>
@@ -178,8 +181,8 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
     <a
-    href="<?= BASE_URL; ?>/index.php?url=listaContato"
-    class="nav-link <?= str_contains($url, 'listaContato') ? 'active' : ''; ?>""
+    href="<?= BASE_URL; ?>/index.php?url=listacontato"
+    class="nav-link <?= str_contains($url, 'listacontato') ? 'active' : ''; ?>""
     >
 
         <i class="nav-icon fas fa-list"></i>
@@ -192,7 +195,7 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 </li>
 
-<li class="nav-item">
+<!-- li class="nav-item">
 
 <a
 href="<?= BASE_URL; ?>/index.php?url=importacao"
@@ -205,7 +208,7 @@ class="nav-link <?= str_contains($url, 'importacao') ? 'active' : ''; ?>"
 
 </a>
 
-</li>
+</li -->
 
 <li class="nav-item">
 
@@ -295,7 +298,7 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 <div class="container-fluid">
 
-<?php require __DIR__ . '/../components/flash.php'; ?>
+<?php require '../app/Views/components/flash.php'; ?>
 
 <?php require $viewPath; ?>
 
@@ -314,6 +317,8 @@ const BASE_URL =
 
 </script>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -324,7 +329,7 @@ const BASE_URL =
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
 
-<script src="<?= ASSET_URL; ?>/js/app.js?v=5"></script>
+<script src="<?= BASE_URL; ?>/assets/js/app.js"></script>
 
 </body>
 </html>

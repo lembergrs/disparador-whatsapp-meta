@@ -177,4 +177,25 @@ class SiteController extends Controller
             exit;
         }
     }
+
+    public function politicaPrivacidade()
+    {
+        $this->view(
+            'site/politica_privacidade',
+            [
+                'titulo' => 'Política de Privacidade'
+            ]
+        );
+    }
+
+    public function termosUso()
+    {
+        $this->view(
+            'site/termos_uso',
+            [
+                'titulo' => 'Termos de Uso'
+            ]
+        );
+    }
+
 }
