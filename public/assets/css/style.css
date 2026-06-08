@@ -186,7 +186,7 @@
 
 .login-custom-card {
     width: 100%;
-    max-width: 420px;
+    max-width: 500px;
     background: #ffffff;
     border-radius: 12px;
     padding: 30px;
@@ -198,18 +198,19 @@
     margin-bottom: 25px;
 }
 
-.login-image-placeholder {
-    width: 90px;
-    height: 90px;
-    margin: 0 auto 15px auto;
+.login-image-placeholder{
+    width: 100%;
+    height: auto;
+    margin: 0 auto 20px auto;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
 }
 
-.login-image-placeholder img {
-    max-width: 90px;
-    max-height: 90px;
+.login-image-placeholder img{
+    max-width: 320px;
+    width: 100%;
+    height: auto;
 }
 
 .login-icon-fallback {
@@ -313,9 +314,9 @@ body.login-custom-page {
 }
 
 .site-logo{
-    height: 52px;
-    max-width: 230px;
-    object-fit: contain;
+    height: 70px;
+    max-width: 320px;
+    width: auto;
 }
 
 .site-hero{
@@ -428,7 +429,7 @@ body.login-custom-page {
     }
 
     .site-logo{
-        height: 42px;
-        max-width: 190px;
+        height: 55px;
+        max-width: 250px;
     }
 }

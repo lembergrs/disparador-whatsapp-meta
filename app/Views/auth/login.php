@@ -33,7 +33,7 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
             <div class="login-image-placeholder">
 
                 <img
-                src="<?= ASSET_URL; ?>/img/logoDisparador.fw.png"
+                src="<?= ASSET_URL; ?>/img/logo-disparador.png"
                 alt="Disparador"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                 >
