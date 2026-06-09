@@ -240,18 +240,18 @@ document.addEventListener('click', function(e){
 
     FB.login(function(response){
 
-        console.log(response);
+        console.log('Embedded Signup response:', response);
 
         if(response.authResponse){
 
             alert(
-                'Login realizado com sucesso. Verifique o console.'
+                'Embedded Signup retornou autorização. Verifique o console.'
             );
 
         }else{
 
             alert(
-                'Login cancelado.'
+                'Login cancelado ou não autorizado.'
             );
 
         }
@@ -259,7 +259,10 @@ document.addEventListener('click', function(e){
     }, {
         config_id: META_CONFIGURATION_ID,
         response_type: 'code',
-        override_default_response_type: true
+        override_default_response_type: true,
+        extras: {
+            feature: 'whatsapp_embedded_signup'
+        }
     });
 
 });

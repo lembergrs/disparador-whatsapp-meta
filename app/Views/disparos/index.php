@@ -167,7 +167,8 @@ class="mb-3"
                 ></textarea>
 
                 <small class="text-muted">
-                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula.
+                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. <br />
+                    Atente para o formato do número (99) 99999-9999 
                 </small>
 
             </div>

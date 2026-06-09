@@ -161,13 +161,27 @@
 
                     <div class="site-mockup-body">
 
+                        <div class="mb-3">
+
+                            <small class="text-muted">
+                                Status da plataforma
+                            </small>
+
+                            <h5 class="font-weight-bold mb-0">
+                                Operação em produção
+                            </h5>
+
+                        </div>
+
                         <div class="row">
 
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">Campanhas enviadas</small>
-                                    <h3 class="mb-0 text-success">1.248</h3>
+                                    <small class="text-muted">API Meta</small>
+                                    <h4 class="mb-0 text-success">
+                                        Operacional
+                                    </h4>
                                 </div>
 
                             </div>
@@ -175,8 +189,10 @@
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">Conversas abertas</small>
-                                    <h3 class="mb-0 text-primary">86</h3>
+                                    <small class="text-muted">Webhooks</small>
+                                    <h4 class="mb-0 text-success">
+                                        Ativos
+                                    </h4>
                                 </div>
 
                             </div>
@@ -186,17 +202,30 @@
                         <div class="site-mini-card">
 
                             <strong>
-                                Campanha: Atualização de cadastro
+                                Últimos 30 dias
                             </strong>
 
-                            <div class="progress mt-3">
+                            <div class="mt-3">
 
-                                <div
-                                class="progress-bar bg-success"
-                                style="width:78%"
-                                >
-                                    78%
-                                </div>
+                                <p class="mb-2">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    Plataforma implantada em ambiente de produção
+                                </p>
+
+                                <p class="mb-2">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    Integração com API Oficial da Meta configurada
+                                </p>
+
+                                <p class="mb-2">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    Templates oficiais criados e sincronizados
+                                </p>
+
+                                <p class="mb-0">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    Central de conversas e campanhas disponíveis
+                                </p>
 
                             </div>
 
@@ -209,9 +238,9 @@
                                 <i class="fab fa-whatsapp fa-2x text-success mr-3"></i>
 
                                 <div>
-                                    <strong>Central de Conversas</strong><br>
+                                    <strong>Disparador WhatsApp Business</strong><br>
                                     <small class="text-muted">
-                                        Mensagens recebidas em tempo real
+                                        Plataforma preparada para campanhas, atendimento e múltiplos números.
                                     </small>
                                 </div>
 
