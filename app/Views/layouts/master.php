@@ -82,7 +82,7 @@ Sair
 
 <span class="brand-text font-weight-light">
 <img
-    src="<?= BASE_URL; ?>/assets/img/logoDisparador.fw.png"
+    src="<?= BASE_URL; ?>/assets/img/logo_disparador.png"
     alt="Logo"
     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
     width="230"
