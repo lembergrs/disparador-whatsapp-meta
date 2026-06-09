@@ -242,19 +242,18 @@ document.addEventListener('click', function(e){
 
         console.log('Embedded Signup response:', response);
 
-        if(response.authResponse){
+        if(response.authResponse && response.authResponse.code){
 
-            alert(
-                'Embedded Signup retornou autorização. Verifique o console.'
-            );
+            alert('Código recebido com sucesso.');
 
-        }else{
+            console.log('CODE:', response.authResponse.code);
 
-            alert(
-                'Login cancelado ou não autorizado.'
-            );
-
+            return;
         }
+
+        alert(
+            'A conexão não foi concluída. Verifique se o popup da Meta foi autorizado até o final.'
+        );
 
     }, {
         config_id: META_CONFIGURATION_ID,
