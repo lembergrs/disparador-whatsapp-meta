@@ -24,7 +24,7 @@ action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 
 <div class="form-group">
 
-<label>Conta Meta</label>
+<<label>Conta Meta</label>
 
 <select
 name="meta"
@@ -33,17 +33,24 @@ class="form-control"
 required
 >
 
-<option value="">
-Selecione
-</option>
+<?php $totalContas = count($contas); ?>
+
+<?php if($totalContas > 1){ ?>
+
+    <option value="">
+        Selecione
+    </option>
+
+<?php } ?>
 
 <?php foreach($contas as $conta){ ?>
 
-<option value="<?= $conta['MTA_ID']; ?>">
-
-<?= $conta['MTA_Nome']; ?>
-
-</option>
+    <option
+    value="<?= $conta['MTA_ID']; ?>"
+    <?= $totalContas == 1 ? 'selected' : ''; ?>
+    >
+        <?= $conta['MTA_Nome']; ?>
+    </option>
 
 <?php } ?>
 
@@ -80,62 +87,6 @@ Selecione primeiro a Conta Meta
 </div>
 
 <div
-id="previewTemplateDisparo"
-class="mt-3"
-style="display:none;"
->
-
-    <div class="card card-outline card-success">
-
-        <div class="card-header">
-
-            <h3 class="card-title">
-                Prévia da mensagem
-            </h3>
-
-        </div>
-
-        <div class="card-body">
-
-            <div
-            id="conteudoPreviewTemplateDisparo"
-            style="white-space: pre-line;"
-            ></div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-
-<div class="form-group">
-
-<label>Número(s) Destino</label>
-
-<textarea
-name="numeros"
-id="numerosDestino"
-class="form-control"
-rows="5"
-placeholder="(41) 99999-9999&#10;(41) 98888-8888"
-required
-></textarea>
-
-<small class="text-muted">
-Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. Use apenas DDD + número.
-</small>
-
-</div>
-
-
-
-
-
-<div id="areaVariaveis"></div>
-
-<div
 id="areaProgressoDisparo"
 style="display:none;"
 class="mb-3"
@@ -161,44 +112,131 @@ class="mb-3"
 
 <div id="resumoFinalDisparo"></div>
 
-<div
-id="areaStatusNumeros"
-style="display:none"
-class="mt-3"
->
+<div class="row mt-3">
 
-    <h5>Status dos Envios</h5>
+    <div class="col-md-6">
 
-    <table class="table table-sm table-bordered">
-        <thead>
-            <tr>
-                <th>Número</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="listaStatusNumeros"></tbody>
-    </table>
+        <div id="previewTemplateDisparo">
 
-</div>
+            <div class="card card-outline card-success">
 
-<button
-type="submit"
-id="btnEnviarDisparo"
-class="btn btn-success"
->
-    <i class="fas fa-paper-plane"></i>
-    Enviar Template
-</button>
+                <div class="card-header">
 
-</form>
+                    <h3 class="card-title">
+                        Prévia da mensagem
+                    </h3>
 
-</div>
+                </div>
+
+                <div class="card-body">
+
+                    <div
+                    id="conteudoPreviewTemplateDisparo"
+                    class="disparo-preview-box"
+                    >
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-file-alt fa-3x mb-3"></i>
+                            <h5>Preview da mensagem</h5>
+                            <p>Selecione um template para exibir a prévia.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <div id="painelEdicaoDisparo">
+
+            <div class="form-group">
+
+                <label>Número(s) Destino</label>
+
+                <textarea
+                name="numeros"
+                id="numerosDestino"
+                class="form-control disparo-numeros-box"
+                rows="7"
+                placeholder="(41) 99999-9999&#10;(41) 98888-8888"
+                required
+                ></textarea>
+
+                <small class="text-muted">
+                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula.
+                </small>
+
+            </div>
+
+            <div id="areaVariaveis"></div>
+
+            <button
+            type="submit"
+            id="btnEnviarDisparo"
+            class="btn btn-success"
+            >
+                <i class="fas fa-paper-plane"></i>
+                Enviar Template
+            </button>
+
+        </div>
+
+        <div
+        id="painelExecucaoDisparo"
+        style="display:none;"
+        >
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+
+                <h5 class="mb-0">
+                    Status dos Envios
+                </h5>
+
+                <button
+                type="button"
+                id="btnPararDisparo"
+                class="btn btn-danger btn-sm"
+                >
+                    <i class="fas fa-stop"></i>
+                    Parar envio
+                </button>
+
+            </div>
+
+            <div
+            id="boxStatusNumeros"
+            class="status-envios-box"
+            >
+
+                <table class="table table-sm table-bordered mb-0">
+
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="listaStatusNumeros"></tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </div>
 
 <script>
 
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
+window.TOTAL_CONTAS_META = <?= count($contas); ?>;
 
 $('#template').change(function(){
 

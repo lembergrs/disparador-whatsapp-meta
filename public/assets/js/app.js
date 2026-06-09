@@ -28,8 +28,6 @@ $(document).ready(function(){
 
 
 
-
-
     $('#tipo_pessoa').change(function(){
 
         let tipo = $(this).val();
@@ -82,9 +80,9 @@ $(document).ready(function(){
 
     });
 
-
-
-
+    if($('#conteudoPreviewTemplateDisparo').length){
+        resetarPreviewDisparo();
+    }
 
     $('#tipo_pessoa').trigger('change');
 
@@ -230,6 +228,19 @@ $(document).ready(function(){
         );
 
     });
+
+    function resetarPreviewDisparo()
+    {
+        $('#conteudoPreviewTemplateDisparo').html(`
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-file-alt fa-3x mb-3"></i>
+                <h5>Preview da mensagem</h5>
+                <p>Selecione um template para exibir a prévia.</p>
+            </div>
+        `);
+
+        $('#previewTemplateDisparo').show();
+    }
 
 
     $(document).on(
@@ -575,6 +586,7 @@ $(document).ready(function(){
         $('#previewTemplateCampanha').hide();
 
         if(!componentesBase64){
+            resetarPreviewDisparo();
             return;
         }
 
@@ -954,6 +966,8 @@ $(document).ready(function(){
 
         $('#areaVariaveis').html('');
 
+        resetarPreviewDisparo();
+
         if(metaId == ''){
 
             templateSelect.append(`
@@ -963,6 +977,7 @@ $(document).ready(function(){
             `);
 
             templateSelect.prop('disabled', true);
+            resetarPreviewDisparo();
 
             return;
 
@@ -976,7 +991,7 @@ $(document).ready(function(){
 
         window.TEMPLATES_DISPARO.forEach(function(template){
 
-            if(template.MTA_ID == metaId){
+            if(String(template.MTA_ID) == String(metaId)){
 
                 templateSelect.append(`
                     <option
@@ -995,11 +1010,42 @@ $(document).ready(function(){
 
     });
 
+    if(
+        $('#meta').length
+        &&
+        typeof window.TOTAL_CONTAS_META !== 'undefined'
+        &&
+        window.TOTAL_CONTAS_META == 1
+    ){
+
+        setTimeout(function(){
+
+            $('#meta').trigger('change');
+            $('#template').prop('disabled', false);
+
+        }, 300);
+
+    }
+
     $('#telefoneTeste').mask('(00) 00000-0000');
+
+    let cancelarDisparo = false;
+
+    $(document).on('click', '#btnPararDisparo', function(){
+
+        cancelarDisparo = true;
+
+        $(this)
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Parando...');
+
+    });
 
     $(document).on('submit', '#formDisparo', function(e){
 
         e.preventDefault();
+
+        cancelarDisparo = false;
 
         let form =
             $(this);
@@ -1031,9 +1077,33 @@ $(document).ready(function(){
 
         });
 
-        $('#resumoFinalDisparo').html('');
+        if(numerosLimpos.length == 0){
 
+            alert('Informe pelo menos um número válido.');
+            return;
+
+        }
+
+        $('#resumoFinalDisparo').html('');
         $('#listaStatusNumeros').html('');
+
+        $('#areaProgressoDisparo').show();
+
+        $('#barraProgressoDisparo')
+            .addClass('progress-bar-animated')
+            .css('width', '0%')
+            .html('0%');
+
+        $('#textoProgressoDisparo').html(
+            'Preparando lista de envio...'
+        );
+
+        $('#painelEdicaoDisparo').hide();
+        $('#painelExecucaoDisparo').show();
+
+        $('#btnPararDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-stop"></i> Parar envio');
 
         numerosLimpos.forEach(function(numero, index){
 
@@ -1050,25 +1120,22 @@ $(document).ready(function(){
 
         });
 
-        $('#areaStatusNumeros').show();
-
-        if(numerosLimpos.length == 0){
-
-            alert('Informe pelo menos um número válido.');
-            return;
-
-        }
-
-        $('#areaProgressoDisparo').show();
-
-        $('#btnEnviarDisparo')
-            .prop('disabled', true)
-            .html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
-
         let total = numerosLimpos.length;
         let enviados = 0;
         let erros = 0;
+        let cancelados = 0;
         let atual = 0;
+
+        function rolarStatus()
+        {
+            let box = $('#boxStatusNumeros');
+
+            if(box.length){
+                box.scrollTop(
+                    box[0].scrollHeight
+                );
+            }
+        }
 
         function atualizarProgresso()
         {
@@ -1091,34 +1158,98 @@ $(document).ready(function(){
                     + enviados
                     + ' | Erros: '
                     + erros
+                    + ' | Cancelados: '
+                    + cancelados
                 );
+        }
+
+        function finalizarEnvio(tipo)
+        {
+            $('#btnEnviarDisparo')
+                .prop('disabled', false)
+                .html('<i class="fas fa-paper-plane"></i> Enviar Template');
+
+            $('#btnPararDisparo')
+                .prop('disabled', false)
+                .html('<i class="fas fa-stop"></i> Parar envio');
+
+            $('#barraProgressoDisparo')
+                .removeClass('progress-bar-animated');
+
+            if(tipo == 'cancelado'){
+
+                $('#textoProgressoDisparo').html(
+                    'Envio cancelado pelo usuário.'
+                );
+
+                $('#resumoFinalDisparo').html(`
+                    <div class="alert alert-warning mt-3">
+                        <strong>Envio cancelado.</strong><br>
+                        Enviados: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
+                        <br>
+                        <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary mt-2"
+                        id="btnVoltarEdicaoDisparo"
+                        >
+                            Editar números
+                        </button>
+                    </div>
+                `);
+
+                return;
+            }
+
+            $('#barraProgressoDisparo')
+                .css('width', '100%')
+                .html('100%');
+
+            $('#textoProgressoDisparo').html(
+                'Envio concluído.'
+            );
+
+            $('#resumoFinalDisparo').html(`
+                <div class="alert alert-success mt-3">
+                    <strong>Envio concluído.</strong><br>
+                    Enviados: ${enviados} | Erros: ${erros}
+                    <br>
+                    <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary mt-2"
+                    id="btnVoltarEdicaoDisparo"
+                    >
+                        Novo envio
+                    </button>
+                </div>
+            `);
+        }
+
+        function cancelarPendentes()
+        {
+            for(let i = atual; i < total; i++){
+
+                $('#linha_numero_' + i + ' td:eq(1)').html(
+                    '<span class="badge badge-warning">Cancelado</span>'
+                );
+
+                cancelados++;
+
+            }
+
+            atualizarProgresso();
+            rolarStatus();
+            finalizarEnvio('cancelado');
         }
 
         function enviarProximo()
         {
+            if(cancelarDisparo){
+                cancelarPendentes();
+                return;
+            }
+
             if(atual >= total){
-
-                $('#btnEnviarDisparo')
-                    .prop('disabled', false)
-                    .html('<i class="fas fa-paper-plane"></i> Enviar Template');
-
-                $('#barraProgressoDisparo')
-                    .removeClass('progress-bar-animated')
-                    .css('width', '100%')
-                    .html('100%');
-
-                $('#textoProgressoDisparo')
-                    .html(
-                        'Envio concluído.'
-                    );
-
-                $('#resumoFinalDisparo').html(`
-                    <div class="alert alert-success mt-3">
-                        <strong>Envio concluído.</strong><br>
-                        Enviados: ${enviados} | Erros: ${erros}
-                    </div>
-                `);
-
+                finalizarEnvio('concluido');
                 return;
             }
 
@@ -1129,9 +1260,11 @@ $(document).ready(function(){
                 '<span class="badge badge-info">Enviando...</span>'
             );
 
+            rolarStatus();
+
             let dados =
                 form.serializeArray();
-                
+
             dados.push({
                 name: 'numero',
                 value: numero
@@ -1141,8 +1274,7 @@ $(document).ready(function(){
                 url: BASE_URL + '/index.php?url=disparo/enviarAjax',
                 method: 'POST',
                 data: dados,
-                dataType:
-                    'json',
+                dataType: 'json',
 
                 success: function(retorno){
 
@@ -1165,6 +1297,7 @@ $(document).ready(function(){
                     }
 
                 },
+
                 error: function(){
 
                     erros++;
@@ -1174,18 +1307,43 @@ $(document).ready(function(){
                     );
 
                 },
+
                 complete: function(){
+
                     atual++;
+
                     atualizarProgresso();
+                    rolarStatus();
+
                     setTimeout(
                         enviarProximo,
                         500
                     );
+
                 }
             });
         }
-        atualizarProgresso();
-        enviarProximo();
+
+        setTimeout(function(){
+
+            atualizarProgresso();
+            enviarProximo();
+
+        }, 500);
+
+    });
+
+    $(document).on('click', '#btnVoltarEdicaoDisparo', function(){
+
+        $('#painelExecucaoDisparo').hide();
+        $('#painelEdicaoDisparo').show();
+
+        $('#areaProgressoDisparo').hide();
+        $('#resumoFinalDisparo').html('');
+        $('#listaStatusNumeros').html('');
+
+        cancelarDisparo = false;
+
     });
 
     $(document).on('change', '#lista_id', function(){
