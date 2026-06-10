@@ -310,7 +310,7 @@
                                     ){ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=<?= $cobranca['COB_ID']; ?>"
+                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=<?= $cobranca['COB_ID']; ?>#tabCobrancas"
                                         class="btn btn-success btn-sm"
                                         onclick="return confirm('Confirmar pagamento?')"
                                         >
@@ -320,7 +320,7 @@
                                         </a>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/cancelarCobranca&id=<?= $cobranca['COB_ID']; ?>"
+                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/cancelarCobranca&id=<?= $cobranca['COB_ID']; ?>#tabCobrancas"
                                         class="btn btn-danger btn-sm"
                                         onclick="return confirm('Cancelar cobrança?')"
                                         >
@@ -905,6 +905,19 @@ document.addEventListener('DOMContentLoaded', function(){
             );
 
     }).trigger('change');
+
+    if(window.location.hash){
+
+        const aba =
+            document.querySelector(
+                'a[href="' + window.location.hash + '"]'
+            );
+
+        if(aba){
+            $(aba).tab('show');
+        }
+
+    }
 
 });
 
