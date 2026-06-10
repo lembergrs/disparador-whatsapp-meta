@@ -260,6 +260,7 @@ document.addEventListener('click', function(e){
         response_type: 'code',
         override_default_response_type: true,
         extras: {
+            setup: {},
             feature: 'whatsapp_embedded_signup'
         }
     });
