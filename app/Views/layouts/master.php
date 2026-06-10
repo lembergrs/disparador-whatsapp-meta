@@ -142,6 +142,22 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 </a>
 
 </li>
+
+<li class="nav-item">
+
+    <a
+    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin"
+    class="nav-link <?= str_contains($url, 'financeiroAdmin') ? 'active' : ''; ?>"
+    >
+
+        <i class="nav-icon fas fa-dollar-sign"></i>
+
+        <p>Financeiro</p>
+
+    </a>
+
+</li>
+
 <li class="nav-item">
 
 <a
@@ -159,12 +175,43 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 <?php } ?>
 
-<?php if($usuario['nivel'] == 'cliente'){ ?>
+<?php if($usuario['nivel'] == 'cliente'){
+
+
+$clienteLiberado = true;
+
+if(
+    isset($usuario['CLI_StatusPagamento']) &&
+    $usuario['CLI_StatusPagamento'] != 'pago'
+){
+    $clienteLiberado = false;
+}
+
+?>
 
 <li class="nav-item">
 
     <a
-    href="<?= BASE_URL; ?>/index.php?url=configuracao/meta"
+    href="<?= BASE_URL; ?>/index.php?url=financeiro"
+    class="nav-link <?= str_contains($url, 'financeiro') ? 'active' : ''; ?>"
+    >
+
+        <i class="nav-icon fas fa-dollar-sign"></i>
+
+        <p>
+            Financeiro
+        </p>
+
+    </a>
+
+</li>
+
+<li class="nav-item">
+
+    <a
+    href="<?= $clienteLiberado
+    ? BASE_URL . '/index.php?url=configuracao/meta'
+    : BASE_URL . '/index.php?url=financeiro'; ?>"
     class="nav-link <?= str_contains($url, 'configuracao') ? 'active' : ''; ?>"
     >
 
@@ -181,7 +228,9 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
     <a
-    href="<?= BASE_URL; ?>/index.php?url=listaContato"
+    href="<?= $clienteLiberado
+    ? BASE_URL . '/index.php?url=listaContato'
+    : BASE_URL . '/index.php?url=financeiro'; ?>"
     class="nav-link <?= str_contains($url, 'listaContato') ? 'active' : ''; ?>""
     >
 
@@ -213,7 +262,9 @@ class="nav-link <?= str_contains($url, 'importacao') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=template"
+href="<?= $clienteLiberado
+? BASE_URL . '/index.php?url=template'
+: BASE_URL . '/index.php?url=financeiro'; ?>"
 class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
 >
 
@@ -228,7 +279,9 @@ class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=disparo"
+href="<?= $clienteLiberado
+? BASE_URL . '/index.php?url=disparo'
+: BASE_URL . '/index.php?url=financeiro'; ?>"
 class="nav-link <?= str_contains($url, 'disparo') ? 'active' : ''; ?>"
 >
 
@@ -243,7 +296,9 @@ class="nav-link <?= str_contains($url, 'disparo') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=campanha"
+href="<?= $clienteLiberado
+? BASE_URL . '/index.php?url=campanha'
+: BASE_URL . '/index.php?url=financeiro'; ?>"
 class="nav-link <?= str_contains($url, 'campanha') ? 'active' : ''; ?>"
 >
 
@@ -258,7 +313,9 @@ class="nav-link <?= str_contains($url, 'campanha') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=conversa"
+href="<?= $clienteLiberado
+? BASE_URL . '/index.php?url=conversa'
+: BASE_URL . '/index.php?url=financeiro'; ?>"
 class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 >
 

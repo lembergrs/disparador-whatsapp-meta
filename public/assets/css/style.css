@@ -663,3 +663,8 @@ body.login-custom-page {
         height: 260px;
     }
 }
+
+#btnSolicitarCadastro:disabled{
+    opacity: .65;
+    cursor: not-allowed;
+}

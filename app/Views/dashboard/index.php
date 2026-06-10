@@ -158,7 +158,203 @@ function formatarDataDashboard($data)
 
 <div class="row">
 
-    <div class="col-md-4">
+    <div class="col-md-3">
+
+        <div class="card">
+
+            <div class="card-header">
+
+                <h3 class="card-title">
+                    Meu Plano
+                </h3>
+
+            </div>
+
+            <div class="card-body">
+
+                <?php if(!empty($cliente['PLA_Nome'])){ ?>
+
+                    <h5>
+                        <?= htmlspecialchars($cliente['PLA_Nome']); ?>
+                    </h5>
+
+                    <p class="mb-1">
+                        <strong>Valor:</strong>
+                        <h4 class="text-success">
+                        R$ <?= number_format(
+                            $cliente['PLA_Valor'],
+                            2,
+                            ',',
+                            '.'
+                        ); ?>
+                        </h4>
+                    </p>
+
+                    <p class="mb-1">
+                        <strong>Números:</strong>
+                        <?= $cliente['PLA_LimiteNumeros']; ?>
+                    </p>
+
+                    <p class="mb-1">
+                        <strong>Usuários:</strong>
+                        <?= $cliente['PLA_LimiteUsuarios']; ?>
+                    </p>
+
+                    <p class="mb-1">
+                        <strong>Limite Mensal:</strong>
+                        <?= number_format(
+                            $cliente['PLA_LimiteMensagens'],
+                            0,
+                            ',',
+                            '.'
+                        ); ?> mensagens
+                    </p>
+
+                    <?php
+
+                    $mensagensUtilizadas =
+                        (int)($consumo['CMS_Mensagens'] ?? 0);
+
+                    $limiteMensagens =
+                        (int)$cliente['PLA_LimiteMensagens'];
+
+                    $percentualUso = 0;
+
+                    if($limiteMensagens > 0){
+
+                        $percentualUso =
+                            min(
+                                100,
+                                round(
+                                    (
+                                        $mensagensUtilizadas
+                                        / $limiteMensagens
+                                    ) * 100
+                                )
+                            );
+                    }
+
+                    $corBarra = 'success';
+
+                    if($percentualUso >= 80){
+                        $corBarra = 'warning';
+                    }
+
+                    if($percentualUso >= 100){
+                        $corBarra = 'danger';
+                    }
+
+                    ?>
+
+                    <hr>
+
+                    <p class="mb-1">
+
+                        <strong>Uso Mensal</strong>
+
+                    </p>
+
+                    <p class="mb-2">
+
+                        <?= number_format(
+                            $mensagensUtilizadas,
+                            0,
+                            ',',
+                            '.'
+                        ); ?>
+
+                        /
+
+                        <?= number_format(
+                            $limiteMensagens,
+                            0,
+                            ',',
+                            '.'
+                        ); ?>
+
+                        mensagens
+
+                    </p>
+
+                    <div class="progress mb-2">
+
+                        <div
+                        class="progress-bar bg-<?= $corBarra; ?>"
+                        style="width: <?= $percentualUso; ?>%;"
+                        >
+
+                            <?= $percentualUso; ?>%
+
+                        </div>
+
+                    </div>
+
+                    <?php if($percentualUso >= 100){ ?>
+
+                        <div class="alert alert-danger py-2">
+
+                            Limite mensal atingido.
+
+                        </div>
+
+                    <?php }elseif($percentualUso >= 90){ ?>
+
+                        <div class="alert alert-danger py-2">
+
+                            Atenção: mais de 90% do plano utilizado.
+
+                        </div>
+
+                    <?php }elseif($percentualUso >= 80){ ?>
+
+                        <div class="alert alert-warning py-2">
+
+                            Atenção: mais de 80% do plano utilizado.
+
+                        </div>
+
+                    <?php } ?>
+
+                    <p class="mb-0">
+
+                        <strong>Status:</strong>
+
+                        <?php if(
+                            $cliente['CLI_StatusPagamento']
+                            == 'pago'
+                        ){ ?>
+
+                            <span class="badge badge-success">
+                                Ativo
+                            </span>
+
+                        <?php }else{ ?>
+
+                            <span class="badge badge-warning">
+                                Pendente
+                            </span>
+
+                        <?php } ?>
+
+                    </p>
+
+                <?php }else{ ?>
+
+                    <div class="alert alert-warning mb-0">
+
+                        Nenhum plano contratado.
+
+                    </div>
+
+                <?php } ?>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-md-3">
 
         <div class="card">
 
@@ -220,7 +416,7 @@ function formatarDataDashboard($data)
 
     </div>
 
-    <div class="col-md-8">
+    <div class="col-md-6">
 
         <div class="card">
 

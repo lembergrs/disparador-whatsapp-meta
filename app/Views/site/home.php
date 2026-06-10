@@ -100,7 +100,7 @@
             <div class="col-lg-6">
 
                 <span class="badge badge-success mb-3">
-                    API Oficial do WhatsApp Business
+                    Plataforma Oficial do WhatsApp Business
                 </span>
 
                 <h1 class="site-hero-title">
@@ -251,6 +251,145 @@
                     </div>
 
                 </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<section class="py-5 bg-white border-top border-bottom">
+
+    <div class="container">
+
+        <div class="text-center mb-4">
+
+            <span class="badge badge-success mb-3">
+                Infraestrutura Oficial
+            </span>
+
+            <h2 class="site-section-title">
+                Integrado à Plataforma Oficial da Meta
+            </h2>
+
+            <p class="text-muted mx-auto" style="max-width: 750px;">
+
+                O Disparador utiliza a API Oficial do WhatsApp Business Platform
+                para envio de mensagens, gerenciamento de templates e integração
+                com números comerciais.
+
+            </p>
+
+        </div>
+
+        <div class="row justify-content-center align-items-center">
+
+            <div class="col-md-8">
+
+                <div class="card site-card-feature">
+
+                    <div class="card-body p-4">
+
+                        <div class="row text-center">
+
+                            <div class="col-md-6 mb-4 mb-md-0">
+
+                                <img
+                                src="<?= ASSET_URL; ?>/img/whatsapp-business.png"
+                                alt="WhatsApp Business"
+                                style="height:60px;"
+                                >
+
+                                <h5 class="mt-3 mb-2">
+                                    WhatsApp Business Platform
+                                </h5>
+
+                                <small class="text-muted">
+                                    API oficial para campanhas,
+                                    atendimento e automações.
+                                </small>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <img
+                                src="<?= ASSET_URL; ?>/img/meta-logo.png"
+                                alt="Meta"
+                                style="height:60px;"
+                                >
+
+                                <h5 class="mt-3 mb-2">
+                                    Plataforma Meta
+                                </h5>
+
+                                <small class="text-muted">
+                                    Infraestrutura utilizada por
+                                    milhões de empresas no mundo.
+                                </small>
+
+                            </div>
+
+                        </div>
+
+                        <hr>
+
+                        <div class="row text-center">
+
+                            <div class="col-md-3 col-6 mb-3">
+
+                                <i class="fas fa-check-circle text-success"></i>
+
+                                <div class="small mt-2">
+                                    API Oficial
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-3 col-6 mb-3">
+
+                                <i class="fas fa-check-circle text-success"></i>
+
+                                <div class="small mt-2">
+                                    Templates Homologados
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-3 col-6 mb-3">
+
+                                <i class="fas fa-check-circle text-success"></i>
+
+                                <div class="small mt-2">
+                                    Cloud API
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-3 col-6 mb-3">
+
+                                <i class="fas fa-check-circle text-success"></i>
+
+                                <div class="small mt-2">
+                                    Ambiente Seguro
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <p class="text-center text-muted small mt-3 mb-0">
+
+                    Meta, WhatsApp e seus respectivos logotipos são marcas de seus proprietários.
+                    O Disparador utiliza a infraestrutura oficial do WhatsApp Business Platform.
+
+                </p>
 
             </div>
 
@@ -509,13 +648,21 @@
 
             <div class="col-md-6">
 
+                <span class="badge badge-success mb-3">
+                    Simulador de custos
+                </span>
+
                 <h2 class="site-section-title">
-                    Simule sua operação
+                    Estime o custo das mensagens da Meta
                 </h2>
 
                 <p class="text-muted">
-                    Em breve você poderá estimar o custo mensal considerando quantidade de mensagens,
-                    plano escolhido e custos da Meta.
+                    Informe o tipo de mensagem e a quantidade estimada para ter uma ideia
+                    do custo aproximado cobrado pela Meta para números do Brasil.
+                </p>
+
+                <p class="text-muted small">
+                    A mensalidade da plataforma Disparador não está incluída nesta simulação.
                 </p>
 
             </div>
@@ -526,23 +673,55 @@
 
                     <div class="card-body p-4">
 
-                        <label>Quantidade estimada de mensagens/mês</label>
+                        <div class="form-group">
 
-                        <input
-                        type="number"
-                        id="simuladorMensagens"
-                        class="form-control"
-                        value="1000"
-                        min="0"
+                            <label>Tipo de mensagem</label>
+
+                            <select
+                            id="simuladorTipoMensagem"
+                            class="form-control"
+                            >
+                                <option value="marketing">
+                                    Marketing
+                                </option>
+
+                                <option value="utility">
+                                    Utilidade
+                                </option>
+
+                                <option value="authentication">
+                                    Autenticação
+                                </option>
+                            </select>
+
+                        </div>
+
+                        <div class="form-group">
+
+                            <label>Quantidade estimada de mensagens</label>
+
+                            <input
+                            type="number"
+                            id="simuladorMensagens"
+                            class="form-control"
+                            value="1000"
+                            min="0"
+                            >
+
+                        </div>
+
+                        <div
+                        class="alert alert-success mt-3"
+                        id="resultadoSimulador"
                         >
+                            Informe os dados para calcular.
+                        </div>
 
                         <small class="text-muted">
-                            Esta simulação é apenas uma estimativa.
+                            Valores estimados com base em tabela pública da Meta para o Brasil.
+                            A cobrança real pode variar conforme categoria, país do destinatário,
+                            moeda, regras vigentes e mensagens efetivamente entregues.
                         </small>
-
-                        <div class="alert alert-success mt-3 mb-0" id="resultadoSimulador">
-                            Informe a quantidade para estimar sua operação.
-                        </div>
 
                     </div>
 
@@ -665,35 +844,82 @@
 
 document.addEventListener('DOMContentLoaded', function(){
 
-    const campo = document.getElementById('simuladorMensagens');
-    const resultado = document.getElementById('resultadoSimulador');
+    const campoQuantidade =
+        document.getElementById('simuladorMensagens');
+
+    const campoTipo =
+        document.getElementById('simuladorTipoMensagem');
+
+    const resultado =
+        document.getElementById('resultadoSimulador');
+
+    const precosMetaBrasil = {
+        marketing: 0.0625,
+        utility: 0.0068,
+        authentication: 0.0068
+    };
+
+    const nomesTipos = {
+        marketing: 'Marketing',
+        utility: 'Utilidade',
+        authentication: 'Autenticação'
+    };
+
+    function formatarDolar(valor)
+    {
+        return valor.toLocaleString(
+            'en-US',
+            {
+                style: 'currency',
+                currency: 'USD'
+            }
+        );
+    }
 
     function atualizarSimulador()
     {
-        const mensagens = parseInt(campo.value || 0);
+        const quantidade =
+            parseInt(campoQuantidade.value || 0);
 
-        let plano = 'Básico';
+        const tipo =
+            campoTipo.value;
 
-        if(mensagens > 2000){
-            plano = 'Profissional';
-        }
+        const precoUnitario =
+            precosMetaBrasil[tipo] || 0;
 
-        if(mensagens > 10000){
-            plano = 'Empresa';
-        }
+        const total =
+            quantidade * precoUnitario;
 
         resultado.innerHTML =
-            '<strong>Plano sugerido:</strong> ' + plano +
-            '<br><small>Os custos de mensagens da Meta variam conforme categoria, país e tabela vigente.</small>';
+            '<strong>Estimativa Meta:</strong> ' +
+            formatarDolar(total) +
+            '<br>' +
+            '<small>' +
+            quantidade.toLocaleString('pt-BR') +
+            ' mensagens de ' +
+            nomesTipos[tipo] +
+            ' × ' +
+            formatarDolar(precoUnitario) +
+            ' por mensagem.' +
+            '</small>';
     }
 
-    campo.addEventListener('input', atualizarSimulador);
+    campoQuantidade.addEventListener(
+        'input',
+        atualizarSimulador
+    );
+
+    campoTipo.addEventListener(
+        'change',
+        atualizarSimulador
+    );
 
     atualizarSimulador();
 
 });
 
 </script>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>

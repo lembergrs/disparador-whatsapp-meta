@@ -9,6 +9,8 @@ use Models\TemplateMeta;
 use Models\Disparo;
 use Services\MetaService;
 use Models\Conversa;
+use Models\ConsumoMensal;
+use Services\ControlePlanoService;
 
 class DisparoController extends Controller
 {
@@ -163,7 +165,6 @@ class DisparoController extends Controller
                 );
 
             $messageId = null;
-
             $status = 'erro';
 
             if(isset($response['messages'][0]['id'])){
@@ -172,6 +173,20 @@ class DisparoController extends Controller
                     $response['messages'][0]['id'];
 
                 $status = 'enviado';
+
+                $consumo =
+                    new ConsumoMensal();
+
+                $consumo->registrarMensagem(
+                    $usuario['CLI_ID']
+                );
+
+                $controlePlano =
+                    new ControlePlanoService();
+
+                $controlePlano->registrarUso(
+                    $usuario['CLI_ID']
+                );
 
                 $totalEnviados++;
 
@@ -344,6 +359,20 @@ class DisparoController extends Controller
                     $response['messages'][0]['id'];
 
                 $status = 'enviado';
+
+                $consumo =
+                    new ConsumoMensal();
+
+                $consumo->registrarMensagem(
+                    $usuario['CLI_ID']
+                );
+
+                $controlePlano =
+                    new ControlePlanoService();
+
+                $controlePlano->registrarUso(
+                    $usuario['CLI_ID']
+                );
 
             }
 

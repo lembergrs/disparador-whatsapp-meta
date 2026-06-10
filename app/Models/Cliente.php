@@ -268,4 +268,28 @@ class Cliente
 
         return $sql->execute([$id]);
     }
+
+    public function buscarComPlano($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT
+                c.*,
+                p.PLA_Nome,
+                p.PLA_Valor,
+                p.PLA_Periodicidade,
+                p.PLA_LimiteNumeros,
+                p.PLA_LimiteUsuarios,
+                p.PLA_LimiteMensagens,
+                p.PLA_ValorMensagemExcedente
+            FROM clientes c
+            LEFT JOIN planos p
+                ON p.PLA_ID = c.CLI_Plano_DR
+            WHERE c.CLI_ID = ?
+        ");
+
+        $sql->execute([$id]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
 }

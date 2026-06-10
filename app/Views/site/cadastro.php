@@ -300,18 +300,31 @@ $flash = Session::getFlash();
 
                         </div>
 
+                        <div class="alert alert-light border mt-3">
+
+                            <small class="text-muted">
+
+                                <i class="fas fa-info-circle text-info"></i>
+
+                                A utilização da API Oficial do WhatsApp Business está sujeita às regras e validações da Meta.
+                                Durante a conexão do número, poderão ser solicitadas informações adicionais para validação da conta.
+
+                            </small>
+
+                        </div>
+
                         <div class="form-check mb-4">
 
                             <input
-                            class="form-check-input"
                             type="checkbox"
+                            id="aceiteTermos"
+                            name="aceiteTermos"
                             required
-                            id="aceite"
                             >
 
                             <label
                             class="form-check-label"
-                            for="aceite"
+                            for="aceiteTermos"
                             >
                                 Li e concordo com os
                                 <a href="#" data-toggle="modal" data-target="#modalTermos">
@@ -329,17 +342,12 @@ $flash = Session::getFlash();
 
                         <button
                         type="submit"
-                        class="btn btn-success btn-lg site-btn-main"
+                        id="btnSolicitarCadastro"
+                        class="btn btn-success btn-block"
+                        disabled
                         >
-                            Solicitar cadastro
+                            Solicitar Cadastro
                         </button>
-
-                        <a
-                        href="<?= BASE_URL; ?>/index.php?url=site"
-                        class="btn btn-outline-secondary btn-lg ml-2"
-                        >
-                            Voltar
-                        </a>
 
                     </form>
 
@@ -468,6 +476,23 @@ $(function(){
 
         }
     }
+
+    // NOVO BLOCO
+
+    function atualizarBotaoCadastro()
+    {
+        $('#btnSolicitarCadastro').prop(
+            'disabled',
+            !$('#aceiteTermos').is(':checked')
+        );
+    }
+
+    $('#aceiteTermos').on(
+        'change',
+        atualizarBotaoCadastro
+    );
+
+    atualizarBotaoCadastro();
 
 });
 

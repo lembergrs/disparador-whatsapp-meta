@@ -26,6 +26,8 @@ class DashboardController extends Controller
         $metaConta = null;
         $ultimasCampanhas = [];
         $ultimasConversas = [];
+        $cliente = null;
+        $consumo = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -89,6 +91,22 @@ class DashboardController extends Controller
         }else{
 
             $cliId = $usuario['CLI_ID'];
+            
+            $clienteModel =
+                new \Models\Cliente();
+
+            $cliente =
+                $clienteModel->buscarComPlano(
+                    $cliId
+                );
+
+            $consumoModel =
+                new \Models\ConsumoMensal();
+
+            $consumo =
+                $consumoModel->buscarMesAtual(
+                    $cliId
+                );
 
             $sql = $db->prepare("
                 SELECT COUNT(*) total
@@ -176,6 +194,7 @@ class DashboardController extends Controller
                 'titulo' => 'Dashboard',
                 'usuario' => $usuario,
                 'clientes' => $clientes,
+                'cliente' => $cliente,
                 'contasMeta' => $contasMeta,
                 'templates' => $templates,
                 'contatos' => $contatos,
@@ -185,7 +204,8 @@ class DashboardController extends Controller
                 'mensagensRecebidas' => $mensagensRecebidas,
                 'metaConta' => $metaConta,
                 'ultimasCampanhas' => $ultimasCampanhas,
-                'ultimasConversas' => $ultimasConversas
+                'ultimasConversas' => $ultimasConversas,
+                'consumo' => $consumo
             ]
         );
     }

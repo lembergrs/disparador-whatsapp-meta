@@ -24,7 +24,7 @@ action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 
 <div class="form-group">
 
-<<label>Conta Meta</label>
+<label>Conta Meta</label>
 
 <select
 name="meta"
