@@ -28,6 +28,7 @@ class DashboardController extends Controller
         $ultimasConversas = [];
         $cliente = null;
         $consumo = null;
+        $excedente = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -105,6 +106,14 @@ class DashboardController extends Controller
 
             $consumo =
                 $consumoModel->buscarMesAtual(
+                    $cliId
+                );
+
+            $excedenteModel =
+                new \Models\ExcedenteMensal();
+
+            $excedente =
+                $excedenteModel->buscarMesAtual(
                     $cliId
                 );
 
@@ -205,7 +214,8 @@ class DashboardController extends Controller
                 'metaConta' => $metaConta,
                 'ultimasCampanhas' => $ultimasCampanhas,
                 'ultimasConversas' => $ultimasConversas,
-                'consumo' => $consumo
+                'consumo' => $consumo,
+                'excedente' => $excedente
             ]
         );
     }

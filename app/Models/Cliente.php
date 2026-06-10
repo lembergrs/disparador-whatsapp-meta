@@ -292,4 +292,31 @@ class Cliente
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function listarFinanceiro()
+    {
+        $sql = $this->db->query("
+            SELECT
+                c.*,
+                p.PLA_Nome,
+                p.PLA_LimiteMensagens,
+                cm.CMS_Mensagens,
+                ex.EXC_Mensagens,
+                ex.EXC_ValorTotal
+            FROM clientes c
+            LEFT JOIN planos p
+                ON p.PLA_ID = c.CLI_Plano_DR
+            LEFT JOIN consumo_mensal cm
+                ON cm.CLI_ID = c.CLI_ID
+                AND cm.CMS_AnoMes = DATE_FORMAT(NOW(), '%Y%m')
+            LEFT JOIN excedentes_mensais ex
+                ON ex.CLI_ID = c.CLI_ID
+                AND ex.EXC_AnoMes = DATE_FORMAT(NOW(), '%Y%m')
+            ORDER BY c.CLI_ID DESC
+        ");
+
+        return $sql->fetchAll(
+            PDO::FETCH_ASSOC
+        );
+    }
+
 }

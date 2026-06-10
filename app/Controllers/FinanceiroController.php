@@ -25,12 +25,21 @@ class FinanceiroController extends Controller
         $cobranca = $cobrancaModel
             ->buscarPendentePorCliente($usuario['CLI_ID']);
 
+        $excedenteModel =
+            new \Models\ExcedenteMensal();
+
+        $excedente =
+            $excedenteModel->buscarMesAtual(
+                $usuario['CLI_ID']
+            );
+
         $this->view(
             'financeiro/index',
             [
                 'titulo' => 'Financeiro',
                 'planos' => $planos,
-                'cobranca' => $cobranca
+                'cobranca' => $cobranca,
+                'excedente' => $excedente
             ]
         );
     }

@@ -51,11 +51,12 @@ class Plano
                 PLA_LimiteNumeros,
                 PLA_LimiteUsuarios,
                 PLA_LimiteMensagens,
-                PLA_ValorMensagemExcedente
+                PLA_ValorMensagemExcedente,
+                PLA_Cor
             )
             VALUES
             (
-                ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?
             )
         ");
 
@@ -66,8 +67,51 @@ class Plano
             $dados['numeros'],
             $dados['usuarios'],
             $dados['mensagens'],
-            str_replace(',', '.', $dados['excedente'])
+            str_replace(',', '.', $dados['excedente']),
+            $dados['cor']
         ]);
     }
+
+    public function editar($id, $dados)
+    {
+        $sql = $this->db->prepare("
+            UPDATE planos
+            SET
+                PLA_Nome = ?,
+                PLA_Periodicidade = ?,
+                PLA_Valor = ?,
+                PLA_LimiteNumeros = ?,
+                PLA_LimiteUsuarios = ?,
+                PLA_LimiteMensagens = ?,
+                PLA_ValorMensagemExcedente = ?,
+                PLA_Cor = ?
+            WHERE PLA_ID = ?
+        ");
+
+        return $sql->execute([
+            $dados['nome'],
+            $dados['periodicidade'],
+            str_replace(',', '.', $dados['valor']),
+            $dados['numeros'],
+            $dados['usuarios'],
+            $dados['mensagens'],
+            str_replace(',', '.', $dados['excedente']),
+            $dados['cor'],
+            $id
+        ]);
+    }
+
+    public function inativar($id)
+    {
+        $sql = $this->db->prepare("
+            UPDATE planos
+            SET PLA_Ativo = 'N'
+            WHERE PLA_ID = ?
+        ");
+
+        return $sql->execute([$id]);
+    }
+
+
 
 }

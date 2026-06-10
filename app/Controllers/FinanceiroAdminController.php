@@ -8,6 +8,7 @@ use Core\Session;
 use Models\Plano;
 use Models\Cobranca;
 use Core\Database;
+use Models\Cliente;
 
 class FinanceiroAdminController extends Controller
 {
@@ -18,12 +19,18 @@ class FinanceiroAdminController extends Controller
         $planoModel = new Plano();
         $cobrancaModel = new Cobranca();
 
+        $clienteModel = new Cliente();
+
+        $clientesFinanceiro =
+            $clienteModel->listarFinanceiro();
+
         $this->view(
             'financeiro_admin/index',
             [
                 'titulo' => 'Financeiro',
                 'planos' => $planoModel->listarAtivos(),
-                'cobrancas' => $cobrancaModel->listar()
+                'cobrancas' => $cobrancaModel->listar(),
+                'clientesFinanceiro' => $clientesFinanceiro
             ]
         );
     }
@@ -45,12 +52,82 @@ class FinanceiroAdminController extends Controller
             'numeros' => $_POST['numeros'],
             'usuarios' => $_POST['usuarios'],
             'mensagens' => $_POST['mensagens'],
-            'excedente' => $_POST['excedente']
+            'excedente' => $_POST['excedente'],
+            'cor' => $_POST['cor']
         ]);
 
         Session::flash(
             'success',
             'Plano salvo com sucesso.'
+        );
+
+        $this->redirect('financeiroAdmin');
+    }
+
+    public function editarPlano()
+    {
+        Auth::admin();
+
+        if($_SERVER['REQUEST_METHOD'] != 'POST'){
+            $this->redirect('financeiroAdmin');
+        }
+
+        $id = (int) ($_POST['plano_id'] ?? 0);
+
+        if(!$id){
+
+            Session::flash(
+                'error',
+                'Plano inválido.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
+        $planoModel = new Plano();
+
+        $planoModel->editar($id, [
+            'nome' => $_POST['nome'],
+            'periodicidade' => $_POST['periodicidade'],
+            'valor' => $_POST['valor'],
+            'numeros' => $_POST['numeros'],
+            'usuarios' => $_POST['usuarios'],
+            'mensagens' => $_POST['mensagens'],
+            'excedente' => $_POST['excedente'],
+            'cor' => $_POST['cor']
+        ]);
+
+        Session::flash(
+            'success',
+            'Plano atualizado com sucesso.'
+        );
+
+        $this->redirect('financeiroAdmin');
+    }
+
+    public function inativarPlano()
+    {
+        Auth::admin();
+
+        $id = (int) ($_GET['id'] ?? 0);
+
+        if(!$id){
+
+            Session::flash(
+                'error',
+                'Plano inválido.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
+        $planoModel = new Plano();
+
+        $planoModel->inativar($id);
+
+        Session::flash(
+            'success',
+            'Plano inativado com sucesso.'
         );
 
         $this->redirect('financeiroAdmin');
@@ -137,4 +214,118 @@ class FinanceiroAdminController extends Controller
 
         $this->redirect('financeiroAdmin');
     }
+
+    public function alterarPlanoCliente()
+    {
+        Auth::admin();
+
+        if($_SERVER['REQUEST_METHOD'] != 'POST'){
+            $this->redirect('financeiroAdmin');
+        }
+
+        $clienteId = (int) ($_POST['cliente_id'] ?? 0);
+        $planoId = (int) ($_POST['plano_id'] ?? 0);
+
+        if(!$clienteId || !$planoId){
+
+            Session::flash(
+                'error',
+                'Cliente ou plano inválido.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            UPDATE clientes
+            SET CLI_Plano_DR = ?
+            WHERE CLI_ID = ?
+        ");
+
+        $sql->execute([
+            $planoId,
+            $clienteId
+        ]);
+
+        Session::flash(
+            'success',
+            'Plano do cliente atualizado.'
+        );
+
+        $this->redirect('financeiroAdmin');
+    }
+
+    public function suspenderCliente()
+    {
+        Auth::admin();
+
+        $clienteId = (int) ($_GET['id'] ?? 0);
+
+        if(!$clienteId){
+
+            Session::flash(
+                'error',
+                'Cliente inválido.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            UPDATE clientes
+            SET CLI_StatusCadastro = 'suspenso'
+            WHERE CLI_ID = ?
+        ");
+
+        $sql->execute([
+            $clienteId
+        ]);
+
+        Session::flash(
+            'success',
+            'Cliente suspenso.'
+        );
+
+        $this->redirect('financeiroAdmin');
+    }
+    public function reativarCliente()
+    {
+        Auth::admin();
+
+        $clienteId = (int) ($_GET['id'] ?? 0);
+
+        if(!$clienteId){
+
+            Session::flash(
+                'error',
+                'Cliente inválido.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            UPDATE clientes
+            SET CLI_StatusCadastro = 'ativo'
+            WHERE CLI_ID = ?
+        ");
+
+        $sql->execute([
+            $clienteId
+        ]);
+
+        Session::flash(
+            'success',
+            'Cliente reativado.'
+        );
+
+        $this->redirect('financeiroAdmin');
+    }
+
 }

@@ -315,6 +315,49 @@ function formatarDataDashboard($data)
 
                     <?php } ?>
 
+                    <?php if(
+                        !empty($excedente)
+                        &&
+                        $excedente['EXC_Mensagens'] > 0
+                    ){ ?>
+
+                        <hr>
+
+                        <p class="mb-1">
+
+                            <strong>
+                                Excedente Atual
+                            </strong>
+
+                        </p>
+
+                        <p class="mb-1">
+
+                            <?= number_format(
+                                $excedente['EXC_Mensagens'],
+                                0,
+                                ',',
+                                '.'
+                            ); ?>
+
+                            mensagens
+
+                        </p>
+
+                        <p class="mb-0">
+
+                            R$
+                            <?= number_format(
+                                $excedente['EXC_ValorTotal'],
+                                2,
+                                ',',
+                                '.'
+                            ); ?>
+
+                        </p>
+
+                    <?php } ?>
+
                     <p class="mb-0">
 
                         <strong>Status:</strong>

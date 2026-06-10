@@ -30,6 +30,59 @@
 
 <?php } ?>
 
+<?php if(
+    !empty($excedente)
+    &&
+    $excedente['EXC_Mensagens'] > 0
+){ ?>
+
+    <div class="alert alert-info">
+
+        <h5>
+
+            Consumo Excedente
+
+        </h5>
+
+        <p class="mb-1">
+
+            Mensagens excedentes:
+
+            <strong>
+
+                <?= number_format(
+                    $excedente['EXC_Mensagens'],
+                    0,
+                    ',',
+                    '.'
+                ); ?>
+
+            </strong>
+
+        </p>
+
+        <p class="mb-0">
+
+            Valor acumulado:
+
+            <strong>
+
+                R$
+                <?= number_format(
+                    $excedente['EXC_ValorTotal'],
+                    2,
+                    ',',
+                    '.'
+                ); ?>
+
+            </strong>
+
+        </p>
+
+    </div>
+
+<?php } ?>
+
 <div class="card">
 
     <div class="card-header">

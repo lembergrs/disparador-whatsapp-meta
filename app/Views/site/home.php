@@ -552,62 +552,36 @@
 
         <div class="row">
 
-            <?php
-            $planos = [
-                [
-                    'nome' => 'Básico',
-                    'descricao' => 'Para começar com um número WhatsApp.',
-                    'numeros' => '1 número WhatsApp',
-                    'usuarios' => '1 usuário',
-                    'classe' => 'secondary'
-                ],
-                [
-                    'nome' => 'Profissional',
-                    'descricao' => 'Para empresas com operação ativa de campanhas.',
-                    'numeros' => '2 números WhatsApp',
-                    'usuarios' => '3 usuários',
-                    'classe' => 'success'
-                ],
-                [
-                    'nome' => 'Empresa',
-                    'descricao' => 'Para operações maiores e mais atendentes.',
-                    'numeros' => '5 números WhatsApp',
-                    'usuarios' => '10 usuários',
-                    'classe' => 'primary'
-                ],
-            ];
-            ?>
-
             <?php foreach($planos as $plano){ ?>
 
                 <div class="col-md-4 mb-4">
 
-                    <div class="card h-100 site-card-feature">
+                    <div class="card border-<?= $plano['PLA_Cor'] ?: 'primary'; ?> h-100">
 
                         <div class="card-body p-4 text-center">
 
-                            <span class="badge badge-<?= $plano['classe']; ?> mb-3">
-                                <?= $plano['nome']; ?>
+                            <span class="badge badge-<?= $plano['PLA_Cor'] ?: 'primary'; ?> mb-3">
+                                <?= htmlspecialchars($plano['PLA_Nome']); ?>
                             </span>
 
                             <h4 class="font-weight-bold">
-                                <?= $plano['nome']; ?>
+                                R$ <?= number_format($plano['PLA_Valor'], 2, ',', '.'); ?>
                             </h4>
 
                             <p class="text-muted">
-                                <?= $plano['descricao']; ?>
+                                <?= $plano['PLA_LimiteNumeros']; ?> número(s) WhatsApp
                             </p>
 
                             <hr>
 
                             <p>
                                 <i class="fab fa-whatsapp text-success"></i>
-                                <?= $plano['numeros']; ?>
+                                <?= $plano['PLA_LimiteUsuarios']; ?> usuário(s)
                             </p>
 
                             <p>
-                                <i class="fas fa-user text-info"></i>
-                                <?= $plano['usuarios']; ?>
+                                <i class="fas fa-paper-plane text-primary"></i>
+                                <?= number_format($plano['PLA_LimiteMensagens'], 0, ',', '.'); ?> mensagens/mês
                             </p>
 
                             <p>

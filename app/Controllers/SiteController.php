@@ -7,13 +7,19 @@ use Core\Database;
 use Core\Session;
 use PDO;
 use PDOException;
+use Models\Plano;
 
 class SiteController extends Controller
 {
     public function index()
     {
+        $planoModel = new Plano();
+
+        $planos = $planoModel->listarAtivos();
+
         $this->view('site/home', [
-            'titulo' => 'Disparador WhatsApp'
+            'titulo' => 'Disparador WhatsApp',
+            'planos' => $planos
         ], false);
     }
 
