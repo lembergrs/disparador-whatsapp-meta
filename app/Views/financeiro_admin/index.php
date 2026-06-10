@@ -459,7 +459,7 @@
                                     <?php if($cliente['CLI_StatusCadastro'] == 'suspenso'){ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/reativarCliente&id=<?= $cliente['CLI_ID']; ?>"
+                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/reativarCliente&id=<?= $cliente['CLI_ID']; ?>#tabClientes"
                                         class="btn btn-success btn-sm"
                                         onclick="return confirm('Reativar cliente?')"
                                         >
@@ -471,7 +471,7 @@
                                     <?php }else{ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/suspenderCliente&id=<?= $cliente['CLI_ID']; ?>"
+                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/suspenderCliente&id=<?= $cliente['CLI_ID']; ?>#tabClientes"
                                         class="btn btn-danger btn-sm"
                                         onclick="return confirm('Suspender cliente?')"
                                         >

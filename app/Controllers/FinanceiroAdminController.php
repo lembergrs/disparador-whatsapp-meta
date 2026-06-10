@@ -140,7 +140,7 @@ class FinanceiroAdminController extends Controller
         $id = (int) ($_GET['id'] ?? 0);
 
         if(!$id){
-            $this->redirect('financeiroAdmin');
+            $this->redirect('financeiroAdmin#tabCobrancas');
         }
 
         $cobrancaModel = new Cobranca();
@@ -149,7 +149,7 @@ class FinanceiroAdminController extends Controller
             $cobrancaModel->buscar($id);
 
         if(!$cobranca){
-            $this->redirect('financeiroAdmin');
+            $this->redirect('financeiroAdmin#tabCobrancas');
         }
 
         $db = Database::getInstance();
@@ -212,7 +212,7 @@ class FinanceiroAdminController extends Controller
             'Cobrança cancelada.'
         );
 
-        $this->redirect('financeiroAdmin');
+        $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
     public function alterarPlanoCliente()
@@ -254,7 +254,7 @@ class FinanceiroAdminController extends Controller
             'Plano do cliente atualizado.'
         );
 
-        $this->redirect('financeiroAdmin');
+        $this->redirect('financeiroAdmin#tabClientes');
     }
 
     public function suspenderCliente()
@@ -270,7 +270,7 @@ class FinanceiroAdminController extends Controller
                 'Cliente inválido.'
             );
 
-            $this->redirect('financeiroAdmin');
+            $this->redirect('financeiroAdmin#tabClientes');
         }
 
         $db = Database::getInstance();
@@ -290,7 +290,7 @@ class FinanceiroAdminController extends Controller
             'Cliente suspenso.'
         );
 
-        $this->redirect('financeiroAdmin');
+        $this->redirect('financeiroAdmin#tabClientes');
     }
     public function reativarCliente()
     {
@@ -305,7 +305,7 @@ class FinanceiroAdminController extends Controller
                 'Cliente inválido.'
             );
 
-            $this->redirect('financeiroAdmin');
+            $this->redirect('financeiroAdmin#tabClientes');
         }
 
         $db = Database::getInstance();
@@ -325,7 +325,7 @@ class FinanceiroAdminController extends Controller
             'Cliente reativado.'
         );
 
-        $this->redirect('financeiroAdmin');
+        $this->redirect('financeiroAdmin#tabClientes');
     }
 
 }
