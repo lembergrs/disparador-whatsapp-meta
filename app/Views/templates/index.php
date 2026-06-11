@@ -351,6 +351,7 @@ name="nome"
 id="nome_template"
 class="form-control"
 required
+oninput="formatarNomeTemplate(this)"
 >
 
 <small class="text-muted">
@@ -447,6 +448,7 @@ Inglês
             name="header_tipo"
             id="header_tipo"
             class="form-control"
+            onchange="alterarTipoHeader(this.value)"
             >
                 <option value="">Sem Header</option>
                 <option value="TEXT">Texto</option>
@@ -604,40 +606,6 @@ $(document).ready(function(){
             },
             order: [[0, 'asc']]
         });
-
-    }
-
-    $('#nome_template').on('input', function(){
-
-        let valor = $(this).val();
-
-        valor = valor
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/ç/g, 'c')
-            .replace(/\s+/g, '_')
-            .replace(/[^a-z0-9_]/g, '')
-            .replace(/_+/g, '_')
-            .replace(/^_+/, '');
-
-        $(this).val(valor);
-
-    });
-
-});
-
-$('#header_tipo').change(function(){
-
-    let tipo = $(this).val();
-
-    if(tipo == 'TEXT'){
-
-        $('#areaHeaderTexto').show();
-
-    }else{
-
-        $('#areaHeaderTexto').hide();
 
     }
 
@@ -975,6 +943,38 @@ function abrirPreviewTemplate(botao)
     $('#templatePreview').html(html);
 
     $('#modalTemplate').modal('show');
+}
+
+function alterarTipoHeader(tipo)
+{
+    if(tipo === 'TEXT'){
+
+        $('#areaHeaderTexto').show();
+
+    }else{
+
+        $('#areaHeaderTexto').hide();
+
+        $('[name=header]').val('');
+
+    }
+}
+
+function formatarNomeTemplate(campo)
+{
+    let valor = campo.value;
+
+    valor = valor
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ç/g, 'c')
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_+/, '');
+
+    campo.value = valor;
 }
 
 </script>
