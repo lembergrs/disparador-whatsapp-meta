@@ -679,15 +679,28 @@ class MetaService
 
 
 
-        foreach($variaveis as $valor){
+        foreach($variaveis as $nome => $valor){
 
-            $parameters[] = [
+            $parametro = [
 
                 'type' => 'text',
 
                 'text' => $valor
 
             ];
+
+            if(
+                !is_int($nome)
+                &&
+                !ctype_digit((string) $nome)
+            ){
+
+                $parametro['parameter_name'] =
+                    (string) $nome;
+
+            }
+
+            $parameters[] = $parametro;
 
         }
 
@@ -778,7 +791,8 @@ class MetaService
                 'error' => [
                     'message' => $curlError
                 ],
-                'http_code' => $httpCode
+                'http_code' => $httpCode,
+                'payload' => $payload
             ];
 
         }
@@ -798,6 +812,7 @@ class MetaService
 
         $retorno['http_code'] = $httpCode;
         $retorno['raw_response'] = $response;
+        $retorno['payload'] = $payload;
 
         return $retorno;
     }
