@@ -74,6 +74,12 @@ class DashboardController extends Controller
                 AND CVS_NaoLida = 'S'
             ")->fetch()['total'];
 
+            $mensagensRecebidas = $db->query("
+                SELECT COUNT(*) total
+                FROM conversa_mensagens
+                WHERE MSG_Direcao = 'recebida'
+            ")->fetch()['total'];
+
             $ultimasCampanhas = $db->query("
                 SELECT *
                 FROM campanhas
