@@ -1,3 +1,37 @@
+<?php
+
+$avaliacao = \Core\Auth::dadosAvaliacaoCliente();
+
+?>
+
+<?php if($avaliacao['ativo']){ ?>
+
+    <div class="alert alert-info">
+
+        <h5>
+            <i class="fas fa-clock"></i>
+            Período de avaliação ativo
+        </h5>
+
+        <p class="mb-1">
+            Você pode usar o sistema durante a avaliação enquanto estiver dentro de
+            <strong><?= $avaliacao['limite_dias']; ?> dias</strong>
+            e abaixo de
+            <strong><?= number_format($avaliacao['limite_mensagens'], 0, ',', '.'); ?> mensagens</strong>.
+        </p>
+
+        <p class="mb-0">
+            Restam
+            <strong><?= $avaliacao['dias_restantes']; ?> dia(s)</strong>
+            e
+            <strong><?= number_format($avaliacao['mensagens_restantes'], 0, ',', '.'); ?> mensagem(ns)</strong>
+            até o limite gratuito.
+        </p>
+
+    </div>
+
+<?php } ?>
+
 <?php if($cobranca){ ?>
 
     <div class="alert alert-warning">

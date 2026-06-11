@@ -66,6 +66,7 @@ class LoginController extends Controller
                 c.CLI_StatusPagamento,
                 c.CLI_StatusCadastro,
                 c.CLI_DataLiberacao,
+                c.CLI_DataCadastro,
                 c.CLI_Plano_DR
             FROM usuarios u
             LEFT JOIN clientes c
@@ -101,8 +102,11 @@ class LoginController extends Controller
                     $usuario['CLI_StatusCadastro'] ?? null,
                 'CLI_DataLiberacao' =>
                     $usuario['CLI_DataLiberacao'] ?? null,
+                'CLI_DataCadastro' =>
+                    $usuario['CLI_DataCadastro'] ?? null,
                 'CLI_Plano_DR' =>
-                    $usuario['CLI_Plano_DR'] ?? null
+                    $usuario['CLI_Plano_DR'] ?? null,
+                'CMS_MensagensMesAtual' => 0
 
             ];
 

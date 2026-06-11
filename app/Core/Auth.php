@@ -4,6 +4,9 @@ namespace Core;
 
 class Auth
 {
+    private const DIAS_AVALIACAO = 7;
+    private const LIMITE_MENSAGENS_AVALIACAO = 200;
+
     public static function check()
     {
         if(!isset($_SESSION['usuario'])){
@@ -72,11 +75,106 @@ class Auth
 
         $usuario = self::usuario();
 
-        return (
+        if(
             ($usuario['CLI_StatusPagamento'] ?? null) == 'pago'
             &&
             ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
+        ){
+            return true;
+        }
+
+        if(
+            ($usuario['CLI_StatusPagamento'] ?? null) != 'pendente'
+            ||
+            ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
+        ){
+            return false;
+        }
+
+        $avaliacao = self::dadosAvaliacaoCliente(false);
+
+        return $avaliacao['ativo'];
+    }
+
+    public static function dadosAvaliacaoCliente($atualizar = true)
+    {
+        if($atualizar){
+            self::atualizarStatusCliente();
+        }
+
+        $usuario = self::usuario();
+
+        $dados = [
+            'ativo' => false,
+            'dias_decorridos' => null,
+            'dias_restantes' => 0,
+            'mensagens_usadas' => 0,
+            'mensagens_restantes' => 0,
+            'limite_dias' => self::DIAS_AVALIACAO,
+            'limite_mensagens' => self::LIMITE_MENSAGENS_AVALIACAO
+        ];
+
+        if(
+            !$usuario
+            ||
+            ($usuario['nivel'] ?? null) != 'cliente'
+            ||
+            ($usuario['CLI_StatusPagamento'] ?? null) != 'pendente'
+            ||
+            ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
+        ){
+            return $dados;
+        }
+
+        $dataBase = ($usuario['CLI_DataLiberacao'] ?? null)
+            ?: ($usuario['CLI_DataCadastro'] ?? null);
+
+        if(empty($dataBase)){
+            return $dados;
+        }
+
+        $timestampBase = strtotime($dataBase);
+
+        if(!$timestampBase){
+            return $dados;
+        }
+
+        $segundosDecorridos = time() - $timestampBase;
+
+        if($segundosDecorridos < 0){
+            $segundosDecorridos = 0;
+        }
+
+        $diasDecorridos = (int) floor(
+            $segundosDecorridos / 86400
         );
+
+        $mensagensUsadas = (int) (
+            $usuario['CMS_MensagensMesAtual']
+            ?? 0
+        );
+
+        $diasRestantes = max(
+            0,
+            self::DIAS_AVALIACAO - $diasDecorridos
+        );
+
+        $mensagensRestantes = max(
+            0,
+            self::LIMITE_MENSAGENS_AVALIACAO - $mensagensUsadas
+        );
+
+        $dados['dias_decorridos'] = $diasDecorridos;
+        $dados['dias_restantes'] = $diasRestantes;
+        $dados['mensagens_usadas'] = $mensagensUsadas;
+        $dados['mensagens_restantes'] = $mensagensRestantes;
+        $dados['ativo'] = (
+            $diasDecorridos < self::DIAS_AVALIACAO
+            &&
+            $mensagensUsadas < self::LIMITE_MENSAGENS_AVALIACAO
+        );
+
+        return $dados;
     }
 
     public static function validarBloqueioFinanceiro()
@@ -133,16 +231,22 @@ class Auth
 
         $sql = $db->prepare("
             SELECT
-                CLI_StatusPagamento,
-                CLI_StatusCadastro,
-                CLI_DataLiberacao,
-                CLI_Plano_DR
-            FROM clientes
-            WHERE CLI_ID = ?
+                c.CLI_StatusPagamento,
+                c.CLI_StatusCadastro,
+                c.CLI_DataLiberacao,
+                c.CLI_DataCadastro,
+                c.CLI_Plano_DR,
+                COALESCE(cm.CMS_Mensagens, 0) AS CMS_MensagensMesAtual
+            FROM clientes c
+            LEFT JOIN consumo_mensal cm
+                ON cm.CLI_ID = c.CLI_ID
+                AND cm.CMS_AnoMes = ?
+            WHERE c.CLI_ID = ?
             LIMIT 1
         ");
 
         $sql->execute([
+            date('Ym'),
             $usuario['CLI_ID']
         ]);
 
@@ -161,8 +265,14 @@ class Auth
         $_SESSION['usuario']['CLI_DataLiberacao'] =
             $cliente['CLI_DataLiberacao'];
 
+        $_SESSION['usuario']['CLI_DataCadastro'] =
+            $cliente['CLI_DataCadastro'];
+
         $_SESSION['usuario']['CLI_Plano_DR'] =
             $cliente['CLI_Plano_DR'];
+
+        $_SESSION['usuario']['CMS_MensagensMesAtual'] =
+            (int) $cliente['CMS_MensagensMesAtual'];
     }
 
     private static function rotaFinanceiraLiberada()
