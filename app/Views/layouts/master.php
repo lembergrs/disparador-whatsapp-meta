@@ -178,14 +178,9 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <?php if($usuario['nivel'] == 'cliente'){
 
 
-$clienteLiberado = true;
+$clienteLiberado = Auth::clienteLiberado();
 
-if(
-    isset($usuario['CLI_StatusPagamento']) &&
-    $usuario['CLI_StatusPagamento'] != 'pago'
-){
-    $clienteLiberado = false;
-}
+$usuario = Auth::usuario();
 
 ?>
 
