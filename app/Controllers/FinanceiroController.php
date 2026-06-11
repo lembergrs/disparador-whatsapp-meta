@@ -56,6 +56,8 @@ class FinanceiroController extends Controller
 
         $planoId = (int) ($_POST['plano'] ?? 0);
 
+        $cobrancaModel = new Cobranca();
+
         $cobrancaExistente =
             $cobrancaModel->buscarPendentePorCliente(
                 $usuario['CLI_ID']
@@ -104,8 +106,6 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             ]);
 
-            $cobrancaModel = new Cobranca();
-
             $cobrancaModel->criar([
                 'cliente' => $usuario['CLI_ID'],
                 'plano' => $plano['PLA_ID'],
@@ -114,6 +114,12 @@ class FinanceiroController extends Controller
             ]);
 
             $db->commit();
+
+            $_SESSION['usuario']['CLI_Plano_DR'] =
+                $plano['PLA_ID'];
+
+            $_SESSION['usuario']['CLI_StatusPagamento'] =
+                'pendente';
 
             Session::flash(
                 'success',
