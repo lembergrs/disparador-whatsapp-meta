@@ -166,9 +166,16 @@ class="mb-3"
                 required
                 ></textarea>
 
-                <small class="text-muted">
-                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. <br />
-                    Atente para o formato do número (99) 99999-9999 
+                <small
+                id="ajudaNumerosDestino"
+                class="text-muted d-block"
+                >
+                    <strong>Formato esperado:</strong><br>
+                    Número
+                    <br><br>
+                    <strong>Exemplo:</strong><br>
+                    (41) 99999-9999<br>
+                    (41) 98888-8888
                 </small>
 
             </div>
@@ -219,6 +226,8 @@ class="mb-3"
                         <tr>
                             <th>Número</th>
                             <th>Status</th>
+                            <th>Motivo</th>
+                            <th>Detalhes</th>
                         </tr>
                     </thead>
 
@@ -313,30 +322,18 @@ $('#template').change(function(){
     });
 
 
-    let html = '';
+    let html = `
 
-    variaveis.forEach(function(v){
-
-        html += `
-
-            <div class="form-group">
-
-                <label>
-                    Variável ${v}
-                </label>
-
-                <input
-                type="text"
-                name="variaveis[${v}]"
-                class="form-control"
-                required
-                >
-
+        <div class="alert alert-info">
+            <strong>Template com ${variaveis.length} variável(is).</strong><br>
+            Informe os valores no campo Números Destino, usando uma linha por destino.<br>
+            A orientação do campo será ajustada conforme a quantidade de variáveis.
+            <div class="mt-2 small">
+                Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
+        </div>
 
-        `;
-
-    });
+    `;
 
 
     $('#areaVariaveis').html(
