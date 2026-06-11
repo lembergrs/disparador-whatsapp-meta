@@ -178,14 +178,11 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <?php if($usuario['nivel'] == 'cliente'){
 
 
-$clienteLiberado = true;
+$clienteLiberado = Auth::clienteLiberado();
 
-if(
-    isset($usuario['CLI_StatusPagamento']) &&
-    $usuario['CLI_StatusPagamento'] != 'pago'
-){
-    $clienteLiberado = false;
-}
+$clientePodeConectarMeta = Auth::clientePodeConectarMeta();
+
+$usuario = Auth::usuario();
 
 ?>
 
@@ -209,7 +206,7 @@ if(
 <li class="nav-item">
 
     <a
-    href="<?= $clienteLiberado
+    href="<?= ($clienteLiberado || $clientePodeConectarMeta)
     ? BASE_URL . '/index.php?url=configuracao/meta'
     : BASE_URL . '/index.php?url=financeiro'; ?>"
     class="nav-link <?= str_contains($url, 'configuracao') ? 'active' : ''; ?>"

@@ -167,8 +167,9 @@ class="mb-3"
                 ></textarea>
 
                 <small class="text-muted">
-                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. <br />
-                    Atente para o formato do número (99) 99999-9999 
+                    Informe um destino por linha. Para templates com variáveis, use:
+                    <code>5541999999999,Valor 1,Valor 2</code>. <br />
+                    O número será exibido em formato amigável após a validação.
                 </small>
 
             </div>
@@ -219,6 +220,8 @@ class="mb-3"
                         <tr>
                             <th>Número</th>
                             <th>Status</th>
+                            <th>Motivo</th>
+                            <th>Detalhes</th>
                         </tr>
                     </thead>
 
@@ -313,30 +316,18 @@ $('#template').change(function(){
     });
 
 
-    let html = '';
+    let html = `
 
-    variaveis.forEach(function(v){
-
-        html += `
-
-            <div class="form-group">
-
-                <label>
-                    Variável ${v}
-                </label>
-
-                <input
-                type="text"
-                name="variaveis[${v}]"
-                class="form-control"
-                required
-                >
-
+        <div class="alert alert-info">
+            <strong>Template com ${variaveis.length} variável(is).</strong><br>
+            Informe os valores no campo Números Destino, usando uma linha por destino.<br>
+            Exemplo: <code>5541999999999,Valor 1,Valor 2</code>
+            <div class="mt-2 small">
+                Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
+        </div>
 
-        `;
-
-    });
+    `;
 
 
     $('#areaVariaveis').html(

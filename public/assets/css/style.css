@@ -647,7 +647,7 @@ body.login-custom-page {
 }
 
 .status-envios-box{
-    height: 300px;
+    max-height: 300px;
     overflow-y: auto;
     border: 1px solid #dee2e6;
     border-radius: 8px;
@@ -658,9 +658,12 @@ body.login-custom-page {
         height: 300px;
     }
 
-    .disparo-numeros-box,
-    .status-envios-box{
+    .disparo-numeros-box{
         height: 260px;
+    }
+
+    .status-envios-box{
+        max-height: 260px;
     }
 }
 

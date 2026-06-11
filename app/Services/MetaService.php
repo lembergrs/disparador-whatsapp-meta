@@ -788,6 +788,14 @@ class MetaService
             true
         );
 
+        if(!is_array($retorno)){
+            $retorno = [
+                'error' => [
+                    'message' => 'Resposta inválida da Meta.'
+                ]
+            ];
+        }
+
         $retorno['http_code'] = $httpCode;
         $retorno['raw_response'] = $response;
 
