@@ -224,6 +224,16 @@
 
                         <?php foreach($cobrancas as $cobranca){ ?>
 
+                            <?php
+
+                            $statusCobranca = strtolower(
+                                trim(
+                                    (string) ($cobranca['COB_Status'] ?? '')
+                                )
+                            );
+
+                            ?>
+
                             <tr>
 
                                 <td>
@@ -260,10 +270,10 @@
                                     ?>
 
                                     <span
-                                    class="badge badge-<?= $badge[$cobranca['COB_Status']] ?? 'secondary'; ?>"
+                                    class="badge badge-<?= $badge[$statusCobranca] ?? 'secondary'; ?>"
                                     >
 
-                                        <?= ucfirst($cobranca['COB_Status']); ?>
+                                        <?= ucfirst($statusCobranca); ?>
 
                                     </span>
 
@@ -305,7 +315,7 @@
                                 <td width="180">
 
                                     <?php if(
-                                        $cobranca['COB_Status']
+                                        $statusCobranca
                                         == 'pendente'
                                     ){ ?>
 
