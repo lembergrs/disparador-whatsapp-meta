@@ -877,6 +877,8 @@ $(document).ready(function(){
 
         });
 
+        atualizarAjudaNumerosDestinoDisparo(variaveis.length);
+
         if(variaveis.length == 0){
             return;
         }
@@ -885,7 +887,7 @@ $(document).ready(function(){
             <div class="alert alert-info">
                 <strong>Template com ${variaveis.length} variável(is).</strong><br>
                 Informe os valores no campo Números Destino, usando uma linha por destino.<br>
-                Exemplo: <code>5541999999999,Valor 1,Valor 2</code>
+                A orientação do campo será ajustada conforme a quantidade de variáveis.
                 <div class="mt-2 small">
                     Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
                 </div>
@@ -1017,6 +1019,55 @@ $(document).ready(function(){
         });
 
         return variaveis;
+    }
+
+    function atualizarAjudaNumerosDestinoDisparo(quantidadeVariaveis)
+    {
+        let formato = 'Número';
+        let exemplos = [
+            '(41) 99999-9999',
+            '(41) 98888-8888'
+        ];
+        let placeholder = exemplos.join('\n');
+
+        if(quantidadeVariaveis == 1){
+            formato = 'Número,Variável 1';
+            exemplos = [
+                '(41) 99999-9999,Rodrigo',
+                '(41) 98888-8888,João'
+            ];
+            placeholder = exemplos.join('\n');
+        }else if(quantidadeVariaveis == 2){
+            formato = 'Número,Variável 1,Variável 2';
+            exemplos = [
+                '(41) 99999-9999,Rodrigo,Pedido 123',
+                '(41) 98888-8888,João,Pedido 456'
+            ];
+            placeholder = exemplos.join('\n');
+        }else if(quantidadeVariaveis >= 3){
+            let partesFormato = ['Número'];
+
+            for(let i = 1; i <= quantidadeVariaveis; i++){
+                partesFormato.push('Variável ' + i);
+            }
+
+            formato = partesFormato.join(',');
+            exemplos = [
+                '(41) 99999-9999,Rodrigo,Pedido 123,Valor extra',
+                '(41) 98888-8888,João,Pedido 456,Valor extra'
+            ];
+            placeholder = exemplos.join('\n');
+        }
+
+        $('#numerosDestino').attr('placeholder', placeholder);
+
+        $('#ajudaNumerosDestino').html(
+            '<strong>Formato esperado:</strong><br>' +
+            escapeHtmlDisparo(formato) +
+            '<br><br>' +
+            '<strong>Exemplo:</strong><br>' +
+            exemplos.map(escapeHtmlDisparo).join('<br>')
+        );
     }
 
     function montarMensagemAproximadaDisparo(componentes, variaveis, valores)
@@ -1230,6 +1281,7 @@ $(document).ready(function(){
 
             templateSelect.prop('disabled', true);
             resetarPreviewDisparo();
+            atualizarAjudaNumerosDestinoDisparo(0);
 
             return;
 
@@ -1280,6 +1332,8 @@ $(document).ready(function(){
     }
 
     $('#telefoneTeste').mask('(00) 00000-0000');
+
+    atualizarAjudaNumerosDestinoDisparo(0);
 
     let cancelarDisparo = false;
 

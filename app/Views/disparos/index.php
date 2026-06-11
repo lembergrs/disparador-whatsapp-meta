@@ -166,10 +166,16 @@ class="mb-3"
                 required
                 ></textarea>
 
-                <small class="text-muted">
-                    Informe um destino por linha. Para templates com variáveis, use:
-                    <code>5541999999999,Valor 1,Valor 2</code>. <br />
-                    O número será exibido em formato amigável após a validação.
+                <small
+                id="ajudaNumerosDestino"
+                class="text-muted d-block"
+                >
+                    <strong>Formato esperado:</strong><br>
+                    Número
+                    <br><br>
+                    <strong>Exemplo:</strong><br>
+                    (41) 99999-9999<br>
+                    (41) 98888-8888
                 </small>
 
             </div>
@@ -321,7 +327,7 @@ $('#template').change(function(){
         <div class="alert alert-info">
             <strong>Template com ${variaveis.length} variável(is).</strong><br>
             Informe os valores no campo Números Destino, usando uma linha por destino.<br>
-            Exemplo: <code>5541999999999,Valor 1,Valor 2</code>
+            A orientação do campo será ajustada conforme a quantidade de variáveis.
             <div class="mt-2 small">
                 Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
