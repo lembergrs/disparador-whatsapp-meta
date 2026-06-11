@@ -180,6 +180,8 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 $clienteLiberado = Auth::clienteLiberado();
 
+$clientePodeConectarMeta = Auth::clientePodeConectarMeta();
+
 $usuario = Auth::usuario();
 
 ?>
@@ -204,7 +206,7 @@ $usuario = Auth::usuario();
 <li class="nav-item">
 
     <a
-    href="<?= $clienteLiberado
+    href="<?= ($clienteLiberado || $clientePodeConectarMeta)
     ? BASE_URL . '/index.php?url=configuracao/meta'
     : BASE_URL . '/index.php?url=financeiro'; ?>"
     class="nav-link <?= str_contains($url, 'configuracao') ? 'active' : ''; ?>"

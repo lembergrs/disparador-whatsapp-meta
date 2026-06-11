@@ -126,8 +126,7 @@ class Auth
             return $dados;
         }
 
-        $dataBase = ($usuario['CLI_DataLiberacao'] ?? null)
-            ?: ($usuario['CLI_DataCadastro'] ?? null);
+        $dataBase = $usuario['CLI_DataLiberacao'] ?? null;
 
         if(empty($dataBase)){
             return $dados;
@@ -175,6 +174,31 @@ class Auth
         );
 
         return $dados;
+    }
+
+    public static function clientePodeConectarMeta()
+    {
+        $usuario = self::usuario();
+
+        if(
+            !$usuario
+            ||
+            ($usuario['nivel'] ?? null) != 'cliente'
+        ){
+            return false;
+        }
+
+        self::atualizarStatusCliente();
+
+        $usuario = self::usuario();
+
+        return (
+            ($usuario['CLI_StatusPagamento'] ?? null) == 'pendente'
+            &&
+            ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
+            &&
+            empty($usuario['CLI_DataLiberacao'])
+        );
     }
 
     public static function validarBloqueioFinanceiro()
@@ -291,15 +315,25 @@ class Auth
         $partes = explode('/', $url);
         $controller = $partes[0] ?? 'dashboard';
 
-        return in_array(
-            $controller,
-            [
-                'dashboard',
-                'financeiro',
-                'login',
-                'site'
-            ],
-            true
+        if(
+            in_array(
+                $controller,
+                [
+                    'dashboard',
+                    'financeiro',
+                    'login',
+                    'site'
+                ],
+                true
+            )
+        ){
+            return true;
+        }
+
+        return (
+            $controller == 'configuracao'
+            &&
+            self::clientePodeConectarMeta()
         );
     }
 }
