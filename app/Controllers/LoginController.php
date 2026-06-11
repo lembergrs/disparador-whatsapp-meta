@@ -61,10 +61,18 @@ class LoginController extends Controller
         $db = Database::getInstance();
 
         $sql = $db->prepare("
-            SELECT *
-            FROM usuarios
-            WHERE USU_Email = ?
-            AND USU_Ativo = 'S'
+            SELECT
+                u.*,
+                c.CLI_StatusPagamento,
+                c.CLI_StatusCadastro,
+                c.CLI_DataLiberacao,
+                c.CLI_DataCadastro,
+                c.CLI_Plano_DR
+            FROM usuarios u
+            LEFT JOIN clientes c
+                ON c.CLI_ID = u.CLI_ID
+            WHERE u.USU_Email = ?
+            AND u.USU_Ativo = 'S'
         ");
 
         $sql->execute([
@@ -87,7 +95,18 @@ class LoginController extends Controller
                 'nome' => $usuario['USU_Nome'],
                 'cliente_id' => $usuario['CLI_ID'],
                 'nivel' => $usuario['USU_Nivel'],
-                'CLI_ID' => $usuario['CLI_ID']
+                'CLI_ID' => $usuario['CLI_ID'],
+                'CLI_StatusPagamento' =>
+                    $usuario['CLI_StatusPagamento'] ?? null,
+                'CLI_StatusCadastro' =>
+                    $usuario['CLI_StatusCadastro'] ?? null,
+                'CLI_DataLiberacao' =>
+                    $usuario['CLI_DataLiberacao'] ?? null,
+                'CLI_DataCadastro' =>
+                    $usuario['CLI_DataCadastro'] ?? null,
+                'CLI_Plano_DR' =>
+                    $usuario['CLI_Plano_DR'] ?? null,
+                'CMS_MensagensMesAtual' => 0
 
             ];
 
