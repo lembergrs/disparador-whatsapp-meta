@@ -2048,3 +2048,5 @@ function validarCnpj(cnpj)
 
     return true;
 }
+
+/* force deploy app.js */
