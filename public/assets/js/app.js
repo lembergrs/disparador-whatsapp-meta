@@ -2049,4 +2049,4 @@ function validarCnpj(cnpj)
     return true;
 }
 
-/* force deploy style css */
+/* force deploy app.js */
