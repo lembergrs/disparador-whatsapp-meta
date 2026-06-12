@@ -306,7 +306,6 @@ aria-hidden="true"
                     rows="16"
                     readonly
                     ></textarea>
-
                     <small class="form-text text-muted">
                         Use este conteúdo para analisar payload, retorno da Meta/API e erros técnicos.
                     </small>
@@ -334,8 +333,14 @@ aria-hidden="true"
                     Fechar
                 </button>
 
+        <div class="alert alert-info">
+            <strong>Template com ${variaveis.length} variável(is).</strong><br>
+            Informe os valores no campo Números Destino, usando uma linha por destino.<br>
+            A orientação do campo será ajustada conforme a quantidade de variáveis.
+            <div class="mt-2 small">
+                Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
-
+        </div>
         </div>
 
     </div>
