@@ -241,6 +241,107 @@ class="mb-3"
 
 </div>
 
+<div
+class="modal fade"
+id="modalDetalhesDisparo"
+tabindex="-1"
+role="dialog"
+aria-hidden="true"
+>
+
+    <div
+    class="modal-dialog modal-lg"
+    role="document"
+    >
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title">
+                    Detalhes técnicos do envio
+                </h5>
+
+                <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Fechar"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row mb-3">
+
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Número</small>
+                        <strong id="detalheDisparoNumero">-</strong>
+                    </div>
+
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Status</small>
+                        <strong id="detalheDisparoStatus">-</strong>
+                    </div>
+
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Mensagem</small>
+                        <strong id="detalheDisparoMensagem">-</strong>
+                    </div>
+
+                </div>
+
+                <div class="form-group mb-0">
+
+                    <label for="detalheDisparoJson">
+                        JSON técnico completo
+                    </label>
+
+                    <textarea
+                    id="detalheDisparoJson"
+                    class="form-control"
+                    rows="16"
+                    readonly
+                    ></textarea>
+
+                    <small class="form-text text-muted">
+                        Use este conteúdo para analisar payload, retorno da Meta/API e erros técnicos.
+                    </small>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                type="button"
+                id="btnCopiarDetalhesDisparo"
+                class="btn btn-outline-primary"
+                >
+                    <i class="fas fa-copy"></i>
+                    Copiar detalhes
+                </button>
+
+                <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+                >
+                    Fechar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
 <script>
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
 window.TOTAL_CONTAS_META = <?= count($contas); ?>;

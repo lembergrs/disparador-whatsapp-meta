@@ -1762,13 +1762,62 @@ $(document).ready(function(){
 
     });
 
+    function preencherModalDetalhesDisparo(detalhesJson)
+    {
+        let detalhes = {};
+
+        try{
+            detalhes = JSON.parse(detalhesJson);
+        }catch(e){
+            detalhes = {};
+        }
+
+        $('#detalheDisparoNumero').text(detalhes.numero || '-');
+        $('#detalheDisparoStatus').text(detalhes.status || '-');
+        $('#detalheDisparoMensagem').text(
+            detalhes.mensagem_amigavel
+            || detalhes.erro_tecnico
+            || '-'
+        );
+        $('#detalheDisparoJson').val(detalhesJson);
+    }
+
     $(document).on('click', '.btnDetalhesDisparo', function(){
 
-        alert(
+        preencherModalDetalhesDisparo(
             decodeDetalhesDisparo(
                 $(this).data('detalhes')
             )
         );
+
+        $('#modalDetalhesDisparo').modal('show');
+
+    });
+
+    $(document).on('click', '#btnCopiarDetalhesDisparo', function(){
+
+        let campo = document.getElementById('detalheDisparoJson');
+
+        if(!campo){
+            return;
+        }
+
+        campo.focus();
+        campo.select();
+
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(campo.value);
+        }else{
+            document.execCommand('copy');
+        }
+
+        $(this).html('<i class="fas fa-check"></i> Copiado');
+
+        setTimeout(function(){
+            $('#btnCopiarDetalhesDisparo').html(
+                '<i class="fas fa-copy"></i> Copiar detalhes'
+            );
+        }, 2000);
 
     });
 
