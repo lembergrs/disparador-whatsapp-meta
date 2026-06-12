@@ -653,6 +653,29 @@ body.login-custom-page {
     border-radius: 8px;
 }
 
+
+.tabela-status-disparo{
+    table-layout: fixed;
+}
+
+.tabela-status-disparo th,
+.tabela-status-disparo td{
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.tabela-status-disparo .col-numero-disparo{
+    width: 32%;
+}
+
+.tabela-status-disparo .col-status-disparo{
+    width: 18%;
+}
+
+.tabela-status-disparo .col-detalhes-disparo{
+    width: 18%;
+}
+
 @media(max-width: 767px){
     .disparo-preview-box{
         height: 300px;

@@ -220,14 +220,14 @@ class="mb-3"
             class="status-envios-box"
             >
 
-                <table class="table table-sm table-bordered mb-0">
+                <table class="table table-sm table-bordered mb-0 tabela-status-disparo">
 
                     <thead>
                         <tr>
-                            <th>Número</th>
-                            <th>Status</th>
+                            <th class="col-numero-disparo">Número</th>
+                            <th class="col-status-disparo">Status</th>
                             <th>Motivo</th>
-                            <th>Detalhes</th>
+                            <th class="col-detalhes-disparo">Detalhes</th>
                         </tr>
                     </thead>
 

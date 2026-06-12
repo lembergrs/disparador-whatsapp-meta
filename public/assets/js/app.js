@@ -1594,9 +1594,53 @@ $(document).ready(function(){
             return dados;
         }
 
-        function aplicarDetalhesLinha(index, retorno)
+        function mensagemCurtaErroDisparo(erro)
         {
-            let detalhes = encodeDetalhesDisparo(retorno.retorno || retorno);
+            erro = String(erro || 'Erro ao enviar mensagem').trim();
+
+            if(erro.length == 0){
+                return 'Erro ao enviar mensagem';
+            }
+
+            if(erro.includes('Invalid parameter')){
+                return 'Erro nos parâmetros do template.';
+            }
+
+            if(erro.includes('Parameter name')){
+                return 'Erro nos nomes das variáveis do template.';
+            }
+
+            if(erro.includes('Unsupported post request')){
+                return 'Erro ao conectar com a Meta.';
+            }
+
+            if(erro.length > 120){
+                return erro.substring(0, 117) + '...';
+            }
+
+            return erro;
+        }
+
+        function montarDetalhesEnvioDisparo(destino, retorno, status, motivo)
+        {
+            return {
+                numero: (retorno && retorno.numero_formatado)
+                    ? retorno.numero_formatado
+                    : destino.numero_formatado,
+                status: status,
+                mensagem_amigavel: motivo,
+                message_id: retorno ? (retorno.message_id || null) : null,
+                erro_tecnico: retorno ? (retorno.erro || null) : null,
+                retorno_meta_api: retorno ? (retorno.retorno || retorno) : null,
+                payload_enviado: retorno && retorno.retorno
+                    ? (retorno.retorno.payload || null)
+                    : null
+            };
+        }
+
+        function aplicarDetalhesLinha(index, detalhesEnvio)
+        {
+            let detalhes = encodeDetalhesDisparo(detalhesEnvio);
 
             if(detalhes === ''){
                 $('#linha_numero_' + index + ' td:eq(3)').html('-');
@@ -1609,7 +1653,7 @@ $(document).ready(function(){
                 class="btn btn-xs btn-outline-info btnDetalhesDisparo"
                 data-detalhes="${detalhes}"
                 >
-                    Detalhes
+                    Ver detalhes
                 </button>
             `);
         }
@@ -1655,9 +1699,7 @@ $(document).ready(function(){
                         );
 
                         $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            '<span class="text-success">Message ID: ' +
-                            escapeHtmlDisparo(retorno.message_id || '-') +
-                            '</span>'
+                            '<span class="text-success">Mensagem enviada com sucesso</span>'
                         );
 
                     }else{
@@ -1669,12 +1711,26 @@ $(document).ready(function(){
                         );
 
                         $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            escapeHtmlDisparo(retorno.erro || 'Erro ao enviar mensagem')
+                            escapeHtmlDisparo(
+                                mensagemCurtaErroDisparo(retorno.erro)
+                            )
                         );
 
                     }
 
-                    aplicarDetalhesLinha(atual, retorno);
+                    let motivoDetalhe = retorno.sucesso
+                        ? 'Mensagem enviada com sucesso'
+                        : mensagemCurtaErroDisparo(retorno.erro);
+
+                    aplicarDetalhesLinha(
+                        atual,
+                        montarDetalhesEnvioDisparo(
+                            destino,
+                            retorno,
+                            retorno.sucesso ? 'Enviado' : 'Erro',
+                            motivoDetalhe
+                        )
+                    );
 
                     if(retorno.numero_formatado){
                         $('#linha_numero_' + atual + ' td:eq(0)').contents().first()[0].textContent =
@@ -1695,12 +1751,21 @@ $(document).ready(function(){
                         'Falha na requisição de envio.'
                     );
 
-                    aplicarDetalhesLinha(atual, {
-                        retorno: {
-                            status: xhr.status,
-                            responseText: xhr.responseText
-                        }
-                    });
+                    aplicarDetalhesLinha(
+                        atual,
+                        montarDetalhesEnvioDisparo(
+                            destino,
+                            {
+                                erro: 'Falha na requisição de envio.',
+                                retorno: {
+                                    status: xhr.status,
+                                    responseText: xhr.responseText
+                                }
+                            },
+                            'Erro',
+                            'Falha na requisição de envio.'
+                        )
+                    );
 
                 },
 
