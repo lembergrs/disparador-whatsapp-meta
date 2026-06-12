@@ -25,7 +25,7 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css">
 
-<link rel="stylesheet" href="<?= ASSET_URL; ?>/assets/css/style.css">
+<link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css">
 
 </head>
 
