@@ -134,6 +134,8 @@ Session::remove('cadastro_dados');
                     <form
                     action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=site/salvar"
                     method="post"
+                    id="formCadastroPublico"
+                    novalidate
                     >
 
                         <div class="row">
@@ -171,6 +173,13 @@ Session::remove('cadastro_dados');
                                     value="<?= htmlspecialchars($dadosCadastro['cpf_cnpj'] ?? ''); ?>"
                                     required
                                     >
+
+                                    <div
+                                    id="erroCpfCnpj"
+                                    class="invalid-feedback"
+                                    >
+                                        Informe um CPF ou CNPJ válido.
+                                    </div>
 
                                 </div>
 
@@ -247,6 +256,13 @@ Session::remove('cadastro_dados');
                                     required
                                     >
 
+                                    <div
+                                    id="erroEmailCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        Informe um e-mail válido.
+                                    </div>
+
                                 </div>
 
                             </div>
@@ -284,8 +300,16 @@ Session::remove('cadastro_dados');
                                     name="senha"
                                     class="form-control"
                                     autocomplete="new-password"
+                                    minlength="6"
                                     required
                                     >
+
+                                    <div
+                                    id="erroSenhaCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        A senha deve ter pelo menos 6 caracteres.
+                                    </div>
 
                                 </div>
 
@@ -304,6 +328,13 @@ Session::remove('cadastro_dados');
                                     autocomplete="new-password"
                                     required
                                     >
+
+                                    <div
+                                    id="erroConfirmarSenhaCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        As senhas informadas não conferem.
+                                    </div>
 
                                 </div>
 
@@ -502,7 +533,147 @@ $(function(){
         }
     }
 
-    // NOVO BLOCO
+    const tamanhoMinimoSenha = 6;
+
+    function apenasNumeros(valor)
+    {
+        return String(valor || '').replace(/\D/g, '');
+    }
+
+    function cpfValido(cpf)
+    {
+        cpf = apenasNumeros(cpf);
+
+        if(cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)){
+            return false;
+        }
+
+        for(let t = 9; t < 11; t++){
+            let soma = 0;
+
+            for(let i = 0; i < t; i++){
+                soma += parseInt(cpf.charAt(i), 10) * ((t + 1) - i);
+            }
+
+            let digito = ((10 * soma) % 11) % 10;
+
+            if(parseInt(cpf.charAt(t), 10) !== digito){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function calcularDigitoCnpj(base, pesos)
+    {
+        let soma = 0;
+
+        pesos.forEach(function(peso, indice){
+            soma += parseInt(base.charAt(indice), 10) * peso;
+        });
+
+        let resto = soma % 11;
+
+        return resto < 2 ? '0' : String(11 - resto);
+    }
+
+    function cnpjValido(cnpj)
+    {
+        cnpj = apenasNumeros(cnpj);
+
+        if(cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)){
+            return false;
+        }
+
+        let digito1 = calcularDigitoCnpj(
+            cnpj.substring(0, 12),
+            [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        );
+
+        let digito2 = calcularDigitoCnpj(
+            cnpj.substring(0, 12) + digito1,
+            [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        );
+
+        return cnpj.slice(-2) === digito1 + digito2;
+    }
+
+    function documentoValido(documento)
+    {
+        documento = apenasNumeros(documento);
+
+        if(documento.length === 11){
+            return cpfValido(documento);
+        }
+
+        if(documento.length === 14){
+            return cnpjValido(documento);
+        }
+
+        return false;
+    }
+
+    function emailValido(email)
+    {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+    }
+
+    function marcarCampo(campo, valido)
+    {
+        campo.toggleClass('is-invalid', !valido);
+        campo.toggleClass('is-valid', valido && campo.val().trim() !== '');
+
+        return valido;
+    }
+
+    function validarDocumentoCadastro()
+    {
+        let campo = $('#cpf_cnpj');
+        let valido = documentoValido(campo.val());
+
+        return marcarCampo(campo, valido);
+    }
+
+    function validarEmailCadastro()
+    {
+        let campo = $('[name="email"]');
+        let valido = emailValido(campo.val());
+
+        return marcarCampo(campo, valido);
+    }
+
+    function validarSenhaCadastro()
+    {
+        let campo = $('[name="senha"]');
+        let valido = campo.val().length >= tamanhoMinimoSenha;
+
+        marcarCampo(campo, valido);
+        validarConfirmacaoSenhaCadastro();
+
+        return valido;
+    }
+
+    function validarConfirmacaoSenhaCadastro()
+    {
+        let senha = $('[name="senha"]').val();
+        let campo = $('[name="confirmar_senha"]');
+        let valido = campo.val() !== '' && campo.val() === senha;
+
+        return marcarCampo(campo, valido);
+    }
+
+    function formularioCadastroValido()
+    {
+        let valido = true;
+
+        valido = validarDocumentoCadastro() && valido;
+        valido = validarEmailCadastro() && valido;
+        valido = validarSenhaCadastro() && valido;
+        valido = validarConfirmacaoSenhaCadastro() && valido;
+
+        return valido;
+    }
 
     function atualizarBotaoCadastro()
     {
@@ -511,6 +682,18 @@ $(function(){
             !$('#aceiteTermos').is(':checked')
         );
     }
+
+    $('#cpf_cnpj').on('blur', validarDocumentoCadastro);
+    $('[name="email"]').on('blur', validarEmailCadastro);
+    $('[name="senha"]').on('blur input', validarSenhaCadastro);
+    $('[name="confirmar_senha"]').on('blur input', validarConfirmacaoSenhaCadastro);
+
+    $('#formCadastroPublico').on('submit', function(e){
+        if(!formularioCadastroValido()){
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
 
     $('#aceiteTermos').on(
         'change',
