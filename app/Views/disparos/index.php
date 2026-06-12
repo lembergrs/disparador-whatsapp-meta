@@ -306,6 +306,7 @@ aria-hidden="true"
                     rows="16"
                     readonly
                     ></textarea>
+
                     <small class="form-text text-muted">
                         Use este conteúdo para analisar payload, retorno da Meta/API e erros técnicos.
                     </small>
@@ -341,6 +342,8 @@ aria-hidden="true"
                 Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
         </div>
+        </div>
+
         </div>
 
     </div>

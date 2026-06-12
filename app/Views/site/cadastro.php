@@ -3,6 +3,8 @@
 use Core\Session;
 
 $flash = Session::getFlash();
+$dadosCadastro = Session::get('cadastro_dados') ?? [];
+Session::remove('cadastro_dados');
 
 ?>
 <!DOCTYPE html>
@@ -21,6 +23,10 @@ $flash = Session::getFlash();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
     <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=11">
+
+    <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php } ?>
 
 </head>
 
@@ -53,12 +59,11 @@ $flash = Session::getFlash();
                     </span>
 
                     <h2 class="font-weight-bold mb-3">
-                        Solicite sua conta no Disparador
+                        Crie sua conta grátis no Disparador
                     </h2>
 
                     <p class="text-muted">
-                        Cadastre sua empresa para começar a usar campanhas,
-                        listas, templates oficiais da Meta e central de conversas.
+                        Cadastre sua empresa, acesse o painel imediatamente e conecte seu WhatsApp para iniciar o teste gratuito.
                     </p>
 
                     <hr>
@@ -70,7 +75,7 @@ $flash = Session::getFlash();
 
                     <p>
                         <i class="fas fa-check-circle text-success"></i>
-                        Importação de contatos e listas
+                        Segmentação por listas de contatos
                     </p>
 
                     <p>
@@ -84,7 +89,7 @@ $flash = Session::getFlash();
                     </p>
 
                     <div class="alert alert-info mt-4 mb-0">
-                        Após o cadastro, sua conta ficará aguardando validação da equipe RL2 Net.
+                        Após criar sua conta, conecte seu WhatsApp Business para iniciar o teste de até 7 dias ou 200 mensagens.
                     </div>
 
                 </div>
@@ -104,7 +109,7 @@ $flash = Session::getFlash();
                     </h4>
 
                     <p class="text-muted mb-4">
-                        Preencha os dados abaixo para solicitar seu acesso.
+                        Preencha os dados abaixo para criar sua conta. Depois, conecte seu WhatsApp para iniciar o teste.
                     </p>
 
                     <?php if($flash): ?>
@@ -129,6 +134,8 @@ $flash = Session::getFlash();
                     <form
                     action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=site/salvar"
                     method="post"
+                    id="formCadastroPublico"
+                    novalidate
                     >
 
                         <div class="row">
@@ -144,8 +151,8 @@ $flash = Session::getFlash();
                                     id="tipo_pessoa"
                                     class="form-control"
                                     >
-                                        <option value="PJ">Pessoa Jurídica</option>
-                                        <option value="PF">Pessoa Física</option>
+                                        <option value="PJ" <?= ($dadosCadastro['tipo_pessoa'] ?? 'PJ') == 'PJ' ? 'selected' : ''; ?>>Pessoa Jurídica</option>
+                                        <option value="PF" <?= ($dadosCadastro['tipo_pessoa'] ?? '') == 'PF' ? 'selected' : ''; ?>>Pessoa Física</option>
                                     </select>
 
                                 </div>
@@ -163,8 +170,16 @@ $flash = Session::getFlash();
                                     name="cpf_cnpj"
                                     id="cpf_cnpj"
                                     class="form-control cpf_cnpj"
+                                    value="<?= htmlspecialchars($dadosCadastro['cpf_cnpj'] ?? ''); ?>"
                                     required
                                     >
+
+                                    <div
+                                    id="erroCpfCnpj"
+                                    class="invalid-feedback"
+                                    >
+                                        Informe um CPF ou CNPJ válido.
+                                    </div>
 
                                 </div>
 
@@ -180,6 +195,7 @@ $flash = Session::getFlash();
                             type="text"
                             name="nome"
                             class="form-control"
+                            value="<?= htmlspecialchars($dadosCadastro['nome'] ?? ''); ?>"
                             required
                             >
 
@@ -197,6 +213,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="razao_social"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['razao_social'] ?? ''); ?>"
                                     >
 
                                 </div>
@@ -213,6 +230,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="nome_fantasia"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['nome_fantasia'] ?? ''); ?>"
                                     >
 
                                 </div>
@@ -233,9 +251,17 @@ $flash = Session::getFlash();
                                     type="email"
                                     name="email"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['email'] ?? ''); ?>"
                                     autocomplete="email"
                                     required
                                     >
+
+                                    <div
+                                    id="erroEmailCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        Informe um e-mail válido.
+                                    </div>
 
                                 </div>
 
@@ -251,6 +277,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="telefone"
                                     class="form-control telefone"
+                                    value="<?= htmlspecialchars($dadosCadastro['telefone'] ?? ''); ?>"
                                     required
                                     >
 
@@ -273,8 +300,16 @@ $flash = Session::getFlash();
                                     name="senha"
                                     class="form-control"
                                     autocomplete="new-password"
+                                    minlength="6"
                                     required
                                     >
+
+                                    <div
+                                    id="erroSenhaCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        A senha deve ter pelo menos 6 caracteres.
+                                    </div>
 
                                 </div>
 
@@ -293,6 +328,13 @@ $flash = Session::getFlash();
                                     autocomplete="new-password"
                                     required
                                     >
+
+                                    <div
+                                    id="erroConfirmarSenhaCadastro"
+                                    class="invalid-feedback"
+                                    >
+                                        As senhas informadas não conferem.
+                                    </div>
 
                                 </div>
 
@@ -313,12 +355,26 @@ $flash = Session::getFlash();
 
                         </div>
 
+                        <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+
+                        <div class="mb-4 mt-3">
+
+                            <div
+                            class="g-recaptcha"
+                            data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
+                            ></div>
+
+                        </div>
+
+                        <?php } ?>
+
                         <div class="form-check mb-4">
 
                             <input
                             type="checkbox"
                             id="aceiteTermos"
                             name="aceiteTermos"
+                            <?= !empty($dadosCadastro['aceiteTermos']) ? 'checked' : ''; ?>
                             required
                             >
 
@@ -346,7 +402,7 @@ $flash = Session::getFlash();
                         class="btn btn-success btn-block"
                         disabled
                         >
-                            Solicitar Cadastro
+                            Criar conta grátis
                         </button>
 
                     </form>
@@ -477,7 +533,147 @@ $(function(){
         }
     }
 
-    // NOVO BLOCO
+    const tamanhoMinimoSenha = 6;
+
+    function apenasNumeros(valor)
+    {
+        return String(valor || '').replace(/\D/g, '');
+    }
+
+    function cpfValido(cpf)
+    {
+        cpf = apenasNumeros(cpf);
+
+        if(cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)){
+            return false;
+        }
+
+        for(let t = 9; t < 11; t++){
+            let soma = 0;
+
+            for(let i = 0; i < t; i++){
+                soma += parseInt(cpf.charAt(i), 10) * ((t + 1) - i);
+            }
+
+            let digito = ((10 * soma) % 11) % 10;
+
+            if(parseInt(cpf.charAt(t), 10) !== digito){
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function calcularDigitoCnpj(base, pesos)
+    {
+        let soma = 0;
+
+        pesos.forEach(function(peso, indice){
+            soma += parseInt(base.charAt(indice), 10) * peso;
+        });
+
+        let resto = soma % 11;
+
+        return resto < 2 ? '0' : String(11 - resto);
+    }
+
+    function cnpjValido(cnpj)
+    {
+        cnpj = apenasNumeros(cnpj);
+
+        if(cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)){
+            return false;
+        }
+
+        let digito1 = calcularDigitoCnpj(
+            cnpj.substring(0, 12),
+            [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        );
+
+        let digito2 = calcularDigitoCnpj(
+            cnpj.substring(0, 12) + digito1,
+            [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+        );
+
+        return cnpj.slice(-2) === digito1 + digito2;
+    }
+
+    function documentoValido(documento)
+    {
+        documento = apenasNumeros(documento);
+
+        if(documento.length === 11){
+            return cpfValido(documento);
+        }
+
+        if(documento.length === 14){
+            return cnpjValido(documento);
+        }
+
+        return false;
+    }
+
+    function emailValido(email)
+    {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+    }
+
+    function marcarCampo(campo, valido)
+    {
+        campo.toggleClass('is-invalid', !valido);
+        campo.toggleClass('is-valid', valido && campo.val().trim() !== '');
+
+        return valido;
+    }
+
+    function validarDocumentoCadastro()
+    {
+        let campo = $('#cpf_cnpj');
+        let valido = documentoValido(campo.val());
+
+        return marcarCampo(campo, valido);
+    }
+
+    function validarEmailCadastro()
+    {
+        let campo = $('[name="email"]');
+        let valido = emailValido(campo.val());
+
+        return marcarCampo(campo, valido);
+    }
+
+    function validarSenhaCadastro()
+    {
+        let campo = $('[name="senha"]');
+        let valido = campo.val().length >= tamanhoMinimoSenha;
+
+        marcarCampo(campo, valido);
+        validarConfirmacaoSenhaCadastro();
+
+        return valido;
+    }
+
+    function validarConfirmacaoSenhaCadastro()
+    {
+        let senha = $('[name="senha"]').val();
+        let campo = $('[name="confirmar_senha"]');
+        let valido = campo.val() !== '' && campo.val() === senha;
+
+        return marcarCampo(campo, valido);
+    }
+
+    function formularioCadastroValido()
+    {
+        let valido = true;
+
+        valido = validarDocumentoCadastro() && valido;
+        valido = validarEmailCadastro() && valido;
+        valido = validarSenhaCadastro() && valido;
+        valido = validarConfirmacaoSenhaCadastro() && valido;
+
+        return valido;
+    }
 
     function atualizarBotaoCadastro()
     {
@@ -486,6 +682,18 @@ $(function(){
             !$('#aceiteTermos').is(':checked')
         );
     }
+
+    $('#cpf_cnpj').on('blur', validarDocumentoCadastro);
+    $('[name="email"]').on('blur', validarEmailCadastro);
+    $('[name="senha"]').on('blur input', validarSenhaCadastro);
+    $('[name="confirmar_senha"]').on('blur input', validarConfirmacaoSenhaCadastro);
+
+    $('#formCadastroPublico').on('submit', function(e){
+        if(!formularioCadastroValido()){
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    });
 
     $('#aceiteTermos').on(
         'change',
