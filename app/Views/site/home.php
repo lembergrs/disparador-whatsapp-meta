@@ -507,7 +507,7 @@
             <div class="col-md-3 mb-4">
                 <div class="site-step">1</div>
                 <h5 class="font-weight-bold">Crie sua conta</h5>
-                <p class="text-muted">Cadastre sua empresa e aguarde a aprovação.</p>
+                <p class="text-muted">Crie sua conta grátis e acesse o painel para conectar seu WhatsApp.</p>
             </div>
 
             <div class="col-md-3 mb-4">

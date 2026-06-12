@@ -133,7 +133,7 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
             <?php foreach($planos as $plano){ ?>
 
-                <div class="col-md-4">
+                <div class="col-md-4 mb-4">
 
                     <div class="card h-100">
 
