@@ -647,10 +647,33 @@ body.login-custom-page {
 }
 
 .status-envios-box{
-    height: 300px;
+    max-height: 300px;
     overflow-y: auto;
     border: 1px solid #dee2e6;
     border-radius: 8px;
+}
+
+
+.tabela-status-disparo{
+    table-layout: fixed;
+}
+
+.tabela-status-disparo th,
+.tabela-status-disparo td{
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.tabela-status-disparo .col-numero-disparo{
+    width: 32%;
+}
+
+.tabela-status-disparo .col-status-disparo{
+    width: 18%;
+}
+
+.tabela-status-disparo .col-detalhes-disparo{
+    width: 18%;
 }
 
 @media(max-width: 767px){
@@ -658,9 +681,12 @@ body.login-custom-page {
         height: 300px;
     }
 
-    .disparo-numeros-box,
-    .status-envios-box{
+    .disparo-numeros-box{
         height: 260px;
+    }
+
+    .status-envios-box{
+        max-height: 260px;
     }
 }
 
