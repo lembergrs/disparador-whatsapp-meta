@@ -180,8 +180,6 @@ class="mb-3"
 
             </div>
 
-            <div id="areaVariaveis"></div>
-
             <button
             type="submit"
             id="btnEnviarDisparo"
@@ -243,86 +241,97 @@ class="mb-3"
 
 </div>
 
-<script>
+<div
+class="modal fade"
+id="modalDetalhesDisparo"
+tabindex="-1"
+role="dialog"
+aria-hidden="true"
+>
 
-window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
-window.TOTAL_CONTAS_META = <?= count($contas); ?>;
+    <div
+    class="modal-dialog modal-lg"
+    role="document"
+    >
 
-$('#template').change(function(){
+        <div class="modal-content">
 
-    let option =
-        $(this).find(':selected');
+            <div class="modal-header">
 
+                <h5 class="modal-title">
+                    Detalhes técnicos do envio
+                </h5>
 
+                <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Fechar"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
 
+            </div>
 
+            <div class="modal-body">
 
-    let componentes =
-        option.attr(
-            'data-componentes'
-        );
+                <div class="row mb-3">
 
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Número</small>
+                        <strong id="detalheDisparoNumero">-</strong>
+                    </div>
 
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Status</small>
+                        <strong id="detalheDisparoStatus">-</strong>
+                    </div>
 
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Mensagem</small>
+                        <strong id="detalheDisparoMensagem">-</strong>
+                    </div>
 
+                </div>
 
-    if(!componentes){
+                <div class="form-group mb-0">
 
-        return;
+                    <label for="detalheDisparoJson">
+                        JSON técnico completo
+                    </label>
 
-    }
+                    <textarea
+                    id="detalheDisparoJson"
+                    class="form-control"
+                    rows="16"
+                    readonly
+                    ></textarea>
+                    <small class="form-text text-muted">
+                        Use este conteúdo para analisar payload, retorno da Meta/API e erros técnicos.
+                    </small>
 
-    componentes =
-        atob(componentes);
+                </div>
 
-    try{
+            </div>
 
-        componentes =
-            JSON.parse(componentes);
+            <div class="modal-footer">
 
-    }catch(e){
+                <button
+                type="button"
+                id="btnCopiarDetalhesDisparo"
+                class="btn btn-outline-primary"
+                >
+                    <i class="fas fa-copy"></i>
+                    Copiar detalhes
+                </button>
 
-        return;
-
-    }
-
-
-    let variaveis = [];
-
-    componentes.forEach(function(comp){
-
-        if(comp.text){
-
-            let matches =
-                comp.text.match(
-                    /{{(.*?)}}/g
-                );
-
-
-            if(matches){
-
-                matches.forEach(function(v){
-
-                    v = v
-                        .replace('{{','')
-                        .replace('}}','');
-
-                    if(!variaveis.includes(v)){
-
-                        variaveis.push(v);
-
-                    }
-
-                });
-
-            }
-
-        }
-
-    });
-
-
-    let html = `
+                <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+                >
+                    Fechar
+                </button>
 
         <div class="alert alert-info">
             <strong>Template com ${variaveis.length} variável(is).</strong><br>
@@ -332,14 +341,13 @@ $('#template').change(function(){
                 Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
         </div>
+        </div>
 
-    `;
+    </div>
 
+</div>
 
-    $('#areaVariaveis').html(
-        html
-    );
-
-});
-
+<script>
+window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
+window.TOTAL_CONTAS_META = <?= count($contas); ?>;
 </script>
