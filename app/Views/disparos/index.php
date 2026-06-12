@@ -334,7 +334,15 @@ aria-hidden="true"
                     Fechar
                 </button>
 
+        <div class="alert alert-info">
+            <strong>Template com ${variaveis.length} variável(is).</strong><br>
+            Informe os valores no campo Números Destino, usando uma linha por destino.<br>
+            A orientação do campo será ajustada conforme a quantidade de variáveis.
+            <div class="mt-2 small">
+                Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
+        </div>
+        </div>
 
         </div>
 

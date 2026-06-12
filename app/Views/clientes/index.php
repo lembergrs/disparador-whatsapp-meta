@@ -253,6 +253,7 @@ tabindex="-1"
 <div class="modal-content">
 
 <form
+id="formCliente"
 action="<?= BASE_URL; ?>/index.php?url=cliente/salvar"
 method="POST"
 >
@@ -567,6 +568,7 @@ rows="4"
 
 <button
 type="submit"
+id="btnSalvarCliente"
 class="btn btn-success"
 >
 
@@ -584,3 +586,29 @@ Salvar
 
 </div>
 
+
+
+<script>
+const formCliente = document.getElementById('formCliente');
+const btnSalvarCliente = document.getElementById('btnSalvarCliente');
+
+if(formCliente && btnSalvarCliente){
+
+    formCliente.addEventListener('submit', function(){
+
+        if(
+            formCliente.checkValidity &&
+            !formCliente.checkValidity()
+        ){
+            return true;
+        }
+
+        btnSalvarCliente.disabled = true;
+        btnSalvarCliente.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+        return true;
+
+    });
+
+}
+</script>
