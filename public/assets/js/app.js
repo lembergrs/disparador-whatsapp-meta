@@ -756,11 +756,11 @@ $(document).ready(function(){
         let componentesBase64 =
             option.attr('data-componentes');
 
-        $('#areaVariaveis').html('');
         $('#conteudoPreviewTemplateDisparo').html('');
         $('#previewTemplateDisparo').hide();
 
         if(!componentesBase64){
+            atualizarAjudaNumerosDestinoDisparo(0);
             return;
         }
 
@@ -848,53 +848,9 @@ $(document).ready(function(){
 
         }
 
-        let variaveis = [];
-
-        componentes.forEach(function(comp){
-
-            if(comp.text){
-
-                let matches =
-                    comp.text.match(/{{(.*?)}}/g);
-
-                if(matches){
-
-                    matches.forEach(function(v){
-
-                        v = v
-                            .replace('{{','')
-                            .replace('}}','');
-
-                        if(!variaveis.includes(v)){
-                            variaveis.push(v);
-                        }
-
-                    });
-
-                }
-
-            }
-
-        });
+        let variaveis = obterVariaveisTemplateDisparo(componentes);
 
         atualizarAjudaNumerosDestinoDisparo(variaveis.length);
-
-        if(variaveis.length == 0){
-            return;
-        }
-
-        let html = `
-            <div class="alert alert-info">
-                <strong>Template com ${variaveis.length} variável(is).</strong><br>
-                Informe os valores no campo Números Destino, usando uma linha por destino.<br>
-                A orientação do campo será ajustada conforme a quantidade de variáveis.
-                <div class="mt-2 small">
-                    Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
-                </div>
-            </div>
-        `;
-
-        $('#areaVariaveis').html(html);
 
     });
 
@@ -1267,7 +1223,6 @@ $(document).ready(function(){
 
         templateSelect.html('');
 
-        $('#areaVariaveis').html('');
 
         resetarPreviewDisparo();
 
@@ -1807,13 +1762,62 @@ $(document).ready(function(){
 
     });
 
+    function preencherModalDetalhesDisparo(detalhesJson)
+    {
+        let detalhes = {};
+
+        try{
+            detalhes = JSON.parse(detalhesJson);
+        }catch(e){
+            detalhes = {};
+        }
+
+        $('#detalheDisparoNumero').text(detalhes.numero || '-');
+        $('#detalheDisparoStatus').text(detalhes.status || '-');
+        $('#detalheDisparoMensagem').text(
+            detalhes.mensagem_amigavel
+            || detalhes.erro_tecnico
+            || '-'
+        );
+        $('#detalheDisparoJson').val(detalhesJson);
+    }
+
     $(document).on('click', '.btnDetalhesDisparo', function(){
 
-        alert(
+        preencherModalDetalhesDisparo(
             decodeDetalhesDisparo(
                 $(this).data('detalhes')
             )
         );
+
+        $('#modalDetalhesDisparo').modal('show');
+
+    });
+
+    $(document).on('click', '#btnCopiarDetalhesDisparo', function(){
+
+        let campo = document.getElementById('detalheDisparoJson');
+
+        if(!campo){
+            return;
+        }
+
+        campo.focus();
+        campo.select();
+
+        if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(campo.value);
+        }else{
+            document.execCommand('copy');
+        }
+
+        $(this).html('<i class="fas fa-check"></i> Copiado');
+
+        setTimeout(function(){
+            $('#btnCopiarDetalhesDisparo').html(
+                '<i class="fas fa-copy"></i> Copiar detalhes'
+            );
+        }, 2000);
 
     });
 
