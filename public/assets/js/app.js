@@ -756,11 +756,11 @@ $(document).ready(function(){
         let componentesBase64 =
             option.attr('data-componentes');
 
-        $('#areaVariaveis').html('');
         $('#conteudoPreviewTemplateDisparo').html('');
         $('#previewTemplateDisparo').hide();
 
         if(!componentesBase64){
+            atualizarAjudaNumerosDestinoDisparo(0);
             return;
         }
 
@@ -848,111 +848,370 @@ $(document).ready(function(){
 
         }
 
-        let variaveis = [];
+        let variaveis = obterVariaveisTemplateDisparo(componentes);
 
-        componentes.forEach(function(comp){
-
-            if(comp.text){
-
-                let matches =
-                    comp.text.match(/{{(.*?)}}/g);
-
-                if(matches){
-
-                    matches.forEach(function(v){
-
-                        v = v
-                            .replace('{{','')
-                            .replace('}}','');
-
-                        if(!variaveis.includes(v)){
-                            variaveis.push(v);
-                        }
-
-                    });
-
-                }
-
-            }
-
-        });
-
-        if(variaveis.length == 0){
-            return;
-        }
-
-        let html = '';
-
-        variaveis.forEach(function(v){
-
-            html += `
-                <div class="form-group">
-
-                    <label>
-                        Variável {{${v}}}
-                    </label>
-
-                    <input
-                    type="text"
-                    name="variaveis[${v}]"
-                    class="form-control"
-                    required
-                    >
-
-                </div>
-            `;
-
-        });
-
-        $('#areaVariaveis').html(html);
+        atualizarAjudaNumerosDestinoDisparo(variaveis.length);
 
     });
 
-    $(document).on('blur', '#numerosDestino', function(){
+    function formatarNumeroDisparo(numero)
+    {
+        numero = String(numero || '').replace(/\D/g, '');
 
-        let linhas =
-            $(this)
-            .val()
-            .split(/[\n,;]+/);
+        if(numero.substring(0,2) == '55'){
+            numero = numero.substring(2);
+        }
 
-        let formatados = [];
+        if(numero.length == 11){
+            return '(' + numero.substring(0,2) + ') ' +
+                numero.substring(2,7) + '-' +
+                numero.substring(7);
+        }
 
-        linhas.forEach(function(numero){
+        if(numero.length == 10){
+            return '(' + numero.substring(0,2) + ') ' +
+                numero.substring(2,6) + '-' +
+                numero.substring(6);
+        }
 
-            numero =
-                numero.replace(/\D/g, '');
+        return numero;
+    }
 
-            if(numero.length == 0){
+    function limparNumeroDisparo(numero)
+    {
+        numero = String(numero || '').replace(/\D/g, '');
+
+        if(numero.length > 0 && numero.substring(0,2) != '55'){
+            numero = '55' + numero;
+        }
+
+        return numero;
+    }
+
+    function escapeHtmlDisparo(texto)
+    {
+        return String(texto ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function encodeDetalhesDisparo(dados)
+    {
+        try{
+            return btoa(
+                unescape(
+                    encodeURIComponent(
+                        JSON.stringify(dados || {}, null, 2)
+                    )
+                )
+            );
+        }catch(e){
+            return '';
+        }
+    }
+
+    function decodeDetalhesDisparo(dados)
+    {
+        try{
+            return decodeURIComponent(
+                escape(
+                    atob(dados)
+                )
+            );
+        }catch(e){
+            return 'Detalhes indisponíveis.';
+        }
+    }
+
+    function obterComponentesTemplateDisparo()
+    {
+        let option = $('#template').find(':selected');
+        let componentesBase64 = option.attr('data-componentes');
+
+        if(!componentesBase64){
+            return [];
+        }
+
+        try{
+            return JSON.parse(atob(componentesBase64));
+        }catch(e){
+            return [];
+        }
+    }
+
+    function obterVariaveisTemplateDisparo(componentes)
+    {
+        let variaveis = [];
+
+        componentes.forEach(function(comp){
+            if(!comp.text){
                 return;
             }
 
-            if(numero.startsWith('55') && numero.length > 11){
-                numero = numero.substring(2);
+            let matches = comp.text.match(/{{(.*?)}}/g);
+
+            if(!matches){
+                return;
             }
 
-            if(numero.length == 11){
+            matches.forEach(function(v){
+                v = v.replace('{{','').replace('}}','').trim();
 
-                numero =
-                    '(' + numero.substring(0,2) + ') ' +
-                    numero.substring(2,7) + '-' +
-                    numero.substring(7);
-
-            }else if(numero.length == 10){
-
-                numero =
-                    '(' + numero.substring(0,2) + ') ' +
-                    numero.substring(2,6) + '-' +
-                    numero.substring(6);
-
-            }
-
-            formatados.push(numero);
-
+                if(v !== '' && !variaveis.includes(v)){
+                    variaveis.push(v);
+                }
+            });
         });
 
-        $(this).val(
-            formatados.join("\n")
+        variaveis.sort(function(a, b){
+            if(!isNaN(a) && !isNaN(b)){
+                return parseInt(a) - parseInt(b);
+            }
+
+            return String(a).localeCompare(String(b));
+        });
+
+        return variaveis;
+    }
+
+    function atualizarAjudaNumerosDestinoDisparo(quantidadeVariaveis)
+    {
+        let formato = 'Número';
+        let exemplos = [
+            '(41) 99999-9999',
+            '(41) 98888-8888'
+        ];
+        let placeholder = exemplos.join('\n');
+
+        if(quantidadeVariaveis == 1){
+            formato = 'Número,Variável 1';
+            exemplos = [
+                '(41) 99999-9999,Rodrigo',
+                '(41) 98888-8888,João'
+            ];
+            placeholder = exemplos.join('\n');
+        }else if(quantidadeVariaveis == 2){
+            formato = 'Número,Variável 1,Variável 2';
+            exemplos = [
+                '(41) 99999-9999,Rodrigo,Pedido 123',
+                '(41) 98888-8888,João,Pedido 456'
+            ];
+            placeholder = exemplos.join('\n');
+        }else if(quantidadeVariaveis >= 3){
+            let partesFormato = ['Número'];
+
+            for(let i = 1; i <= quantidadeVariaveis; i++){
+                partesFormato.push('Variável ' + i);
+            }
+
+            formato = partesFormato.join(',');
+            exemplos = [
+                '(41) 99999-9999,Rodrigo,Pedido 123,Valor extra',
+                '(41) 98888-8888,João,Pedido 456,Valor extra'
+            ];
+            placeholder = exemplos.join('\n');
+        }
+
+        $('#numerosDestino').attr('placeholder', placeholder);
+
+        $('#ajudaNumerosDestino').html(
+            '<strong>Formato esperado:</strong><br>' +
+            escapeHtmlDisparo(formato) +
+            '<br><br>' +
+            '<strong>Exemplo:</strong><br>' +
+            exemplos.map(escapeHtmlDisparo).join('<br>')
         );
+    }
+
+    function montarMensagemAproximadaDisparo(componentes, variaveis, valores)
+    {
+        let partes = [];
+
+        componentes.forEach(function(comp){
+            if(['HEADER', 'BODY', 'FOOTER'].includes(comp.type) && comp.text){
+                let texto = comp.text;
+
+                variaveis.forEach(function(v, index){
+                    texto = texto.replace(
+                        new RegExp('{{\\s*' + v + '\\s*}}', 'g'),
+                        valores[index] || ''
+                    );
+                });
+
+                partes.push(texto);
+            }
+        });
+
+        return partes.join('\n\n');
+    }
+
+    function parseDestinosDisparo()
+    {
+        let componentes = obterComponentesTemplateDisparo();
+        let variaveis = obterVariaveisTemplateDisparo(componentes);
+        let linhas = $('#numerosDestino').val().split(/\r?\n/);
+        let destinos = [];
+        let erros = [];
+        let temExtrasSemVariaveis = false;
+        let numerosUsados = [];
+
+        linhas.forEach(function(linhaOriginal, index){
+            let linha = linhaOriginal.trim();
+
+            if(linha === ''){
+                return;
+            }
+
+            let partes = linha.split(',');
+            let numeroOriginal = partes.shift().trim();
+            let numeroLimpo = limparNumeroDisparo(numeroOriginal);
+            let valores = partes.map(function(valor){
+                return valor.trim();
+            });
+
+            if(numeroLimpo === ''){
+                erros.push('Linha ' + (index + 1) + ': número não informado.');
+                return;
+            }
+
+            if(numerosUsados.includes(numeroLimpo)){
+                return;
+            }
+
+            if(variaveis.length > 0 && valores.length < variaveis.length){
+                erros.push(
+                    'Linha ' + (index + 1) + ': o template exige ' +
+                    variaveis.length + ' variável(is), mas foram informada(s) ' +
+                    valores.length + '.'
+                );
+                return;
+            }
+
+            if(variaveis.length > 0){
+                valores = valores.slice(0, variaveis.length);
+            }
+
+            if(variaveis.length == 0 && valores.length > 0){
+                temExtrasSemVariaveis = true;
+            }
+
+            numerosUsados.push(numeroLimpo);
+
+            destinos.push({
+                linha: index + 1,
+                numero: numeroLimpo,
+                numero_formatado: formatarNumeroDisparo(numeroLimpo),
+                valores: valores,
+                mensagem: montarMensagemAproximadaDisparo(
+                    componentes,
+                    variaveis,
+                    valores
+                )
+            });
+        });
+
+        return {
+            componentes: componentes,
+            variaveis: variaveis,
+            destinos: destinos,
+            erros: erros,
+            temExtrasSemVariaveis: temExtrasSemVariaveis
+        };
+    }
+
+    function atualizarPreviewDestinosDisparo(parse)
+    {
+        if(parse.destinos.length == 0){
+            return;
+        }
+
+        let html = `
+            <div class="mb-2">
+                <strong>Prévia dos destinos</strong>
+            </div>
+        `;
+
+        parse.destinos.slice(0, 10).forEach(function(destino){
+            html += `
+                <div class="border rounded p-2 mb-2">
+                    <div>
+                        <strong>${escapeHtmlDisparo(destino.numero_formatado)}</strong>
+                    </div>
+            `;
+
+            if(parse.variaveis.length > 0){
+                html += '<ul class="mb-2 pl-3">';
+
+                parse.variaveis.forEach(function(v, index){
+                    html += `
+                        <li>
+                            {{${escapeHtmlDisparo(v)}}}:
+                            ${escapeHtmlDisparo(destino.valores[index] || '')}
+                        </li>
+                    `;
+                });
+
+                html += '</ul>';
+            }
+
+            if(destino.mensagem){
+                html += `
+                    <div class="small text-muted">
+                        ${escapeHtmlDisparo(destino.mensagem).replace(/\n/g, '<br>')}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+        });
+
+        if(parse.destinos.length > 10){
+            html += `
+                <div class="text-muted small">
+                    Exibindo 10 de ${parse.destinos.length} destino(s).
+                </div>
+            `;
+        }
+
+        $('#conteudoPreviewTemplateDisparo').html(html);
+        $('#previewTemplateDisparo').show();
+    }
+
+    $(document).on('blur', '#numerosDestino', function(){
+
+        let linhas = $(this).val().split(/\r?\n/);
+        let formatadas = [];
+
+        linhas.forEach(function(linha){
+            linha = linha.trim();
+
+            if(linha === ''){
+                return;
+            }
+
+            let partes = linha.split(',');
+            let numero = partes.shift();
+            let numeroLimpo = limparNumeroDisparo(numero);
+
+            if(numeroLimpo === ''){
+                return;
+            }
+
+            let linhaFormatada = formatarNumeroDisparo(numeroLimpo);
+
+            if(partes.length > 0){
+                linhaFormatada += ',' + partes.map(function(valor){
+                    return valor.trim();
+                }).join(',');
+            }
+
+            formatadas.push(linhaFormatada);
+        });
+
+        $(this).val(formatadas.join("\n"));
 
     });
 
@@ -964,7 +1223,6 @@ $(document).ready(function(){
 
         templateSelect.html('');
 
-        $('#areaVariaveis').html('');
 
         resetarPreviewDisparo();
 
@@ -978,6 +1236,7 @@ $(document).ready(function(){
 
             templateSelect.prop('disabled', true);
             resetarPreviewDisparo();
+            atualizarAjudaNumerosDestinoDisparo(0);
 
             return;
 
@@ -1029,6 +1288,8 @@ $(document).ready(function(){
 
     $('#telefoneTeste').mask('(00) 00000-0000');
 
+    atualizarAjudaNumerosDestinoDisparo(0);
+
     let cancelarDisparo = false;
 
     $(document).on('click', '#btnPararDisparo', function(){
@@ -1047,41 +1308,34 @@ $(document).ready(function(){
 
         cancelarDisparo = false;
 
-        let form =
-            $(this);
+        let form = $(this);
+        let parse = parseDestinosDisparo();
 
-        let numerosTexto =
-            $('#numerosDestino').val();
+        if(parse.erros.length > 0){
+            alert(parse.erros.join("\n"));
+            return;
+        }
 
-        let numeros =
-            numerosTexto.split(/[\n,;]+/);
-
-        let numerosLimpos = [];
-
-        numeros.forEach(function(numero){
-
-            numero =
-                numero.replace(/\D/g, '');
-
-            if(numero.length == 0){
-                return;
-            }
-
-            if(numero.substring(0,2) != '55'){
-                numero = '55' + numero;
-            }
-
-            if(!numerosLimpos.includes(numero)){
-                numerosLimpos.push(numero);
-            }
-
-        });
-
-        if(numerosLimpos.length == 0){
-
+        if(parse.destinos.length == 0){
             alert('Informe pelo menos um número válido.');
             return;
+        }
 
+        atualizarPreviewDestinosDisparo(parse);
+
+        if(parse.temExtrasSemVariaveis){
+            if(!confirm(
+                'O template selecionado não possui variáveis, mas algumas linhas têm dados após a vírgula. Esses dados extras serão ignorados. Deseja continuar?'
+            )){
+                return;
+            }
+        }
+
+        if(!confirm(
+            'Confira a prévia dos destinos e confirme o envio de ' +
+            parse.destinos.length + ' mensagem(ns). Deseja iniciar agora?'
+        )){
+            return;
         }
 
         $('#resumoFinalDisparo').html('');
@@ -1101,26 +1355,49 @@ $(document).ready(function(){
         $('#painelEdicaoDisparo').hide();
         $('#painelExecucaoDisparo').show();
 
+        $('#btnEnviarDisparo')
+            .prop('disabled', true)
+            .html('<i class="fas fa-spinner fa-spin"></i> Enviando...');
+
         $('#btnPararDisparo')
             .prop('disabled', false)
             .html('<i class="fas fa-stop"></i> Parar envio');
 
-        numerosLimpos.forEach(function(numero, index){
+        parse.destinos.forEach(function(destino, index){
+
+            let variaveisHtml = '';
+
+            if(parse.variaveis.length > 0){
+                variaveisHtml = '<div class="small text-muted">';
+
+                parse.variaveis.forEach(function(v, i){
+                    variaveisHtml +=
+                        '{{' + escapeHtmlDisparo(v) + '}}: ' +
+                        escapeHtmlDisparo(destino.valores[i] || '') + '<br>';
+                });
+
+                variaveisHtml += '</div>';
+            }
 
             $('#listaStatusNumeros').append(`
                 <tr id="linha_numero_${index}">
-                    <td>${numero}</td>
+                    <td>
+                        ${escapeHtmlDisparo(destino.numero_formatado)}
+                        ${variaveisHtml}
+                    </td>
                     <td>
                         <span class="badge badge-secondary">
                             Pendente
                         </span>
                     </td>
+                    <td class="small text-muted">-</td>
+                    <td>-</td>
                 </tr>
             `);
 
         });
 
-        let total = numerosLimpos.length;
+        let total = parse.destinos.length;
         let enviados = 0;
         let erros = 0;
         let cancelados = 0;
@@ -1209,7 +1486,7 @@ $(document).ready(function(){
             );
 
             $('#resumoFinalDisparo').html(`
-                <div class="alert alert-success mt-3">
+                <div class="alert ${erros > 0 ? 'alert-warning' : 'alert-success'} mt-3">
                     <strong>Envio concluído.</strong><br>
                     Enviados: ${enviados} | Erros: ${erros}
                     <br>
@@ -1232,6 +1509,10 @@ $(document).ready(function(){
                     '<span class="badge badge-warning">Cancelado</span>'
                 );
 
+                $('#linha_numero_' + i + ' td:eq(2)').html(
+                    '<span class="text-muted">Envio cancelado antes de iniciar.</span>'
+                );
+
                 cancelados++;
 
             }
@@ -1239,6 +1520,97 @@ $(document).ready(function(){
             atualizarProgresso();
             rolarStatus();
             finalizarEnvio('cancelado');
+        }
+
+        function montarDadosEnvio(destino)
+        {
+            let dados = [
+                {
+                    name: 'meta',
+                    value: $('#meta').val()
+                },
+                {
+                    name: 'template',
+                    value: $('#template').val()
+                },
+                {
+                    name: 'numero',
+                    value: destino.numero
+                }
+            ];
+
+            parse.variaveis.forEach(function(v, index){
+                dados.push({
+                    name: 'variaveis[' + v + ']',
+                    value: destino.valores[index] || ''
+                });
+            });
+
+            return dados;
+        }
+
+        function mensagemCurtaErroDisparo(erro)
+        {
+            erro = String(erro || 'Erro ao enviar mensagem').trim();
+
+            if(erro.length == 0){
+                return 'Erro ao enviar mensagem';
+            }
+
+            if(erro.includes('Invalid parameter')){
+                return 'Erro nos parâmetros do template.';
+            }
+
+            if(erro.includes('Parameter name')){
+                return 'Erro nos nomes das variáveis do template.';
+            }
+
+            if(erro.includes('Unsupported post request')){
+                return 'Erro ao conectar com a Meta.';
+            }
+
+            if(erro.length > 120){
+                return erro.substring(0, 117) + '...';
+            }
+
+            return erro;
+        }
+
+        function montarDetalhesEnvioDisparo(destino, retorno, status, motivo)
+        {
+            return {
+                numero: (retorno && retorno.numero_formatado)
+                    ? retorno.numero_formatado
+                    : destino.numero_formatado,
+                status: status,
+                mensagem_amigavel: motivo,
+                message_id: retorno ? (retorno.message_id || null) : null,
+                erro_tecnico: retorno ? (retorno.erro || null) : null,
+                retorno_meta_api: retorno ? (retorno.retorno || retorno) : null,
+                payload_enviado: retorno && retorno.retorno
+                    ? (retorno.retorno.payload || null)
+                    : null
+            };
+        }
+
+        function aplicarDetalhesLinha(index, detalhesEnvio)
+        {
+            let detalhes = encodeDetalhesDisparo(detalhesEnvio);
+
+            if(detalhes === ''){
+                $('#linha_numero_' + index + ' td:eq(3)').html('-');
+                return;
+            }
+
+            $('#linha_numero_' + index + ' td:eq(3)').html(`
+                <button
+                type="button"
+                class="btn btn-xs btn-outline-info btnDetalhesDisparo"
+                data-detalhes="${detalhes}"
+                >
+                    Ver detalhes
+                </button>
+            `);
         }
 
         function enviarProximo()
@@ -1253,27 +1625,22 @@ $(document).ready(function(){
                 return;
             }
 
-            let numero =
-                numerosLimpos[atual];
+            let destino = parse.destinos[atual];
 
             $('#linha_numero_' + atual + ' td:eq(1)').html(
                 '<span class="badge badge-info">Enviando...</span>'
             );
 
+            $('#linha_numero_' + atual + ' td:eq(2)').html(
+                '<span class="text-muted">Aguardando resposta da Meta...</span>'
+            );
+
             rolarStatus();
-
-            let dados =
-                form.serializeArray();
-
-            dados.push({
-                name: 'numero',
-                value: numero
-            });
 
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/enviarAjax',
                 method: 'POST',
-                data: dados,
+                data: montarDadosEnvio(destino),
                 dataType: 'json',
 
                 success: function(retorno){
@@ -1286,6 +1653,10 @@ $(document).ready(function(){
                             '<span class="badge badge-success">Enviado</span>'
                         );
 
+                        $('#linha_numero_' + atual + ' td:eq(2)').html(
+                            '<span class="text-success">Mensagem enviada com sucesso</span>'
+                        );
+
                     }else{
 
                         erros++;
@@ -1294,16 +1665,61 @@ $(document).ready(function(){
                             '<span class="badge badge-danger">Erro</span>'
                         );
 
+                        $('#linha_numero_' + atual + ' td:eq(2)').html(
+                            escapeHtmlDisparo(
+                                mensagemCurtaErroDisparo(retorno.erro)
+                            )
+                        );
+
+                    }
+
+                    let motivoDetalhe = retorno.sucesso
+                        ? 'Mensagem enviada com sucesso'
+                        : mensagemCurtaErroDisparo(retorno.erro);
+
+                    aplicarDetalhesLinha(
+                        atual,
+                        montarDetalhesEnvioDisparo(
+                            destino,
+                            retorno,
+                            retorno.sucesso ? 'Enviado' : 'Erro',
+                            motivoDetalhe
+                        )
+                    );
+
+                    if(retorno.numero_formatado){
+                        $('#linha_numero_' + atual + ' td:eq(0)').contents().first()[0].textContent =
+                            retorno.numero_formatado;
                     }
 
                 },
 
-                error: function(){
+                error: function(xhr){
 
                     erros++;
 
                     $('#linha_numero_' + atual + ' td:eq(1)').html(
                         '<span class="badge badge-danger">Erro</span>'
+                    );
+
+                    $('#linha_numero_' + atual + ' td:eq(2)').html(
+                        'Falha na requisição de envio.'
+                    );
+
+                    aplicarDetalhesLinha(
+                        atual,
+                        montarDetalhesEnvioDisparo(
+                            destino,
+                            {
+                                erro: 'Falha na requisição de envio.',
+                                retorno: {
+                                    status: xhr.status,
+                                    responseText: xhr.responseText
+                                }
+                            },
+                            'Erro',
+                            'Falha na requisição de envio.'
+                        )
                     );
 
                 },
@@ -1343,6 +1759,16 @@ $(document).ready(function(){
         $('#listaStatusNumeros').html('');
 
         cancelarDisparo = false;
+
+    });
+
+    $(document).on('click', '.btnDetalhesDisparo', function(){
+
+        alert(
+            decodeDetalhesDisparo(
+                $(this).data('detalhes')
+            )
+        );
 
     });
 

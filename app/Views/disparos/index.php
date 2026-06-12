@@ -166,14 +166,19 @@ class="mb-3"
                 required
                 ></textarea>
 
-                <small class="text-muted">
-                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. <br />
-                    Atente para o formato do número (99) 99999-9999 
+                <small
+                id="ajudaNumerosDestino"
+                class="text-muted d-block"
+                >
+                    <strong>Formato esperado:</strong><br>
+                    Número
+                    <br><br>
+                    <strong>Exemplo:</strong><br>
+                    (41) 99999-9999<br>
+                    (41) 98888-8888
                 </small>
 
             </div>
-
-            <div id="areaVariaveis"></div>
 
             <button
             type="submit"
@@ -213,12 +218,14 @@ class="mb-3"
             class="status-envios-box"
             >
 
-                <table class="table table-sm table-bordered mb-0">
+                <table class="table table-sm table-bordered mb-0 tabela-status-disparo">
 
                     <thead>
                         <tr>
-                            <th>Número</th>
-                            <th>Status</th>
+                            <th class="col-numero-disparo">Número</th>
+                            <th class="col-status-disparo">Status</th>
+                            <th>Motivo</th>
+                            <th class="col-detalhes-disparo">Detalhes</th>
                         </tr>
                     </thead>
 
@@ -235,114 +242,6 @@ class="mb-3"
 </div>
 
 <script>
-
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
 window.TOTAL_CONTAS_META = <?= count($contas); ?>;
-
-$('#template').change(function(){
-
-    let option =
-        $(this).find(':selected');
-
-
-
-
-
-    let componentes =
-        option.attr(
-            'data-componentes'
-        );
-
-
-
-
-
-    if(!componentes){
-
-        return;
-
-    }
-
-    componentes =
-        atob(componentes);
-
-    try{
-
-        componentes =
-            JSON.parse(componentes);
-
-    }catch(e){
-
-        return;
-
-    }
-
-
-    let variaveis = [];
-
-    componentes.forEach(function(comp){
-
-        if(comp.text){
-
-            let matches =
-                comp.text.match(
-                    /{{(.*?)}}/g
-                );
-
-
-            if(matches){
-
-                matches.forEach(function(v){
-
-                    v = v
-                        .replace('{{','')
-                        .replace('}}','');
-
-                    if(!variaveis.includes(v)){
-
-                        variaveis.push(v);
-
-                    }
-
-                });
-
-            }
-
-        }
-
-    });
-
-
-    let html = '';
-
-    variaveis.forEach(function(v){
-
-        html += `
-
-            <div class="form-group">
-
-                <label>
-                    Variável ${v}
-                </label>
-
-                <input
-                type="text"
-                name="variaveis[${v}]"
-                class="form-control"
-                required
-                >
-
-            </div>
-
-        `;
-
-    });
-
-
-    $('#areaVariaveis').html(
-        html
-    );
-
-});
-
 </script>

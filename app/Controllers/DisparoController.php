@@ -307,6 +307,129 @@ class DisparoController extends Controller
         );
     }
 
+    private function extrairVariaveisTemplate($template)
+    {
+        $componentes = json_decode(
+            $template['TMP_Componentes'] ?? '[]',
+            true
+        );
+
+        if(!is_array($componentes)){
+            return [];
+        }
+
+        $variaveis = [];
+
+        foreach($componentes as $componente){
+
+            if(empty($componente['text'])){
+                continue;
+            }
+
+            preg_match_all(
+                '/{{(.*?)}}/',
+                $componente['text'],
+                $matches
+            );
+
+            foreach(($matches[1] ?? []) as $variavel){
+
+                $variavel = trim($variavel);
+
+                if(
+                    $variavel !== ''
+                    &&
+                    !in_array($variavel, $variaveis, true)
+                ){
+                    $variaveis[] = $variavel;
+                }
+            }
+        }
+
+        usort($variaveis, function($a, $b){
+            if(is_numeric($a) && is_numeric($b)){
+                return (int) $a <=> (int) $b;
+            }
+
+            return strcmp($a, $b);
+        });
+
+        return $variaveis;
+    }
+
+    private function normalizarVariaveisDisparo($variaveisRecebidas, $variaveisTemplate)
+    {
+        if(!is_array($variaveisRecebidas)){
+            $variaveisRecebidas = [];
+        }
+
+        $normalizadas = [];
+
+        foreach($variaveisTemplate as $indice => $variavel){
+
+            $valor = $variaveisRecebidas[$variavel]
+                ?? $variaveisRecebidas[(string) ($indice + 1)]
+                ?? $variaveisRecebidas[$indice]
+                ?? null;
+
+            if($valor === null || trim((string) $valor) === ''){
+                throw new \Exception(
+                    'Informe o valor da variável {{' . $variavel . '}}.'
+                );
+            }
+
+            $normalizadas[$variavel] = trim((string) $valor);
+        }
+
+        return $normalizadas;
+    }
+
+    private function formatarNumero($numero)
+    {
+        $numero = preg_replace('/\D/', '', $numero);
+
+        if(substr($numero, 0, 2) == '55'){
+            $numero = substr($numero, 2);
+        }
+
+        if(strlen($numero) == 11){
+            return '(' . substr($numero, 0, 2) . ') '
+                . substr($numero, 2, 5)
+                . '-'
+                . substr($numero, 7);
+        }
+
+        if(strlen($numero) == 10){
+            return '(' . substr($numero, 0, 2) . ') '
+                . substr($numero, 2, 4)
+                . '-'
+                . substr($numero, 6);
+        }
+
+        return $numero;
+    }
+
+    private function extrairErroMeta($response)
+    {
+        if(!is_array($response)){
+            return 'Erro ao enviar mensagem';
+        }
+
+        if(!empty($response['error']['message'])){
+            return $response['error']['message'];
+        }
+
+        if(!empty($response['error']['error_user_msg'])){
+            return $response['error']['error_user_msg'];
+        }
+
+        if(!empty($response['message'])){
+            return $response['message'];
+        }
+
+        return 'Erro ao enviar mensagem';
+    }
+
     public function enviarAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -322,32 +445,47 @@ class DisparoController extends Controller
                     $_POST['template']
                 );
 
-            $meta =
-                new \Services\MetaService(
-                    $_POST['meta']
-                );
+            if(!$template){
+                throw new \Exception('Template não encontrado.');
+            }
 
             $numero =
                 preg_replace(
                     '/\D/',
                     '',
                     $_POST['numero']
+                    ?? ''
                 );
+
+            if($numero == ''){
+                throw new \Exception('Número de destino não informado.');
+            }
 
             if(substr($numero, 0, 2) != '55'){
                 $numero = '55' . $numero;
             }
 
+            $variaveisTemplate =
+                $this->extrairVariaveisTemplate(
+                    $template
+                );
+
+            $variaveisEnvio =
+                $this->normalizarVariaveisDisparo(
+                    $_POST['variaveis'] ?? [],
+                    $variaveisTemplate
+                );
+
+            $meta =
+                new \Services\MetaService(
+                    $_POST['meta']
+                );
+
             $response =
                 $meta->enviarTemplate(
-
                     $numero,
-
                     $template,
-
-                    $_POST['variaveis']
-                    ?? []
-
+                    $variaveisEnvio
                 );
 
             $messageId = null;
@@ -373,7 +511,6 @@ class DisparoController extends Controller
                 $controlePlano->registrarUso(
                     $usuario['CLI_ID']
                 );
-
             }
 
             $disparo =
@@ -397,8 +534,7 @@ class DisparoController extends Controller
                     $template['TMP_Nome'],
 
                 'variaveis' =>
-                    $_POST['variaveis']
-                    ?? [],
+                    $variaveisEnvio,
 
                 'message_id' =>
                     $messageId,
@@ -454,8 +590,11 @@ class DisparoController extends Controller
 
                 echo json_encode([
                     'sucesso' => true,
+                    'status' => 'enviado',
                     'numero' => $numero,
-                    'message_id' => $messageId
+                    'numero_formatado' => $this->formatarNumero($numero),
+                    'message_id' => $messageId,
+                    'retorno' => $response
                 ]);
 
                 return;
@@ -463,17 +602,24 @@ class DisparoController extends Controller
 
             echo json_encode([
                 'sucesso' => false,
+                'status' => 'erro',
                 'numero' => $numero,
-                'erro' =>
-                    $response['error']['message']
-                    ?? 'Erro ao enviar mensagem'
+                'numero_formatado' => $this->formatarNumero($numero),
+                'erro' => $this->extrairErroMeta($response),
+                'retorno' => $response
             ]);
 
         }catch(\Exception $e){
 
             echo json_encode([
                 'sucesso' => false,
-                'erro' => $e->getMessage()
+                'status' => 'erro',
+                'numero' => $_POST['numero'] ?? null,
+                'numero_formatado' => $this->formatarNumero($_POST['numero'] ?? ''),
+                'erro' => $e->getMessage(),
+                'retorno' => [
+                    'exception' => $e->getMessage()
+                ]
             ]);
 
         }
