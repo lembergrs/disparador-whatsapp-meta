@@ -37,13 +37,69 @@ class SiteController extends Controller
             exit;
         }
 
+
+        $tipoPessoa = $_POST['tipo_pessoa'] ?? 'PJ';
+        $cpfCnpj = preg_replace('/\D/', '', $_POST['cpf_cnpj'] ?? '');
+        $nome = trim($_POST['nome'] ?? '');
+        $razaoSocial = trim($_POST['razao_social'] ?? '');
+        $nomeFantasia = trim($_POST['nome_fantasia'] ?? '');
+        if ($tipoPessoa === 'PF') {
+            $razaoSocial = null;
+            $nomeFantasia = $nome;
+        }
+        $email = trim($_POST['email'] ?? '');
+        $telefone = preg_replace('/\D/', '', $_POST['telefone'] ?? '');
+        $senha = $_POST['senha'] ?? '';
+        $confirmarSenha = $_POST['confirmar_senha'] ?? '';
+        $dadosCadastro = [
+            'tipo_pessoa' => $tipoPessoa,
+            'cpf_cnpj' => $_POST['cpf_cnpj'] ?? '',
+            'nome' => $nome,
+            'razao_social' => $razaoSocial,
+            'nome_fantasia' => $nomeFantasia,
+            'email' => $email,
+            'telefone' => $_POST['telefone'] ?? '',
+            'aceiteTermos' => $_POST['aceiteTermos'] ?? null
+        ];
+
+
+        if (
+            empty($cpfCnpj) ||
+            empty($nome) ||
+            empty($email) ||
+            empty($telefone) ||
+            empty($senha) ||
+            empty($confirmarSenha)
+        ) {
+            $this->voltarCadastroComDados(
+                $dadosCadastro,
+                'Preencha todos os campos obrigatórios.'
+            );
+        }
+
+        if ($senha !== $confirmarSenha) {
+            $this->voltarCadastroComDados(
+                $dadosCadastro,
+                'As senhas informadas não conferem.'
+            );
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->voltarCadastroComDados(
+                $dadosCadastro,
+                'Informe um e-mail válido.'
+            );
+        }
+
+
         if (defined('RECAPTCHA_SECRET_KEY') && RECAPTCHA_SECRET_KEY != '') {
             $captcha = $_POST['g-recaptcha-response'] ?? '';
 
             if ($captcha == '') {
-                Session::flash('error', 'Confirme que você não é um robô.');
-                header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-                exit;
+                $this->voltarCadastroComDados(
+                    $dadosCadastro,
+                    'Confirme que você não é um robô.'
+                );
             }
 
             $ch = curl_init();
@@ -65,49 +121,11 @@ class SiteController extends Controller
             $retorno = json_decode($retorno, true);
 
             if (empty($retorno['success'])) {
-                Session::flash('error', 'Falha na validação do reCAPTCHA. Tente novamente.');
-                header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-                exit;
+                $this->voltarCadastroComDados(
+                    $dadosCadastro,
+                    'Falha na validação do reCAPTCHA. Tente novamente.'
+                );
             }
-        }
-
-        $tipoPessoa = $_POST['tipo_pessoa'] ?? 'PJ';
-        $cpfCnpj = preg_replace('/\D/', '', $_POST['cpf_cnpj'] ?? '');
-        $nome = trim($_POST['nome'] ?? '');
-        $razaoSocial = trim($_POST['razao_social'] ?? '');
-        $nomeFantasia = trim($_POST['nome_fantasia'] ?? '');
-        if ($tipoPessoa === 'PF') {
-            $razaoSocial = null;
-            $nomeFantasia = $nome;
-        }
-        $email = trim($_POST['email'] ?? '');
-        $telefone = preg_replace('/\D/', '', $_POST['telefone'] ?? '');
-        $senha = $_POST['senha'] ?? '';
-        $confirmarSenha = $_POST['confirmar_senha'] ?? '';
-
-        if (
-            empty($cpfCnpj) ||
-            empty($nome) ||
-            empty($email) ||
-            empty($telefone) ||
-            empty($senha) ||
-            empty($confirmarSenha)
-        ) {
-            Session::flash('error', 'Preencha todos os campos obrigatórios.');
-            header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-            exit;
-        }
-
-        if ($senha !== $confirmarSenha) {
-            Session::flash('error', 'As senhas informadas não conferem.');
-            header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-            exit;
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            Session::flash('error', 'Informe um e-mail válido.');
-            header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-            exit;
         }
 
         try {
@@ -122,9 +140,10 @@ class SiteController extends Controller
             $verificaEmail->execute([$email]);
 
             if ($verificaEmail->fetch(PDO::FETCH_ASSOC)) {
-                Session::flash('error', 'Já existe uma conta cadastrada com este e-mail.');
-                header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-                exit;
+                $this->voltarCadastroComDados(
+                    $dadosCadastro,
+                    'Já existe uma conta cadastrada com este e-mail.'
+                );
             }
 
             $db->beginTransaction();
@@ -212,10 +231,27 @@ class SiteController extends Controller
                 $db->rollBack();
             }
 
-            Session::flash('error', 'Erro ao realizar cadastro.');
-            header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
-            exit;
+            $this->voltarCadastroComDados(
+                $dadosCadastro ?? ($_POST ?? []),
+                'Erro ao realizar cadastro.'
+            );
         }
+    }
+
+
+    private function voltarCadastroComDados($dados, $mensagem)
+    {
+        unset(
+            $dados['senha'],
+            $dados['confirmar_senha'],
+            $dados['g-recaptcha-response']
+        );
+
+        Session::set('cadastro_dados', $dados);
+        Session::flash('error', $mensagem);
+
+        header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
+        exit;
     }
 
     public function politicaPrivacidade()

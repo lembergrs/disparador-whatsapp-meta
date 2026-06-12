@@ -3,6 +3,8 @@
 use Core\Session;
 
 $flash = Session::getFlash();
+$dadosCadastro = Session::get('cadastro_dados') ?? [];
+Session::remove('cadastro_dados');
 
 ?>
 <!DOCTYPE html>
@@ -147,8 +149,8 @@ $flash = Session::getFlash();
                                     id="tipo_pessoa"
                                     class="form-control"
                                     >
-                                        <option value="PJ">Pessoa Jurídica</option>
-                                        <option value="PF">Pessoa Física</option>
+                                        <option value="PJ" <?= ($dadosCadastro['tipo_pessoa'] ?? 'PJ') == 'PJ' ? 'selected' : ''; ?>>Pessoa Jurídica</option>
+                                        <option value="PF" <?= ($dadosCadastro['tipo_pessoa'] ?? '') == 'PF' ? 'selected' : ''; ?>>Pessoa Física</option>
                                     </select>
 
                                 </div>
@@ -166,6 +168,7 @@ $flash = Session::getFlash();
                                     name="cpf_cnpj"
                                     id="cpf_cnpj"
                                     class="form-control cpf_cnpj"
+                                    value="<?= htmlspecialchars($dadosCadastro['cpf_cnpj'] ?? ''); ?>"
                                     required
                                     >
 
@@ -183,6 +186,7 @@ $flash = Session::getFlash();
                             type="text"
                             name="nome"
                             class="form-control"
+                            value="<?= htmlspecialchars($dadosCadastro['nome'] ?? ''); ?>"
                             required
                             >
 
@@ -200,6 +204,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="razao_social"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['razao_social'] ?? ''); ?>"
                                     >
 
                                 </div>
@@ -216,6 +221,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="nome_fantasia"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['nome_fantasia'] ?? ''); ?>"
                                     >
 
                                 </div>
@@ -236,6 +242,7 @@ $flash = Session::getFlash();
                                     type="email"
                                     name="email"
                                     class="form-control"
+                                    value="<?= htmlspecialchars($dadosCadastro['email'] ?? ''); ?>"
                                     autocomplete="email"
                                     required
                                     >
@@ -254,6 +261,7 @@ $flash = Session::getFlash();
                                     type="text"
                                     name="telefone"
                                     class="form-control telefone"
+                                    value="<?= htmlspecialchars($dadosCadastro['telefone'] ?? ''); ?>"
                                     required
                                     >
 
@@ -335,6 +343,7 @@ $flash = Session::getFlash();
                             type="checkbox"
                             id="aceiteTermos"
                             name="aceiteTermos"
+                            <?= !empty($dadosCadastro['aceiteTermos']) ? 'checked' : ''; ?>
                             required
                             >
 
