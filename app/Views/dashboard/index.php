@@ -90,6 +90,58 @@ function formatarDataDashboard($data)
 
 </div>
 
+<div class="row">
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-primary">
+            <div class="inner">
+                <h3><?= number_format($campanhas, 0, ',', '.'); ?></h3>
+                <p>Campanhas Totais</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-bullhorn"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-info">
+            <div class="inner">
+                <h3><?= number_format($conversas, 0, ',', '.'); ?></h3>
+                <p>Conversas Ativas</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-comments"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner">
+                <h3><?= number_format($naoLidas, 0, ',', '.'); ?></h3>
+                <p>Não Lidas</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-secondary">
+            <div class="inner">
+                <h3><?= number_format($mensagensRecebidas, 0, ',', '.'); ?></h3>
+                <p>Mensagens Recebidas</p>
+            </div>
+            <div class="icon">
+                <i class="fas fa-inbox"></i>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 <?php }else{ ?>
 
 <div class="row">

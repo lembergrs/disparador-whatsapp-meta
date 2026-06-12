@@ -22,6 +22,10 @@ $flash = Session::getFlash();
 
     <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=11">
 
+    <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <?php } ?>
+
 </head>
 
 <body class="site-cadastro-page">
@@ -53,12 +57,11 @@ $flash = Session::getFlash();
                     </span>
 
                     <h2 class="font-weight-bold mb-3">
-                        Solicite sua conta no Disparador
+                        Crie sua conta grátis no Disparador
                     </h2>
 
                     <p class="text-muted">
-                        Cadastre sua empresa para começar a usar campanhas,
-                        listas, templates oficiais da Meta e central de conversas.
+                        Cadastre sua empresa, acesse o painel imediatamente e conecte seu WhatsApp para iniciar o teste gratuito.
                     </p>
 
                     <hr>
@@ -70,7 +73,7 @@ $flash = Session::getFlash();
 
                     <p>
                         <i class="fas fa-check-circle text-success"></i>
-                        Importação de contatos e listas
+                        Segmentação por listas de contatos
                     </p>
 
                     <p>
@@ -84,7 +87,7 @@ $flash = Session::getFlash();
                     </p>
 
                     <div class="alert alert-info mt-4 mb-0">
-                        Após o cadastro, sua conta ficará aguardando validação da equipe RL2 Net.
+                        Após criar sua conta, conecte seu WhatsApp Business para iniciar o teste de até 7 dias ou 200 mensagens.
                     </div>
 
                 </div>
@@ -104,7 +107,7 @@ $flash = Session::getFlash();
                     </h4>
 
                     <p class="text-muted mb-4">
-                        Preencha os dados abaixo para solicitar seu acesso.
+                        Preencha os dados abaixo para criar sua conta. Depois, conecte seu WhatsApp para iniciar o teste.
                     </p>
 
                     <?php if($flash): ?>
@@ -313,6 +316,19 @@ $flash = Session::getFlash();
 
                         </div>
 
+                        <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
+
+                        <div class="mb-4 mt-3">
+
+                            <div
+                            class="g-recaptcha"
+                            data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
+                            ></div>
+
+                        </div>
+
+                        <?php } ?>
+
                         <div class="form-check mb-4">
 
                             <input
@@ -346,7 +362,7 @@ $flash = Session::getFlash();
                         class="btn btn-success btn-block"
                         disabled
                         >
-                            Solicitar Cadastro
+                            Criar conta grátis
                         </button>
 
                     </form>

@@ -166,14 +166,19 @@ class="mb-3"
                 required
                 ></textarea>
 
-                <small class="text-muted">
-                    Informe um número por linha. Também pode separar por vírgula ou ponto e vírgula. <br />
-                    Atente para o formato do número (99) 99999-9999 
+                <small
+                id="ajudaNumerosDestino"
+                class="text-muted d-block"
+                >
+                    <strong>Formato esperado:</strong><br>
+                    Número
+                    <br><br>
+                    <strong>Exemplo:</strong><br>
+                    (41) 99999-9999<br>
+                    (41) 98888-8888
                 </small>
 
             </div>
-
-            <div id="areaVariaveis"></div>
 
             <button
             type="submit"
@@ -213,12 +218,14 @@ class="mb-3"
             class="status-envios-box"
             >
 
-                <table class="table table-sm table-bordered mb-0">
+                <table class="table table-sm table-bordered mb-0 tabela-status-disparo">
 
                     <thead>
                         <tr>
-                            <th>Número</th>
-                            <th>Status</th>
+                            <th class="col-numero-disparo">Número</th>
+                            <th class="col-status-disparo">Status</th>
+                            <th>Motivo</th>
+                            <th class="col-detalhes-disparo">Detalhes</th>
                         </tr>
                     </thead>
 
@@ -234,115 +241,108 @@ class="mb-3"
 
 </div>
 
-<script>
+<div
+class="modal fade"
+id="modalDetalhesDisparo"
+tabindex="-1"
+role="dialog"
+aria-hidden="true"
+>
 
-window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
-window.TOTAL_CONTAS_META = <?= count($contas); ?>;
+    <div
+    class="modal-dialog modal-lg"
+    role="document"
+    >
 
-$('#template').change(function(){
+        <div class="modal-content">
 
-    let option =
-        $(this).find(':selected');
+            <div class="modal-header">
 
+                <h5 class="modal-title">
+                    Detalhes técnicos do envio
+                </h5>
 
-
-
-
-    let componentes =
-        option.attr(
-            'data-componentes'
-        );
-
-
-
-
-
-    if(!componentes){
-
-        return;
-
-    }
-
-    componentes =
-        atob(componentes);
-
-    try{
-
-        componentes =
-            JSON.parse(componentes);
-
-    }catch(e){
-
-        return;
-
-    }
-
-
-    let variaveis = [];
-
-    componentes.forEach(function(comp){
-
-        if(comp.text){
-
-            let matches =
-                comp.text.match(
-                    /{{(.*?)}}/g
-                );
-
-
-            if(matches){
-
-                matches.forEach(function(v){
-
-                    v = v
-                        .replace('{{','')
-                        .replace('}}','');
-
-                    if(!variaveis.includes(v)){
-
-                        variaveis.push(v);
-
-                    }
-
-                });
-
-            }
-
-        }
-
-    });
-
-
-    let html = '';
-
-    variaveis.forEach(function(v){
-
-        html += `
-
-            <div class="form-group">
-
-                <label>
-                    Variável ${v}
-                </label>
-
-                <input
-                type="text"
-                name="variaveis[${v}]"
-                class="form-control"
-                required
+                <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Fechar"
                 >
+                    <span aria-hidden="true">&times;</span>
+                </button>
 
             </div>
 
-        `;
+            <div class="modal-body">
 
-    });
+                <div class="row mb-3">
 
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Número</small>
+                        <strong id="detalheDisparoNumero">-</strong>
+                    </div>
 
-    $('#areaVariaveis').html(
-        html
-    );
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Status</small>
+                        <strong id="detalheDisparoStatus">-</strong>
+                    </div>
 
-});
+                    <div class="col-md-4">
+                        <small class="text-muted d-block">Mensagem</small>
+                        <strong id="detalheDisparoMensagem">-</strong>
+                    </div>
 
+                </div>
+
+                <div class="form-group mb-0">
+
+                    <label for="detalheDisparoJson">
+                        JSON técnico completo
+                    </label>
+
+                    <textarea
+                    id="detalheDisparoJson"
+                    class="form-control"
+                    rows="16"
+                    readonly
+                    ></textarea>
+
+                    <small class="form-text text-muted">
+                        Use este conteúdo para analisar payload, retorno da Meta/API e erros técnicos.
+                    </small>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                type="button"
+                id="btnCopiarDetalhesDisparo"
+                class="btn btn-outline-primary"
+                >
+                    <i class="fas fa-copy"></i>
+                    Copiar detalhes
+                </button>
+
+                <button
+                type="button"
+                class="btn btn-secondary"
+                data-dismiss="modal"
+                >
+                    Fechar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
+window.TOTAL_CONTAS_META = <?= count($contas); ?>;
 </script>

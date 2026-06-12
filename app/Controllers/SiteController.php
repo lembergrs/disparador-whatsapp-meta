@@ -37,6 +37,40 @@ class SiteController extends Controller
             exit;
         }
 
+        if (defined('RECAPTCHA_SECRET_KEY') && RECAPTCHA_SECRET_KEY != '') {
+            $captcha = $_POST['g-recaptcha-response'] ?? '';
+
+            if ($captcha == '') {
+                Session::flash('error', 'Confirme que você não é um robô.');
+                header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
+                exit;
+            }
+
+            $ch = curl_init();
+
+            curl_setopt_array($ch, [
+                CURLOPT_URL => 'https://www.google.com/recaptcha/api/siteverify',
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => http_build_query([
+                    'secret' => RECAPTCHA_SECRET_KEY,
+                    'response' => $captcha,
+                    'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+                ]),
+                CURLOPT_RETURNTRANSFER => true
+            ]);
+
+            $retorno = curl_exec($ch);
+            curl_close($ch);
+
+            $retorno = json_decode($retorno, true);
+
+            if (empty($retorno['success'])) {
+                Session::flash('error', 'Falha na validação do reCAPTCHA. Tente novamente.');
+                header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
+                exit;
+            }
+        }
+
         $tipoPessoa = $_POST['tipo_pessoa'] ?? 'PJ';
         $cpfCnpj = preg_replace('/\D/', '', $_POST['cpf_cnpj'] ?? '');
         $nome = trim($_POST['nome'] ?? '');
@@ -119,9 +153,9 @@ class SiteController extends Controller
                     :telefone,
                     0.00,
                     'pendente',
-                    'pendente',
+                    'ativo',
                     :observacoes,
-                    'N'
+                    'S'
                 )
             ");
 
@@ -133,7 +167,7 @@ class SiteController extends Controller
                 ':nome_fantasia' => $nomeFantasia ?: $nome,
                 ':email' => $email,
                 ':telefone' => $telefone,
-                ':observacoes' => 'Cadastro realizado pelo site público. Aguardando aprovação.'
+                ':observacoes' => 'Cadastro realizado pelo site público. Conta ativada automaticamente.'
             ]);
 
             $clienteId = $db->lastInsertId();
@@ -152,7 +186,7 @@ class SiteController extends Controller
                     :email,
                     :senha,
                     'cliente',
-                    'N'
+                    'S'
                 )
             ");
 
@@ -167,7 +201,7 @@ class SiteController extends Controller
 
             Session::flash(
                 'success',
-                'Cadastro realizado com sucesso. Sua conta está aguardando aprovação.'
+                'Cadastro realizado com sucesso. Você já pode acessar sua conta.'
             );
 
             header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=login');

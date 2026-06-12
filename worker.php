@@ -18,7 +18,9 @@ spl_autoload_register(function($class){
 
 use Core\Database;
 use Services\MetaService;
+use Services\ControlePlanoService;
 use Models\Conversa;
+use Models\ConsumoMensal;
 
 $modoTeste = false; // troque para false para envio real
 $limitePorExecucao = 10;
@@ -221,6 +223,20 @@ foreach($campanhas as $campanha){
                 ")->execute([
                     $campanha['CAM_ID']
                 ]);
+
+                $consumo =
+                    new ConsumoMensal();
+
+                $consumo->registrarMensagem(
+                    $campanha['CLI_ID']
+                );
+
+                $controlePlano =
+                    new ControlePlanoService();
+
+                $controlePlano->registrarUso(
+                    $campanha['CLI_ID']
+                );
 
                 $conversaModel =
                     new Conversa();
