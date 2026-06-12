@@ -653,6 +653,7 @@ body.login-custom-page {
     border-radius: 8px;
 }
 
+
 .tabela-status-disparo{
     table-layout: fixed;
 }
@@ -693,5 +694,3 @@ body.login-custom-page {
     opacity: .65;
     cursor: not-allowed;
 }
-
-/* até aqui vai o arquivo */
