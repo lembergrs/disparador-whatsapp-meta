@@ -66,6 +66,27 @@ class MetaContaController extends Controller
 
     public function salvar()
     {
+        $clienteId =
+            (int) ($_POST['cliente'] ?? 0);
+
+        $limite =
+            $this->metaModel
+            ->avaliarLimiteNumerosPorCliente(
+                $clienteId
+            );
+
+        if(!$limite['permitido']){
+
+            Session::flash(
+                'error',
+                $limite['mensagem']
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
         $this->metaModel->salvar(
             $_POST
         );
@@ -170,11 +191,55 @@ class MetaContaController extends Controller
 
     public function atualizar()
     {
-        $id = $_POST['id'];
+        $id =
+            (int) ($_POST['id'] ?? 0);
 
+        $contaAtual =
+            $this->metaModel->buscar(
+                $id
+            );
 
+        if(!$contaAtual){
 
+            Session::flash(
+                'error',
+                'Conta Meta inválida.'
+            );
 
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
+        $clienteId =
+            (int) ($_POST['cliente'] ?? 0);
+
+        $clienteAlterado =
+            (int) $contaAtual['CLI_ID']
+            !==
+            $clienteId;
+
+        if($clienteAlterado){
+
+            $limite =
+                $this->metaModel
+                ->avaliarLimiteNumerosPorCliente(
+                    $clienteId,
+                    $id
+                );
+
+            if(!$limite['permitido']){
+
+                Session::flash(
+                    'error',
+                    $limite['mensagem']
+                );
+
+                $this->redirect(
+                    'metaConta'
+                );
+            }
+        }
 
         $this->metaModel->atualizar(
             $id,
