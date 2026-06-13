@@ -240,6 +240,35 @@ class MetaConta
         ];
     }
 
+    public function validarLimiteNumerosPlano(
+        $clienteId,
+        $limitePlano
+    )
+    {
+        $utilizados =
+            $this->contarAtivasPorCliente(
+                $clienteId
+            );
+
+        $limitePlano =
+            (int) $limitePlano;
+
+        $permitido =
+            $utilizados <= $limitePlano;
+
+        return [
+            'permitido' => $permitido,
+            'utilizados' => $utilizados,
+            'limite' => $limitePlano,
+            'mensagem' => $permitido
+                ? null
+                : sprintf(
+                    'Para migrar para este plano, reduza a quantidade de números conectados para no máximo %d. Atualmente sua conta possui %d números conectados.',
+                    $limitePlano,
+                    $utilizados
+                )
+        ];
+    }
 
 
 
