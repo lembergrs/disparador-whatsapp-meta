@@ -133,6 +133,19 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
             <?php foreach($planos as $plano){ ?>
 
+                <?php
+                $numerosAtivosPlano =
+                    (int) ($numerosAtivos ?? 0);
+
+                $limiteNumerosPlano =
+                    (int) $plano['PLA_LimiteNumeros'];
+
+                $planoIncompativelNumeros =
+                    $numerosAtivosPlano
+                    >
+                    $limiteNumerosPlano;
+                ?>
+
                 <div class="col-md-4 mb-4">
 
                     <div class="card h-100">
@@ -181,6 +194,20 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                                 por mensagem adicional
                             </p>
 
+                            <?php if($planoIncompativelNumeros){ ?>
+
+                                <div class="alert alert-warning small">
+                                    Plano incompatível com sua utilização atual.
+                                    Reduza para no máximo
+                                    <?= $limiteNumerosPlano; ?>
+                                    número(s) conectado(s).
+                                    Atualmente sua conta possui
+                                    <?= $numerosAtivosPlano; ?>
+                                    número(s) conectado(s).
+                                </div>
+
+                            <?php } ?>
+
                             <form
                             method="post"
                             action="<?= BASE_URL; ?>/index.php?url=financeiro/escolherPlano"
@@ -195,6 +222,7 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                                 <button
                                 type="submit"
                                 class="btn btn-success btn-block"
+                                <?= $planoIncompativelNumeros ? 'disabled' : ''; ?>
                                 >
                                     Escolher plano
                                 </button>

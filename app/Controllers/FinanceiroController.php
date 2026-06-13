@@ -8,6 +8,7 @@ use Core\Session;
 use Core\Database;
 use Models\Plano;
 use Models\Cobranca;
+use Models\MetaConta;
 
 class FinanceiroController extends Controller
 {
@@ -19,8 +20,13 @@ class FinanceiroController extends Controller
 
         $planoModel = new Plano();
         $cobrancaModel = new Cobranca();
+        $metaContaModel = new MetaConta();
 
         $planos = $planoModel->listarAtivos();
+        $numerosAtivos =
+            $metaContaModel->contarAtivasPorCliente(
+                $usuario['CLI_ID']
+            );
 
         $cobranca = $cobrancaModel
             ->buscarPendentePorCliente($usuario['CLI_ID']);
@@ -39,7 +45,8 @@ class FinanceiroController extends Controller
                 'titulo' => 'Financeiro',
                 'planos' => $planos,
                 'cobranca' => $cobranca,
-                'excedente' => $excedente
+                'excedente' => $excedente,
+                'numerosAtivos' => $numerosAtivos
             ]
         );
     }
@@ -82,6 +89,23 @@ class FinanceiroController extends Controller
             Session::flash(
                 'error',
                 'Plano inválido.'
+            );
+
+            $this->redirect('financeiro');
+        }
+
+        $metaContaModel = new MetaConta();
+        $validacaoNumeros =
+            $metaContaModel->validarLimiteNumerosPlano(
+                $usuario['CLI_ID'],
+                $plano['PLA_LimiteNumeros']
+            );
+
+        if(!$validacaoNumeros['permitido']){
+
+            Session::flash(
+                'error',
+                $validacaoNumeros['mensagem']
             );
 
             $this->redirect('financeiro');
