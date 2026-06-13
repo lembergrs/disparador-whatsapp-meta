@@ -29,11 +29,18 @@ class ConfiguracaoController extends Controller
                 $usuario['CLI_ID']
             );
 
+        $limiteNumeros =
+            $this->metaContaModel
+            ->avaliarLimiteNumerosPorCliente(
+                $usuario['CLI_ID']
+            );
+
         $this->view(
             'configuracao/meta',
             [
                 'titulo' => 'Números WhatsApp',
-                'contas' => $contas
+                'contas' => $contas,
+                'limiteNumeros' => $limiteNumeros
             ]
         );
     }

@@ -31,6 +31,20 @@ function formatarTelefoneConfiguracao($telefone)
     return $telefone;
 }
 
+$limiteNumeros =
+    $limiteNumeros
+    ??
+    [
+        'permitido' => false,
+        'sem_plano' => true,
+        'utilizados' => count($contas ?? []),
+        'limite' => 0,
+        'mensagem' => 'Escolha um plano para conectar seu número WhatsApp.'
+    ];
+
+$podeConectarNumero =
+    !empty($limiteNumeros['permitido']);
+
 ?>
 
 <div class="row">
@@ -47,20 +61,60 @@ function formatarTelefoneConfiguracao($telefone)
 
                 <div class="card-tools">
 
-                    <button
-                    type="button"
-                    class="btn btn-success btn-sm"
-                    id="btnConectarWhatsApp"
-                    >
-                        <i class="fab fa-whatsapp"></i>
-                        Conectar novo número
-                    </button>
+                    <?php if($podeConectarNumero){ ?>
+
+                        <button
+                        type="button"
+                        class="btn btn-success btn-sm"
+                        id="btnConectarWhatsApp"
+                        >
+                            <i class="fab fa-whatsapp"></i>
+                            Conectar novo número
+                        </button>
+
+                    <?php }else{ ?>
+
+                        <a
+                        href="<?= BASE_URL; ?>/index.php?url=financeiro"
+                        class="btn btn-primary btn-sm"
+                        >
+                            <i class="fas fa-arrow-up"></i>
+                            Ver planos
+                        </a>
+
+                    <?php } ?>
 
                 </div>
 
             </div>
 
             <div class="card-body">
+
+                <div class="alert alert-info">
+                    <strong>
+                        <?= (int) $limiteNumeros['utilizados']; ?>
+                        de
+                        <?= (int) $limiteNumeros['limite']; ?>
+                        números conectados
+                    </strong>
+                </div>
+
+                <?php if(!$podeConectarNumero){ ?>
+
+                    <div class="alert alert-warning">
+                        <?= htmlspecialchars($limiteNumeros['mensagem']); ?>
+
+                        <div class="mt-2">
+                            <a
+                            href="<?= BASE_URL; ?>/index.php?url=financeiro"
+                            class="btn btn-primary btn-sm"
+                            >
+                                Ver Financeiro/Planos
+                            </a>
+                        </div>
+                    </div>
+
+                <?php } ?>
 
                 <?php if(empty($contas)){ ?>
 
@@ -77,14 +131,18 @@ function formatarTelefoneConfiguracao($telefone)
                             receber mensagens e atender seus contatos.
                         </p>
 
-                        <button
-                        type="button"
-                        class="btn btn-success"
-                        id="btnConectarWhatsAppVazio"
-                        >
-                            <i class="fab fa-whatsapp"></i>
-                            Conectar WhatsApp
-                        </button>
+                        <?php if($podeConectarNumero){ ?>
+
+                            <button
+                            type="button"
+                            class="btn btn-success"
+                            id="btnConectarWhatsAppVazio"
+                            >
+                                <i class="fab fa-whatsapp"></i>
+                                Conectar WhatsApp
+                            </button>
+
+                        <?php } ?>
 
                     </div>
 
