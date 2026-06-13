@@ -273,7 +273,6 @@ class MetaConta
 
 
 
-
     public function inativar($id)
     {
         $sql = $this->db->prepare("
