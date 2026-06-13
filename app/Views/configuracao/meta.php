@@ -160,7 +160,6 @@ $podeConectarNumero =
                                     <th>Status</th>
                                     <th>Phone Number ID</th>
                                     <th>WABA ID</th>
-                                    <th width="180">Ações</th>
                                 </tr>
 
                             </thead>
@@ -207,19 +206,6 @@ $podeConectarNumero =
                                             <small>
                                                 <?= htmlspecialchars($conta['MTA_WabaId']); ?>
                                             </small>
-                                        </td>
-
-                                        <td>
-
-                                            <button
-                                            type="button"
-                                            class="btn btn-info btn-sm"
-                                            disabled
-                                            >
-                                                <i class="fas fa-sync"></i>
-                                                Templates
-                                            </button>
-
                                         </td>
 
                                     </tr>
