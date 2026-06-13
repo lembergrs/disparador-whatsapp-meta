@@ -9,6 +9,7 @@ use Models\Plano;
 use Models\Cobranca;
 use Core\Database;
 use Models\Cliente;
+use Models\MetaConta;
 
 class FinanceiroAdminController extends Controller
 {
@@ -234,6 +235,39 @@ class FinanceiroAdminController extends Controller
             );
 
             $this->redirect('financeiroAdmin');
+        }
+
+        $planoModel = new Plano();
+        $plano =
+            $planoModel->buscar(
+                $planoId
+            );
+
+        if(!$plano){
+
+            Session::flash(
+                'error',
+                'Plano inválido.'
+            );
+
+            $this->redirect('financeiroAdmin#tabClientes');
+        }
+
+        $metaContaModel = new MetaConta();
+        $validacaoNumeros =
+            $metaContaModel->validarLimiteNumerosPlano(
+                $clienteId,
+                $plano['PLA_LimiteNumeros']
+            );
+
+        if(!$validacaoNumeros['permitido']){
+
+            Session::flash(
+                'error',
+                $validacaoNumeros['mensagem']
+            );
+
+            $this->redirect('financeiroAdmin#tabClientes');
         }
 
         $db = Database::getInstance();
