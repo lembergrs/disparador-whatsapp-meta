@@ -53,7 +53,7 @@ function formatarNumeroBR($numero)
 
                 <div class="row">
 
-                    <div class="col-6">
+                    <div class="col-<?= !empty($podeAtribuirConversa) ? '4' : '6'; ?>">
 
                         <select
                             id="filtroStatus"
@@ -74,7 +74,7 @@ function formatarNumeroBR($numero)
 
                     </div>
 
-                    <div class="col-6">
+                    <div class="col-<?= !empty($podeAtribuirConversa) ? '4' : '6'; ?>">
 
                         <select
                             id="filtroEtiqueta"
@@ -98,6 +98,39 @@ function formatarNumeroBR($numero)
                         </select>
 
                     </div>
+
+                    <?php if(!empty($podeAtribuirConversa)){ ?>
+
+                    <div class="col-4">
+
+                        <select
+                            id="filtroResponsavel"
+                            class="form-control form-control-sm"
+                        >
+                            <option value="" <?= empty($responsavel) ? 'selected' : ''; ?>>
+                                Todos responsáveis
+                            </option>
+
+                            <option value="sem" <?= (($responsavel ?? '') == 'sem') ? 'selected' : ''; ?>>
+                                Sem responsável
+                            </option>
+
+                            <?php foreach(($atendentes ?? []) as $atendente){ ?>
+
+                                <option
+                                    value="<?= (int) $atendente['USU_ID']; ?>"
+                                    <?= (($responsavel ?? '') == $atendente['USU_ID']) ? 'selected' : ''; ?>
+                                >
+                                    <?= htmlspecialchars($atendente['USU_Nome']); ?>
+                                </option>
+
+                            <?php } ?>
+
+                        </select>
+
+                    </div>
+
+                    <?php } ?>
 
                 </div>
 
@@ -158,6 +191,45 @@ function formatarNumeroBR($numero)
     </div>
 </div>
 
+
+
+<?php if(!empty($podeAtribuirConversa)){ ?>
+<div class="modal fade" id="modalResponsavel" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formAtribuirResponsavel">
+                <div class="modal-header">
+                    <h5 class="modal-title">Atribuir conversa</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="conversa_id" id="responsavelConversaId">
+                    <div class="form-group">
+                        <label>Responsável</label>
+                        <select name="responsavel_id" id="responsavelUsuarioId" class="form-control" required>
+                            <option value="">Selecione um atendente</option>
+                            <?php foreach(($atendentes ?? []) as $atendente){ ?>
+                                <option value="<?= (int) $atendente['USU_ID']; ?>">
+                                    <?= htmlspecialchars($atendente['USU_Nome']); ?>
+                                    (<?= htmlspecialchars($atendente['USU_Nivel']); ?>)
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="alert alert-danger d-none" id="erroResponsavel"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnSalvarResponsavel">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
 <script>
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -178,6 +250,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     let filtroEtiqueta =
         $('#filtroEtiqueta').val() || '';
+
+    let filtroResponsavel =
+        $('#filtroResponsavel').val() || '';
 
     let timerBusca = null;
 
@@ -201,6 +276,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 + '&busca=' + encodeURIComponent(filtroBusca)
                 + '&status=' + encodeURIComponent(filtroStatus)
                 + '&etiqueta=' + encodeURIComponent(filtroEtiqueta)
+                + '&responsavel=' + encodeURIComponent(filtroResponsavel)
         );
     }
 
@@ -346,6 +422,15 @@ document.addEventListener('DOMContentLoaded', function(){
 
     });
 
+    $('#filtroResponsavel').on('change', function(){
+
+        filtroResponsavel =
+            $(this).val() || '';
+
+        atualizarListaConversas();
+
+    });
+
     $(document).on('submit', '#formEnviarMensagem', function(e){
 
         e.preventDefault();
@@ -422,7 +507,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     $(document).on('click', '.item-conversa', function(e){
 
-        if($(e.target).closest('button, a.btn, .btn-marcar-nao-lida, .btn-etiquetas').length){
+        if($(e.target).closest('button, a.btn, .btn-marcar-nao-lida, .btn-etiquetas, .btn-atribuir').length){
             return;
         }
 
@@ -451,6 +536,69 @@ document.addEventListener('DOMContentLoaded', function(){
 
             }
         );
+
+    });
+
+
+
+    $(document).on('click', '.btn-atribuir', function(e){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        $('#erroResponsavel').addClass('d-none').text('');
+        $('#responsavelConversaId').val($(this).data('id'));
+        $('#responsavelUsuarioId').val($(this).data('responsavel') || '');
+        $('#modalResponsavel').modal('show');
+
+    });
+
+    $(document).on('submit', '#formAtribuirResponsavel', function(e){
+
+        e.preventDefault();
+
+        $('#btnSalvarResponsavel').prop('disabled', true);
+        $('#erroResponsavel').addClass('d-none').text('');
+
+        $.post(
+            urlBase + 'conversa/atribuirResponsavelAjax',
+            $(this).serialize(),
+            function(retorno){
+
+                if(retorno.sucesso){
+                    $('#modalResponsavel').modal('hide');
+                    atualizarListaConversas();
+
+                    if(conversaAberta != ''){
+                        $('#painelConversa').load(
+                            urlBase + 'conversa/ajaxConversa&id=' + conversaAberta,
+                            function(){
+                                rolarMensagensParaFinal();
+                            }
+                        );
+                    }
+
+                    return;
+                }
+
+                $('#erroResponsavel')
+                    .removeClass('d-none')
+                    .text(retorno.erro || 'Erro ao atribuir conversa.');
+            },
+            'json'
+        ).fail(function(xhr){
+            let mensagem = 'Erro de comunicação com o servidor.';
+
+            if(xhr.status == 403){
+                mensagem = 'Permissão negada.';
+            }
+
+            $('#erroResponsavel')
+                .removeClass('d-none')
+                .text(mensagem);
+        }).always(function(){
+            $('#btnSalvarResponsavel').prop('disabled', false);
+        });
 
     });
 
