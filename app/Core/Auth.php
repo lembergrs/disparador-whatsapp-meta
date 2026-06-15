@@ -45,13 +45,40 @@ class Auth
         session_destroy();
     }
 
+    public static function nivelCliente($nivel = null)
+    {
+        return in_array(
+            $nivel,
+            ['cliente', 'cliente_admin', 'cliente_usuario'],
+            true
+        );
+    }
+
+    public static function clienteAdmin()
+    {
+        self::check();
+
+        if(
+            !in_array(
+                $_SESSION['usuario']['nivel'] ?? null,
+                ['admin', 'cliente_admin', 'cliente'],
+                true
+            )
+        ){
+
+            die('Acesso negado');
+
+        }
+    }
+
     public static function cliente()
     {
         self::check();
 
         if(
-            $_SESSION['usuario']['nivel']
-            != 'cliente'
+            !self::nivelCliente(
+                $_SESSION['usuario']['nivel'] ?? null
+            )
         ){
 
             die('Acesso negado');
@@ -66,7 +93,7 @@ class Auth
         if(
             !$usuario
             ||
-            ($usuario['nivel'] ?? null) != 'cliente'
+            !self::nivelCliente($usuario['nivel'] ?? null)
         ){
             return true;
         }
@@ -117,7 +144,7 @@ class Auth
         if(
             !$usuario
             ||
-            ($usuario['nivel'] ?? null) != 'cliente'
+            !self::nivelCliente($usuario['nivel'] ?? null)
             ||
             ($usuario['CLI_StatusPagamento'] ?? null) != 'pendente'
             ||
@@ -183,7 +210,11 @@ class Auth
         if(
             !$usuario
             ||
-            ($usuario['nivel'] ?? null) != 'cliente'
+            !in_array(
+                $usuario['nivel'] ?? null,
+                ['cliente', 'cliente_admin'],
+                true
+            )
         ){
             return false;
         }
@@ -208,7 +239,7 @@ class Auth
         if(
             !$usuario
             ||
-            ($usuario['nivel'] ?? null) != 'cliente'
+            !self::nivelCliente($usuario['nivel'] ?? null)
         ){
             return;
         }
@@ -244,7 +275,7 @@ class Auth
         if(
             !$usuario
             ||
-            ($usuario['nivel'] ?? null) != 'cliente'
+            !self::nivelCliente($usuario['nivel'] ?? null)
             ||
             empty($usuario['CLI_ID'])
         ){
