@@ -220,7 +220,7 @@ class SiteController extends Controller
                     :nome,
                     :email,
                     :senha,
-                    'cliente',
+                    'cliente_admin',
                     'S'
                 )
             ");
