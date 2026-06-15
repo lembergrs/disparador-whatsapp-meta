@@ -175,17 +175,20 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 <?php } ?>
 
-<?php if($usuario['nivel'] == 'cliente'){
+<?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){
 
 
 $clienteLiberado = Auth::clienteLiberado();
 
 $clientePodeConectarMeta = Auth::clientePodeConectarMeta();
 
+$podeGerenciarConta = in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_admin'], true);
+
 $usuario = Auth::usuario();
 
 ?>
 
+<?php if($podeGerenciarConta){ ?>
 <li class="nav-item">
 
     <a
@@ -202,7 +205,9 @@ $usuario = Auth::usuario();
     </a>
 
 </li>
+<?php } ?>
 
+<?php if($podeGerenciarConta){ ?>
 <li class="nav-item">
 
     <a
@@ -221,6 +226,16 @@ $usuario = Auth::usuario();
     </a>
 
 </li>
+<?php } ?>
+
+<?php if($podeGerenciarConta){ ?>
+<li class="nav-item">
+    <a href="<?= BASE_URL; ?>/index.php?url=usuario" class="nav-link <?= str_contains($url, 'usuario') ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-users"></i>
+        <p>Usuários</p>
+    </a>
+</li>
+<?php } ?>
 
 <li class="nav-item">
 

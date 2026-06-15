@@ -163,7 +163,7 @@ class ClienteController extends Controller
                         :nome,
                         :email,
                         :senha,
-                        'cliente'
+                        'cliente_admin'
                     )
                 ";
 
