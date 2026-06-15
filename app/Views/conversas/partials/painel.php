@@ -55,6 +55,27 @@ if(!function_exists('formatarNumeroBR')){
             <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
         </small>
 
+        <br>
+
+        <small class="text-muted">
+            <i class="fas fa-user-headset"></i>
+            <?= !empty($conversaSelecionada['ResponsavelNome'])
+                ? htmlspecialchars($conversaSelecionada['ResponsavelNome'])
+                : 'Sem responsável'; ?>
+        </small>
+
+        <?php if(!empty($podeAtribuirConversa)){ ?>
+            <button
+                type="button"
+                class="btn btn-xs btn-outline-info float-right btn-atribuir"
+                data-id="<?= $conversaSelecionada['CVS_ID']; ?>"
+                data-responsavel="<?= (int) ($conversaSelecionada['ResponsavelId'] ?? 0); ?>"
+            >
+                <i class="fas fa-user-plus"></i>
+                Atribuir
+            </button>
+        <?php } ?>
+
     </div>
 
     <div
