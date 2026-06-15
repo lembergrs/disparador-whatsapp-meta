@@ -146,4 +146,25 @@ class Usuario
 
         return (int) $sql->fetch(PDO::FETCH_ASSOC)['total'];
     }
+
+    public function listarAtivosAtendimentoPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT
+                USU_ID,
+                USU_Nome,
+                USU_Email,
+                USU_Nivel
+            FROM usuarios
+            WHERE CLI_ID = ?
+            AND USU_Ativo = 'S'
+            AND USU_Nivel IN ('cliente_admin', 'cliente_usuario')
+            ORDER BY USU_Nome ASC
+        ");
+
+        $sql->execute([$clienteId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 }
