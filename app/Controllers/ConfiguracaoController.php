@@ -12,7 +12,7 @@ class ConfiguracaoController extends Controller
 
     public function __construct()
     {
-        Auth::cliente();
+        Auth::clienteAdmin();
 
         $this->metaContaModel =
             new MetaConta();
