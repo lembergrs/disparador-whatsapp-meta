@@ -776,12 +776,21 @@ class ConversaController extends Controller
         }
 
         $conversaId = (int) ($_POST['conversa_id'] ?? 0);
-        $responsavelId = (int) ($_POST['responsavel_id'] ?? 0);
 
-        if(!$conversaId || !$responsavelId){
+        $responsavelIdPost = trim((string) ($_POST['responsavel_id'] ?? ''));
+        $responsavelId = $responsavelIdPost === ''
+            ? null
+            : (int) $responsavelIdPost;
+
+        if($responsavelId === 0){
+            $responsavelId = null;
+        }
+
+        if(!$conversaId){
             echo json_encode([
                 'sucesso' => false,
-                'erro' => 'Informe a conversa e o responsável.'
+                'erro' => 'Informe a conversa.'
+
             ]);
 
             return;

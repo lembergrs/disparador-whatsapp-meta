@@ -362,7 +362,7 @@ class Conversa
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function atribuirResponsavel($conversaId, $clienteId, $usuarioId)
+    public function atribuirResponsavel($conversaId, $clienteId, $usuarioId = null)
     {
         $conversa = $this->buscar($conversaId, $clienteId);
 
@@ -370,6 +370,26 @@ class Conversa
             return [
                 'sucesso' => false,
                 'erro' => 'Conversa não encontrada para este cliente.'
+            ];
+        }
+
+        if($usuarioId === null){
+            $sql = $this->db->prepare("
+                UPDATE conversas
+                SET CON_Responsavel_USU_ID = NULL
+                WHERE CVS_ID = ?
+                AND CLI_ID = ?
+            ");
+
+            $ok = $sql->execute([
+                $conversaId,
+                $clienteId
+            ]);
+
+            return [
+                'sucesso' => $ok,
+                'mensagem' => 'Responsável removido com sucesso.',
+                'responsavel' => null
             ];
         }
 
@@ -400,6 +420,7 @@ class Conversa
 
         return [
             'sucesso' => $ok,
+            'mensagem' => 'Conversa atribuída com sucesso.',
             'responsavel' => $responsavel
         ];
     }

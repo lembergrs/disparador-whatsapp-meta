@@ -208,8 +208,8 @@ function formatarNumeroBR($numero)
                     <input type="hidden" name="conversa_id" id="responsavelConversaId">
                     <div class="form-group">
                         <label>Responsável</label>
-                        <select name="responsavel_id" id="responsavelUsuarioId" class="form-control" required>
-                            <option value="">Selecione um atendente</option>
+                        <select name="responsavel_id" id="responsavelUsuarioId" class="form-control">
+                            <option value="">Sem responsável</option>
                             <?php foreach(($atendentes ?? []) as $atendente){ ?>
                                 <option value="<?= (int) $atendente['USU_ID']; ?>">
                                     <?= htmlspecialchars($atendente['USU_Nome']); ?>
