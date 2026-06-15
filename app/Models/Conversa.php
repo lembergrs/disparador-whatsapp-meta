@@ -145,7 +145,9 @@ class Conversa
         $clienteId,
         $busca = '',
         $status = '',
-        $etiqueta = ''
+        $etiqueta = '',
+        $usuario = null,
+        $responsavel = ''
     )
     {
         $where = [];
@@ -159,6 +161,7 @@ class Conversa
         $busca = trim($busca);
         $status = trim($status);
         $etiqueta = (int) $etiqueta;
+        $responsavel = trim((string) $responsavel);
 
         if($busca != ''){
 
@@ -196,6 +199,23 @@ class Conversa
             $where[] = "c.CVS_NaoLida = 'N'";
         }
 
+        if(
+            $usuario
+            &&
+            ($usuario['nivel'] ?? null) == 'cliente_usuario'
+        ){
+            $where[] = "c.CON_Responsavel_USU_ID = ?";
+            $params[] = (int) $usuario['id'];
+        }elseif($responsavel !== ''){
+
+            if($responsavel == 'sem'){
+                $where[] = "c.CON_Responsavel_USU_ID IS NULL";
+            }elseif((int) $responsavel > 0){
+                $where[] = "c.CON_Responsavel_USU_ID = ?";
+                $params[] = (int) $responsavel;
+            }
+        }
+
         if($etiqueta > 0){
 
             $where[] = "EXISTS (
@@ -215,6 +235,8 @@ class Conversa
         $sql = "
             SELECT
                 c.*,
+                r.USU_Nome AS ResponsavelNome,
+                r.USU_ID AS ResponsavelId,
 
                 GROUP_CONCAT(
                     DISTINCT CONCAT(
@@ -235,6 +257,10 @@ class Conversa
                 ON e.ETQ_ID = v.ETQ_ID
                 AND e.CLI_ID = c.CLI_ID
                 AND e.ETQ_Ativo = 'S'
+
+            LEFT JOIN usuarios r
+                ON r.USU_ID = c.CON_Responsavel_USU_ID
+                AND r.CLI_ID = c.CLI_ID
 
             WHERE " . implode(' AND ', $where) . "
 
@@ -278,10 +304,16 @@ class Conversa
     public function buscar($conversaId, $clienteId)
     {
         $sql = $this->db->prepare("
-            SELECT *
-            FROM conversas
-            WHERE CVS_ID = ?
-            AND CLI_ID = ?
+            SELECT
+                c.*,
+                r.USU_Nome AS ResponsavelNome,
+                r.USU_ID AS ResponsavelId
+            FROM conversas c
+            LEFT JOIN usuarios r
+                ON r.USU_ID = c.CON_Responsavel_USU_ID
+                AND r.CLI_ID = c.CLI_ID
+            WHERE c.CVS_ID = ?
+            AND c.CLI_ID = ?
             LIMIT 1
         ");
 
@@ -291,6 +323,106 @@ class Conversa
         ]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarAcessivel($conversaId, $clienteId, $usuario)
+    {
+        $conversa = $this->buscar($conversaId, $clienteId);
+
+        if(
+            !$conversa
+            ||
+            (($usuario['nivel'] ?? null) == 'cliente_usuario'
+            &&
+            (int) ($conversa['CON_Responsavel_USU_ID'] ?? 0) != (int) ($usuario['id'] ?? 0))
+        ){
+            return false;
+        }
+
+        return $conversa;
+    }
+
+    public function usuarioPodeSerResponsavel($usuarioId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT USU_ID, USU_Nome
+            FROM usuarios
+            WHERE USU_ID = ?
+            AND CLI_ID = ?
+            AND USU_Ativo = 'S'
+            AND USU_Nivel IN ('cliente_admin', 'cliente_usuario')
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $usuarioId,
+            $clienteId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function atribuirResponsavel($conversaId, $clienteId, $usuarioId = null)
+    {
+        $conversa = $this->buscar($conversaId, $clienteId);
+
+        if(!$conversa){
+            return [
+                'sucesso' => false,
+                'erro' => 'Conversa não encontrada para este cliente.'
+            ];
+        }
+
+        if($usuarioId === null){
+            $sql = $this->db->prepare("
+                UPDATE conversas
+                SET CON_Responsavel_USU_ID = NULL
+                WHERE CVS_ID = ?
+                AND CLI_ID = ?
+            ");
+
+            $ok = $sql->execute([
+                $conversaId,
+                $clienteId
+            ]);
+
+            return [
+                'sucesso' => $ok,
+                'mensagem' => 'Responsável removido com sucesso.',
+                'responsavel' => null
+            ];
+        }
+
+        $responsavel = $this->usuarioPodeSerResponsavel(
+            $usuarioId,
+            $clienteId
+        );
+
+        if(!$responsavel){
+            return [
+                'sucesso' => false,
+                'erro' => 'Responsável inválido, inativo ou de outro cliente.'
+            ];
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE conversas
+            SET CON_Responsavel_USU_ID = ?
+            WHERE CVS_ID = ?
+            AND CLI_ID = ?
+        ");
+
+        $ok = $sql->execute([
+            $usuarioId,
+            $conversaId,
+            $clienteId
+        ]);
+
+        return [
+            'sucesso' => $ok,
+            'mensagem' => 'Conversa atribuída com sucesso.',
+            'responsavel' => $responsavel
+        ];
     }
 
     public function marcarComoLida($conversaId, $clienteId)
