@@ -14,7 +14,7 @@ class FinanceiroController extends Controller
 {
     public function index()
     {
-        Auth::cliente();
+        Auth::clienteAdmin();
 
         $usuario = Auth::usuario();
 
@@ -53,7 +53,7 @@ class FinanceiroController extends Controller
 
     public function escolherPlano()
     {
-        Auth::cliente();
+        Auth::clienteAdmin();
 
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){
             $this->redirect('financeiro');

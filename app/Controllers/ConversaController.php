@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Session;
 use Models\Conversa;
+use Models\Usuario;
 use Services\MetaService;
 
 class ConversaController extends Controller
@@ -32,18 +33,36 @@ class ConversaController extends Controller
         $etiqueta =
             $_GET['etiqueta'] ?? '';
 
+        $responsavel =
+            $_GET['responsavel'] ?? '';
+
         $conversas =
             $this->conversaModel->listarConversas(
                 $usuario['CLI_ID'],
                 $busca,
                 $status,
-                $etiqueta
+                $etiqueta,
+                $usuario,
+                $this->responsavelPermitido($usuario, $responsavel)
             );
 
         $etiquetas =
             $this->conversaModel->listarEtiquetas(
                 $usuario['CLI_ID']
             );
+
+        $atendentes = [];
+
+        if(($usuario['nivel'] ?? null) == 'cliente_admin'){
+            $usuarioModel = new Usuario();
+            $atendentes = $usuarioModel
+                ->listarAtivosAtendimentoPorCliente(
+                    $usuario['CLI_ID']
+                );
+        }
+
+        $podeAtribuirConversa =
+            ($usuario['nivel'] ?? null) == 'cliente_admin';
 
         $conversaSelecionada = null;
         $mensagens = [];
@@ -52,9 +71,10 @@ class ConversaController extends Controller
         if(!empty($_GET['id'])){
 
             $conversaSelecionada =
-                $this->conversaModel->buscar(
+                $this->conversaModel->buscarAcessivel(
                     $_GET['id'],
-                    $usuario['CLI_ID']
+                    $usuario['CLI_ID'],
+                    $usuario
                 );
 
             if($conversaSelecionada){
@@ -87,6 +107,9 @@ class ConversaController extends Controller
                 'busca' => $busca,
                 'status' => $status,
                 'etiqueta' => $etiqueta,
+                'responsavel' => $responsavel,
+                'atendentes' => $atendentes,
+                'podeAtribuirConversa' => ($usuario['nivel'] ?? null) == 'cliente_admin',
                 'conversaSelecionada' => $conversaSelecionada,
                 'mensagens' => $mensagens,
                 'janelaAberta' => $janelaAberta
@@ -117,9 +140,10 @@ class ConversaController extends Controller
         }
 
         $conversa =
-            $this->conversaModel->buscar(
+            $this->conversaModel->buscarAcessivel(
                 $conversaId,
-                $usuario['CLI_ID']
+                $usuario['CLI_ID'],
+                $usuario
             );
 
         if(!$conversa){
@@ -299,13 +323,21 @@ class ConversaController extends Controller
         $etiqueta =
             $_GET['etiqueta'] ?? '';
 
+        $responsavel =
+            $_GET['responsavel'] ?? '';
+
         $conversas =
             $this->conversaModel->listarConversas(
                 $usuario['CLI_ID'],
                 $busca,
                 $status,
-                $etiqueta
+                $etiqueta,
+                $usuario,
+                $this->responsavelPermitido($usuario, $_GET['responsavel'] ?? '')
             );
+
+        $podeAtribuirConversa =
+            ($usuario['nivel'] ?? null) == 'cliente_admin';
 
         $conversaSelecionada = null;
 
@@ -313,9 +345,10 @@ class ConversaController extends Controller
 
             $conversaSelecionada =
                 $this->conversaModel
-                ->buscar(
+                ->buscarAcessivel(
                     $_GET['id'],
-                    $usuario['CLI_ID']
+                    $usuario['CLI_ID'],
+                    $usuario
                 );
         }
 
@@ -337,9 +370,10 @@ class ConversaController extends Controller
         }
 
         $conversa =
-            $this->conversaModel->buscar(
+            $this->conversaModel->buscarAcessivel(
                 $id,
-                $usuario['CLI_ID']
+                $usuario['CLI_ID'],
+                $usuario
             );
 
         if(!$conversa){
@@ -388,9 +422,10 @@ class ConversaController extends Controller
             }
 
             $conversa =
-                $this->conversaModel->buscar(
+                $this->conversaModel->buscarAcessivel(
                     $conversaId,
-                    $usuario['CLI_ID']
+                    $usuario['CLI_ID'],
+                    $usuario
                 );
 
             if(!$conversa){
@@ -510,6 +545,21 @@ class ConversaController extends Controller
             return;
         }
 
+        $conversa = $this->conversaModel->buscarAcessivel(
+            $id,
+            $usuario['CLI_ID'],
+            $usuario
+        );
+
+        if(!$conversa){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Conversa não encontrada.'
+            ]);
+
+            return;
+        }
+
         $ok =
             $this->conversaModel->marcarComoNaoLida(
                 $id,
@@ -533,9 +583,10 @@ class ConversaController extends Controller
         }
 
         $conversa =
-            $this->conversaModel->buscar(
+            $this->conversaModel->buscarAcessivel(
                 $id,
-                $usuario['CLI_ID']
+                $usuario['CLI_ID'],
+                $usuario
             );
 
         if(!$conversa){
@@ -580,6 +631,21 @@ class ConversaController extends Controller
 
         if(!is_array($etiquetas)){
             $etiquetas = [];
+        }
+
+        $conversa = $this->conversaModel->buscarAcessivel(
+            $id,
+            $usuario['CLI_ID'],
+            $usuario
+        );
+
+        if(!$conversa){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Conversa não encontrada.'
+            ]);
+
+            return;
         }
 
         $ok =
@@ -647,6 +713,9 @@ class ConversaController extends Controller
     {
         $usuario = Auth::usuario();
 
+        $podeAtribuirConversa =
+            ($usuario['nivel'] ?? null) == 'cliente_admin';
+
         $conversaSelecionada = null;
         $mensagens = [];
         $janelaAberta = false;
@@ -657,9 +726,10 @@ class ConversaController extends Controller
         if($id){
 
             $conversaSelecionada =
-                $this->conversaModel->buscar(
+                $this->conversaModel->buscarAcessivel(
                     $id,
-                    $usuario['CLI_ID']
+                    $usuario['CLI_ID'],
+                    $usuario
                 );
 
             if($conversaSelecionada){
@@ -685,6 +755,54 @@ class ConversaController extends Controller
 
         require __DIR__ . '/../Views/conversas/partials/painel.php';
         
+    }
+
+
+    public function atribuirResponsavelAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+
+        if(($usuario['nivel'] ?? null) != 'cliente_admin'){
+            http_response_code(403);
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Permissão negada.'
+            ]);
+
+            return;
+        }
+
+        $conversaId = (int) ($_POST['conversa_id'] ?? 0);
+        $responsavelId = (int) ($_POST['responsavel_id'] ?? 0);
+
+        if(!$conversaId || !$responsavelId){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Informe a conversa e o responsável.'
+            ]);
+
+            return;
+        }
+
+        $resultado = $this->conversaModel->atribuirResponsavel(
+            $conversaId,
+            $usuario['CLI_ID'],
+            $responsavelId
+        );
+
+        echo json_encode($resultado);
+    }
+
+    private function responsavelPermitido($usuario, $responsavel)
+    {
+        if(($usuario['nivel'] ?? null) != 'cliente_admin'){
+            return '';
+        }
+
+        return $responsavel;
     }
 
 }

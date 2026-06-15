@@ -80,6 +80,15 @@ data-id="<?= $conversa['CVS_ID']; ?>"
             <?= htmlspecialchars($numeroFormatado); ?>
         </small>
 
+        <br>
+
+        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
+            <i class="fas fa-user-headset"></i>
+            <?= !empty($conversa['ResponsavelNome'])
+                ? htmlspecialchars($conversa['ResponsavelNome'])
+                : 'Sem responsável'; ?>
+        </small>
+
     </div>
 
     <div class="text-right">
@@ -111,6 +120,20 @@ data-id="<?= $conversa['CVS_ID']; ?>"
         >
             <i class="fas fa-tags"></i>
         </button>
+
+        <?php if(!empty($podeAtribuirConversa)){ ?>
+
+            <button
+                type="button"
+                class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-info'; ?> btn-atribuir"
+                data-id="<?= $conversa['CVS_ID']; ?>"
+                data-responsavel="<?= (int) ($conversa['ResponsavelId'] ?? 0); ?>"
+                title="Atribuir"
+            >
+                <i class="fas fa-user-plus"></i>
+            </button>
+
+        <?php } ?>
 
     </div>
 
