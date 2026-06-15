@@ -776,6 +776,7 @@ class ConversaController extends Controller
         }
 
         $conversaId = (int) ($_POST['conversa_id'] ?? 0);
+
         $responsavelIdPost = trim((string) ($_POST['responsavel_id'] ?? ''));
         $responsavelId = $responsavelIdPost === ''
             ? null
@@ -789,6 +790,7 @@ class ConversaController extends Controller
             echo json_encode([
                 'sucesso' => false,
                 'erro' => 'Informe a conversa.'
+
             ]);
 
             return;
