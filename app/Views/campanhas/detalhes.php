@@ -9,13 +9,20 @@ function statusBadge($status)
         'finalizada' => 'success',
         'cancelada' => 'danger',
         'pendente' => 'warning',
+        'aguardando_confirmacao' => 'info',
         'enviado' => 'success',
+        'enviada' => 'success',
+        'entregue' => 'primary',
+        'lida' => 'success',
+        'falhou' => 'danger',
         'erro' => 'danger'
     ];
 
     $class = $classes[$status] ?? 'secondary';
 
-    return '<span class="badge badge-' . $class . '">' . ucfirst($status) . '</span>';
+    $label = str_replace('_', ' ', $status);
+
+    return '<span class="badge badge-' . $class . '">' . ucfirst($label) . '</span>';
 }
 
 function dataBR($data)
