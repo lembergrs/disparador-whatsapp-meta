@@ -161,7 +161,7 @@ foreach($campanhas as $campanha){
 
             $campo = $var['CPV_Campo'];
 
-            $parametros[] =
+            $parametros[$var['CPV_Variavel']] =
                 $dadosContato[$campo]
                 ?? '';
 

@@ -84,7 +84,7 @@ Sair
 
 <span class="brand-text font-weight-light">
 <img
-    src="<?= BASE_URL; ?>/assets/img/logo_disparador.png"
+    src="<?= ASSET_URL; ?>/img/logo_disparador.png"
     alt="Logo"
     onerror="this.onerror=null; this.style.display='none'; if (this.nextElementSibling) { this.nextElementSibling.style.display='flex'; }"
     width="230"
