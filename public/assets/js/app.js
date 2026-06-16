@@ -1403,13 +1403,40 @@ $(document).ready(function(){
         let cancelados = 0;
         let atual = 0;
 
+        let autoScrollStatusDisparo = true;
+        const limiteProximoFimDisparo = 80;
+
+        function estaProximoFimStatusDisparo()
+        {
+            let box = $('#boxStatusNumeros');
+
+            if(!box.length){
+                return true;
+            }
+
+            let elemento = box[0];
+            let distanciaFim = elemento.scrollHeight
+                - elemento.scrollTop
+                - elemento.clientHeight;
+
+            return distanciaFim < limiteProximoFimDisparo;
+        }
+
+        $('#boxStatusNumeros')
+            .off('scroll.disparoAutoScroll')
+            .on('scroll.disparoAutoScroll', function(){
+                autoScrollStatusDisparo =
+                    estaProximoFimStatusDisparo();
+            });
+
         function rolarStatus()
         {
             let box = $('#boxStatusNumeros');
 
-            if(box.length){
-                box.scrollTop(
-                    box[0].scrollHeight
+            if(box.length && autoScrollStatusDisparo){
+                box.stop(true).animate(
+                    {scrollTop: box[0].scrollHeight},
+                    150
                 );
             }
         }
@@ -1431,7 +1458,7 @@ $(document).ready(function(){
                     + atual
                     + ' de '
                     + total
-                    + ' | Enviados: '
+                    + ' | Aceitos: '
                     + enviados
                     + ' | Erros: '
                     + erros
@@ -1462,7 +1489,7 @@ $(document).ready(function(){
                 $('#resumoFinalDisparo').html(`
                     <div class="alert alert-warning mt-3">
                         <strong>Envio cancelado.</strong><br>
-                        Enviados: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
+                        Aceitos: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
                         <br>
                         <button
                         type="button"
@@ -1488,7 +1515,7 @@ $(document).ready(function(){
             $('#resumoFinalDisparo').html(`
                 <div class="alert ${erros > 0 ? 'alert-warning' : 'alert-success'} mt-3">
                     <strong>Envio concluído.</strong><br>
-                    Enviados: ${enviados} | Erros: ${erros}
+                    Aceitos: ${enviados} | Erros: ${erros}
                     <br>
                     <button
                     type="button"
@@ -1650,11 +1677,11 @@ $(document).ready(function(){
                         enviados++;
 
                         $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-success">Enviado</span>'
+                            '<span class="badge badge-info">Aguardando confirmação</span>'
                         );
 
                         $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            '<span class="text-success">Mensagem enviada com sucesso</span>'
+                            '<span class="text-info">Enviado para processamento pela Meta</span>'
                         );
 
                     }else{
@@ -1674,7 +1701,7 @@ $(document).ready(function(){
                     }
 
                     let motivoDetalhe = retorno.sucesso
-                        ? 'Mensagem enviada com sucesso'
+                        ? 'Aguardando confirmação da Meta'
                         : mensagemCurtaErroDisparo(retorno.erro);
 
                     aplicarDetalhesLinha(
@@ -1682,7 +1709,7 @@ $(document).ready(function(){
                         montarDetalhesEnvioDisparo(
                             destino,
                             retorno,
-                            retorno.sucesso ? 'Enviado' : 'Erro',
+                            retorno.sucesso ? 'Aguardando confirmação' : 'Erro',
                             motivoDetalhe
                         )
                     );
@@ -1733,7 +1760,7 @@ $(document).ready(function(){
 
                     setTimeout(
                         enviarProximo,
-                        500
+                        200
                     );
 
                 }

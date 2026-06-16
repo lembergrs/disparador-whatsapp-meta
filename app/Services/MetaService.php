@@ -490,21 +490,35 @@ class MetaService
         ){
 
             $buttons = [];
+            $totalUrl = 0;
+            $totalTelefone = 0;
 
             foreach($dados['botoes'] as $botao){
 
-                if(empty($botao['texto'])){
+                $tipo = $botao['tipo'] ?? '';
+                $texto = trim($botao['texto'] ?? '');
+                $valor = trim($botao['valor'] ?? '');
+
+                if($texto == ''){
                     continue;
                 }
 
-                switch($botao['tipo']){
+                if(mb_strlen($texto) > 25){
+                    return [
+                        'error' => [
+                            'message' => 'O texto dos botões deve ter no máximo 25 caracteres.'
+                        ]
+                    ];
+                }
+
+                switch($tipo){
 
                     case 'QUICK_REPLY':
 
                         $buttons[] = [
 
                             'type' => 'QUICK_REPLY',
-                            'text' => $botao['texto']
+                            'text' => $texto
 
                         ];
 
@@ -512,14 +526,21 @@ class MetaService
 
                     case 'URL':
 
+                        $totalUrl++;
+
+                        if($valor == '' || !preg_match('/^https?:\/\//i', $valor)){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe uma URL válida para todos os botões de URL.'
+                                ]
+                            ];
+                        }
+
                         $buttons[] = [
 
                             'type' => 'URL',
-                            'text' => $botao['texto'],
-
-                            'url'  =>
-                                $botao['valor']
-                                ?? ''
+                            'text' => $texto,
+                            'url'  => $valor
 
                         ];
 
@@ -527,19 +548,50 @@ class MetaService
 
                     case 'PHONE_NUMBER':
 
+                        $totalTelefone++;
+
+                        if($valor == ''){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe o telefone para todos os botões de telefone.'
+                                ]
+                            ];
+                        }
+
                         $buttons[] = [
 
                             'type' => 'PHONE_NUMBER',
-                            'text' => $botao['texto'],
-
-                            'phone_number' =>
-                                $botao['valor']
-                                ?? ''
+                            'text' => $texto,
+                            'phone_number' => preg_replace('/[^0-9+]/', '', $valor)
 
                         ];
 
                     break;
 
+                }
+
+                if(count($buttons) > 10){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 10 botões por template.'
+                        ]
+                    ];
+                }
+
+                if($totalUrl > 2){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 2 botões de URL.'
+                        ]
+                    ];
+                }
+
+                if($totalTelefone > 1){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 1 botão de telefone.'
+                        ]
+                    ];
                 }
 
             }
@@ -602,6 +654,17 @@ class MetaService
 
 
 
+        $this->registrarLogTemplateMeta('request', [
+            'cli_id' => $this->conta['CLI_ID'] ?? null,
+            'waba_id' => $this->conta['MTA_WabaId'] ?? null,
+            'template' => $nomeTemplate,
+            'categoria' => $dados['categoria'] ?? null,
+            'idioma' => $dados['idioma'] ?? null,
+            'payload' => $payload
+        ]);
+
+
+
         $curl = curl_init();
 
 
@@ -637,16 +700,50 @@ class MetaService
         $response =
             curl_exec($curl);
 
+        $curlError = curl_error($curl);
+
+        $httpCode = curl_getinfo(
+            $curl,
+            CURLINFO_HTTP_CODE
+        );
+
         curl_close($curl);
 
 
 
-
-
-        return json_decode(
+        $retorno = json_decode(
             $response,
             true
         );
+
+        if(!is_array($retorno)){
+            $retorno = [
+                'error' => [
+                    'message' => $curlError ?: 'Resposta inválida da Meta.'
+                ],
+                'raw_response' => $response
+            ];
+        }
+
+        $retorno['http_code'] = $httpCode;
+        $retorno['raw_response'] = $response;
+
+        if($curlError){
+            $retorno['curl_error'] = $curlError;
+        }
+
+        $this->registrarLogTemplateMeta('response', [
+            'cli_id' => $this->conta['CLI_ID'] ?? null,
+            'waba_id' => $this->conta['MTA_WabaId'] ?? null,
+            'template' => $nomeTemplate,
+            'categoria' => $dados['categoria'] ?? null,
+            'idioma' => $dados['idioma'] ?? null,
+            'http_code' => $httpCode,
+            'response' => $retorno,
+            'error' => $this->extrairErroLogTemplateMeta($retorno)
+        ]);
+
+        return $retorno;
     }
 
 
@@ -815,6 +912,78 @@ class MetaService
         $retorno['payload'] = $payload;
 
         return $retorno;
+    }
+
+
+
+
+    private function registrarLogTemplateMeta($fase, $dados)
+    {
+        $diretorio = dirname(__DIR__, 2) . '/storage/logs';
+
+        if(!is_dir($diretorio)){
+            mkdir($diretorio, 0755, true);
+        }
+
+        $registro = [
+            'data_hora' => date('Y-m-d H:i:s'),
+            'fase' => $fase,
+            'dados' => $this->mascararDadosSensiveisTemplateMeta($dados)
+        ];
+
+        file_put_contents(
+            $diretorio . '/meta_templates.log',
+            json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+
+
+    private function mascararDadosSensiveisTemplateMeta($dados)
+    {
+        if(!is_array($dados)){
+            return $dados;
+        }
+
+        foreach($dados as $chave => $valor){
+            $chaveNormalizada = strtolower((string) $chave);
+
+            if(
+                strpos($chaveNormalizada, 'token') !== false
+                ||
+                strpos($chaveNormalizada, 'authorization') !== false
+            ){
+                $dados[$chave] = '[mascarado]';
+                continue;
+            }
+
+            if(is_array($valor)){
+                $dados[$chave] = $this->mascararDadosSensiveisTemplateMeta($valor);
+            }
+        }
+
+        return $dados;
+    }
+
+
+
+    private function extrairErroLogTemplateMeta($retorno)
+    {
+        if(empty($retorno['error']) || !is_array($retorno['error'])){
+            return null;
+        }
+
+        $erro = $retorno['error'];
+
+        return [
+            'message' => $erro['message'] ?? null,
+            'code' => $erro['code'] ?? null,
+            'error_subcode' => $erro['error_subcode'] ?? null,
+            'error_data' => $erro['error_data'] ?? null,
+            'fbtrace_id' => $erro['fbtrace_id'] ?? null
+        ];
     }
 
 }
