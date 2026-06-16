@@ -949,15 +949,23 @@ $('#modalNovoTemplate').on('hidden.bs.modal', function(){
 
 function validarVariaveisTemplateTexto(texto)
 {
-    if((texto.match(/{{/g) || []).length !== (texto.match(/}}/g) || []).length){
-        return false;
+    texto = String(texto || '');
+
+    let matches = texto.match(/{{(.*?)}}/g) || [];
+
+    for(let i = 0; i < matches.length; i++){
+        let conteudo = matches[i]
+            .replace('{{', '')
+            .replace('}}', '');
+
+        if(conteudo !== conteudo.trim() || !/^[A-Za-z0-9_]+$/.test(conteudo)){
+            return false;
+        }
     }
 
-    if(/{{\s*}}|(?<!{){[A-Za-z0-9_]+}(?!})|[A-Za-z0-9_]+}}|{{[A-Za-z0-9_]+(?!})|{{[^}]*$/.test(texto)){
-        return false;
-    }
+    let textoSemVariaveisValidas = texto.replace(/{{[A-Za-z0-9_]+}}/g, '');
 
-    return true;
+    return !/[{}]/.test(textoSemVariaveisValidas);
 }
 
 function obterVariaveisNovoTemplate()
