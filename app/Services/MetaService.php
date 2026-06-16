@@ -490,21 +490,35 @@ class MetaService
         ){
 
             $buttons = [];
+            $totalUrl = 0;
+            $totalTelefone = 0;
 
             foreach($dados['botoes'] as $botao){
 
-                if(empty($botao['texto'])){
+                $tipo = $botao['tipo'] ?? '';
+                $texto = trim($botao['texto'] ?? '');
+                $valor = trim($botao['valor'] ?? '');
+
+                if($texto == ''){
                     continue;
                 }
 
-                switch($botao['tipo']){
+                if(mb_strlen($texto) > 25){
+                    return [
+                        'error' => [
+                            'message' => 'O texto dos botões deve ter no máximo 25 caracteres.'
+                        ]
+                    ];
+                }
+
+                switch($tipo){
 
                     case 'QUICK_REPLY':
 
                         $buttons[] = [
 
                             'type' => 'QUICK_REPLY',
-                            'text' => $botao['texto']
+                            'text' => $texto
 
                         ];
 
@@ -512,14 +526,21 @@ class MetaService
 
                     case 'URL':
 
+                        $totalUrl++;
+
+                        if($valor == '' || !preg_match('/^https?:\/\//i', $valor)){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe uma URL válida para todos os botões de URL.'
+                                ]
+                            ];
+                        }
+
                         $buttons[] = [
 
                             'type' => 'URL',
-                            'text' => $botao['texto'],
-
-                            'url'  =>
-                                $botao['valor']
-                                ?? ''
+                            'text' => $texto,
+                            'url'  => $valor
 
                         ];
 
@@ -527,19 +548,50 @@ class MetaService
 
                     case 'PHONE_NUMBER':
 
+                        $totalTelefone++;
+
+                        if($valor == ''){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe o telefone para todos os botões de telefone.'
+                                ]
+                            ];
+                        }
+
                         $buttons[] = [
 
                             'type' => 'PHONE_NUMBER',
-                            'text' => $botao['texto'],
-
-                            'phone_number' =>
-                                $botao['valor']
-                                ?? ''
+                            'text' => $texto,
+                            'phone_number' => preg_replace('/[^0-9+]/', '', $valor)
 
                         ];
 
                     break;
 
+                }
+
+                if(count($buttons) > 10){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 10 botões por template.'
+                        ]
+                    ];
+                }
+
+                if($totalUrl > 2){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 2 botões de URL.'
+                        ]
+                    ];
+                }
+
+                if($totalTelefone > 1){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 1 botão de telefone.'
+                        ]
+                    ];
                 }
 
             }
