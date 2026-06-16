@@ -1020,13 +1020,36 @@ class MetaService
 
 
 
-    private function validarTextoVariaveisMeta($texto)
+    public static function validarSintaxeVariaveisTemplate($texto)
     {
-        if(substr_count($texto, '{{') !== substr_count($texto, '}}')){
-            throw new Exception('Existe uma variável inválida no template. Use o formato {{nome}} ou {{1}}.');
+        $texto = (string) $texto;
+
+        preg_match_all('/{{(.*?)}}/s', $texto, $matches);
+
+        foreach(($matches[1] ?? []) as $conteudo){
+            if(
+                $conteudo !== trim($conteudo)
+                ||
+                !preg_match('/^[A-Za-z0-9_]+$/', $conteudo)
+            ){
+                return false;
+            }
         }
 
-        if(preg_match('/{{\s*}}|(?<!{){[A-Za-z0-9_]+}(?!})|[A-Za-z0-9_]+}}|{{[A-Za-z0-9_]+(?!})|{{[^}]*$/', $texto)){
+        $textoSemVariaveisValidas = preg_replace(
+            '/{{[A-Za-z0-9_]+}}/',
+            '',
+            $texto
+        );
+
+        return !preg_match('/[{}]/', $textoSemVariaveisValidas);
+    }
+
+
+
+    private function validarTextoVariaveisMeta($texto)
+    {
+        if(!self::validarSintaxeVariaveisTemplate($texto)){
             throw new Exception('Existe uma variável inválida no template. Use o formato {{nome}} ou {{1}}.');
         }
     }
