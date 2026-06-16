@@ -89,6 +89,17 @@ class TemplateController extends Controller
 
         if(isset($response['id'])){
 
+            if(!empty($response['template_local'])){
+                $templateLocal = $response['template_local'];
+                $templateLocal['id'] = $response['id'];
+                $templateLocal['status'] = $response['status'] ?? ($templateLocal['status'] ?? 'PENDING');
+
+                $this->templateModel->salvarOuAtualizar(
+                    $metaId,
+                    $templateLocal
+                );
+            }
+
             Session::flash(
                 'success',
                 'Template enviado para aprovação.'

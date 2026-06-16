@@ -492,37 +492,32 @@ $(document).ready(function(){
 
 
 
+            function coletarVariaveisTextoTemplate(texto){
+                let matches = String(texto || '').match(/{{(.*?)}}/g);
+
+                if(matches){
+                    matches.forEach(function(v){
+                        v = v.replace('{{','').replace('}}','').trim();
+
+                        if(v !== '' && !variaveis.includes(v)){
+                            variaveis.push(v);
+                        }
+                    });
+                }
+            }
+
             componentes.forEach(function(comp){
 
                 if(comp.text){
+                    coletarVariaveisTextoTemplate(comp.text);
+                }
 
-                    let matches =
-                        comp.text.match(
-                            /{{(.*?)}}/g
-                        );
-
-
-
-
-
-                    if(matches){
-
-                        matches.forEach(function(v){
-
-                            v = v
-                                .replace('{{','')
-                                .replace('}}','');
-
-                            if(!variaveis.includes(v)){
-
-                                variaveis.push(v);
-
-                            }
-
-                        });
-
-                    }
-
+                if(comp.type == 'BUTTONS' && comp.buttons){
+                    comp.buttons.forEach(function(btn){
+                        if(btn.url){
+                            coletarVariaveisTextoTemplate(btn.url);
+                        }
+                    });
                 }
 
             });
@@ -677,26 +672,32 @@ $(document).ready(function(){
 
         let variaveis = [];
 
+        function coletarVariaveisCampanha(texto){
+            let matches = String(texto || '').match(/{{(.*?)}}/g);
+
+            if(matches){
+                matches.forEach(function(v){
+                    v = v.replace('{{','').replace('}}','').trim();
+
+                    if(v !== '' && !variaveis.includes(v)){
+                        variaveis.push(v);
+                    }
+                });
+            }
+        }
+
         componentes.forEach(function(comp){
 
             if(comp.text){
+                coletarVariaveisCampanha(comp.text);
+            }
 
-                let matches = comp.text.match(/{{(.*?)}}/g);
-
-                if(matches){
-
-                    matches.forEach(function(v){
-
-                        v = v.replace('{{','').replace('}}','');
-
-                        if(!variaveis.includes(v)){
-                            variaveis.push(v);
-                        }
-
-                    });
-
-                }
-
+            if(comp.type == 'BUTTONS' && comp.buttons){
+                comp.buttons.forEach(function(btn){
+                    if(btn.url){
+                        coletarVariaveisCampanha(btn.url);
+                    }
+                });
             }
 
         });
@@ -946,12 +947,9 @@ $(document).ready(function(){
     {
         let variaveis = [];
 
-        componentes.forEach(function(comp){
-            if(!comp.text){
-                return;
-            }
-
-            let matches = comp.text.match(/{{(.*?)}}/g);
+        function coletarVariaveisTexto(texto)
+        {
+            let matches = String(texto || '').match(/{{(.*?)}}/g);
 
             if(!matches){
                 return;
@@ -964,15 +962,31 @@ $(document).ready(function(){
                     variaveis.push(v);
                 }
             });
-        });
+        }
 
-        variaveis.sort(function(a, b){
-            if(!isNaN(a) && !isNaN(b)){
-                return parseInt(a) - parseInt(b);
+        componentes.forEach(function(comp){
+            if(comp.text){
+                coletarVariaveisTexto(comp.text);
             }
 
-            return String(a).localeCompare(String(b));
+            if(comp.type == 'BUTTONS' && comp.buttons){
+                comp.buttons.forEach(function(botao){
+                    if(botao.url){
+                        coletarVariaveisTexto(botao.url);
+                    }
+                });
+            }
         });
+
+        let todasNumericas = variaveis.length > 0 && variaveis.every(function(v){
+            return !isNaN(v);
+        });
+
+        if(todasNumericas){
+            variaveis.sort(function(a, b){
+                return parseInt(a) - parseInt(b);
+            });
+        }
 
         return variaveis;
     }
