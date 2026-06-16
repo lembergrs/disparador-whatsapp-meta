@@ -172,7 +172,7 @@ class DisparoController extends Controller
                 $messageId =
                     $response['messages'][0]['id'];
 
-                $status = 'enviado';
+                $status = 'aguardando_confirmacao';
 
                 $consumo =
                     new ConsumoMensal();
@@ -286,14 +286,14 @@ class DisparoController extends Controller
                 'success',
                 'Envio concluído. '
                 . $totalEnviados
-                . ' mensagem(ns) enviada(s).'
+                . ' mensagem(ns) aceita(s) para processamento.'
             );
 
         }else{
 
             \Core\Session::flash(
                 'error',
-                'Envio concluído com erros. Enviadas: '
+                'Envio concluído com erros. Aceitas para processamento: '
                 . $totalEnviados
                 . ' | Erros: '
                 . $totalErros
@@ -496,7 +496,7 @@ class DisparoController extends Controller
                 $messageId =
                     $response['messages'][0]['id'];
 
-                $status = 'enviado';
+                $status = 'aguardando_confirmacao';
 
                 $consumo =
                     new ConsumoMensal();
@@ -586,13 +586,14 @@ class DisparoController extends Controller
 
             ]);
 
-            if($status == 'enviado'){
+            if($status == 'aguardando_confirmacao'){
 
                 echo json_encode([
                     'sucesso' => true,
-                    'status' => 'enviado',
+                    'status' => 'aguardando_confirmacao',
                     'numero' => $numero,
                     'numero_formatado' => $this->formatarNumero($numero),
+                    'mensagem' => 'Aguardando confirmação da Meta',
                     'message_id' => $messageId,
                     'retorno' => $response
                 ]);
