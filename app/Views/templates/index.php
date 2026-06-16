@@ -502,8 +502,8 @@ required
 
 <small class="text-muted">
 
-Use variáveis:
-{{1}}, {{2}}, {{3}}
+Você pode usar variáveis como {{nome}}, {{valor}} ou {{erro}}.
+O sistema converterá automaticamente para o padrão da Meta: {{1}}, {{2}}, {{3}}.
 
 </small>
 
@@ -819,6 +819,25 @@ $(document).on('submit', '#formNovoTemplate', function(e){
         }
     }
 
+    let textosValidar = [
+        $('[name=header]').val() || '',
+        $('[name=body]').val() || ''
+    ];
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        if($(this).find('.tipoBotao').val() == 'URL'){
+            textosValidar.push($(this).find('.valorBotao').val() || '');
+        }
+    });
+
+    for(let i = 0; i < textosValidar.length; i++){
+        if(!validarVariaveisTemplateTexto(textosValidar[i])){
+            alert('Existe uma variável inválida no template. Use o formato {{nome}} ou {{1}}.');
+            e.preventDefault();
+            return false;
+        }
+    }
+
     let totalBotoes = 0;
     let totalUrl = 0;
     let totalTelefone = 0;
@@ -928,42 +947,69 @@ $('#modalNovoTemplate').on('hidden.bs.modal', function(){
     atualizarPreviewBotoesTemplate();
 });
 
-$(document).on('input', '[name=body]', function(){
+function validarVariaveisTemplateTexto(texto)
+{
+    if((texto.match(/{{/g) || []).length !== (texto.match(/}}/g) || []).length){
+        return false;
+    }
 
-    let texto = $(this).val();
+    if(/{{\s*}}|(?<!{){[A-Za-z0-9_]+}(?!})|[A-Za-z0-9_]+}}|{{[A-Za-z0-9_]+(?!})|{{[^}]*$/.test(texto)){
+        return false;
+    }
 
-    let matches = texto.match(/{{(.*?)}}/g);
+    return true;
+}
+
+function obterVariaveisNovoTemplate()
+{
+    let textos = [
+        $('[name=header]').val() || '',
+        $('[name=body]').val() || ''
+    ];
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        if($(this).find('.tipoBotao').val() == 'URL'){
+            textos.push($(this).find('.valorBotao').val() || '');
+        }
+    });
 
     let variaveis = [];
 
-    if(matches){
+    textos.forEach(function(texto){
+        let matches = texto.match(/{{\s*([A-Za-z0-9_]+)\s*}}/g);
 
-        matches.forEach(function(v){
+        if(matches){
+            matches.forEach(function(v){
+                v = v
+                    .replace('{{', '')
+                    .replace('}}', '')
+                    .trim();
 
-            v = v
-                .replace('{{', '')
-                .replace('}}', '')
-                .trim();
+                if(!variaveis.includes(v)){
+                    variaveis.push(v);
+                }
+            });
+        }
+    });
 
-            if(!variaveis.includes(v)){
-                variaveis.push(v);
-            }
+    return variaveis;
+}
 
-        });
-
-    }
-
+function atualizarExemplosVariaveisTemplate()
+{
+    let variaveis = obterVariaveisNovoTemplate();
     let html = '';
 
     if(variaveis.length > 0){
 
-        variaveis.forEach(function(v){
+        variaveis.forEach(function(v, index){
 
             html += `
                 <div class="form-group">
 
                     <label>
                         Exemplo para {{${v}}}
+                        <small class="text-muted">${v} → {{${index + 1}}}</small>
                     </label>
 
                     <input
@@ -988,8 +1034,12 @@ $(document).on('input', '[name=body]', function(){
         $('#areaExemplosVariaveis').hide();
 
     }
+}
 
+$(document).on('input change', '[name=body], [name=header], .valorBotao, .tipoBotao', function(){
+    atualizarExemplosVariaveisTemplate();
 });
+
 
 function abrirPreviewTemplate(botao)
 {

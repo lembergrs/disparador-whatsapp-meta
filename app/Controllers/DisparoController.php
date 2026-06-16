@@ -320,15 +320,10 @@ class DisparoController extends Controller
 
         $variaveis = [];
 
-        foreach($componentes as $componente){
-
-            if(empty($componente['text'])){
-                continue;
-            }
-
+        $coletarVariaveis = function($texto) use (&$variaveis){
             preg_match_all(
                 '/{{(.*?)}}/',
-                $componente['text'],
+                $texto,
                 $matches
             );
 
@@ -344,15 +339,43 @@ class DisparoController extends Controller
                     $variaveis[] = $variavel;
                 }
             }
-        }
+        };
 
-        usort($variaveis, function($a, $b){
-            if(is_numeric($a) && is_numeric($b)){
-                return (int) $a <=> (int) $b;
+        foreach($componentes as $componente){
+
+            if(!empty($componente['text'])){
+                $coletarVariaveis($componente['text']);
             }
 
-            return strcmp($a, $b);
-        });
+            if(
+                ($componente['type'] ?? '') == 'BUTTONS'
+                &&
+                !empty($componente['buttons'])
+                &&
+                is_array($componente['buttons'])
+            ){
+                foreach($componente['buttons'] as $botao){
+                    if(!empty($botao['url'])){
+                        $coletarVariaveis($botao['url']);
+                    }
+                }
+            }
+        }
+
+        $todasNumericas = !empty($variaveis);
+
+        foreach($variaveis as $variavel){
+            if(!is_numeric($variavel)){
+                $todasNumericas = false;
+                break;
+            }
+        }
+
+        if($todasNumericas){
+            usort($variaveis, function($a, $b){
+                return (int) $a <=> (int) $b;
+            });
+        }
 
         return $variaveis;
     }
