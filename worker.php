@@ -23,7 +23,7 @@ use Models\Conversa;
 use Models\ConsumoMensal;
 
 $modoTeste = false; // troque para false para envio real
-$limitePorExecucao = 10;
+$limitePorExecucao = 50;
 
 $db = Database::getInstance();
 
@@ -204,7 +204,7 @@ foreach($campanhas as $campanha){
                 $db->prepare("
                     UPDATE fila_envio
                     SET
-                        FIL_Status = 'enviado',
+                        FIL_Status = 'aguardando_confirmacao',
                         FIL_DataEnvio = NOW(),
                         FIL_Erro = NULL,
                         FIL_MessageId = ?,
@@ -267,7 +267,7 @@ foreach($campanhas as $campanha){
                         $retorno['messages'][0]['id'],
 
                     'status' =>
-                        'enviado',
+                        'aguardando_confirmacao',
 
                     'retorno' =>
                         $retorno,
@@ -283,8 +283,7 @@ foreach($campanhas as $campanha){
                     $db,
                     $campanha['CAM_ID'],
                     $item['FIL_ID'],
-                    $retorno['error']['message']
-                    ?? json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                    extrairErroMetaWorker($retorno),
                     $retorno
                 );
 
@@ -301,7 +300,7 @@ foreach($campanhas as $campanha){
 
         }
 
-        sleep(1);
+        aplicarLimiteEnvio($retorno ?? null);
     }
 
     finalizarSeConcluida($db, $campanha['CAM_ID']);
@@ -373,4 +372,54 @@ function finalizarSeConcluida($db, $campanhaId)
         echo "Campanha {$campanhaId} ainda possui {$total} pendentes.\n";
 
     }
+}
+
+
+
+function aplicarLimiteEnvio($retorno = null)
+{
+    if(ehRateLimitMeta($retorno)){
+        echo "Limite de envio da Meta atingido. Pausando lote temporariamente.\n";
+        sleep(WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+        return;
+    }
+
+    $enviosPorSegundo = max(1, (int) WHATSAPP_ENVIOS_POR_SEGUNDO);
+    usleep((int) round(1000000 / $enviosPorSegundo));
+}
+
+
+
+function ehRateLimitMeta($retorno)
+{
+    if(!is_array($retorno)){
+        return false;
+    }
+
+    $codigoHttp = (int) ($retorno['http_code'] ?? 0);
+    $codigoErro = (int) ($retorno['error']['code'] ?? 0);
+    $mensagem = strtolower((string) ($retorno['error']['message'] ?? ''));
+
+    return $codigoHttp == 429
+        || in_array($codigoErro, [4, 17, 32, 613], true)
+        || strpos($mensagem, 'rate limit') !== false
+        || strpos($mensagem, 'too many') !== false;
+}
+
+
+
+
+function extrairErroMetaWorker($retorno)
+{
+    if(ehRateLimitMeta($retorno)){
+        return 'Limite de envio da Meta atingido. O lote foi pausado temporariamente e deve ser retomado com velocidade reduzida.';
+    }
+
+    if(is_array($retorno) && !empty($retorno['error']['message'])){
+        return $retorno['error']['message'];
+    }
+
+    return is_array($retorno)
+        ? json_encode($retorno, JSON_UNESCAPED_UNICODE)
+        : 'Erro ao enviar mensagem';
 }
