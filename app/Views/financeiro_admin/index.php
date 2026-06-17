@@ -359,8 +359,11 @@ if(!function_exists('valorPlanoCicloAdmin')){
                                 <td width="180">
 
                                     <?php if(
-                                        $statusCobranca
-                                        == 'pendente'
+                                        in_array(
+                                            $statusCobranca,
+                                            ['pendente', 'vencido'],
+                                            true
+                                        )
                                     ){ ?>
 
                                         <a

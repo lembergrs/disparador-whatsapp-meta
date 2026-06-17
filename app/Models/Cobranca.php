@@ -83,6 +83,7 @@ class Cobranca
                 COB_Status = 'pago',
                 COB_DataPagamento = NOW()
             WHERE COB_ID = ?
+            AND COB_Status IN ('pendente','vencido')
         ");
 
         return $sql->execute([$id]);

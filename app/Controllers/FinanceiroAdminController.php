@@ -179,6 +179,17 @@ class FinanceiroAdminController extends Controller
             $this->redirect('financeiroAdmin#tabCobrancas');
         }
 
+        $statusCobranca = strtolower(trim((string) ($cobranca['COB_Status'] ?? '')));
+
+        if(!in_array($statusCobranca, ['pendente', 'vencido'], true)){
+            Session::flash(
+                'error',
+                'Não foi possível lançar o pagamento.'
+            );
+
+            $this->redirect('financeiroAdmin#tabCobrancas');
+        }
+
         $db = Database::getInstance();
 
         $db->beginTransaction();
@@ -192,7 +203,7 @@ class FinanceiroAdminController extends Controller
                 SET
                     CLI_StatusPagamento = 'pago',
                     CLI_StatusCadastro = 'ativo',
-                    CLI_DataLiberacao = NOW()
+                    CLI_DataLiberacao = COALESCE(CLI_DataLiberacao, NOW())
                 WHERE CLI_ID = ?
             ");
 
@@ -201,7 +212,10 @@ class FinanceiroAdminController extends Controller
             ]);
 
             $assinaturaModel = new Assinatura();
-            $assinatura = $assinaturaModel->buscarAtualPorCliente($cobranca['CLI_ID']);
+            $assinatura = $assinaturaModel->buscarParaPagamento(
+                $cobranca['CLI_ID'],
+                $cobranca['PLA_ID']
+            );
 
             if($assinatura){
                 $assinaturaModel->ativar($assinatura['ASS_ID']);
@@ -211,7 +225,7 @@ class FinanceiroAdminController extends Controller
 
             Session::flash(
                 'success',
-                'Pagamento confirmado.'
+                'Pagamento lançado com sucesso.'
             );
 
         }catch(\Exception $e){
@@ -220,7 +234,7 @@ class FinanceiroAdminController extends Controller
 
             Session::flash(
                 'error',
-                'Erro ao confirmar pagamento.'
+                'Não foi possível lançar o pagamento.'
             );
         }
 
