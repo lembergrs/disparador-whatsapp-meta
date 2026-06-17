@@ -13,6 +13,14 @@ if ($host === 'disparador.test') {
 define('RECAPTCHA_SITE_KEY', '6LdDLBQtAAAAAEp5UhSPe_cikIC5u3VDrtq1-rse');
 define('RECAPTCHA_SECRET_KEY', '6LdDLBQtAAAAAPB-YaekMjxjXwJY9V05mMJnUoZG');
 
+// Taxa segura inicial de disparos para WhatsApp Cloud API.
+// Ajuste conforme qualidade, limites e aprovação da conta na Meta.
+defined('WHATSAPP_ENVIOS_POR_SEGUNDO') || define('WHATSAPP_ENVIOS_POR_SEGUNDO', 5);
+defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS', 5);
+
+// Dias de tolerância financeira após vencimento antes do bloqueio operacional.
+defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
+
 /*
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'whatsapp_disparador');
