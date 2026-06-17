@@ -27,6 +27,8 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css">
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -82,9 +84,9 @@ Sair
 
 <span class="brand-text font-weight-light">
 <img
-    src="<?= BASE_URL; ?>/assets/img/logo_disparador.png"
+    src="<?= ASSET_URL; ?>/img/logo_disparador.png"
     alt="Logo"
-    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    onerror="this.onerror=null; this.style.display='none'; if (this.nextElementSibling) { this.nextElementSibling.style.display='flex'; }"
     width="230"
     >
 </span>
@@ -153,6 +155,21 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
         <i class="nav-icon fas fa-dollar-sign"></i>
 
         <p>Financeiro</p>
+
+    </a>
+
+</li>
+
+<li class="nav-item">
+
+    <a
+    href="<?= BASE_URL; ?>/index.php?url=assinatura"
+    class="nav-link <?= str_contains($url, 'assinatura') ? 'active' : ''; ?>"
+    >
+
+        <i class="nav-icon fas fa-file-invoice-dollar"></i>
+
+        <p>Assinaturas</p>
 
     </a>
 
@@ -397,8 +414,6 @@ window.fbAsyncInit = function() {
 };
 
 </script>
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
 
