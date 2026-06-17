@@ -45,9 +45,13 @@ $nome =
 $numeroFormatado =
     formatarNumeroBR($conversa['CVS_Numero']);
 
+$conversaSelecionadaId =
+    $conversaSelecionada['CVS_ID']
+    ?? ($_GET['id'] ?? null);
+
 $ativa =
-    isset($conversaSelecionada['CVS_ID'])
-    && $conversaSelecionada['CVS_ID'] == $conversa['CVS_ID'];
+    !empty($conversaSelecionadaId)
+    && (int) $conversaSelecionadaId === (int) $conversa['CVS_ID'];
 
 $itemClass =
     $ativa

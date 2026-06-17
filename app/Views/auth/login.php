@@ -113,25 +113,36 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
 
                 <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
 
-                <div class="mb-4 mt-3">
+                <div class="mt-4 mb-3">
 
                     <div
-                    class="g-recaptcha"
-                    data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
-                    ></div>
+                        id="recaptchaLoading"
+                        class="alert alert-warning text-center mb-3"
+                    >
+                        <i class="fas fa-shield-alt"></i>
+                        Aguarde o carregamento da proteção de segurança.
+                    </div>
+
+                    <div class="d-flex justify-content-center">
+                        <div
+                            class="g-recaptcha"
+                            data-sitekey="<?= RECAPTCHA_SITE_KEY; ?>"
+                            data-callback="recaptchaValidado"
+                        ></div>
+                    </div>
 
                 </div>
 
                 <?php } ?>
 
                 <button
-                type="submit"
-                class="btn btn-primary btn-block btn-login-custom"
+                    type="submit"
+                    id="btnLogin"
+                    class="btn btn-primary btn-block btn-login-custom"
+                    disabled
                 >
-
                     <i class="fas fa-sign-in-alt"></i>
                     Entrar
-
                 </button>
 
                 <div class="text-center mt-3">
@@ -160,8 +171,47 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
     </div>
 
 </div>
+<script>
 
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+function recaptchaValidado()
+{
+    var btnLogin = document.getElementById('btnLogin');
+
+    if(btnLogin){
+        btnLogin.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+
+    var tentativas = 0;
+
+    var verificarRecaptcha = setInterval(function(){
+
+        tentativas++;
+
+        var iframe = document.querySelector('.g-recaptcha iframe');
+
+        if(iframe){
+
+            var aviso = document.getElementById('recaptchaLoading');
+
+            if(aviso){
+                aviso.style.display = 'none';
+            }
+
+            clearInterval(verificarRecaptcha);
+        }
+
+        if(tentativas >= 50){
+            clearInterval(verificarRecaptcha);
+        }
+
+    }, 100);
+
+});
+
+</script>
 
 </body>
 
