@@ -1,3 +1,22 @@
+<?php
+
+if(!function_exists('categoriaTemplatePtBr')){
+
+    function categoriaTemplatePtBr($categoria)
+    {
+        $categorias = [
+            'MARKETING' => 'Marketing',
+            'UTILITY' => 'Utilidade',
+            'AUTHENTICATION' => 'Autenticação'
+        ];
+
+        return $categorias[$categoria] ?? $categoria;
+    }
+
+}
+
+?>
+
 <div class="card">
 
 <div class="card-header">
@@ -106,7 +125,7 @@ class="table table-bordered table-striped table-hover datatable"
 </td>
 
 <td>
-<?= $template['TMP_Categoria']; ?>
+<?= categoriaTemplatePtBr($template['TMP_Categoria']); ?>
 </td>
 
 <td>
@@ -163,7 +182,7 @@ data-status="<?= htmlspecialchars($template['TMP_Status'], ENT_QUOTES); ?>"
 
 data-idioma="<?= htmlspecialchars($template['TMP_Idioma'], ENT_QUOTES); ?>"
 
-data-categoria="<?= htmlspecialchars($template['TMP_Categoria'], ENT_QUOTES); ?>"
+data-categoria="<?= htmlspecialchars(categoriaTemplatePtBr($template['TMP_Categoria']), ENT_QUOTES); ?>"
 
 data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
