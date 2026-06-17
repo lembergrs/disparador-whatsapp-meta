@@ -11,6 +11,7 @@ use Core\Database;
 use Models\Cliente;
 use Models\MetaConta;
 use Models\Assinatura;
+use Services\FinanceiroRecorrenciaService;
 
 class FinanceiroAdminController extends Controller
 {
@@ -244,6 +245,34 @@ class FinanceiroAdminController extends Controller
             'success',
             'Cobrança cancelada.'
         );
+
+        $this->redirect('financeiroAdmin#tabCobrancas');
+    }
+
+
+    public function processarVencimentos()
+    {
+        Auth::admin();
+
+        try{
+            $service = new FinanceiroRecorrenciaService();
+            $resultado = $service->processarVencimentos();
+
+            Session::flash(
+                'success',
+                'Vencimentos processados com sucesso. Cobranças vencidas: ' .
+                $resultado['cobrancas_vencidas'] .
+                ' | Assinaturas vencidas: ' .
+                $resultado['assinaturas_vencidas'] .
+                ' | Clientes atualizados: ' .
+                $resultado['clientes_atualizados'] . '.'
+            );
+        }catch(\Exception $e){
+            Session::flash(
+                'error',
+                'Erro ao processar vencimentos financeiros.'
+            );
+        }
 
         $this->redirect('financeiroAdmin#tabCobrancas');
     }

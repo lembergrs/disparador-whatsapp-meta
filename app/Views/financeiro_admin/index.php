@@ -224,6 +224,17 @@ if(!function_exists('valorPlanoCicloAdmin')){
             id="tabCobrancas"
             >
 
+                <div class="mb-3 text-right">
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/processarVencimentos#tabCobrancas"
+                    class="btn btn-warning"
+                    onclick="return confirm('Processar vencimentos financeiros agora?')"
+                    >
+                        <i class="fas fa-calendar-times"></i>
+                        Processar vencimentos
+                    </a>
+                </div>
+
                 <table
                 class="table table-bordered table-striped datatable"
                 >
