@@ -60,6 +60,7 @@ class="table table-bordered table-striped table-hover datatable"
 <th>Telefone</th>
 <th>Cadastro</th>
 <th>Pagamento</th>
+<th>Assinatura</th>
 <th>Ações</th>
 
 </tr>
@@ -145,6 +146,22 @@ class="table table-bordered table-striped table-hover datatable"
 
 <?php } ?>
 
+</td>
+
+<td>
+<?php if(!empty($cliente['ASS_PlanoNome'])){ ?>
+    <strong><?= htmlspecialchars($cliente['ASS_PlanoNome']); ?></strong><br>
+    <small class="text-muted">
+        <?= htmlspecialchars($cliente['ASS_Ciclo']); ?> |
+        R$ <?= number_format($cliente['ASS_Valor'], 2, ',', '.'); ?>
+    </small><br>
+    <small>
+        <?= ucfirst($cliente['ASS_Status']); ?> |
+        Próx.: <?= $cliente['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($cliente['ASS_DataProximaCobranca'])) : '-'; ?>
+    </small>
+<?php }else{ ?>
+    <span class="text-muted">Sem assinatura</span>
+<?php } ?>
 </td>
 
 <td>
