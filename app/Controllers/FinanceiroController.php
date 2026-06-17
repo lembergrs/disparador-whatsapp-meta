@@ -9,6 +9,7 @@ use Core\Database;
 use Models\Plano;
 use Models\Cobranca;
 use Models\MetaConta;
+use Models\Assinatura;
 
 class FinanceiroController extends Controller
 {
@@ -21,6 +22,7 @@ class FinanceiroController extends Controller
         $planoModel = new Plano();
         $cobrancaModel = new Cobranca();
         $metaContaModel = new MetaConta();
+        $assinaturaModel = new Assinatura();
 
         $planos = $planoModel->listarAtivos();
         $numerosAtivos =
@@ -39,6 +41,11 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             );
 
+        $assinaturaAtual =
+            $assinaturaModel->buscarAtualPorCliente(
+                $usuario['CLI_ID']
+            );
+
         $this->view(
             'financeiro/index',
             [
@@ -46,7 +53,8 @@ class FinanceiroController extends Controller
                 'planos' => $planos,
                 'cobranca' => $cobranca,
                 'excedente' => $excedente,
-                'numerosAtivos' => $numerosAtivos
+                'numerosAtivos' => $numerosAtivos,
+                'assinaturaAtual' => $assinaturaAtual
             ]
         );
     }
@@ -136,6 +144,13 @@ class FinanceiroController extends Controller
                 'valor' => $plano['PLA_Valor'],
                 'vencimento' => date('Y-m-d', strtotime('+3 days'))
             ]);
+
+            $assinaturaModel = new Assinatura();
+            $assinaturaModel->criarOuAtualizarPorCliente(
+                $usuario['CLI_ID'],
+                $plano,
+                'pendente'
+            );
 
             $db->commit();
 

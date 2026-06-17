@@ -24,10 +24,22 @@ class Cliente
         if($status){
 
             $sql = $this->db->prepare("
-                SELECT *
-                FROM clientes
-                WHERE CLI_StatusCadastro = :status
-                ORDER BY CLI_ID DESC
+                SELECT c.*,
+                    a.ASS_Ciclo, a.ASS_Status, a.ASS_Valor, a.ASS_DataProximaCobranca,
+                    p.PLA_Nome AS ASS_PlanoNome
+                FROM clientes c
+                LEFT JOIN assinaturas a
+                    ON a.ASS_ID = (
+                        SELECT ax.ASS_ID
+                        FROM assinaturas ax
+                        WHERE ax.CLI_ID = c.CLI_ID
+                        AND ax.ASS_Status IN ('ativa','pendente','vencida')
+                        ORDER BY FIELD(ax.ASS_Status, 'ativa','pendente','vencida'), ax.ASS_ID DESC
+                        LIMIT 1
+                    )
+                LEFT JOIN planos p ON p.PLA_ID = a.PLA_ID
+                WHERE c.CLI_StatusCadastro = :status
+                ORDER BY c.CLI_ID DESC
             ");
 
             $sql->execute([
@@ -37,10 +49,22 @@ class Cliente
         }else{
 
             $sql = $this->db->query("
-                SELECT *
-                FROM clientes
-                WHERE CLI_StatusCadastro IN ('pendente','ativo')
-                ORDER BY CLI_ID DESC
+                SELECT c.*,
+                    a.ASS_Ciclo, a.ASS_Status, a.ASS_Valor, a.ASS_DataProximaCobranca,
+                    p.PLA_Nome AS ASS_PlanoNome
+                FROM clientes c
+                LEFT JOIN assinaturas a
+                    ON a.ASS_ID = (
+                        SELECT ax.ASS_ID
+                        FROM assinaturas ax
+                        WHERE ax.CLI_ID = c.CLI_ID
+                        AND ax.ASS_Status IN ('ativa','pendente','vencida')
+                        ORDER BY FIELD(ax.ASS_Status, 'ativa','pendente','vencida'), ax.ASS_ID DESC
+                        LIMIT 1
+                    )
+                LEFT JOIN planos p ON p.PLA_ID = a.PLA_ID
+                WHERE c.CLI_StatusCadastro IN ('pendente','ativo')
+                ORDER BY c.CLI_ID DESC
             ");
 
         }

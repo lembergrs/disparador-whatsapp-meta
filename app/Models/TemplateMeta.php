@@ -48,6 +48,13 @@ class TemplateMeta
         $existe =
             $sql->fetch();
 
+        $componentes =
+            $this->preservarMapeamentoVariaveis(
+                $metaId,
+                $template['id'],
+                $template['components'] ?? []
+            );
+
 
 
 
@@ -84,7 +91,7 @@ class TemplateMeta
                 $template['status'],
 
                 json_encode(
-                    $template['components']
+                    $componentes
                 ),
 
                 $existe['TMP_ID']
@@ -142,10 +149,56 @@ class TemplateMeta
             $template['status'],
 
             json_encode(
-                $template['components']
+                $componentes
             )
 
         ]);
+    }
+
+
+
+
+    private function preservarMapeamentoVariaveis($metaId, $metaTemplateId, $componentesNovos)
+    {
+        if(!is_array($componentesNovos)){
+            $componentesNovos = [];
+        }
+
+        $sql = $this->db->prepare("
+            SELECT TMP_Componentes
+            FROM templates_meta
+            WHERE TMP_MetaId = ?
+            AND MTA_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $metaTemplateId,
+            $metaId
+        ]);
+
+        $atual = $sql->fetch(PDO::FETCH_ASSOC);
+
+        if(!$atual){
+            return $componentesNovos;
+        }
+
+        $componentesAtuais = json_decode(
+            $atual['TMP_Componentes'] ?? '[]',
+            true
+        );
+
+        if(!is_array($componentesAtuais)){
+            return $componentesNovos;
+        }
+
+        foreach($componentesAtuais as $componente){
+            if(($componente['type'] ?? '') == 'VARIABLE_MAPPING'){
+                return $componentesAtuais;
+            }
+        }
+
+        return $componentesNovos;
     }
 
 
