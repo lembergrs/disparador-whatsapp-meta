@@ -1,4 +1,12 @@
 <?php
+if(!function_exists('valorPlanoCicloFinanceiro')){
+    function valorPlanoCicloFinanceiro($plano, $ciclo)
+    {
+        return \Models\Plano::valorPorCiclo($plano, $ciclo);
+    }
+}
+?>
+<?php
 
 $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
@@ -117,6 +125,27 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <?php } ?>
 
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Minha Assinatura</h3>
+    </div>
+    <div class="card-body">
+        <?php if(!empty($assinaturaAtual)){ ?>
+            <div class="row">
+                <div class="col-md-2"><small class="text-muted d-block">Plano contratado</small><strong><?= htmlspecialchars($assinaturaAtual['PLA_Nome']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Ciclo</small><strong><?= htmlspecialchars($assinaturaAtual['ASS_Ciclo']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Valor</small><strong>R$ <?= number_format($assinaturaAtual['ASS_Valor'], 2, ',', '.'); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Status</small><strong><?= ucfirst($assinaturaAtual['ASS_Status']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Próxima cobrança</small><strong><?= $assinaturaAtual['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataProximaCobranca'])) : '-'; ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Data de início</small><strong><?= $assinaturaAtual['ASS_DataInicio'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataInicio'])) : '-'; ?></strong></div>
+            </div>
+        <?php }else{ ?>
+            <div class="alert alert-info mb-0">Você ainda não possui uma assinatura ativa.</div>
+        <?php } ?>
+    </div>
+</div>
+
 <div class="card">
 
     <div class="card-header">
@@ -144,6 +173,11 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                     $numerosAtivosPlano
                     >
                     $limiteNumerosPlano;
+
+                $valorMensalPlano = valorPlanoCicloFinanceiro($plano, 'mensal');
+                $valorTrimestralPlano = valorPlanoCicloFinanceiro($plano, 'trimestral');
+                $valorSemestralPlano = valorPlanoCicloFinanceiro($plano, 'semestral');
+                $valorAnualPlano = valorPlanoCicloFinanceiro($plano, 'anual');
                 ?>
 
                 <div class="col-md-4 mb-4">
@@ -157,7 +191,9 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                             </h4>
 
                             <h2 class="text-success">
-                                R$ <?= number_format($plano['PLA_Valor'], 2, ',', '.'); ?>
+                                R$ <span class="valor-plano-ciclo">
+                                    <?= number_format($valorMensalPlano, 2, ',', '.'); ?>
+                                </span>
                             </h2>
 
                             <p>
@@ -219,6 +255,23 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                                 value="<?= $plano['PLA_ID']; ?>"
                                 >
 
+                                <div class="form-group text-left">
+                                    <label>Ciclo de cobrança</label>
+                                    <select
+                                    name="ciclo"
+                                    class="form-control select-ciclo-plano"
+                                    data-mensal="<?= $valorMensalPlano; ?>"
+                                    data-trimestral="<?= $valorTrimestralPlano; ?>"
+                                    data-semestral="<?= $valorSemestralPlano; ?>"
+                                    data-anual="<?= $valorAnualPlano; ?>"
+                                    >
+                                        <option value="mensal">Mensal</option>
+                                        <option value="trimestral">Trimestral</option>
+                                        <option value="semestral">Semestral</option>
+                                        <option value="anual">Anual</option>
+                                    </select>
+                                </div>
+
                                 <button
                                 type="submit"
                                 class="btn btn-success btn-block"
@@ -242,3 +295,22 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.select-ciclo-plano').forEach(function(select){
+        select.addEventListener('change', function(){
+            const card = select.closest('.card-body');
+            const valor = parseFloat(select.dataset[select.value] || '0');
+            const alvo = card ? card.querySelector('.valor-plano-ciclo') : null;
+
+            if(alvo){
+                alvo.textContent = valor.toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        });
+    });
+});
+</script>

@@ -33,30 +33,44 @@ class Cobranca
 
     public function criar($dados)
     {
-        $sql = $this->db->prepare("
-            INSERT INTO cobrancas (
-                CLI_ID,
-                PLA_ID,
-                COB_Valor,
-                COB_Status,
-                COB_Forma,
-                COB_DataVencimento
-            ) VALUES (
-                :cliente,
-                :plano,
-                :valor,
-                'pendente',
-                'bolepix',
-                :vencimento
-            )
-        ");
-
-        $sql->execute([
+        $campos = [
+            'CLI_ID',
+            'PLA_ID',
+            'COB_Valor',
+            'COB_Status',
+            'COB_Forma',
+            'COB_DataVencimento'
+        ];
+        $valores = [
+            ':cliente',
+            ':plano',
+            ':valor',
+            "'pendente'",
+            "'bolepix'",
+            ':vencimento'
+        ];
+        $params = [
             ':cliente' => $dados['cliente'],
             ':plano' => $dados['plano'],
             ':valor' => $dados['valor'],
             ':vencimento' => $dados['vencimento']
-        ]);
+        ];
+
+        if($this->colunaExiste('cobrancas', 'COB_Tipo')){
+            $campos[] = 'COB_Tipo';
+            $valores[] = ':tipo';
+            $params[':tipo'] = $dados['tipo'] ?? 'mensalidade';
+        }
+
+        $sql = $this->db->prepare("
+            INSERT INTO cobrancas (
+                " . implode(', ', $campos) . "
+            ) VALUES (
+                " . implode(', ', $valores) . "
+            )
+        ");
+
+        $sql->execute($params);
 
         return $this->db->lastInsertId();
     }
@@ -69,6 +83,7 @@ class Cobranca
                 COB_Status = 'pago',
                 COB_DataPagamento = NOW()
             WHERE COB_ID = ?
+            AND COB_Status IN ('pendente','vencido')
         ");
 
         return $sql->execute([$id]);
@@ -116,4 +131,26 @@ class Cobranca
         return $sql->execute([$id]);
     }
 
+
+
+    private function colunaExiste($tabela, $coluna)
+    {
+        static $cache = [];
+
+        $chave = $tabela . '.' . $coluna;
+
+        if(array_key_exists($chave, $cache)){
+            return $cache[$chave];
+        }
+
+        $sql = $this->db->prepare("
+            SHOW COLUMNS FROM {$tabela} LIKE ?
+        ");
+
+        $sql->execute([$coluna]);
+
+        $cache[$chave] = (bool) $sql->fetch(PDO::FETCH_ASSOC);
+
+        return $cache[$chave];
+    }
 }
