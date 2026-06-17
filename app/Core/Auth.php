@@ -118,9 +118,44 @@ class Auth
             return false;
         }
 
+        if(self::clienteEmToleranciaFinanceira($usuario['CLI_ID'] ?? null)){
+            return true;
+        }
+
         $avaliacao = self::dadosAvaliacaoCliente(false);
 
         return $avaliacao['ativo'];
+    }
+
+
+    private static function clienteEmToleranciaFinanceira($clienteId)
+    {
+        if(empty($clienteId)){
+            return false;
+        }
+
+        $diasTolerancia = defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO')
+            ? (int) FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO
+            : 5;
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            SELECT COB_ID
+            FROM cobrancas
+            WHERE CLI_ID = ?
+            AND COB_Status = 'vencido'
+            AND COB_DataVencimento >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+            ORDER BY COB_DataVencimento DESC
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $clienteId,
+            $diasTolerancia
+        ]);
+
+        return (bool) $sql->fetch(\PDO::FETCH_ASSOC);
     }
 
     public static function dadosAvaliacaoCliente($atualizar = true)
