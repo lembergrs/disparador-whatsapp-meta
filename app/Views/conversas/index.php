@@ -269,14 +269,20 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function atualizarListaConversas()
     {
-        $('#listaConversas').load(
+        const lista = $('#listaConversas');
+        const scrollAtual = lista.scrollTop();
+
+        lista.load(
             urlBase
                 + 'conversa/ajaxLista'
                 + '&id=' + conversaAberta
                 + '&busca=' + encodeURIComponent(filtroBusca)
                 + '&status=' + encodeURIComponent(filtroStatus)
                 + '&etiqueta=' + encodeURIComponent(filtroEtiqueta)
-                + '&responsavel=' + encodeURIComponent(filtroResponsavel)
+                + '&responsavel=' + encodeURIComponent(filtroResponsavel),
+            function(){
+                lista.scrollTop(scrollAtual);
+            }
         );
     }
 
@@ -507,6 +513,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     $(document).on('click', '.item-conversa', function(e){
 
+        e.preventDefault();
+
         if($(e.target).closest('button, a.btn, .btn-marcar-nao-lida, .btn-etiquetas, .btn-atribuir').length){
             return;
         }
@@ -532,7 +540,9 @@ document.addEventListener('DOMContentLoaded', function(){
             function(){
 
                 rolarMensagensParaFinal();
-                atualizarListaConversas();
+
+                $('#listaConversas .item-conversa').removeClass('active');
+                $('#listaConversas .item-conversa[data-id="' + conversaAberta + '"]').addClass('active');
 
             }
         );
