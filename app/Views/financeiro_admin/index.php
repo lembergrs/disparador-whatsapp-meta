@@ -226,6 +226,15 @@ if(!function_exists('valorPlanoCicloAdmin')){
 
                 <div class="mb-3 text-right">
                     <a
+                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/gerarCobrancasRecorrentes#tabCobrancas"
+                    class="btn btn-success mr-2"
+                    onclick="return confirm('Gerar cobranças recorrentes agora?')"
+                    >
+                        <i class="fas fa-sync-alt"></i>
+                        Gerar cobranças recorrentes
+                    </a>
+
+                    <a
                     href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/processarVencimentos#tabCobrancas"
                     class="btn btn-warning"
                     onclick="return confirm('Processar vencimentos financeiros agora?')"

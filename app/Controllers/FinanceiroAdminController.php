@@ -277,6 +277,36 @@ class FinanceiroAdminController extends Controller
         $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
+
+    public function gerarCobrancasRecorrentes()
+    {
+        Auth::admin();
+
+        try{
+            $service = new FinanceiroRecorrenciaService();
+            $resultado = $service->gerarCobrancasRecorrentes();
+
+            Session::flash(
+                'success',
+                'Cobranças recorrentes processadas. Geradas: ' .
+                $resultado['cobrancas_geradas'] .
+                ' | Assinaturas processadas: ' .
+                $resultado['assinaturas_processadas'] .
+                ' | Ignoradas por duplicidade: ' .
+                $resultado['cobrancas_ignoradas_duplicidade'] .
+                ' | Erros: ' .
+                $resultado['erros'] . '.'
+            );
+        }catch(\Exception $e){
+            Session::flash(
+                'error',
+                'Erro ao gerar cobranças recorrentes.'
+            );
+        }
+
+        $this->redirect('financeiroAdmin#tabCobrancas');
+    }
+
     public function alterarPlanoCliente()
     {
         Auth::admin();
