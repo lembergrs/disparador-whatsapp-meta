@@ -5,6 +5,31 @@ if(!function_exists('valorPlanoCicloAdmin')){
         return \Models\Plano::valorPorCiclo($plano, $ciclo);
     }
 }
+
+if(!function_exists('corPlanoAdmin')){
+    function corPlanoAdmin($cor)
+    {
+        $cor = trim((string) $cor);
+        return $cor !== '' ? $cor : 'secondary';
+    }
+}
+
+if(!function_exists('nomeCorPlanoAdmin')){
+    function nomeCorPlanoAdmin($cor)
+    {
+        $nomes = [
+            'secondary' => 'Cinza',
+            'primary' => 'Azul',
+            'success' => 'Verde',
+            'warning' => 'Amarelo',
+            'danger' => 'Vermelho',
+            'info' => 'Ciano',
+            'dark' => 'Preto'
+        ];
+
+        return $nomes[$cor] ?? ucfirst($cor);
+    }
+}
 ?>
 <div class="card">
 
@@ -87,6 +112,7 @@ if(!function_exists('valorPlanoCicloAdmin')){
                         <tr>
 
                             <th>Plano</th>
+                            <th>Cor</th>
                             <th>Mensal</th>
                             <th>Trimestral</th>
                             <th>Semestral</th>
@@ -110,6 +136,14 @@ if(!function_exists('valorPlanoCicloAdmin')){
 
                                 <td>
                                     <?= htmlspecialchars($plano['PLA_Nome']); ?>
+                                </td>
+
+                                <?php $corPlano = corPlanoAdmin($plano['PLA_Cor'] ?? ''); ?>
+                                <td>
+                                    <span class="badge badge-<?= htmlspecialchars($corPlano); ?>">
+                                        &nbsp;
+                                    </span>
+                                    <?= htmlspecialchars(nomeCorPlanoAdmin($corPlano)); ?>
                                 </td>
 
                                 <td>
@@ -173,6 +207,8 @@ if(!function_exists('valorPlanoCicloAdmin')){
                                     data-nome="<?= htmlspecialchars($plano['PLA_Nome']); ?>"
 
                                     data-periodicidade="<?= $plano['PLA_Periodicidade']; ?>"
+
+                                    data-cor="<?= htmlspecialchars(corPlanoAdmin($plano['PLA_Cor'] ?? '')); ?>"
 
                                     data-valor-mensal="<?= valorPlanoCicloAdmin($plano, 'mensal'); ?>"
 
@@ -792,7 +828,7 @@ tabindex="-1"
 
                         <div
                         id="previewCor"
-                        class="badge badge-primary mt-2"
+                        class="badge badge-secondary mt-2"
                         >
                             Exemplo do Plano
                         </div>
@@ -980,6 +1016,11 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('excedente').value =
             botao.dataset.excedente;
 
+        document.getElementById('cor').value =
+            botao.dataset.cor || 'secondary';
+
+        atualizarPreviewCor();
+
         document.getElementById('formPlano').action =
             '<?= BASE_URL; ?>/index.php?url=financeiroAdmin/editarPlano';
 
@@ -1018,6 +1059,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
         document.getElementById('plano_id').value = '';
 
+        document.getElementById('cor').value = 'secondary';
+        atualizarPreviewCor();
+
         document.getElementById('formPlano').action =
             '<?= BASE_URL; ?>/index.php?url=financeiroAdmin/salvarPlano';
 
@@ -1026,9 +1070,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     });
 
-    $('#cor').on('change', function(){
+    function atualizarPreviewCor(){
 
-        let cor = $(this).val();
+        let cor = $('#cor').val() || 'secondary';
 
         $('#previewCor')
             .removeClass(
@@ -1038,7 +1082,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 'badge-' + cor
             );
 
-    }).trigger('change');
+    }
+
+    $('#cor').on('change', atualizarPreviewCor);
+    atualizarPreviewCor();
 
     if(window.location.hash){
 
