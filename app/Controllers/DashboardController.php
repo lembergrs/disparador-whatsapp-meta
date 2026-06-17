@@ -23,6 +23,10 @@ class DashboardController extends Controller
         $naoLidas = 0;
         $campanhas = 0;
         $mensagensRecebidas = 0;
+        $assinaturasAtivas = 0;
+        $assinaturasPendentes = 0;
+        $assinaturasVencidas = 0;
+        $assinaturasCanceladas = 0;
         $metaConta = null;
         $ultimasCampanhas = [];
         $ultimasConversas = [];
@@ -78,6 +82,22 @@ class DashboardController extends Controller
                 SELECT COUNT(*) total
                 FROM conversa_mensagens
                 WHERE MSG_Direcao = 'recebida'
+            ")->fetch()['total'];
+
+            $assinaturasAtivas = $db->query("
+                SELECT COUNT(*) total FROM assinaturas WHERE ASS_Status = 'ativa'
+            ")->fetch()['total'];
+
+            $assinaturasPendentes = $db->query("
+                SELECT COUNT(*) total FROM assinaturas WHERE ASS_Status = 'pendente'
+            ")->fetch()['total'];
+
+            $assinaturasVencidas = $db->query("
+                SELECT COUNT(*) total FROM assinaturas WHERE ASS_Status = 'vencida'
+            ")->fetch()['total'];
+
+            $assinaturasCanceladas = $db->query("
+                SELECT COUNT(*) total FROM assinaturas WHERE ASS_Status = 'cancelada'
             ")->fetch()['total'];
 
             $ultimasCampanhas = $db->query("
@@ -221,7 +241,11 @@ class DashboardController extends Controller
                 'ultimasCampanhas' => $ultimasCampanhas,
                 'ultimasConversas' => $ultimasConversas,
                 'consumo' => $consumo,
-                'excedente' => $excedente
+                'excedente' => $excedente,
+                'assinaturasAtivas' => $assinaturasAtivas,
+                'assinaturasPendentes' => $assinaturasPendentes,
+                'assinaturasVencidas' => $assinaturasVencidas,
+                'assinaturasCanceladas' => $assinaturasCanceladas
             ]
         );
     }

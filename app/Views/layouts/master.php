@@ -162,6 +162,21 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 
 <li class="nav-item">
 
+    <a
+    href="<?= BASE_URL; ?>/index.php?url=assinatura"
+    class="nav-link <?= str_contains($url, 'assinatura') ? 'active' : ''; ?>"
+    >
+
+        <i class="nav-icon fas fa-file-invoice-dollar"></i>
+
+        <p>Assinaturas</p>
+
+    </a>
+
+</li>
+
+<li class="nav-item">
+
 <a
 href="<?= BASE_URL; ?>/index.php?url=metaConta"
 class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
