@@ -89,6 +89,17 @@ class TemplateController extends Controller
 
         if(isset($response['id'])){
 
+            if(!empty($response['template_local'])){
+                $templateLocal = $response['template_local'];
+                $templateLocal['id'] = $response['id'];
+                $templateLocal['status'] = $response['status'] ?? ($templateLocal['status'] ?? 'PENDING');
+
+                $this->templateModel->salvarOuAtualizar(
+                    $metaId,
+                    $templateLocal
+                );
+            }
+
             Session::flash(
                 'success',
                 'Template enviado para aprovação.'
@@ -97,9 +108,7 @@ class TemplateController extends Controller
         }else{
 
             $erro =
-                $response['error']['message']
-                ??
-                'Erro ao criar template';
+                $this->extrairErroTemplateMeta($response);
 
 
 
@@ -217,6 +226,26 @@ class TemplateController extends Controller
         );
 
         $this->redirect('template');
+    }
+
+
+
+
+    private function extrairErroTemplateMeta($response)
+    {
+        if(!is_array($response)){
+            return 'Erro ao criar template';
+        }
+
+        if(!empty($response['error']['error_data']['details'])){
+            return $response['error']['error_data']['details'];
+        }
+
+        if(!empty($response['error']['message'])){
+            return $response['error']['message'];
+        }
+
+        return 'Erro ao criar template';
     }
 
 }

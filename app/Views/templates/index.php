@@ -1,3 +1,22 @@
+<?php
+
+if(!function_exists('categoriaTemplatePtBr')){
+
+    function categoriaTemplatePtBr($categoria)
+    {
+        $categorias = [
+            'MARKETING' => 'Marketing',
+            'UTILITY' => 'Utilidade',
+            'AUTHENTICATION' => 'Autenticação'
+        ];
+
+        return $categorias[$categoria] ?? $categoria;
+    }
+
+}
+
+?>
+
 <div class="card">
 
 <div class="card-header">
@@ -106,7 +125,7 @@ class="table table-bordered table-striped table-hover datatable"
 </td>
 
 <td>
-<?= $template['TMP_Categoria']; ?>
+<?= categoriaTemplatePtBr($template['TMP_Categoria']); ?>
 </td>
 
 <td>
@@ -163,7 +182,7 @@ data-status="<?= htmlspecialchars($template['TMP_Status'], ENT_QUOTES); ?>"
 
 data-idioma="<?= htmlspecialchars($template['TMP_Idioma'], ENT_QUOTES); ?>"
 
-data-categoria="<?= htmlspecialchars($template['TMP_Categoria'], ENT_QUOTES); ?>"
+data-categoria="<?= htmlspecialchars(categoriaTemplatePtBr($template['TMP_Categoria']), ENT_QUOTES); ?>"
 
 data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
@@ -502,8 +521,8 @@ required
 
 <small class="text-muted">
 
-Use variáveis:
-{{1}}, {{2}}, {{3}}
+Você pode usar variáveis como {{nome}}, {{valor}} ou {{erro}}.
+O sistema converterá automaticamente para o padrão da Meta: {{1}}, {{2}}, {{3}}.
 
 </small>
 
@@ -544,6 +563,15 @@ Botões
 </div>
 
 <div id="areaBotoes"></div>
+
+<div class="card card-outline card-secondary mt-3">
+    <div class="card-header py-2">
+        <h3 class="card-title">Preview dos botões</h3>
+    </div>
+    <div class="card-body py-2" id="previewBotoesTemplate">
+        <small class="text-muted">Nenhum botão adicionado.</small>
+    </div>
+</div>
 
 
 <div class="form-group">
@@ -596,13 +624,14 @@ $(document).ready(function(){
 
     if (
         $('#tabelaTemplates').length &&
+        $.fn.DataTable &&
         !$.fn.DataTable.isDataTable('#tabelaTemplates')
     ) {
 
         $('#tabelaTemplates').DataTable({
             language: {
                 url:
-                '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
+                'https://cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
             },
             order: [[0, 'asc']]
         });
@@ -613,23 +642,108 @@ $(document).ready(function(){
 
 let contadorBotoes = 0;
 
-$('#btnAdicionarBotao').click(function(){
+function totalBotoesTemplatePorTipo(tipo)
+{
+    let total = 0;
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        if(!tipo || $(this).find('.tipoBotao').val() == tipo){
+            total++;
+        }
+    });
+
+    return total;
+}
+
+function atualizarCampoValorBotao(card)
+{
+    let tipo = card.find('.tipoBotao').val();
+    let campoValor = card.find('.valorBotao');
+    let ajudaValor = card.find('.ajudaValorBotao');
+
+    if(tipo == 'QUICK_REPLY'){
+        campoValor
+            .val('')
+            .prop('required', false)
+            .prop('disabled', true)
+            .attr('placeholder', 'Não se aplica');
+
+        ajudaValor.text('Resposta rápida não usa URL ou telefone.');
+        return;
+    }
+
+    campoValor
+        .prop('disabled', false)
+        .prop('required', true);
+
+    if(tipo == 'URL'){
+        campoValor.attr('placeholder', 'https://exemplo.com');
+        ajudaValor.text('Informe uma URL completa iniciando com http:// ou https://.');
+        return;
+    }
+
+    campoValor.attr('placeholder', '+5541999999999');
+    ajudaValor.text('Informe o telefone em formato internacional, com código do país.');
+}
+
+function atualizarPreviewBotoesTemplate()
+{
+    let html = '';
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        let tipo = $(this).find('.tipoBotao').val();
+        let texto = $(this).find('.textoBotao').val() || 'Botão sem texto';
+        let icone = 'fa-reply';
+
+        if(tipo == 'URL'){
+            icone = 'fa-link';
+        }
+
+        if(tipo == 'PHONE_NUMBER'){
+            icone = 'fa-phone';
+        }
+
+        html += `
+            <button type="button" class="btn btn-outline-primary btn-block btn-sm mb-1" disabled>
+                <i class="fas ${icone}"></i>
+                ${$('<div>').text(texto).html()}
+            </button>
+        `;
+    });
+
+    if(html == ''){
+        html = '<small class="text-muted">Nenhum botão adicionado.</small>';
+    }
+
+    $('#previewBotoesTemplate').html(html);
+}
+
+$(document).on('click', '#btnAdicionarBotao', function(e){
+
+    e.preventDefault();
+
+    if(totalBotoesTemplatePorTipo() >= 10){
+        alert('A Meta permite no máximo 10 botões.');
+        return;
+    }
 
     contadorBotoes++;
 
     let html = `
 
     <div
-    class="card mb-2"
+    class="card mb-2 card-botao-template"
     id="botao_${contadorBotoes}"
+    data-id="${contadorBotoes}"
     >
 
         <div class="card-body">
 
             <div class="row">
 
-                <div class="col-md-4">
+                <div class="col-md-3">
 
+                    <label>Tipo</label>
                     <select
                     name="botoes[${contadorBotoes}][tipo]"
                     class="form-control tipoBotao"
@@ -653,32 +767,41 @@ $('#btnAdicionarBotao').click(function(){
 
                 <div class="col-md-4">
 
+                    <label>Texto</label>
                     <input
                     type="text"
                     name="botoes[${contadorBotoes}][texto]"
-                    class="form-control"
+                    class="form-control textoBotao"
                     placeholder="Texto do botão"
+                    maxlength="25"
+                    required
                     >
 
                 </div>
 
-                <div class="col-md-3">
+                <div class="col-md-4">
 
+                    <label>URL ou telefone</label>
                     <input
                     type="text"
                     name="botoes[${contadorBotoes}][valor]"
-                    class="form-control"
+                    class="form-control valorBotao"
                     placeholder="URL ou telefone"
+                    disabled
                     >
+                    <small class="form-text text-muted ajudaValorBotao">
+                        Resposta rápida não usa URL ou telefone.
+                    </small>
 
                 </div>
 
-                <div class="col-md-1">
+                <div class="col-md-1 d-flex align-items-end">
 
                     <button
                     type="button"
                     class="btn btn-danger removerBotao"
                     data-id="${contadorBotoes}"
+                    title="Remover botão"
                     >
                         X
                     </button>
@@ -694,8 +817,11 @@ $('#btnAdicionarBotao').click(function(){
     `;
 
     $('#areaBotoes').append(html);
+    atualizarCampoValorBotao($('#botao_' + contadorBotoes));
+    atualizarPreviewBotoesTemplate();
 
 });
+
 
 $(document).on('submit', '#formNovoTemplate', function(e){
 
@@ -706,115 +832,99 @@ $(document).on('submit', '#formNovoTemplate', function(e){
         let headerTexto = $('[name=header]').val();
 
         if(headerTexto.trim() == ''){
-
             alert('Informe o texto do Header.');
-
             e.preventDefault();
-
             return false;
-
         }
+    }
 
+    let textosValidar = [
+        $('[name=header]').val() || '',
+        $('[name=body]').val() || ''
+    ];
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        if($(this).find('.tipoBotao').val() == 'URL'){
+            textosValidar.push($(this).find('.valorBotao').val() || '');
+        }
+    });
+
+    for(let i = 0; i < textosValidar.length; i++){
+        if(!validarVariaveisTemplateTexto(textosValidar[i])){
+            alert('Existe uma variável inválida no template. Use o formato {{nome}} ou {{1}}.');
+            e.preventDefault();
+            return false;
+        }
     }
 
     let totalBotoes = 0;
     let totalUrl = 0;
     let totalTelefone = 0;
-    let totalQuick = 0;
+    let invalido = false;
 
-    $('#areaBotoes .card').each(function(){
+    $('#areaBotoes .card-botao-template').each(function(){
 
         totalBotoes++;
 
-        let tipo =
-            $(this).find('[name*="[tipo]"]').val();
-
-        let texto =
-            $(this).find('[name*="[texto]"]').val();
-
-        let valor =
-            $(this).find('[name*="[valor]"]').val();
+        let tipo = $(this).find('[name*="[tipo]"]').val();
+        let texto = $(this).find('[name*="[texto]"]').val();
+        let valor = $(this).find('[name*="[valor]"]').val();
 
         if(texto.trim() == ''){
-
             alert('Informe o texto de todos os botões.');
-
-            e.preventDefault();
-
+            invalido = true;
             return false;
-
         }
 
         if(tipo == 'URL'){
-
             totalUrl++;
 
             if(valor.trim() == ''){
-
                 alert('Informe a URL do botão.');
-
-                e.preventDefault();
-
+                invalido = true;
                 return false;
-
             }
 
+            if(!/^https?:\/\//i.test(valor.trim())){
+                alert('Informe uma URL válida iniciando com http:// ou https://.');
+                invalido = true;
+                return false;
+            }
         }
 
         if(tipo == 'PHONE_NUMBER'){
-
             totalTelefone++;
 
             if(valor.trim() == ''){
-
                 alert('Informe o telefone do botão.');
-
-                e.preventDefault();
-
+                invalido = true;
                 return false;
-
             }
-
         }
-
-        if(tipo == 'QUICK_REPLY'){
-
-            totalQuick++;
-
-        }
-
     });
 
-    if(totalBotoes > 10){
-
-        alert('A Meta permite no máximo 10 botões.');
-
+    if(invalido){
         e.preventDefault();
-
         return false;
+    }
 
+    if(totalBotoes > 10){
+        alert('A Meta permite no máximo 10 botões.');
+        e.preventDefault();
+        return false;
     }
 
     if(totalUrl > 2){
-
         alert('A Meta permite no máximo 2 botões de URL.');
-
         e.preventDefault();
-
         return false;
-
     }
 
     if(totalTelefone > 1){
-
         alert('A Meta permite no máximo 1 botão de telefone.');
-
         e.preventDefault();
-
         return false;
-
     }
-
 });
 
 $(document).on(
@@ -823,46 +933,110 @@ $(document).on(
     function(){
 
         $('#botao_' + $(this).data('id')).remove();
+        atualizarPreviewBotoesTemplate();
 
     }
 );
 
-$(document).on('input', '[name=body]', function(){
+$(document).on('change', '.tipoBotao', function(){
+    let card = $(this).closest('.card-botao-template');
+    let tipo = $(this).val();
 
-    let texto = $(this).val();
+    if(tipo == 'URL' && totalBotoesTemplatePorTipo('URL') > 2){
+        alert('A Meta permite no máximo 2 botões de URL.');
+        $(this).val('QUICK_REPLY');
+    }
 
-    let matches = texto.match(/{{(.*?)}}/g);
+    if(tipo == 'PHONE_NUMBER' && totalBotoesTemplatePorTipo('PHONE_NUMBER') > 1){
+        alert('A Meta permite no máximo 1 botão de telefone.');
+        $(this).val('QUICK_REPLY');
+    }
+
+    atualizarCampoValorBotao(card);
+    atualizarPreviewBotoesTemplate();
+});
+
+$(document).on('input', '.textoBotao, .valorBotao', function(){
+    atualizarPreviewBotoesTemplate();
+});
+
+$('#modalNovoTemplate').on('hidden.bs.modal', function(){
+    $('#areaBotoes').html('');
+    contadorBotoes = 0;
+    atualizarPreviewBotoesTemplate();
+});
+
+function validarVariaveisTemplateTexto(texto)
+{
+    texto = String(texto || '');
+
+    let matches = texto.match(/{{(.*?)}}/g) || [];
+
+    for(let i = 0; i < matches.length; i++){
+        let conteudo = matches[i]
+            .replace('{{', '')
+            .replace('}}', '');
+
+        if(conteudo !== conteudo.trim() || !/^[A-Za-z0-9_]+$/.test(conteudo)){
+            return false;
+        }
+    }
+
+    let textoSemVariaveisValidas = texto.replace(/{{[A-Za-z0-9_]+}}/g, '');
+
+    return !/[{}]/.test(textoSemVariaveisValidas);
+}
+
+function obterVariaveisNovoTemplate()
+{
+    let textos = [
+        $('[name=header]').val() || '',
+        $('[name=body]').val() || ''
+    ];
+
+    $('#areaBotoes .card-botao-template').each(function(){
+        if($(this).find('.tipoBotao').val() == 'URL'){
+            textos.push($(this).find('.valorBotao').val() || '');
+        }
+    });
 
     let variaveis = [];
 
-    if(matches){
+    textos.forEach(function(texto){
+        let matches = texto.match(/{{\s*([A-Za-z0-9_]+)\s*}}/g);
 
-        matches.forEach(function(v){
+        if(matches){
+            matches.forEach(function(v){
+                v = v
+                    .replace('{{', '')
+                    .replace('}}', '')
+                    .trim();
 
-            v = v
-                .replace('{{', '')
-                .replace('}}', '')
-                .trim();
+                if(!variaveis.includes(v)){
+                    variaveis.push(v);
+                }
+            });
+        }
+    });
 
-            if(!variaveis.includes(v)){
-                variaveis.push(v);
-            }
+    return variaveis;
+}
 
-        });
-
-    }
-
+function atualizarExemplosVariaveisTemplate()
+{
+    let variaveis = obterVariaveisNovoTemplate();
     let html = '';
 
     if(variaveis.length > 0){
 
-        variaveis.forEach(function(v){
+        variaveis.forEach(function(v, index){
 
             html += `
                 <div class="form-group">
 
                     <label>
                         Exemplo para {{${v}}}
+                        <small class="text-muted">${v} → {{${index + 1}}}</small>
                     </label>
 
                     <input
@@ -887,8 +1061,12 @@ $(document).on('input', '[name=body]', function(){
         $('#areaExemplosVariaveis').hide();
 
     }
+}
 
+$(document).on('input change', '[name=body], [name=header], .valorBotao, .tipoBotao', function(){
+    atualizarExemplosVariaveisTemplate();
 });
+
 
 function abrirPreviewTemplate(botao)
 {
