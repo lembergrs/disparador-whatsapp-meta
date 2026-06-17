@@ -492,37 +492,32 @@ $(document).ready(function(){
 
 
 
+            function coletarVariaveisTextoTemplate(texto){
+                let matches = String(texto || '').match(/{{(.*?)}}/g);
+
+                if(matches){
+                    matches.forEach(function(v){
+                        v = v.replace('{{','').replace('}}','').trim();
+
+                        if(v !== '' && !variaveis.includes(v)){
+                            variaveis.push(v);
+                        }
+                    });
+                }
+            }
+
             componentes.forEach(function(comp){
 
                 if(comp.text){
+                    coletarVariaveisTextoTemplate(comp.text);
+                }
 
-                    let matches =
-                        comp.text.match(
-                            /{{(.*?)}}/g
-                        );
-
-
-
-
-
-                    if(matches){
-
-                        matches.forEach(function(v){
-
-                            v = v
-                                .replace('{{','')
-                                .replace('}}','');
-
-                            if(!variaveis.includes(v)){
-
-                                variaveis.push(v);
-
-                            }
-
-                        });
-
-                    }
-
+                if(comp.type == 'BUTTONS' && comp.buttons){
+                    comp.buttons.forEach(function(btn){
+                        if(btn.url){
+                            coletarVariaveisTextoTemplate(btn.url);
+                        }
+                    });
                 }
 
             });
@@ -677,26 +672,32 @@ $(document).ready(function(){
 
         let variaveis = [];
 
+        function coletarVariaveisCampanha(texto){
+            let matches = String(texto || '').match(/{{(.*?)}}/g);
+
+            if(matches){
+                matches.forEach(function(v){
+                    v = v.replace('{{','').replace('}}','').trim();
+
+                    if(v !== '' && !variaveis.includes(v)){
+                        variaveis.push(v);
+                    }
+                });
+            }
+        }
+
         componentes.forEach(function(comp){
 
             if(comp.text){
+                coletarVariaveisCampanha(comp.text);
+            }
 
-                let matches = comp.text.match(/{{(.*?)}}/g);
-
-                if(matches){
-
-                    matches.forEach(function(v){
-
-                        v = v.replace('{{','').replace('}}','');
-
-                        if(!variaveis.includes(v)){
-                            variaveis.push(v);
-                        }
-
-                    });
-
-                }
-
+            if(comp.type == 'BUTTONS' && comp.buttons){
+                comp.buttons.forEach(function(btn){
+                    if(btn.url){
+                        coletarVariaveisCampanha(btn.url);
+                    }
+                });
             }
 
         });
@@ -946,12 +947,9 @@ $(document).ready(function(){
     {
         let variaveis = [];
 
-        componentes.forEach(function(comp){
-            if(!comp.text){
-                return;
-            }
-
-            let matches = comp.text.match(/{{(.*?)}}/g);
+        function coletarVariaveisTexto(texto)
+        {
+            let matches = String(texto || '').match(/{{(.*?)}}/g);
 
             if(!matches){
                 return;
@@ -964,15 +962,31 @@ $(document).ready(function(){
                     variaveis.push(v);
                 }
             });
-        });
+        }
 
-        variaveis.sort(function(a, b){
-            if(!isNaN(a) && !isNaN(b)){
-                return parseInt(a) - parseInt(b);
+        componentes.forEach(function(comp){
+            if(comp.text){
+                coletarVariaveisTexto(comp.text);
             }
 
-            return String(a).localeCompare(String(b));
+            if(comp.type == 'BUTTONS' && comp.buttons){
+                comp.buttons.forEach(function(botao){
+                    if(botao.url){
+                        coletarVariaveisTexto(botao.url);
+                    }
+                });
+            }
         });
+
+        let todasNumericas = variaveis.length > 0 && variaveis.every(function(v){
+            return !isNaN(v);
+        });
+
+        if(todasNumericas){
+            variaveis.sort(function(a, b){
+                return parseInt(a) - parseInt(b);
+            });
+        }
 
         return variaveis;
     }
@@ -1403,13 +1417,40 @@ $(document).ready(function(){
         let cancelados = 0;
         let atual = 0;
 
+        let autoScrollStatusDisparo = true;
+        const limiteProximoFimDisparo = 80;
+
+        function estaProximoFimStatusDisparo()
+        {
+            let box = $('#boxStatusNumeros');
+
+            if(!box.length){
+                return true;
+            }
+
+            let elemento = box[0];
+            let distanciaFim = elemento.scrollHeight
+                - elemento.scrollTop
+                - elemento.clientHeight;
+
+            return distanciaFim < limiteProximoFimDisparo;
+        }
+
+        $('#boxStatusNumeros')
+            .off('scroll.disparoAutoScroll')
+            .on('scroll.disparoAutoScroll', function(){
+                autoScrollStatusDisparo =
+                    estaProximoFimStatusDisparo();
+            });
+
         function rolarStatus()
         {
             let box = $('#boxStatusNumeros');
 
-            if(box.length){
-                box.scrollTop(
-                    box[0].scrollHeight
+            if(box.length && autoScrollStatusDisparo){
+                box.stop(true).animate(
+                    {scrollTop: box[0].scrollHeight},
+                    150
                 );
             }
         }
@@ -1431,7 +1472,7 @@ $(document).ready(function(){
                     + atual
                     + ' de '
                     + total
-                    + ' | Enviados: '
+                    + ' | Aceitos: '
                     + enviados
                     + ' | Erros: '
                     + erros
@@ -1462,7 +1503,7 @@ $(document).ready(function(){
                 $('#resumoFinalDisparo').html(`
                     <div class="alert alert-warning mt-3">
                         <strong>Envio cancelado.</strong><br>
-                        Enviados: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
+                        Aceitos: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
                         <br>
                         <button
                         type="button"
@@ -1488,7 +1529,7 @@ $(document).ready(function(){
             $('#resumoFinalDisparo').html(`
                 <div class="alert ${erros > 0 ? 'alert-warning' : 'alert-success'} mt-3">
                     <strong>Envio concluído.</strong><br>
-                    Enviados: ${enviados} | Erros: ${erros}
+                    Aceitos: ${enviados} | Erros: ${erros}
                     <br>
                     <button
                     type="button"
@@ -1650,11 +1691,11 @@ $(document).ready(function(){
                         enviados++;
 
                         $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-success">Enviado</span>'
+                            '<span class="badge badge-info">Aguardando confirmação</span>'
                         );
 
                         $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            '<span class="text-success">Mensagem enviada com sucesso</span>'
+                            '<span class="text-info">Enviado para processamento pela Meta</span>'
                         );
 
                     }else{
@@ -1674,7 +1715,7 @@ $(document).ready(function(){
                     }
 
                     let motivoDetalhe = retorno.sucesso
-                        ? 'Mensagem enviada com sucesso'
+                        ? 'Aguardando confirmação da Meta'
                         : mensagemCurtaErroDisparo(retorno.erro);
 
                     aplicarDetalhesLinha(
@@ -1682,7 +1723,7 @@ $(document).ready(function(){
                         montarDetalhesEnvioDisparo(
                             destino,
                             retorno,
-                            retorno.sucesso ? 'Enviado' : 'Erro',
+                            retorno.sucesso ? 'Aguardando confirmação' : 'Erro',
                             motivoDetalhe
                         )
                     );
@@ -1733,7 +1774,7 @@ $(document).ready(function(){
 
                     setTimeout(
                         enviarProximo,
-                        500
+                        200
                     );
 
                 }

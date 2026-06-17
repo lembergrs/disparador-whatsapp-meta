@@ -10,6 +10,7 @@ use Models\Cobranca;
 use Core\Database;
 use Models\Cliente;
 use Models\MetaConta;
+use Models\Assinatura;
 
 class FinanceiroAdminController extends Controller
 {
@@ -174,6 +175,13 @@ class FinanceiroAdminController extends Controller
                 $cobranca['CLI_ID']
             ]);
 
+            $assinaturaModel = new Assinatura();
+            $assinatura = $assinaturaModel->buscarAtualPorCliente($cobranca['CLI_ID']);
+
+            if($assinatura){
+                $assinaturaModel->ativar($assinatura['ASS_ID']);
+            }
+
             $db->commit();
 
             Session::flash(
@@ -282,6 +290,13 @@ class FinanceiroAdminController extends Controller
             $planoId,
             $clienteId
         ]);
+
+        $assinaturaModel = new Assinatura();
+        $assinaturaModel->criarOuAtualizarPorCliente(
+            $clienteId,
+            $plano,
+            'ativa'
+        );
 
         Session::flash(
             'success',

@@ -117,6 +117,27 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <?php } ?>
 
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Minha Assinatura</h3>
+    </div>
+    <div class="card-body">
+        <?php if(!empty($assinaturaAtual)){ ?>
+            <div class="row">
+                <div class="col-md-2"><small class="text-muted d-block">Plano contratado</small><strong><?= htmlspecialchars($assinaturaAtual['PLA_Nome']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Ciclo</small><strong><?= htmlspecialchars($assinaturaAtual['ASS_Ciclo']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Valor</small><strong>R$ <?= number_format($assinaturaAtual['ASS_Valor'], 2, ',', '.'); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Status</small><strong><?= ucfirst($assinaturaAtual['ASS_Status']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Próxima cobrança</small><strong><?= $assinaturaAtual['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataProximaCobranca'])) : '-'; ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Data de início</small><strong><?= $assinaturaAtual['ASS_DataInicio'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataInicio'])) : '-'; ?></strong></div>
+            </div>
+        <?php }else{ ?>
+            <div class="alert alert-info mb-0">Você ainda não possui uma assinatura ativa.</div>
+        <?php } ?>
+    </div>
+</div>
+
 <div class="card">
 
     <div class="card-header">
