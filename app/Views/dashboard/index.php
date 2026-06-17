@@ -140,6 +140,34 @@ function formatarDataDashboard($data)
         </div>
     </div>
 
+
+</div>
+
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-success">
+            <div class="inner"><h3><?= number_format($assinaturasAtivas, 0, ',', '.'); ?></h3><p>Assinaturas Ativas</p></div>
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-warning">
+            <div class="inner"><h3><?= number_format($assinaturasPendentes, 0, ',', '.'); ?></h3><p>Assinaturas Pendentes</p></div>
+            <div class="icon"><i class="fas fa-clock"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-danger">
+            <div class="inner"><h3><?= number_format($assinaturasVencidas, 0, ',', '.'); ?></h3><p>Assinaturas Vencidas</p></div>
+            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-6">
+        <div class="small-box bg-secondary">
+            <div class="inner"><h3><?= number_format($assinaturasCanceladas, 0, ',', '.'); ?></h3><p>Assinaturas Canceladas</p></div>
+            <div class="icon"><i class="fas fa-ban"></i></div>
+        </div>
+    </div>
 </div>
 
 <?php }else{ ?>
