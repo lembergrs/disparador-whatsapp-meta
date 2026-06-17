@@ -381,6 +381,9 @@ class MetaService
 
 
         $components = [];
+        $componentesOriginais = [];
+        $mapaVariaveis = [];
+        $contadorVariaveis = 1;
 
         /*
         |--------------------------------------------------------------------------
@@ -393,12 +396,38 @@ class MetaService
             if($dados['header_tipo'] == 'TEXT'
                 && !empty($dados['header'])){
 
-                $components[] = [
+                $headerOriginal = $dados['header'];
+                $headerTexto = $this->normalizarTextoVariaveisMeta(
+                    $headerOriginal,
+                    $mapaVariaveis,
+                    $contadorVariaveis
+                );
+
+                $headerComponent = [
 
                     'type'   => 'HEADER',
                     'format' => 'TEXT',
-                    'text'   => $dados['header']
+                    'text'   => $headerTexto
 
+                ];
+
+                $variaveisHeader = $this->extrairVariaveisTextoMeta($headerOriginal);
+
+                if(!empty($variaveisHeader)){
+                    $headerComponent['example'] = [
+                        'header_text' => $this->montarExemplosVariaveisMeta(
+                            $variaveisHeader,
+                            $dados['exemplos'] ?? []
+                        )
+                    ];
+                }
+
+                $components[] = $headerComponent;
+
+                $componentesOriginais[] = [
+                    'type' => 'HEADER',
+                    'format' => 'TEXT',
+                    'text' => $headerOriginal
                 ];
 
             }else{
@@ -408,6 +437,11 @@ class MetaService
                     'type'   => 'HEADER',
                     'format' => $dados['header_tipo']
 
+                ];
+
+                $componentesOriginais[] = [
+                    'type'   => 'HEADER',
+                    'format' => $dados['header_tipo']
                 ];
 
             }
@@ -420,38 +454,32 @@ class MetaService
         |--------------------------------------------------------------------------
         */
 
+        $bodyOriginal = $dados['body'];
+        $bodyTexto = $this->normalizarTextoVariaveisMeta(
+            $bodyOriginal,
+            $mapaVariaveis,
+            $contadorVariaveis
+        );
+
         $bodyComponent = [
 
             'type' => 'BODY',
 
-            'text' => $dados['body']
+            'text' => $bodyTexto
 
         ];
 
-        preg_match_all(
-            '/{{(.*?)}}/',
-            $dados['body'],
-            $matches
-        );
+        $variaveisBody = $this->extrairVariaveisTextoMeta($bodyOriginal);
 
-        if(!empty($matches[1])){
-
-            $exemplos = [];
-
-            foreach($matches[1] as $var){
-
-                $var = trim($var);
-
-                $exemplos[] =
-                    $dados['exemplos'][$var]
-                    ?? 'Exemplo';
-
-            }
+        if(!empty($variaveisBody)){
 
             $bodyComponent['example'] = [
 
                 'body_text' => [
-                    $exemplos
+                    $this->montarExemplosVariaveisMeta(
+                        $variaveisBody,
+                        $dados['exemplos'] ?? []
+                    )
                 ]
 
             ];
@@ -459,6 +487,11 @@ class MetaService
         }
 
         $components[] = $bodyComponent;
+
+        $componentesOriginais[] = [
+            'type' => 'BODY',
+            'text' => $bodyOriginal
+        ];
 
         /*
         |--------------------------------------------------------------------------
@@ -473,6 +506,11 @@ class MetaService
                 'type' => 'FOOTER',
                 'text' => $dados['footer']
 
+            ];
+
+            $componentesOriginais[] = [
+                'type' => 'FOOTER',
+                'text' => $dados['footer']
             ];
 
         }
@@ -490,56 +528,146 @@ class MetaService
         ){
 
             $buttons = [];
+            $buttonsOriginais = [];
+            $totalUrl = 0;
+            $totalTelefone = 0;
 
             foreach($dados['botoes'] as $botao){
 
-                if(empty($botao['texto'])){
+                $tipo = $botao['tipo'] ?? '';
+                $texto = trim($botao['texto'] ?? '');
+                $valor = trim($botao['valor'] ?? '');
+
+                if($texto == ''){
                     continue;
                 }
 
-                switch($botao['tipo']){
+                if(mb_strlen($texto) > 25){
+                    return [
+                        'error' => [
+                            'message' => 'O texto dos botões deve ter no máximo 25 caracteres.'
+                        ]
+                    ];
+                }
+
+                switch($tipo){
 
                     case 'QUICK_REPLY':
 
                         $buttons[] = [
 
                             'type' => 'QUICK_REPLY',
-                            'text' => $botao['texto']
+                            'text' => $texto
 
+                        ];
+
+                        $buttonsOriginais[] = [
+                            'type' => 'QUICK_REPLY',
+                            'text' => $texto
                         ];
 
                     break;
 
                     case 'URL':
 
-                        $buttons[] = [
+                        $totalUrl++;
+
+                        if($valor == '' || !preg_match('/^https?:\/\//i', $valor)){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe uma URL válida para todos os botões de URL.'
+                                ]
+                            ];
+                        }
+
+                        $urlOriginal = $valor;
+                        $urlMeta = $this->normalizarTextoVariaveisMeta(
+                            $urlOriginal,
+                            $mapaVariaveis,
+                            $contadorVariaveis
+                        );
+
+                        $botaoUrl = [
 
                             'type' => 'URL',
-                            'text' => $botao['texto'],
+                            'text' => $texto,
+                            'url'  => $urlMeta
 
-                            'url'  =>
-                                $botao['valor']
-                                ?? ''
+                        ];
 
+                        $variaveisUrl = $this->extrairVariaveisTextoMeta($urlOriginal);
+
+                        if(!empty($variaveisUrl)){
+                            $botaoUrl['example'] = [
+                                $this->montarExemploUrlMeta(
+                                    $urlOriginal,
+                                    $dados['exemplos'] ?? []
+                                )
+                            ];
+                        }
+
+                        $buttons[] = $botaoUrl;
+
+                        $buttonsOriginais[] = [
+                            'type' => 'URL',
+                            'text' => $texto,
+                            'url' => $urlOriginal
                         ];
 
                     break;
 
                     case 'PHONE_NUMBER':
 
+                        $totalTelefone++;
+
+                        if($valor == ''){
+                            return [
+                                'error' => [
+                                    'message' => 'Informe o telefone para todos os botões de telefone.'
+                                ]
+                            ];
+                        }
+
                         $buttons[] = [
 
                             'type' => 'PHONE_NUMBER',
-                            'text' => $botao['texto'],
+                            'text' => $texto,
+                            'phone_number' => preg_replace('/[^0-9+]/', '', $valor)
 
-                            'phone_number' =>
-                                $botao['valor']
-                                ?? ''
+                        ];
 
+                        $buttonsOriginais[] = [
+                            'type' => 'PHONE_NUMBER',
+                            'text' => $texto,
+                            'phone_number' => preg_replace('/[^0-9+]/', '', $valor)
                         ];
 
                     break;
 
+                }
+
+                if(count($buttons) > 10){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 10 botões por template.'
+                        ]
+                    ];
+                }
+
+                if($totalUrl > 2){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 2 botões de URL.'
+                        ]
+                    ];
+                }
+
+                if($totalTelefone > 1){
+                    return [
+                        'error' => [
+                            'message' => 'A Meta permite no máximo 1 botão de telefone.'
+                        ]
+                    ];
                 }
 
             }
@@ -552,6 +680,11 @@ class MetaService
 
                     'buttons' => $buttons
 
+                ];
+
+                $componentesOriginais[] = [
+                    'type' => 'BUTTONS',
+                    'buttons' => $buttonsOriginais
                 ];
 
             }
@@ -586,6 +719,15 @@ class MetaService
 
 
 
+        if(!empty($mapaVariaveis)){
+            $componentesOriginais[] = [
+                'type' => 'VARIABLE_MAPPING',
+                'mapping' => $mapaVariaveis
+            ];
+        }
+
+
+
         $payload = [
 
             'name' => $nomeTemplate,
@@ -599,6 +741,17 @@ class MetaService
         ];
 
 
+
+
+
+        $this->registrarLogTemplateMeta('request', [
+            'cli_id' => $this->conta['CLI_ID'] ?? null,
+            'waba_id' => $this->conta['MTA_WabaId'] ?? null,
+            'template' => $nomeTemplate,
+            'categoria' => $dados['categoria'] ?? null,
+            'idioma' => $dados['idioma'] ?? null,
+            'payload' => $payload
+        ]);
 
 
 
@@ -637,16 +790,58 @@ class MetaService
         $response =
             curl_exec($curl);
 
+        $curlError = curl_error($curl);
+
+        $httpCode = curl_getinfo(
+            $curl,
+            CURLINFO_HTTP_CODE
+        );
+
         curl_close($curl);
 
 
 
-
-
-        return json_decode(
+        $retorno = json_decode(
             $response,
             true
         );
+
+        if(!is_array($retorno)){
+            $retorno = [
+                'error' => [
+                    'message' => $curlError ?: 'Resposta inválida da Meta.'
+                ],
+                'raw_response' => $response
+            ];
+        }
+
+        $retorno['http_code'] = $httpCode;
+        $retorno['raw_response'] = $response;
+
+        if($curlError){
+            $retorno['curl_error'] = $curlError;
+        }
+
+        $retorno['template_local'] = [
+            'name' => $nomeTemplate,
+            'category' => $dados['categoria'],
+            'language' => $dados['idioma'],
+            'status' => $retorno['status'] ?? 'PENDING',
+            'components' => !empty($componentesOriginais) ? $componentesOriginais : $components
+        ];
+
+        $this->registrarLogTemplateMeta('response', [
+            'cli_id' => $this->conta['CLI_ID'] ?? null,
+            'waba_id' => $this->conta['MTA_WabaId'] ?? null,
+            'template' => $nomeTemplate,
+            'categoria' => $dados['categoria'] ?? null,
+            'idioma' => $dados['idioma'] ?? null,
+            'http_code' => $httpCode,
+            'response' => $retorno,
+            'error' => $this->extrairErroLogTemplateMeta($retorno)
+        ]);
+
+        return $retorno;
     }
 
 
@@ -678,6 +873,11 @@ class MetaService
 
 
 
+
+        $variaveis = $this->ordenarVariaveisEnvioTemplate(
+            $variaveis,
+            $template
+        );
 
         foreach($variaveis as $nome => $valor){
 
@@ -815,6 +1015,236 @@ class MetaService
         $retorno['payload'] = $payload;
 
         return $retorno;
+    }
+
+
+
+
+    public static function validarSintaxeVariaveisTemplate($texto)
+    {
+        $texto = (string) $texto;
+
+        preg_match_all('/{{(.*?)}}/s', $texto, $matches);
+
+        foreach(($matches[1] ?? []) as $conteudo){
+            if(
+                $conteudo !== trim($conteudo)
+                ||
+                !preg_match('/^[A-Za-z0-9_]+$/', $conteudo)
+            ){
+                return false;
+            }
+        }
+
+        $textoSemVariaveisValidas = preg_replace(
+            '/{{[A-Za-z0-9_]+}}/',
+            '',
+            $texto
+        );
+
+        return !preg_match('/[{}]/', $textoSemVariaveisValidas);
+    }
+
+
+
+    private function validarTextoVariaveisMeta($texto)
+    {
+        if(!self::validarSintaxeVariaveisTemplate($texto)){
+            throw new Exception('Existe uma variável inválida no template. Use o formato {{nome}} ou {{1}}.');
+        }
+    }
+
+
+
+    private function extrairVariaveisTextoMeta($texto)
+    {
+        $this->validarTextoVariaveisMeta($texto);
+
+        preg_match_all('/{{\s*([A-Za-z0-9_]+)\s*}}/', $texto, $matches);
+
+        $variaveis = [];
+
+        foreach(($matches[1] ?? []) as $variavel){
+            if(!in_array($variavel, $variaveis, true)){
+                $variaveis[] = $variavel;
+            }
+        }
+
+        return $variaveis;
+    }
+
+
+
+    private function normalizarTextoVariaveisMeta($texto, &$mapa, &$contador)
+    {
+        $this->validarTextoVariaveisMeta($texto);
+
+        return preg_replace_callback(
+            '/{{\s*([A-Za-z0-9_]+)\s*}}/',
+            function($match) use (&$mapa, &$contador){
+                $variavel = $match[1];
+
+                if(!isset($mapa[$variavel])){
+                    $mapa[$variavel] = ctype_digit($variavel)
+                        ? (int) $variavel
+                        : $contador++;
+
+                    if(ctype_digit($variavel) && (int) $variavel >= $contador){
+                        $contador = ((int) $variavel) + 1;
+                    }
+                }
+
+                return '{{' . $mapa[$variavel] . '}}';
+            },
+            $texto
+        );
+    }
+
+
+
+    private function montarExemplosVariaveisMeta($variaveis, $exemplosRecebidos)
+    {
+        $exemplos = [];
+
+        foreach($variaveis as $variavel){
+            $exemplos[] = $exemplosRecebidos[$variavel]
+                ?? $exemplosRecebidos[(string) $variavel]
+                ?? 'Exemplo';
+        }
+
+        return $exemplos;
+    }
+
+
+
+    private function montarExemploUrlMeta($url, $exemplosRecebidos)
+    {
+        return preg_replace_callback(
+            '/{{\s*([A-Za-z0-9_]+)\s*}}/',
+            function($match) use ($exemplosRecebidos){
+                $variavel = $match[1];
+
+                return $exemplosRecebidos[$variavel]
+                    ?? $exemplosRecebidos[(string) $variavel]
+                    ?? 'exemplo';
+            },
+            $url
+        );
+    }
+
+
+
+    private function ordenarVariaveisEnvioTemplate($variaveis, $template)
+    {
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return $variaveis;
+        }
+
+        $mapping = [];
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'VARIABLE_MAPPING'){
+                $mapping = $componente['mapping'] ?? [];
+                break;
+            }
+        }
+
+        if(empty($mapping)){
+            return $variaveis;
+        }
+
+        asort($mapping, SORT_NUMERIC);
+
+        $ordenadas = [];
+
+        foreach($mapping as $nome => $numero){
+            if(array_key_exists($nome, $variaveis)){
+                $ordenadas[(int) $numero] = $variaveis[$nome];
+                continue;
+            }
+
+            if(array_key_exists((string) $numero, $variaveis)){
+                $ordenadas[(int) $numero] = $variaveis[(string) $numero];
+            }
+        }
+
+        ksort($ordenadas, SORT_NUMERIC);
+
+        return !empty($ordenadas) ? array_values($ordenadas) : $variaveis;
+    }
+
+
+
+
+    private function registrarLogTemplateMeta($fase, $dados)
+    {
+        $diretorio = dirname(__DIR__, 2) . '/storage/logs';
+
+        if(!is_dir($diretorio)){
+            mkdir($diretorio, 0755, true);
+        }
+
+        $registro = [
+            'data_hora' => date('Y-m-d H:i:s'),
+            'fase' => $fase,
+            'dados' => $this->mascararDadosSensiveisTemplateMeta($dados)
+        ];
+
+        file_put_contents(
+            $diretorio . '/meta_templates.log',
+            json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+
+
+    private function mascararDadosSensiveisTemplateMeta($dados)
+    {
+        if(!is_array($dados)){
+            return $dados;
+        }
+
+        foreach($dados as $chave => $valor){
+            $chaveNormalizada = strtolower((string) $chave);
+
+            if(
+                strpos($chaveNormalizada, 'token') !== false
+                ||
+                strpos($chaveNormalizada, 'authorization') !== false
+            ){
+                $dados[$chave] = '[mascarado]';
+                continue;
+            }
+
+            if(is_array($valor)){
+                $dados[$chave] = $this->mascararDadosSensiveisTemplateMeta($valor);
+            }
+        }
+
+        return $dados;
+    }
+
+
+
+    private function extrairErroLogTemplateMeta($retorno)
+    {
+        if(empty($retorno['error']) || !is_array($retorno['error'])){
+            return null;
+        }
+
+        $erro = $retorno['error'];
+
+        return [
+            'message' => $erro['message'] ?? null,
+            'code' => $erro['code'] ?? null,
+            'error_subcode' => $erro['error_subcode'] ?? null,
+            'error_data' => $erro['error_data'] ?? null,
+            'fbtrace_id' => $erro['fbtrace_id'] ?? null
+        ];
     }
 
 }

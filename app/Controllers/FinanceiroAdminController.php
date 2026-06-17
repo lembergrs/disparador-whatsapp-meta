@@ -10,6 +10,7 @@ use Models\Cobranca;
 use Core\Database;
 use Models\Cliente;
 use Models\MetaConta;
+use Models\Assinatura;
 
 class FinanceiroAdminController extends Controller
 {
@@ -44,12 +45,24 @@ class FinanceiroAdminController extends Controller
             $this->redirect('financeiroAdmin');
         }
 
+        if(trim((string) ($_POST['valor_mensal'] ?? '')) === ''){
+            Session::flash(
+                'error',
+                'Informe o valor mensal do plano.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
         $planoModel = new Plano();
 
         $planoModel->salvar([
             'nome' => $_POST['nome'],
             'periodicidade' => $_POST['periodicidade'],
-            'valor' => $_POST['valor'],
+            'valor_mensal' => $_POST['valor_mensal'] ?? $_POST['valor'] ?? '',
+            'valor_trimestral' => $_POST['valor_trimestral'] ?? '',
+            'valor_semestral' => $_POST['valor_semestral'] ?? '',
+            'valor_anual' => $_POST['valor_anual'] ?? '',
             'numeros' => $_POST['numeros'],
             'usuarios' => $_POST['usuarios'],
             'mensagens' => $_POST['mensagens'],
@@ -85,12 +98,24 @@ class FinanceiroAdminController extends Controller
             $this->redirect('financeiroAdmin');
         }
 
+        if(trim((string) ($_POST['valor_mensal'] ?? '')) === ''){
+            Session::flash(
+                'error',
+                'Informe o valor mensal do plano.'
+            );
+
+            $this->redirect('financeiroAdmin');
+        }
+
         $planoModel = new Plano();
 
         $planoModel->editar($id, [
             'nome' => $_POST['nome'],
             'periodicidade' => $_POST['periodicidade'],
-            'valor' => $_POST['valor'],
+            'valor_mensal' => $_POST['valor_mensal'] ?? $_POST['valor'] ?? '',
+            'valor_trimestral' => $_POST['valor_trimestral'] ?? '',
+            'valor_semestral' => $_POST['valor_semestral'] ?? '',
+            'valor_anual' => $_POST['valor_anual'] ?? '',
             'numeros' => $_POST['numeros'],
             'usuarios' => $_POST['usuarios'],
             'mensagens' => $_POST['mensagens'],
@@ -174,6 +199,13 @@ class FinanceiroAdminController extends Controller
                 $cobranca['CLI_ID']
             ]);
 
+            $assinaturaModel = new Assinatura();
+            $assinatura = $assinaturaModel->buscarAtualPorCliente($cobranca['CLI_ID']);
+
+            if($assinatura){
+                $assinaturaModel->ativar($assinatura['ASS_ID']);
+            }
+
             $db->commit();
 
             Session::flash(
@@ -226,8 +258,9 @@ class FinanceiroAdminController extends Controller
 
         $clienteId = (int) ($_POST['cliente_id'] ?? 0);
         $planoId = (int) ($_POST['plano_id'] ?? 0);
+        $ciclo = $_POST['ciclo'] ?? 'mensal';
 
-        if(!$clienteId || !$planoId){
+        if(!$clienteId || !$planoId || !Plano::cicloValido($ciclo)){
 
             Session::flash(
                 'error',
@@ -270,23 +303,57 @@ class FinanceiroAdminController extends Controller
             $this->redirect('financeiroAdmin#tabClientes');
         }
 
+        $valorCiclo = Plano::valorPorCiclo($plano, $ciclo);
+        $proximaCobranca = date(
+            'Y-m-d',
+            strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months')
+        );
+
         $db = Database::getInstance();
 
-        $sql = $db->prepare("
-            UPDATE clientes
-            SET CLI_Plano_DR = ?
-            WHERE CLI_ID = ?
-        ");
+        $db->beginTransaction();
 
-        $sql->execute([
-            $planoId,
-            $clienteId
-        ]);
+        try{
 
-        Session::flash(
-            'success',
-            'Plano do cliente atualizado.'
-        );
+            $sql = $db->prepare("
+                UPDATE clientes
+                SET CLI_Plano_DR = ?
+                WHERE CLI_ID = ?
+            ");
+
+            $sql->execute([
+                $planoId,
+                $clienteId
+            ]);
+
+            $assinaturaModel = new Assinatura();
+            $assinaturaModel->criarOuAtualizarPorCliente(
+                $clienteId,
+                $plano,
+                'ativa',
+                [
+                    'ciclo' => $ciclo,
+                    'valor' => $valorCiclo,
+                    'proxima_cobranca' => $proximaCobranca
+                ]
+            );
+
+            $db->commit();
+
+            Session::flash(
+                'success',
+                'Plano do cliente atualizado.'
+            );
+
+        }catch(\Exception $e){
+
+            $db->rollBack();
+
+            Session::flash(
+                'error',
+                'Erro ao atualizar plano do cliente.'
+            );
+        }
 
         $this->redirect('financeiroAdmin#tabClientes');
     }

@@ -425,7 +425,7 @@ class CampanhaController extends Controller
             $campo =
                 $var['CPV_Campo'];
 
-            $parametros[] =
+            $parametros[$var['CPV_Variavel']] =
                 $dadosContato[$campo] ?? '';
 
         }
