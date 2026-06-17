@@ -105,24 +105,46 @@ class Assinatura
         return $this->alterarStatus($id, 'vencida');
     }
 
-    public function criarOuAtualizarPorCliente($clienteId, $plano, $status = 'pendente')
+    public function criarOuAtualizarPorCliente($clienteId, $plano, $status = 'pendente', $opcoes = [])
     {
         $assinatura = $this->buscarAtualPorCliente($clienteId);
         $dados = [
             'cliente' => $clienteId,
             'plano' => $plano['PLA_ID'],
-            'ciclo' => $plano['PLA_Periodicidade'],
+            'ciclo' => $opcoes['ciclo'] ?? $plano['PLA_Periodicidade'],
             'status' => $status,
-            'valor' => $plano['PLA_Valor'],
+            'valor' => $opcoes['valor'] ?? $plano['PLA_Valor'],
             'dia_vencimento' => (int) date('d'),
             'data_inicio' => date('Y-m-d'),
             'data_fim' => null,
-            'proxima_cobranca' => date('Y-m-d', strtotime('+3 days'))
+            'proxima_cobranca' => $opcoes['proxima_cobranca'] ?? date('Y-m-d', strtotime('+3 days'))
         ];
 
-        if($assinatura){
+        if(!$assinatura){
+            return $this->criar($dados);
+        }
+
+        $mesmoPlano =
+            (int) $assinatura['PLA_ID']
+            ===
+            (int) $plano['PLA_ID'];
+
+        $mesmoCiclo =
+            (string) $assinatura['ASS_Ciclo']
+            ===
+            (string) $dados['ciclo'];
+
+        $assinaturaPodeSerAtualizada = in_array(
+            $assinatura['ASS_Status'],
+            ['ativa', 'pendente'],
+            true
+        );
+
+        if($mesmoPlano && $mesmoCiclo && $assinaturaPodeSerAtualizada){
             return $this->atualizar($assinatura['ASS_ID'], $dados);
         }
+
+        $this->encerrarVigentesDoCliente($clienteId);
 
         return $this->criar($dados);
     }
@@ -148,7 +170,7 @@ class Assinatura
             $params[] = $ignorarId;
         }
 
-        $sql = $this->db->prepare("\n            UPDATE assinaturas\n            SET ASS_Status = 'cancelada',\n                ASS_DataFim = COALESCE(ASS_DataFim, CURDATE()),\n                ASS_DataAtualizacao = NOW()\n            WHERE CLI_ID = ?\n            AND ASS_Status IN ('ativa','pendente','vencida')\n            {$filtroIgnorar}\n        ");
+        $sql = $this->db->prepare("\n            UPDATE assinaturas\n            SET ASS_Status = 'cancelada',\n                ASS_DataFim = COALESCE(ASS_DataFim, CURDATE()),\n                ASS_DataAtualizacao = NOW()\n            WHERE CLI_ID = ?\n            AND ASS_Status IN ('ativa','pendente')\n            {$filtroIgnorar}\n        ");
 
         return $sql->execute($params);
     }
