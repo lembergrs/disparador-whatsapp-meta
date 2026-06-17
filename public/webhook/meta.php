@@ -296,6 +296,10 @@ foreach($entries as $entry){
                     continue;
                 }
 
+                $statusInterno = mapearStatusMeta($statusMsg);
+                $erroMeta = extrairErroStatusMeta($status);
+                $retornoStatus = json_encode($status, JSON_UNESCAPED_UNICODE);
+
                 $sql = $db->prepare("
                     UPDATE conversa_mensagens
                     SET
@@ -305,8 +309,35 @@ foreach($entries as $entry){
                 ");
 
                 $sql->execute([
-                    $statusMsg,
-                    json_encode($status, JSON_UNESCAPED_UNICODE),
+                    $statusInterno,
+                    $retornoStatus,
+                    $messageId
+                ]);
+
+                $db->prepare("
+                    UPDATE disparos
+                    SET
+                        DSP_Status = ?,
+                        DSP_Retorno = ?
+                    WHERE DSP_MessageId = ?
+                ")->execute([
+                    $statusInterno,
+                    $retornoStatus,
+                    $messageId
+                ]);
+
+                $db->prepare("
+                    UPDATE fila_envio
+                    SET
+                        FIL_Status = ?,
+                        FIL_Erro = CASE WHEN ? IS NOT NULL THEN ? ELSE FIL_Erro END,
+                        FIL_Retorno = ?
+                    WHERE FIL_MessageId = ?
+                ")->execute([
+                    $statusInterno,
+                    $erroMeta,
+                    $erroMeta,
+                    $retornoStatus,
                     $messageId
                 ]);
 
@@ -321,3 +352,46 @@ foreach($entries as $entry){
 http_response_code(200);
 
 echo 'EVENT_RECEIVED';
+
+
+
+function mapearStatusMeta($status)
+{
+    $mapa = [
+        'sent' => 'enviada',
+        'delivered' => 'entregue',
+        'read' => 'lida',
+        'failed' => 'falhou'
+    ];
+
+    return $mapa[$status] ?? $status;
+}
+
+
+
+function extrairErroStatusMeta($status)
+{
+    $erro = $status['errors'][0] ?? null;
+
+    if(!$erro){
+        return null;
+    }
+
+    $partes = [];
+
+    foreach(['title', 'message', 'details', 'error_data'] as $campo){
+        if(empty($erro[$campo])){
+            continue;
+        }
+
+        $partes[] = is_array($erro[$campo])
+            ? json_encode($erro[$campo], JSON_UNESCAPED_UNICODE)
+            : $erro[$campo];
+    }
+
+    if(!empty($erro['code'])){
+        $partes[] = 'Código: ' . $erro['code'];
+    }
+
+    return trim(implode(' | ', array_filter($partes))) ?: 'Falha confirmada pela Meta';
+}

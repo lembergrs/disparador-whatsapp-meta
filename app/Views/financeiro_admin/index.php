@@ -1,3 +1,36 @@
+<?php
+if(!function_exists('valorPlanoCicloAdmin')){
+    function valorPlanoCicloAdmin($plano, $ciclo)
+    {
+        return \Models\Plano::valorPorCiclo($plano, $ciclo);
+    }
+}
+
+if(!function_exists('corPlanoAdmin')){
+    function corPlanoAdmin($cor)
+    {
+        $cor = trim((string) $cor);
+        return $cor !== '' ? $cor : 'secondary';
+    }
+}
+
+if(!function_exists('nomeCorPlanoAdmin')){
+    function nomeCorPlanoAdmin($cor)
+    {
+        $nomes = [
+            'secondary' => 'Cinza',
+            'primary' => 'Azul',
+            'success' => 'Verde',
+            'warning' => 'Amarelo',
+            'danger' => 'Vermelho',
+            'info' => 'Ciano',
+            'dark' => 'Preto'
+        ];
+
+        return $nomes[$cor] ?? ucfirst($cor);
+    }
+}
+?>
 <div class="card">
 
     <div class="card-header">
@@ -79,8 +112,11 @@
                         <tr>
 
                             <th>Plano</th>
-                            <th>Periodicidade</th>
-                            <th>Valor</th>
+                            <th>Cor</th>
+                            <th>Mensal</th>
+                            <th>Trimestral</th>
+                            <th>Semestral</th>
+                            <th>Anual</th>
                             <th>Números</th>
                             <th>Usuários</th>
                             <th>Mensagens/Mês</th>
@@ -102,12 +138,28 @@
                                     <?= htmlspecialchars($plano['PLA_Nome']); ?>
                                 </td>
 
+                                <?php $corPlano = corPlanoAdmin($plano['PLA_Cor'] ?? ''); ?>
                                 <td>
-                                    <?= ucfirst($plano['PLA_Periodicidade']); ?>
+                                    <span class="badge badge-<?= htmlspecialchars($corPlano); ?>">
+                                        &nbsp;
+                                    </span>
+                                    <?= htmlspecialchars(nomeCorPlanoAdmin($corPlano)); ?>
                                 </td>
 
                                 <td>
-                                    R$ <?= number_format($plano['PLA_Valor'], 2, ',', '.'); ?>
+                                    R$ <?= number_format(valorPlanoCicloAdmin($plano, 'mensal'), 2, ',', '.'); ?>
+                                </td>
+
+                                <td>
+                                    R$ <?= number_format(valorPlanoCicloAdmin($plano, 'trimestral'), 2, ',', '.'); ?>
+                                </td>
+
+                                <td>
+                                    R$ <?= number_format(valorPlanoCicloAdmin($plano, 'semestral'), 2, ',', '.'); ?>
+                                </td>
+
+                                <td>
+                                    R$ <?= number_format(valorPlanoCicloAdmin($plano, 'anual'), 2, ',', '.'); ?>
                                 </td>
 
                                 <td>
@@ -156,7 +208,15 @@
 
                                     data-periodicidade="<?= $plano['PLA_Periodicidade']; ?>"
 
-                                    data-valor="<?= $plano['PLA_Valor']; ?>"
+                                    data-cor="<?= htmlspecialchars(corPlanoAdmin($plano['PLA_Cor'] ?? '')); ?>"
+
+                                    data-valor-mensal="<?= valorPlanoCicloAdmin($plano, 'mensal'); ?>"
+
+                                    data-valor-trimestral="<?= valorPlanoCicloAdmin($plano, 'trimestral'); ?>"
+
+                                    data-valor-semestral="<?= valorPlanoCicloAdmin($plano, 'semestral'); ?>"
+
+                                    data-valor-anual="<?= valorPlanoCicloAdmin($plano, 'anual'); ?>"
 
                                     data-numeros="<?= $plano['PLA_LimiteNumeros']; ?>"
 
@@ -199,6 +259,26 @@
             class="tab-pane fade"
             id="tabCobrancas"
             >
+
+                <div class="mb-3 text-right">
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/gerarCobrancasRecorrentes#tabCobrancas"
+                    class="btn btn-success mr-2"
+                    onclick="return confirm('Gerar cobranças recorrentes agora?')"
+                    >
+                        <i class="fas fa-sync-alt"></i>
+                        Gerar cobranças recorrentes
+                    </a>
+
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/processarVencimentos#tabCobrancas"
+                    class="btn btn-warning"
+                    onclick="return confirm('Processar vencimentos financeiros agora?')"
+                    >
+                        <i class="fas fa-calendar-times"></i>
+                        Processar vencimentos
+                    </a>
+                </div>
 
                 <table
                 class="table table-bordered table-striped datatable"
@@ -315,8 +395,11 @@
                                 <td width="180">
 
                                     <?php if(
-                                        $statusCobranca
-                                        == 'pendente'
+                                        in_array(
+                                            $statusCobranca,
+                                            ['pendente', 'vencido'],
+                                            true
+                                        )
                                     ){ ?>
 
                                         <a
@@ -601,17 +684,67 @@ tabindex="-1"
 
                     </div>
 
-                    <div class="form-group">
+                    <div class="form-row">
 
-                        <label>Valor</label>
+                        <div class="form-group col-md-6">
 
-                        <input
-                        type="text"
-                        name="valor"
-                        id="valor"
-                        class="form-control"
-                        required
-                        >
+                            <label>Valor mensal</label>
+
+                            <input
+                            type="text"
+                            name="valor_mensal"
+                            id="valor_mensal"
+                            class="form-control"
+                            required
+                            >
+
+                        </div>
+
+                        <div class="form-group col-md-6">
+
+                            <label>Valor trimestral</label>
+
+                            <input
+                            type="text"
+                            name="valor_trimestral"
+                            id="valor_trimestral"
+                            class="form-control"
+                            placeholder="Automático: mensal x 3"
+                            >
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-row">
+
+                        <div class="form-group col-md-6">
+
+                            <label>Valor semestral</label>
+
+                            <input
+                            type="text"
+                            name="valor_semestral"
+                            id="valor_semestral"
+                            class="form-control"
+                            placeholder="Automático: mensal x 6"
+                            >
+
+                        </div>
+
+                        <div class="form-group col-md-6">
+
+                            <label>Valor anual</label>
+
+                            <input
+                            type="text"
+                            name="valor_anual"
+                            id="valor_anual"
+                            class="form-control"
+                            placeholder="Automático: mensal x 12"
+                            >
+
+                        </div>
 
                     </div>
 
@@ -695,7 +828,7 @@ tabindex="-1"
 
                         <div
                         id="previewCor"
-                        class="badge badge-primary mt-2"
+                        class="badge badge-secondary mt-2"
                         >
                             Exemplo do Plano
                         </div>
@@ -798,6 +931,24 @@ tabindex="-1"
 
                     </div>
 
+                    <div class="form-group">
+
+                        <label>Ciclo</label>
+
+                        <select
+                        name="ciclo"
+                        id="ciclo_cliente"
+                        class="form-control"
+                        required
+                        >
+                            <option value="mensal">Mensal</option>
+                            <option value="trimestral">Trimestral</option>
+                            <option value="semestral">Semestral</option>
+                            <option value="anual">Anual</option>
+                        </select>
+
+                    </div>
+
                 </div>
 
                 <div class="modal-footer">
@@ -841,8 +992,17 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('periodicidade').value =
             botao.dataset.periodicidade;
 
-        document.getElementById('valor').value =
-            botao.dataset.valor;
+        document.getElementById('valor_mensal').value =
+            botao.dataset.valorMensal;
+
+        document.getElementById('valor_trimestral').value =
+            botao.dataset.valorTrimestral;
+
+        document.getElementById('valor_semestral').value =
+            botao.dataset.valorSemestral;
+
+        document.getElementById('valor_anual').value =
+            botao.dataset.valorAnual;
 
         document.getElementById('numeros').value =
             botao.dataset.numeros;
@@ -855,6 +1015,11 @@ document.addEventListener('DOMContentLoaded', function(){
 
         document.getElementById('excedente').value =
             botao.dataset.excedente;
+
+        document.getElementById('cor').value =
+            botao.dataset.cor || 'secondary';
+
+        atualizarPreviewCor();
 
         document.getElementById('formPlano').action =
             '<?= BASE_URL; ?>/index.php?url=financeiroAdmin/editarPlano';
@@ -894,6 +1059,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
         document.getElementById('plano_id').value = '';
 
+        document.getElementById('cor').value = 'secondary';
+        atualizarPreviewCor();
+
         document.getElementById('formPlano').action =
             '<?= BASE_URL; ?>/index.php?url=financeiroAdmin/salvarPlano';
 
@@ -902,9 +1070,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     });
 
-    $('#cor').on('change', function(){
+    function atualizarPreviewCor(){
 
-        let cor = $(this).val();
+        let cor = $('#cor').val() || 'secondary';
 
         $('#previewCor')
             .removeClass(
@@ -914,7 +1082,10 @@ document.addEventListener('DOMContentLoaded', function(){
                 'badge-' + cor
             );
 
-    }).trigger('change');
+    }
+
+    $('#cor').on('change', atualizarPreviewCor);
+    atualizarPreviewCor();
 
     if(window.location.hash){
 

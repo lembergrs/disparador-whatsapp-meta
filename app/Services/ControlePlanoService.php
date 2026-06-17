@@ -45,8 +45,10 @@ class ControlePlanoService
             );
 
         $limitePlano =
-            (int)
-            $cliente['PLA_LimiteMensagens'];
+            (int)(
+                $consumo['CMS_LimiteMensagens']
+                ?? $cliente['PLA_LimiteMensagens']
+            );
 
         if(
             $mensagensUtilizadas
@@ -57,8 +59,10 @@ class ControlePlanoService
         }
 
         $valorExcedente =
-            (float)
-            $cliente['PLA_ValorMensagemExcedente'];
+            (float)(
+                $consumo['CMS_ValorMensagemExcedente']
+                ?? $cliente['PLA_ValorMensagemExcedente']
+            );
 
         $excedenteModel =
             new ExcedenteMensal();
@@ -66,7 +70,11 @@ class ControlePlanoService
         $excedenteModel
             ->registrarExcedente(
                 $cliId,
-                $valorExcedente
+                $valorExcedente,
+                [
+                    'PLA_ID' => $consumo['CMS_PLA_ID'] ?? $cliente['PLA_ID'],
+                    'PLA_LimiteMensagens' => $limitePlano
+                ]
             );
     }
 }
