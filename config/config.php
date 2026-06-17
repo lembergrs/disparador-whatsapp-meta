@@ -3,11 +3,20 @@
 $host = $_SERVER['HTTP_HOST'] ?? '';
 
 if ($host === 'disparador.test') {
+
     define('BASE_URL', 'http://disparador.test');
     define('ASSET_URL', BASE_URL . '/assets');
+
 } else {
-    define('BASE_URL', 'https://disparador.rosemegamania.com');
+
+    $protocolo =
+        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            ? 'https'
+            : 'http';
+
+    define('BASE_URL', $protocolo . '://' . $host);
     define('ASSET_URL', BASE_URL . '/public/assets');
+
 }
 
 define('RECAPTCHA_SITE_KEY', '6LdDLBQtAAAAAEp5UhSPe_cikIC5u3VDrtq1-rse');
