@@ -172,7 +172,7 @@ class DisparoController extends Controller
                 $messageId =
                     $response['messages'][0]['id'];
 
-                $status = 'enviado';
+                $status = 'aguardando_confirmacao';
 
                 $consumo =
                     new ConsumoMensal();
@@ -286,14 +286,14 @@ class DisparoController extends Controller
                 'success',
                 'Envio concluído. '
                 . $totalEnviados
-                . ' mensagem(ns) enviada(s).'
+                . ' mensagem(ns) aceita(s) para processamento.'
             );
 
         }else{
 
             \Core\Session::flash(
                 'error',
-                'Envio concluído com erros. Enviadas: '
+                'Envio concluído com erros. Aceitas para processamento: '
                 . $totalEnviados
                 . ' | Erros: '
                 . $totalErros
@@ -320,15 +320,10 @@ class DisparoController extends Controller
 
         $variaveis = [];
 
-        foreach($componentes as $componente){
-
-            if(empty($componente['text'])){
-                continue;
-            }
-
+        $coletarVariaveis = function($texto) use (&$variaveis){
             preg_match_all(
                 '/{{(.*?)}}/',
-                $componente['text'],
+                $texto,
                 $matches
             );
 
@@ -344,15 +339,43 @@ class DisparoController extends Controller
                     $variaveis[] = $variavel;
                 }
             }
-        }
+        };
 
-        usort($variaveis, function($a, $b){
-            if(is_numeric($a) && is_numeric($b)){
-                return (int) $a <=> (int) $b;
+        foreach($componentes as $componente){
+
+            if(!empty($componente['text'])){
+                $coletarVariaveis($componente['text']);
             }
 
-            return strcmp($a, $b);
-        });
+            if(
+                ($componente['type'] ?? '') == 'BUTTONS'
+                &&
+                !empty($componente['buttons'])
+                &&
+                is_array($componente['buttons'])
+            ){
+                foreach($componente['buttons'] as $botao){
+                    if(!empty($botao['url'])){
+                        $coletarVariaveis($botao['url']);
+                    }
+                }
+            }
+        }
+
+        $todasNumericas = !empty($variaveis);
+
+        foreach($variaveis as $variavel){
+            if(!is_numeric($variavel)){
+                $todasNumericas = false;
+                break;
+            }
+        }
+
+        if($todasNumericas){
+            usort($variaveis, function($a, $b){
+                return (int) $a <=> (int) $b;
+            });
+        }
 
         return $variaveis;
     }
@@ -496,7 +519,7 @@ class DisparoController extends Controller
                 $messageId =
                     $response['messages'][0]['id'];
 
-                $status = 'enviado';
+                $status = 'aguardando_confirmacao';
 
                 $consumo =
                     new ConsumoMensal();
@@ -586,13 +609,14 @@ class DisparoController extends Controller
 
             ]);
 
-            if($status == 'enviado'){
+            if($status == 'aguardando_confirmacao'){
 
                 echo json_encode([
                     'sucesso' => true,
-                    'status' => 'enviado',
+                    'status' => 'aguardando_confirmacao',
                     'numero' => $numero,
                     'numero_formatado' => $this->formatarNumero($numero),
+                    'mensagem' => 'Aguardando confirmação da Meta',
                     'message_id' => $messageId,
                     'retorno' => $response
                 ]);
