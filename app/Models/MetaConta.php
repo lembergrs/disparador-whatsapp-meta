@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use PDOException;
 
 class MetaConta
 {
@@ -47,6 +48,32 @@ class MetaConta
 
 
 
+    public function colunaWebhookVerifyTokenExiste()
+    {
+        try{
+
+            $sql = $this->db->prepare("
+
+                SELECT COUNT(*)
+
+                FROM INFORMATION_SCHEMA.COLUMNS
+
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'meta_contas'
+                AND COLUMN_NAME = 'MTA_WebhookVerifyToken'
+
+            " );
+
+            $sql->execute();
+
+            return (int) $sql->fetchColumn() > 0;
+
+        }catch(PDOException $e){
+
+            return false;
+        }
+    }
+
     public function salvar($dados)
     {
         $sql = $this->db->prepare("
@@ -61,6 +88,7 @@ class MetaConta
                 MTA_Token,
                 MTA_UrlBase,
                 MTA_NumeroTelefone,
+                MTA_WebhookVerifyToken,
                 MTA_Status,
                 MTA_Ativo
 
@@ -69,7 +97,7 @@ class MetaConta
             VALUES
             (
 
-                ?, ?, ?, ?, ?, ?, ?, 'desconectado', 'S'
+                ?, ?, ?, ?, ?, ?, ?, ?, 'desconectado', 'S'
 
             )
 
@@ -93,7 +121,9 @@ class MetaConta
 
             $dados['url_base'],
 
-            $dados['numero']
+            $dados['numero'],
+
+            $dados['webhook_verify_token']
 
         ]);
     }
@@ -306,7 +336,9 @@ class MetaConta
 
                 MTA_UrlBase = ?,
 
-                MTA_NumeroTelefone = ?
+                MTA_NumeroTelefone = ?,
+
+                MTA_WebhookVerifyToken = ?
 
             WHERE MTA_ID = ?
 
@@ -331,6 +363,8 @@ class MetaConta
             $dados['url_base'],
 
             $dados['numero'],
+
+            $dados['webhook_verify_token'],
 
             $id
 
