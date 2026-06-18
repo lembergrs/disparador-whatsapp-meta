@@ -298,6 +298,7 @@ class Cliente
         $sql = $this->db->prepare("
             SELECT
                 c.*,
+                p.PLA_ID,
                 p.PLA_Nome,
                 p.PLA_Valor,
                 p.PLA_Periodicidade,

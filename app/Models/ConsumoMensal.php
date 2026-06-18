@@ -22,6 +22,11 @@ class ConsumoMensal
             $plano = $clienteModel->buscarComPlano($cliId);
         }
 
+        $plano = is_array($plano) ? $plano : [];
+        $planoId = $plano['PLA_ID'] ?? $plano['CMS_PLA_ID'] ?? null;
+        $limiteMensagens = $plano['PLA_LimiteMensagens'] ?? $plano['CMS_LimiteMensagens'] ?? null;
+        $valorMensagemExcedente = $plano['PLA_ValorMensagemExcedente'] ?? $plano['CMS_ValorMensagemExcedente'] ?? null;
+
         $anoMes =
             date('Ym');
 
@@ -52,27 +57,27 @@ class ConsumoMensal
             $paramsAtualizacao = [];
 
             if(
-                $plano
+                $planoId !== null
                 && $this->colunaExiste('consumo_mensal', 'CMS_PLA_ID')
             ){
                 $camposAtualizacao[] = 'CMS_PLA_ID = COALESCE(CMS_PLA_ID, ?)';
-                $paramsAtualizacao[] = $plano['PLA_ID'];
+                $paramsAtualizacao[] = $planoId;
             }
 
             if(
-                $plano
+                $limiteMensagens !== null
                 && $this->colunaExiste('consumo_mensal', 'CMS_LimiteMensagens')
             ){
                 $camposAtualizacao[] = 'CMS_LimiteMensagens = COALESCE(CMS_LimiteMensagens, ?)';
-                $paramsAtualizacao[] = (int) $plano['PLA_LimiteMensagens'];
+                $paramsAtualizacao[] = (int) $limiteMensagens;
             }
 
             if(
-                $plano
+                $valorMensagemExcedente !== null
                 && $this->colunaExiste('consumo_mensal', 'CMS_ValorMensagemExcedente')
             ){
                 $camposAtualizacao[] = 'CMS_ValorMensagemExcedente = COALESCE(CMS_ValorMensagemExcedente, ?)';
-                $paramsAtualizacao[] = (float) $plano['PLA_ValorMensagemExcedente'];
+                $paramsAtualizacao[] = (float) $valorMensagemExcedente;
             }
 
             $paramsAtualizacao[] = $registro['CMS_ID'];
@@ -96,30 +101,30 @@ class ConsumoMensal
         $params = [$cliId, $anoMes];
 
         if(
-            $plano
+            $planoId !== null
             && $this->colunaExiste('consumo_mensal', 'CMS_PLA_ID')
         ){
             $campos[] = 'CMS_PLA_ID';
             $placeholders[] = '?';
-            $params[] = $plano['PLA_ID'];
+            $params[] = $planoId;
         }
 
         if(
-            $plano
+            $limiteMensagens !== null
             && $this->colunaExiste('consumo_mensal', 'CMS_LimiteMensagens')
         ){
             $campos[] = 'CMS_LimiteMensagens';
             $placeholders[] = '?';
-            $params[] = (int) $plano['PLA_LimiteMensagens'];
+            $params[] = (int) $limiteMensagens;
         }
 
         if(
-            $plano
+            $valorMensagemExcedente !== null
             && $this->colunaExiste('consumo_mensal', 'CMS_ValorMensagemExcedente')
         ){
             $campos[] = 'CMS_ValorMensagemExcedente';
             $placeholders[] = '?';
-            $params[] = (float) $plano['PLA_ValorMensagemExcedente'];
+            $params[] = (float) $valorMensagemExcedente;
         }
 
         $sql =
