@@ -34,6 +34,29 @@ class MetaContaController extends Controller
 
 
 
+    private function gerarWebhookVerifyToken()
+    {
+        return bin2hex(
+            random_bytes(32)
+        );
+    }
+
+    private function prepararDadosWebhookVerifyToken($dados)
+    {
+        $dados['webhook_verify_token'] =
+            trim(
+                $dados['webhook_verify_token'] ?? ''
+            );
+
+        if($dados['webhook_verify_token'] === ''){
+
+            $dados['webhook_verify_token'] =
+                $this->gerarWebhookVerifyToken();
+        }
+
+        return $dados;
+    }
+
     public function index()
     {
         $contas =
@@ -41,6 +64,9 @@ class MetaContaController extends Controller
 
         $clientes =
             $this->clienteModel->listar();
+
+        $colunaWebhookVerifyTokenExiste =
+            $this->metaModel->colunaWebhookVerifyTokenExiste();
 
 
 
@@ -54,7 +80,9 @@ class MetaContaController extends Controller
 
                 'contas' => $contas,
 
-                'clientes' => $clientes
+                'clientes' => $clientes,
+
+                'colunaWebhookVerifyTokenExiste' => $colunaWebhookVerifyTokenExiste
 
             ]
         );
@@ -87,8 +115,25 @@ class MetaContaController extends Controller
             );
         }
 
+        $dados =
+            $this->prepararDadosWebhookVerifyToken(
+                $_POST
+            );
+
+        if(!$this->metaModel->colunaWebhookVerifyTokenExiste()){
+
+            Session::flash(
+                'error',
+                'A coluna MTA_WebhookVerifyToken não existe em meta_contas. Crie a coluna antes de salvar o token do webhook.'
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
         $this->metaModel->salvar(
-            $_POST
+            $dados
         );
 
 
@@ -241,9 +286,26 @@ class MetaContaController extends Controller
             }
         }
 
+        $dados =
+            $this->prepararDadosWebhookVerifyToken(
+                $_POST
+            );
+
+        if(!$this->metaModel->colunaWebhookVerifyTokenExiste()){
+
+            Session::flash(
+                'error',
+                'A coluna MTA_WebhookVerifyToken não existe em meta_contas. Crie a coluna antes de salvar o token do webhook.'
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
         $this->metaModel->atualizar(
             $id,
-            $_POST
+            $dados
         );
 
 
