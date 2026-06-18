@@ -17,6 +17,15 @@ Nova Conta Meta
 
 <div class="card-body">
 
+<?php if(empty($colunaWebhookVerifyTokenExiste)){ ?>
+
+<div class="alert alert-warning">
+A coluna <strong>MTA_WebhookVerifyToken</strong> não foi encontrada na tabela <strong>meta_contas</strong>.
+Crie a coluna para salvar o Verify Token do webhook.
+</div>
+
+<?php } ?>
+
 <table class="table table-bordered table-striped table-hover datatable">
 
 <thead>
@@ -67,6 +76,8 @@ data-phone="<?= $conta['MTA_PhoneNumberId']; ?>"
 data-waba="<?= $conta['MTA_WabaId']; ?>"
 
 data-token="<?= htmlspecialchars($conta['MTA_Token']); ?>"
+
+data-webhook-token="<?= htmlspecialchars($conta['MTA_WebhookVerifyToken'] ?? ''); ?>"
 
 data-url="<?= $conta['MTA_UrlBase']; ?>"
 
@@ -213,6 +224,53 @@ class="form-control"
 rows="4"
 required
 ></textarea>
+
+</div>
+
+<div class="form-group">
+
+<label>Webhook Verify Token</label>
+
+<div class="input-group">
+
+<input
+type="text"
+name="webhook_verify_token"
+id="webhook_verify_token"
+class="form-control"
+minlength="32"
+maxlength="128"
+required
+>
+
+<div class="input-group-append">
+
+<button
+type="button"
+class="btn btn-outline-secondary"
+id="btnGerarWebhookToken"
+>
+Gerar Token
+</button>
+
+</div>
+
+</div>
+
+<small class="form-text text-muted">
+Use este token no campo Verify Token da configuração do Webhook da Meta. Se ficar vazio em uma conta nova, o sistema gera um token seguro automaticamente ao salvar.
+</small>
+
+</div>
+
+<div class="alert alert-info">
+
+<strong>Configuração do Webhook na Meta</strong><br>
+Webhook URL:
+<code id="metaWebhookUrl">https://disparador.net/public/webhook/meta.php</code>
+<br>
+Verify Token:
+<code id="metaWebhookVerifyTokenPreview">Informe ou gere um token</code>
 
 </div>
 

@@ -243,6 +243,45 @@ $(document).ready(function(){
     }
 
 
+    function gerarWebhookVerifyTokenMeta()
+    {
+        let bytes = new Uint8Array(32);
+
+        if(
+            window.crypto
+            &&
+            window.crypto.getRandomValues
+        ){
+
+            window.crypto.getRandomValues(bytes);
+
+            return Array.from(bytes)
+            .map(function(byte){
+
+                return byte.toString(16).padStart(2, '0');
+            })
+            .join('');
+        }
+
+        return Array.from(bytes)
+        .map(function(){
+
+            return Math.floor(Math.random() * 256)
+            .toString(16)
+            .padStart(2, '0');
+        })
+        .join('');
+    }
+
+    function atualizarPreviewWebhookVerifyTokenMeta()
+    {
+        let token = $('#webhook_verify_token').val();
+
+        $('#metaWebhookVerifyTokenPreview').text(
+            token || 'Informe ou gere um token'
+        );
+    }
+
     $(document).on(
         'click',
         '.btnEditarMeta',
@@ -271,6 +310,12 @@ $(document).ready(function(){
             $('[name=token]').val(
                 $(this).data('token')
             );
+
+            $('[name=webhook_verify_token]').val(
+                $(this).data('webhook-token')
+            );
+
+            atualizarPreviewWebhookVerifyTokenMeta();
 
             $('[name=url_base]').val(
                 $(this).data('url')
@@ -303,6 +348,12 @@ $(document).ready(function(){
 
         $('#meta_id').val('');
 
+        $('[name=webhook_verify_token]').val(
+            gerarWebhookVerifyTokenMeta()
+        );
+
+        atualizarPreviewWebhookVerifyTokenMeta();
+
 
 
 
@@ -322,6 +373,26 @@ $(document).ready(function(){
         );
 
     });
+
+    $('#btnGerarWebhookToken').click(function(){
+
+        $('[name=webhook_verify_token]').val(
+            gerarWebhookVerifyTokenMeta()
+        );
+
+        atualizarPreviewWebhookVerifyTokenMeta();
+
+    });
+
+    $(document).on(
+        'input',
+        '[name=webhook_verify_token]',
+        function(){
+
+            atualizarPreviewWebhookVerifyTokenMeta();
+
+        }
+    );
 
     $(document).on(
         'click',
