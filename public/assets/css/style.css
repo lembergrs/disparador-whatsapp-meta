@@ -696,3 +696,15 @@ body.login-custom-page {
 }
 
 /* force deploy style css */
+.meta-webhook-config-box code{
+    color: #1f2937;
+    background: rgba(255, 255, 255, .7);
+    border: 1px solid rgba(31, 41, 55, .12);
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+
+.auto-resposta-section{
+    padding-left: 0;
+    padding-right: 0;
+}

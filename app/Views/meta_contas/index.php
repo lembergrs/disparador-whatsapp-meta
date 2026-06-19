@@ -26,6 +26,15 @@ Crie a coluna para salvar o Verify Token do webhook.
 
 <?php } ?>
 
+<?php if(empty($colunasAutoRespostaExistem)){ ?>
+
+<div class="alert alert-warning">
+As colunas de <strong>auto resposta</strong> não foram encontradas na tabela <strong>meta_contas</strong>.
+Crie as colunas para salvar a configuração de auto resposta.
+</div>
+
+<?php } ?>
+
 <table class="table table-bordered table-striped table-hover datatable">
 
 <thead>
@@ -82,6 +91,12 @@ data-webhook-token="<?= htmlspecialchars($conta['MTA_WebhookVerifyToken'] ?? '')
 data-url="<?= $conta['MTA_UrlBase']; ?>"
 
 data-numero="<?= $conta['MTA_NumeroTelefone']; ?>"
+
+data-auto-resposta-ativa="<?= $conta['MTA_AutoRespostaAtiva'] ?? 'N'; ?>"
+
+data-auto-resposta-texto="<?= htmlspecialchars($conta['MTA_AutoRespostaTexto'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+data-auto-resposta-intervalo="<?= $conta['MTA_AutoRespostaIntervaloMinutos'] ?? 1440; ?>"
 >
 
 <i class="fas fa-edit"></i>
@@ -263,7 +278,7 @@ Use este token no campo Verify Token da configuração do Webhook da Meta. Se fi
 
 </div>
 
-<div class="alert alert-info">
+<div class="alert alert-info meta-webhook-config-box">
 
 <strong>Configuração do Webhook na Meta</strong><br>
 Webhook URL:
@@ -297,6 +312,88 @@ type="text"
 name="numero"
 class="form-control"
 >
+
+</div>
+
+<div class="auto-resposta-section">
+
+<hr>
+
+<h5>Auto resposta</h5>
+
+<div class="alert alert-info">
+Essa mensagem será enviada automaticamente quando esse número receber uma mensagem. Ela não usa template e só funciona dentro da janela de atendimento de 24 horas da Meta.
+</div>
+
+<div class="form-group">
+
+<label>Ativar auto resposta</label>
+
+<div class="d-flex align-items-center">
+
+<div class="form-check form-check-inline">
+<input class="form-check-input" type="radio" name="auto_resposta_ativa" id="auto_resposta_ativa_n" value="N" checked>
+<label class="form-check-label" for="auto_resposta_ativa_n">Não</label>
+</div>
+
+<div class="form-check form-check-inline">
+<input class="form-check-input" type="radio" name="auto_resposta_ativa" id="auto_resposta_ativa_s" value="S">
+<label class="form-check-label" for="auto_resposta_ativa_s">Sim</label>
+</div>
+
+</div>
+
+</div>
+
+<div class="form-group">
+
+<label>Texto da auto resposta</label>
+
+<textarea
+name="auto_resposta_texto"
+class="form-control"
+rows="4"
+></textarea>
+
+</div>
+
+<div class="form-group">
+
+<label>Intervalo para repetir auto resposta</label>
+
+<input
+type="hidden"
+name="auto_resposta_intervalo_minutos"
+value="1440"
+>
+
+<div class="row">
+
+<div class="col-md-6">
+<label class="small text-muted">Horas</label>
+<select name="auto_resposta_intervalo_horas" class="form-control auto-resposta-horas">
+<?php for($hora = 0; $hora <= 24; $hora++){ ?>
+<option value="<?= $hora; ?>"><?= str_pad($hora, 2, '0', STR_PAD_LEFT); ?></option>
+<?php } ?>
+</select>
+</div>
+
+<div class="col-md-6">
+<label class="small text-muted">Minutos</label>
+<select name="auto_resposta_intervalo_minutos_select" class="form-control auto-resposta-minutos">
+<?php for($minuto = 0; $minuto <= 60; $minuto++){ ?>
+<option value="<?= $minuto; ?>"><?= str_pad($minuto, 2, '0', STR_PAD_LEFT); ?></option>
+<?php } ?>
+</select>
+</div>
+
+</div>
+
+<small class="form-text text-muted">
+O total será salvo em minutos. Selecione pelo menos 1 minuto.
+</small>
+
+</div>
 
 </div>
 
