@@ -68,48 +68,32 @@ if(!$ativa && $conversa['CVS_NaoLida'] == 'S'){
 href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
 class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
 data-id="<?= $conversa['CVS_ID']; ?>"
+title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 >
 
-<div class="d-flex justify-content-between align-items-start">
+<div class="d-flex justify-content-between align-items-start conversa-lista-topo">
 
-    <div style="max-width:75%;">
+    <div class="conversa-lista-nome">
 
         <strong>
             <?= htmlspecialchars($nome); ?>
         </strong>
 
-        <br>
-
-        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-            <?= htmlspecialchars($numeroFormatado); ?>
-        </small>
-
-        <br>
-
-        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-            <i class="fas fa-user-headset"></i>
-            <?= !empty($conversa['ResponsavelNome'])
-                ? htmlspecialchars($conversa['ResponsavelNome'])
-                : 'Sem responsável'; ?>
-        </small>
-
     </div>
 
-    <div class="text-right">
+    <div class="text-right conversa-lista-acoes">
 
         <?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
 
-            <span class="badge badge-success mb-1">
+            <span class="badge badge-success badge-nao-lida conversa-badge-novas">
                 <?= $conversa['CVS_QtdeNaoLidas'] > 0 ? $conversa['CVS_QtdeNaoLidas'] : 'Novo'; ?>
             </span>
-
-            <br>
 
         <?php } ?>
 
         <button
             type="button"
-            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-secondary'; ?> btn-marcar-nao-lida"
+            class="btn btn-xs btn-outline-secondary btn-marcar-nao-lida"
             data-id="<?= $conversa['CVS_ID']; ?>"
             title="Marcar como não lida"
         >
@@ -118,7 +102,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
         <button
             type="button"
-            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-primary'; ?> btn-etiquetas"
+            class="btn btn-xs btn-outline-primary btn-etiquetas"
             data-id="<?= $conversa['CVS_ID']; ?>"
             title="Etiquetas"
         >
@@ -129,7 +113,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
             <button
                 type="button"
-                class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-info'; ?> btn-atribuir"
+                class="btn btn-xs btn-outline-info btn-atribuir"
                 data-id="<?= $conversa['CVS_ID']; ?>"
                 data-responsavel="<?= (int) ($conversa['ResponsavelId'] ?? 0); ?>"
                 title="Atribuir"
@@ -140,6 +124,21 @@ data-id="<?= $conversa['CVS_ID']; ?>"
         <?php } ?>
 
     </div>
+
+</div>
+
+<div class="conversa-lista-meta <?= $ativa ? 'text-white' : 'text-muted'; ?>">
+
+    <small>
+        <?= htmlspecialchars($numeroFormatado); ?>
+    </small>
+
+    <small class="conversa-lista-responsavel">
+        <i class="fas fa-user-headset"></i>
+        <?= !empty($conversa['ResponsavelNome'])
+            ? htmlspecialchars($conversa['ResponsavelNome'])
+            : 'Sem responsável'; ?>
+    </small>
 
 </div>
 
@@ -167,9 +166,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
 <?php } ?>
 
-<br>
-
-<small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
+<small class="conversa-ultima-mensagem <?= $ativa ? 'text-white' : 'text-muted'; ?>">
     <?= htmlspecialchars($conversa['CVS_UltimaMensagem']); ?>
 </small>
 
