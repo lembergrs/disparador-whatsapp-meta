@@ -333,7 +333,8 @@ class ConversaController extends Controller
                 $status,
                 $etiqueta,
                 $usuario,
-                $this->responsavelPermitido($usuario, $_GET['responsavel'] ?? '')
+                $this->responsavelPermitido($usuario, $_GET['responsavel'] ?? ''),
+                $_GET['manter_aberta'] ?? null
             );
 
         $podeAtribuirConversa =

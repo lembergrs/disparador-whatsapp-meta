@@ -27,11 +27,11 @@ function formatarNumeroBR($numero)
 
 ?>
 
-<div class="row">
+<div class="row" id="conversasContainer">
 
     <div class="col-md-4">
 
-        <div class="card" style="height:75vh;">
+        <div class="card conversas-resizable-card">
 
             <div class="card-header bg-light">
                 <strong>
@@ -152,8 +152,7 @@ function formatarNumeroBR($numero)
 
         <div
             id="painelConversa"
-            class="card"
-            style="height:75vh;"
+            class="card conversas-resizable-card"
         >
 
             <?php require __DIR__ . '/partials/painel.php'; ?>
@@ -163,6 +162,8 @@ function formatarNumeroBR($numero)
     </div>
 
 </div>
+
+<div id="conversasResizeHandle" class="conversas-resize-handle" title="Arraste para ajustar a altura"></div>
 
 <div class="modal fade" id="modalEtiquetas" tabindex="-1">
     <div class="modal-dialog">
@@ -267,26 +268,40 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     }
 
-    function atualizarListaConversas()
+    let atualizandoListaConversas = false;
+    let atualizandoMensagens = false;
+
+    function atualizarListaConversas(forcar)
     {
         const lista = $('#listaConversas');
-        const scrollAtual = lista.scrollTop();
 
-        lista.load(
-            urlBase
+        if(atualizandoListaConversas && !forcar){
+            return;
+        }
+
+        const scrollAtual = lista.scrollTop();
+        atualizandoListaConversas = true;
+
+        $.ajax({
+            url:
+                urlBase
                 + 'conversa/ajaxLista'
                 + '&id=' + conversaAberta
+                + '&manter_aberta=' + encodeURIComponent(conversaAberta || '')
                 + '&busca=' + encodeURIComponent(filtroBusca)
                 + '&status=' + encodeURIComponent(filtroStatus)
                 + '&etiqueta=' + encodeURIComponent(filtroEtiqueta)
                 + '&responsavel=' + encodeURIComponent(filtroResponsavel),
-            function(){
-                lista.scrollTop(scrollAtual);
-            }
-        );
+            method: 'GET'
+        }).done(function(html){
+            lista.html(html);
+            lista.scrollTop(scrollAtual);
+        }).always(function(){
+            atualizandoListaConversas = false;
+        });
     }
 
-    function atualizarMensagens(marcarLida)
+    function atualizarMensagens(marcarLida, forcar)
     {
         if(conversaAberta == ''){
             return;
@@ -296,16 +311,34 @@ document.addEventListener('DOMContentLoaded', function(){
             return;
         }
 
-        $('#areaMensagens').load(
-            urlBase
+        if(atualizandoMensagens && !forcar){
+            return;
+        }
+
+        atualizandoMensagens = true;
+
+        $.ajax({
+            url:
+                urlBase
                 + 'conversa/ajaxMensagens&id='
                 + conversaAberta
                 + '&marcar_lida='
                 + (marcarLida || 'N'),
-            function(){
-                rolarMensagensParaFinal();
-            }
-        );
+            method: 'GET'
+        }).done(function(html){
+            $('#areaMensagens').html(html);
+            rolarMensagensParaFinal();
+        }).always(function(){
+            atualizandoMensagens = false;
+        });
+    }
+
+    function marcarConversaComoLidaVisualmente(conversaId)
+    {
+        const item = $('#listaConversas .item-conversa[data-id="' + conversaId + '"]');
+
+        item.removeClass('font-weight-bold');
+        item.find('.badge-nao-lida').remove();
     }
 
     rolarMensagensParaFinal();
@@ -353,10 +386,10 @@ document.addEventListener('DOMContentLoaded', function(){
                     ultimaAtualizacaoConversas =
                         retorno.ultima;
 
-                    atualizarListaConversas();
+                    atualizarListaConversas(false);
 
                     if(conversaAberta != ''){
-                        atualizarMensagens('N');
+                        atualizarMensagens('N', false);
                     }
 
                 }
@@ -404,7 +437,7 @@ document.addEventListener('DOMContentLoaded', function(){
             filtroBusca =
                 $('#filtroBusca').val() || '';
 
-            atualizarListaConversas();
+            atualizarListaConversas(false);
 
         }, 300);
 
@@ -415,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function(){
         filtroStatus =
             $(this).val() || '';
 
-        atualizarListaConversas();
+        atualizarListaConversas(false);
 
     });
 
@@ -424,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function(){
         filtroEtiqueta =
             $(this).val() || '';
 
-        atualizarListaConversas();
+        atualizarListaConversas(false);
 
     });
 
@@ -433,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function(){
         filtroResponsavel =
             $(this).val() || '';
 
-        atualizarListaConversas();
+        atualizarListaConversas(false);
 
     });
 
@@ -475,8 +508,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
                     $('#campoMensagem').val('');
 
-                    atualizarMensagens('N');
-                    atualizarListaConversas();
+                    atualizarMensagens('N', false);
+                    atualizarListaConversas(false);
 
                 }else{
 
@@ -529,6 +562,8 @@ document.addEventListener('DOMContentLoaded', function(){
         conversaAberta =
             conversaId;
 
+        marcarConversaComoLidaVisualmente(conversaId);
+
         $('#painelConversa').html(
             '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">' +
                 '<i class="fas fa-spinner fa-spin mr-2"></i> Carregando conversa...' +
@@ -577,7 +612,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 if(retorno.sucesso){
                     $('#modalResponsavel').modal('hide');
-                    atualizarListaConversas();
+                    atualizarListaConversas(false);
 
                     if(conversaAberta != ''){
                         $('#painelConversa').load(
@@ -636,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 if(retorno.sucesso){
 
-                    atualizarListaConversas();
+                    atualizarListaConversas(false);
 
                 }else{
 
@@ -691,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 if(retorno.sucesso){
 
                     $('#modalEtiquetas').modal('hide');
-                    atualizarListaConversas();
+                    atualizarListaConversas(false);
 
                 }else{
 
@@ -760,6 +795,68 @@ document.addEventListener('DOMContentLoaded', function(){
         );
 
     });
+
+
+    function aplicarAlturaConversas(altura)
+    {
+        const alturaMinima = 420;
+        const alturaMaxima = Math.max(alturaMinima, window.innerHeight - 140);
+
+        altura = Math.max(
+            alturaMinima,
+            Math.min(altura, alturaMaxima)
+        );
+
+        $('.conversas-resizable-card').css('height', altura + 'px');
+
+        localStorage.setItem(
+            'centralConversasAltura',
+            altura
+        );
+    }
+
+    function iniciarResizeConversas()
+    {
+        const alturaSalva = parseInt(
+            localStorage.getItem('centralConversasAltura'),
+            10
+        );
+
+        aplicarAlturaConversas(
+            isNaN(alturaSalva) ? Math.round(window.innerHeight * 0.75) : alturaSalva
+        );
+
+        let redimensionando = false;
+
+        $('#conversasResizeHandle').on('mousedown', function(e){
+            redimensionando = true;
+            e.preventDefault();
+            $('body').addClass('conversas-redimensionando');
+        });
+
+        $(document).on('mousemove', function(e){
+            if(!redimensionando){
+                return;
+            }
+
+            const topo = $('#conversasContainer').offset().top;
+
+            aplicarAlturaConversas(
+                e.pageY - topo - 8
+            );
+        });
+
+        $(document).on('mouseup', function(){
+            if(!redimensionando){
+                return;
+            }
+
+            redimensionando = false;
+            $('body').removeClass('conversas-redimensionando');
+        });
+    }
+
+    iniciarResizeConversas();
 
 });
 

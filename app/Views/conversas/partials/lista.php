@@ -70,36 +70,21 @@ class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
 data-id="<?= $conversa['CVS_ID']; ?>"
 >
 
-<div class="d-flex justify-content-between align-items-start">
+<div class="d-flex justify-content-between align-items-start conversa-lista-topo">
 
-    <div style="max-width:75%;">
+    <div class="conversa-lista-nome">
 
         <strong>
             <?= htmlspecialchars($nome); ?>
         </strong>
 
-        <br>
-
-        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-            <?= htmlspecialchars($numeroFormatado); ?>
-        </small>
-
-        <br>
-
-        <small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
-            <i class="fas fa-user-headset"></i>
-            <?= !empty($conversa['ResponsavelNome'])
-                ? htmlspecialchars($conversa['ResponsavelNome'])
-                : 'Sem responsável'; ?>
-        </small>
-
     </div>
 
-    <div class="text-right">
+    <div class="text-right conversa-lista-acoes">
 
         <?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
 
-            <span class="badge badge-success mb-1">
+            <span class="badge badge-success mb-1 badge-nao-lida">
                 <?= $conversa['CVS_QtdeNaoLidas'] > 0 ? $conversa['CVS_QtdeNaoLidas'] : 'Novo'; ?>
             </span>
 
@@ -143,6 +128,21 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
 </div>
 
+<div class="conversa-lista-meta <?= $ativa ? 'text-white' : 'text-muted'; ?>">
+
+    <small>
+        <?= htmlspecialchars($numeroFormatado); ?>
+    </small>
+
+    <small class="conversa-lista-responsavel">
+        <i class="fas fa-user-headset"></i>
+        <?= !empty($conversa['ResponsavelNome'])
+            ? htmlspecialchars($conversa['ResponsavelNome'])
+            : 'Sem responsável'; ?>
+    </small>
+
+</div>
+
 <?php if(!empty($conversa['Etiquetas'])){ ?>
 
     <div class="mt-1">
@@ -167,9 +167,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
 <?php } ?>
 
-<br>
-
-<small class="<?= $ativa ? 'text-white' : 'text-muted'; ?>">
+<small class="conversa-ultima-mensagem <?= $ativa ? 'text-white' : 'text-muted'; ?>">
     <?= htmlspecialchars($conversa['CVS_UltimaMensagem']); ?>
 </small>
 
