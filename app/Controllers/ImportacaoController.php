@@ -57,6 +57,8 @@ class ImportacaoController extends Controller
 
     public function importar()
     {
+        $this->validarCsrfPost();
+
         try{
 
             $usuario = Auth::usuario();
@@ -197,12 +199,20 @@ class ImportacaoController extends Controller
                 $vinculados++;
             }
 
+            if(!empty($arquivo) && is_file($arquivo)){
+                unlink($arquivo);
+            }
+
             $_SESSION['sucesso'] =
                 "{$importados} novo(s) contato(s) importado(s). "
                 . "{$vinculados} contato(s) vinculado(s) à lista. "
                 . "{$ignorados} linha(s) ignorada(s).";
 
         }catch(\Exception $e){
+
+            if(!empty($arquivo) && is_file($arquivo)){
+                unlink($arquivo);
+            }
 
             $_SESSION['erro'] =
                 $e->getMessage();

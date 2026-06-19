@@ -89,6 +89,8 @@ class LoginController extends Controller
             )
         ){
 
+            session_regenerate_id(true);
+
             $_SESSION['usuario'] = [
 
                 'id' => $usuario['USU_ID'],

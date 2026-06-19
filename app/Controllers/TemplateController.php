@@ -66,15 +66,24 @@ class TemplateController extends Controller
 
     public function criar()
     {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+
         $metaId =
-            $_POST['meta'];
+            (int) ($_POST['meta'] ?? 0);
+
+        if(!$this->metaModel->buscarPorCliente($metaId, $usuario['CLI_ID'])){
+            Session::flash('error', 'Conta Meta inválida.');
+            $this->redirect('template');
+        }
 
 
 
 
 
         $meta =
-            new MetaService($metaId);
+            new MetaService($metaId, $usuario['CLI_ID']);
 
 
 
@@ -134,14 +143,23 @@ class TemplateController extends Controller
 
     public function sincronizar()
     {
-        $metaId = $_GET['meta'];
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+
+        $metaId = (int) ($_POST['meta'] ?? 0);
+
+        if(!$this->metaModel->buscarPorCliente($metaId, $usuario['CLI_ID'])){
+            Session::flash('error', 'Conta Meta inválida.');
+            $this->redirect('template');
+        }
 
 
 
 
 
         $meta =
-            new MetaService($metaId);
+            new MetaService($metaId, $usuario['CLI_ID']);
 
 
 
@@ -201,9 +219,11 @@ class TemplateController extends Controller
 
     public function inativar()
     {
+        $this->validarCsrfPost();
+
         $usuario = Auth::usuario();
 
-        $id = (int) ($_GET['id'] ?? 0);
+        $id = (int) ($_POST['id'] ?? 0);
 
         if($id <= 0){
 

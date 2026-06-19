@@ -32,6 +32,8 @@ class AssinaturaController extends Controller
 
     public function salvar()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         if($_SERVER['REQUEST_METHOD'] != 'POST'){
@@ -55,6 +57,8 @@ class AssinaturaController extends Controller
 
     public function cancelar()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
         (new Assinatura())->cancelar((int) ($_GET['id'] ?? 0));
         Session::flash('success', 'Assinatura cancelada.');
@@ -63,6 +67,8 @@ class AssinaturaController extends Controller
 
     public function ativar()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
         (new Assinatura())->ativar((int) ($_GET['id'] ?? 0));
         Session::flash('success', 'Assinatura ativada.');
@@ -71,6 +77,8 @@ class AssinaturaController extends Controller
 
     public function marcarVencida()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
         (new Assinatura())->marcarVencida((int) ($_GET['id'] ?? 0));
         Session::flash('success', 'Assinatura marcada como vencida.');

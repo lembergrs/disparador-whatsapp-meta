@@ -232,7 +232,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                     </button>
 
                                     <a
-                                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/inativarPlano&id=<?= $plano['PLA_ID']; ?>"
+                                    href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/inativarPlano&id=<?= (int) $plano['PLA_ID']; ?>"
                                     class="btn btn-danger btn-sm"
                                     onclick="return confirm('Inativar plano?')"
                                     >
@@ -262,7 +262,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
 
                 <div class="mb-3 text-right">
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/gerarCobrancasRecorrentes#tabCobrancas"
+                    href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/gerarCobrancasRecorrentes#tabCobrancas"
                     class="btn btn-success mr-2"
                     onclick="return confirm('Gerar cobranças recorrentes agora?')"
                     >
@@ -271,7 +271,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                     </a>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/processarVencimentos#tabCobrancas"
+                    href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/processarVencimentos#tabCobrancas"
                     class="btn btn-warning"
                     onclick="return confirm('Processar vencimentos financeiros agora?')"
                     >
@@ -403,7 +403,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                     ){ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=<?= $cobranca['COB_ID']; ?>#tabCobrancas"
+                                        href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=<?= (int) $cobranca['COB_ID']; ?>#tabCobrancas"
                                         class="btn btn-success btn-sm"
                                         onclick="return confirm('Confirmar pagamento?')"
                                         >
@@ -413,7 +413,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                         </a>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/cancelarCobranca&id=<?= $cobranca['COB_ID']; ?>#tabCobrancas"
+                                        href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/cancelarCobranca&id=<?= (int) $cobranca['COB_ID']; ?>#tabCobrancas"
                                         class="btn btn-danger btn-sm"
                                         onclick="return confirm('Cancelar cobrança?')"
                                         >
@@ -552,7 +552,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                     <?php if($cliente['CLI_StatusCadastro'] == 'suspenso'){ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/reativarCliente&id=<?= $cliente['CLI_ID']; ?>#tabClientes"
+                                        href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/reativarCliente&id=<?= (int) $cliente['CLI_ID']; ?>#tabClientes"
                                         class="btn btn-success btn-sm"
                                         onclick="return confirm('Reativar cliente?')"
                                         >
@@ -564,7 +564,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                     <?php }else{ ?>
 
                                         <a
-                                        href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/suspenderCliente&id=<?= $cliente['CLI_ID']; ?>#tabClientes"
+                                        href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/suspenderCliente&id=<?= (int) $cliente['CLI_ID']; ?>#tabClientes"
                                         class="btn btn-danger btn-sm"
                                         onclick="return confirm('Suspender cliente?')"
                                         >
