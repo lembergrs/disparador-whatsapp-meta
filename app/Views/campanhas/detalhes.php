@@ -282,7 +282,7 @@ class="btn btn-secondary"
 <?php if(in_array($campanha['CAM_Status'], ['rascunho','agendada','processando'])){ ?>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=campanha/cancelar&id=<?= $campanha['CAM_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=campanha/cancelar&id=<?= (int) $campanha['CAM_ID']; ?>"
 class="btn btn-danger"
 onclick="return confirm('Deseja cancelar esta campanha?')"
 >

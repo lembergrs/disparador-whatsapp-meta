@@ -68,19 +68,19 @@ function badgeAssinatura($status)
                             </button>
 
                             <?php if($assinatura['ASS_Status'] != 'ativa'){ ?>
-                                <a href="<?= BASE_URL; ?>/index.php?url=assinatura/ativar&id=<?= $assinatura['ASS_ID']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Ativar esta assinatura?')">
+                                <a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=assinatura/ativar&id=<?= (int) $assinatura['ASS_ID']; ?>" class="btn btn-success btn-sm" onclick="return confirm('Ativar esta assinatura?')">
                                     <i class="fas fa-check"></i>
                                 </a>
                             <?php } ?>
 
                             <?php if($assinatura['ASS_Status'] != 'vencida'){ ?>
-                                <a href="<?= BASE_URL; ?>/index.php?url=assinatura/marcarVencida&id=<?= $assinatura['ASS_ID']; ?>" class="btn btn-warning btn-sm" onclick="return confirm('Marcar como vencida?')">
+                                <a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=assinatura/marcarVencida&id=<?= (int) $assinatura['ASS_ID']; ?>" class="btn btn-warning btn-sm" onclick="return confirm('Marcar como vencida?')">
                                     <i class="fas fa-exclamation-triangle"></i>
                                 </a>
                             <?php } ?>
 
                             <?php if($assinatura['ASS_Status'] != 'cancelada'){ ?>
-                                <a href="<?= BASE_URL; ?>/index.php?url=assinatura/cancelar&id=<?= $assinatura['ASS_ID']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Cancelar esta assinatura?')">
+                                <a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=assinatura/cancelar&id=<?= (int) $assinatura['ASS_ID']; ?>" class="btn btn-danger btn-sm" onclick="return confirm('Cancelar esta assinatura?')">
                                     <i class="fas fa-ban"></i>
                                 </a>
                             <?php } ?>
