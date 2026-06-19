@@ -273,6 +273,50 @@ $(document).ready(function(){
         .join('');
     }
 
+
+    function definirAutoRespostaAtiva(valor, contexto)
+    {
+        contexto = contexto || $(document);
+
+        contexto.find('[name=auto_resposta_ativa][value="' + (valor || 'N') + '"]').prop('checked', true);
+    }
+
+    function definirIntervaloAutoResposta(totalMinutos, contexto)
+    {
+        contexto = contexto || $(document);
+
+        totalMinutos = parseInt(totalMinutos, 10);
+
+        if(isNaN(totalMinutos) || totalMinutos <= 0){
+            totalMinutos = 1440;
+        }
+
+        let horas = Math.floor(totalMinutos / 60);
+        let minutos = totalMinutos % 60;
+
+        if(horas > 24){
+            horas = 24;
+            minutos = 0;
+        }
+
+        contexto.find('[name=auto_resposta_intervalo_horas]').val(horas);
+        contexto.find('[name=auto_resposta_intervalo_minutos_select]').val(minutos);
+        contexto.find('[name=auto_resposta_intervalo_minutos]').val((horas * 60) + minutos);
+    }
+
+    function atualizarIntervaloAutoResposta(contexto)
+    {
+        contexto = contexto || $(document);
+
+        let horas = parseInt(contexto.find('[name=auto_resposta_intervalo_horas]').val(), 10);
+        let minutos = parseInt(contexto.find('[name=auto_resposta_intervalo_minutos_select]').val(), 10);
+
+        horas = isNaN(horas) ? 0 : horas;
+        minutos = isNaN(minutos) ? 0 : minutos;
+
+        contexto.find('[name=auto_resposta_intervalo_minutos]').val((horas * 60) + minutos);
+    }
+
     function atualizarPreviewWebhookVerifyTokenMeta()
     {
         let token = $('#webhook_verify_token').val();
@@ -325,16 +369,18 @@ $(document).ready(function(){
                 $(this).data('numero')
             );
 
-            $('[name=auto_resposta_ativa]').val(
-                $(this).data('auto-resposta-ativa') || 'N'
+            definirAutoRespostaAtiva(
+                $(this).data('auto-resposta-ativa') || 'N',
+                $('#formMeta')
             );
 
             $('[name=auto_resposta_texto]').val(
                 $(this).data('auto-resposta-texto') || ''
             );
 
-            $('[name=auto_resposta_intervalo_minutos]').val(
-                $(this).data('auto-resposta-intervalo') || 1440
+            definirIntervaloAutoResposta(
+                $(this).data('auto-resposta-intervalo') || 1440,
+                $('#formMeta')
             );
 
             $('#formMeta').attr(
@@ -366,9 +412,9 @@ $(document).ready(function(){
 
         atualizarPreviewWebhookVerifyTokenMeta();
 
-        $('[name=auto_resposta_ativa]').val('N');
+        definirAutoRespostaAtiva('N', $('#formMeta'));
         $('[name=auto_resposta_texto]').val('');
-        $('[name=auto_resposta_intervalo_minutos]').val(1440);
+        definirIntervaloAutoResposta(1440, $('#formMeta'));
 
         $('#formMeta').attr(
             'action',
@@ -402,7 +448,7 @@ $(document).ready(function(){
         function(e){
 
             if(
-                $('[name=auto_resposta_ativa]').val() == 'S'
+                $('#formMeta [name=auto_resposta_ativa]:checked').val() == 'S'
                 &&
                 $.trim($('[name=auto_resposta_texto]').val()) == ''
             ){
@@ -411,14 +457,94 @@ $(document).ready(function(){
                 return false;
             }
 
+            atualizarIntervaloAutoResposta($('#formMeta'));
+
             let intervalo = parseInt(
-                $('[name=auto_resposta_intervalo_minutos]').val(),
+                $('#formMeta [name=auto_resposta_intervalo_minutos]').val(),
                 10
             );
 
-            if(isNaN(intervalo) || intervalo < 5){
+            if(isNaN(intervalo) || intervalo < 1){
                 e.preventDefault();
-                alert('O intervalo mínimo da auto resposta é de 5 minutos.');
+                alert('Selecione um intervalo de pelo menos 1 minuto para a auto resposta.');
+                return false;
+            }
+        }
+    );
+
+    $(document).on(
+        'change',
+        '[name=auto_resposta_intervalo_horas], [name=auto_resposta_intervalo_minutos_select]',
+        function(){
+
+            atualizarIntervaloAutoResposta(
+                $(this).closest('form')
+            );
+
+        }
+    );
+
+    $(document).on(
+        'click',
+        '.btnConfigurarAutoRespostaCliente',
+        function(){
+
+            let form = $('#formAutoRespostaCliente');
+
+            form.find('[name=conta_id]').val(
+                $(this).data('id')
+            );
+
+            $('#autoRespostaClienteNumero').text(
+                $(this).data('numero') || ''
+            );
+
+            definirAutoRespostaAtiva(
+                $(this).data('auto-resposta-ativa') || 'N',
+                form
+            );
+
+            form.find('[name=auto_resposta_texto]').val(
+                $(this).data('auto-resposta-texto') || ''
+            );
+
+            definirIntervaloAutoResposta(
+                $(this).data('auto-resposta-intervalo') || 1440,
+                form
+            );
+
+            $('#modalAutoRespostaCliente').modal('show');
+
+        }
+    );
+
+    $(document).on(
+        'submit',
+        '#formAutoRespostaCliente',
+        function(e){
+
+            let form = $(this);
+
+            if(
+                form.find('[name=auto_resposta_ativa]:checked').val() == 'S'
+                &&
+                $.trim(form.find('[name=auto_resposta_texto]').val()) == ''
+            ){
+                e.preventDefault();
+                alert('Informe o texto da auto resposta para ativá-la.');
+                return false;
+            }
+
+            atualizarIntervaloAutoResposta(form);
+
+            let intervalo = parseInt(
+                form.find('[name=auto_resposta_intervalo_minutos]').val(),
+                10
+            );
+
+            if(isNaN(intervalo) || intervalo < 1){
+                e.preventDefault();
+                alert('Selecione um intervalo de pelo menos 1 minuto para a auto resposta.');
                 return false;
             }
         }
