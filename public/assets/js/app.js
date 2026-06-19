@@ -325,6 +325,18 @@ $(document).ready(function(){
                 $(this).data('numero')
             );
 
+            $('[name=auto_resposta_ativa]').val(
+                $(this).data('auto-resposta-ativa') || 'N'
+            );
+
+            $('[name=auto_resposta_texto]').val(
+                $(this).data('auto-resposta-texto') || ''
+            );
+
+            $('[name=auto_resposta_intervalo_minutos]').val(
+                $(this).data('auto-resposta-intervalo') || 1440
+            );
+
             $('#formMeta').attr(
                 'action',
                 BASE_URL
@@ -354,9 +366,9 @@ $(document).ready(function(){
 
         atualizarPreviewWebhookVerifyTokenMeta();
 
-
-
-
+        $('[name=auto_resposta_ativa]').val('N');
+        $('[name=auto_resposta_texto]').val('');
+        $('[name=auto_resposta_intervalo_minutos]').val(1440);
 
         $('#formMeta').attr(
             'action',
@@ -383,6 +395,34 @@ $(document).ready(function(){
         atualizarPreviewWebhookVerifyTokenMeta();
 
     });
+
+    $(document).on(
+        'submit',
+        '#formMeta',
+        function(e){
+
+            if(
+                $('[name=auto_resposta_ativa]').val() == 'S'
+                &&
+                $.trim($('[name=auto_resposta_texto]').val()) == ''
+            ){
+                e.preventDefault();
+                alert('Informe o texto da auto resposta para ativá-la.');
+                return false;
+            }
+
+            let intervalo = parseInt(
+                $('[name=auto_resposta_intervalo_minutos]').val(),
+                10
+            );
+
+            if(isNaN(intervalo) || intervalo < 5){
+                e.preventDefault();
+                alert('O intervalo mínimo da auto resposta é de 5 minutos.');
+                return false;
+            }
+        }
+    );
 
     $(document).on(
         'input',
