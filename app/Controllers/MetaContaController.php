@@ -56,7 +56,7 @@ class MetaContaController extends Controller
 
         $dados['auto_resposta_intervalo_minutos'] =
             max(
-                5,
+                1,
                 (int) ($dados['auto_resposta_intervalo_minutos'] ?? 1440)
             );
 

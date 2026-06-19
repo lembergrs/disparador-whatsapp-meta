@@ -411,6 +411,36 @@ class MetaConta
         ]);
     }
 
+
+    public function atualizarAutoRespostaPorCliente($id, $clienteId, $dados)
+    {
+        $sql = $this->db->prepare("
+
+            UPDATE meta_contas SET
+
+                MTA_AutoRespostaAtiva = ?,
+
+                MTA_AutoRespostaTexto = ?,
+
+                MTA_AutoRespostaIntervaloMinutos = ?
+
+            WHERE MTA_ID = ?
+            AND CLI_ID = ?
+            AND MTA_Ativo = 'S'
+
+        ");
+
+        $sql->execute([
+            $dados['auto_resposta_ativa'],
+            $dados['auto_resposta_texto'],
+            $dados['auto_resposta_intervalo_minutos'],
+            $id,
+            $clienteId
+        ]);
+
+        return $sql->rowCount() > 0;
+    }
+
     public function listarPorCliente($clienteId)
     {
         $sql = $this->db->prepare("

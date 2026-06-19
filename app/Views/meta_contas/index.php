@@ -278,7 +278,7 @@ Use este token no campo Verify Token da configuração do Webhook da Meta. Se fi
 
 </div>
 
-<div class="alert alert-info">
+<div class="alert alert-info meta-webhook-config-box">
 
 <strong>Configuração do Webhook na Meta</strong><br>
 Webhook URL:
@@ -315,8 +315,7 @@ class="form-control"
 
 </div>
 
-</div>
-
+<div class="auto-resposta-section">
 
 <hr>
 
@@ -330,13 +329,19 @@ Essa mensagem será enviada automaticamente quando esse número receber uma mens
 
 <label>Ativar auto resposta</label>
 
-<select
-name="auto_resposta_ativa"
-class="form-control"
->
-<option value="N">Não</option>
-<option value="S">Sim</option>
-</select>
+<div class="d-flex align-items-center">
+
+<div class="form-check form-check-inline">
+<input class="form-check-input" type="radio" name="auto_resposta_ativa" id="auto_resposta_ativa_n" value="N" checked>
+<label class="form-check-label" for="auto_resposta_ativa_n">Não</label>
+</div>
+
+<div class="form-check form-check-inline">
+<input class="form-check-input" type="radio" name="auto_resposta_ativa" id="auto_resposta_ativa_s" value="S">
+<label class="form-check-label" for="auto_resposta_ativa_s">Sim</label>
+</div>
+
+</div>
 
 </div>
 
@@ -354,15 +359,43 @@ rows="4"
 
 <div class="form-group">
 
-<label>Intervalo para repetir auto resposta, em minutos</label>
+<label>Intervalo para repetir auto resposta</label>
 
 <input
-type="number"
+type="hidden"
 name="auto_resposta_intervalo_minutos"
-class="form-control"
-min="5"
 value="1440"
 >
+
+<div class="row">
+
+<div class="col-md-6">
+<label class="small text-muted">Horas</label>
+<select name="auto_resposta_intervalo_horas" class="form-control auto-resposta-horas">
+<?php for($hora = 0; $hora <= 24; $hora++){ ?>
+<option value="<?= $hora; ?>"><?= str_pad($hora, 2, '0', STR_PAD_LEFT); ?></option>
+<?php } ?>
+</select>
+</div>
+
+<div class="col-md-6">
+<label class="small text-muted">Minutos</label>
+<select name="auto_resposta_intervalo_minutos_select" class="form-control auto-resposta-minutos">
+<?php for($minuto = 0; $minuto <= 60; $minuto++){ ?>
+<option value="<?= $minuto; ?>"><?= str_pad($minuto, 2, '0', STR_PAD_LEFT); ?></option>
+<?php } ?>
+</select>
+</div>
+
+</div>
+
+<small class="form-text text-muted">
+O total será salvo em minutos. Selecione pelo menos 1 minuto.
+</small>
+
+</div>
+
+</div>
 
 </div>
 
