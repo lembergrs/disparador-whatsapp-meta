@@ -13,7 +13,7 @@
     "
     >
 
-        <?= nl2br($msg['MSG_Texto']); ?>
+        <?= nl2br(htmlspecialchars($msg['MSG_Texto'] ?? '', ENT_QUOTES, 'UTF-8')); ?>
 
         <br>
 
@@ -38,7 +38,7 @@
     "
     >
 
-        <?= nl2br($msg['MSG_Texto']); ?>
+        <?= nl2br(htmlspecialchars($msg['MSG_Texto'] ?? '', ENT_QUOTES, 'UTF-8')); ?>
 
         <br>
 

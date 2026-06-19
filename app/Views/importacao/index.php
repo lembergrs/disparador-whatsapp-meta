@@ -33,7 +33,7 @@ if(!function_exists('formatarTelefone')){
 <?php if(isset($_SESSION['sucesso'])){ ?>
 
 <div class="alert alert-success">
-<?= $_SESSION['sucesso']; ?>
+<?= htmlspecialchars($_SESSION['sucesso'], ENT_QUOTES, 'UTF-8'); ?>
 </div>
 
 <?php unset($_SESSION['sucesso']); ?>
@@ -43,10 +43,28 @@ if(!function_exists('formatarTelefone')){
 <?php if(isset($_SESSION['erro'])){ ?>
 
 <div class="alert alert-danger">
-<?= $_SESSION['erro']; ?>
+<?= htmlspecialchars($_SESSION['erro'], ENT_QUOTES, 'UTF-8'); ?>
 </div>
 
 <?php unset($_SESSION['erro']); ?>
+
+<?php } ?>
+
+<?php if(!empty($listaSelecionadaDados)){ ?>
+
+<div class="alert alert-info" id="alertaListaImportacao">
+    <i class="fas fa-info-circle"></i>
+    Importando contatos para a lista:
+    <strong id="nomeListaImportacao"><?= htmlspecialchars($listaSelecionadaDados['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?></strong>
+</div>
+
+<?php }else{ ?>
+
+<div class="alert alert-info" id="alertaListaImportacao" style="display:none;">
+    <i class="fas fa-info-circle"></i>
+    Importando contatos para a lista:
+    <strong id="nomeListaImportacao"></strong>
+</div>
 
 <?php } ?>
 
@@ -59,6 +77,8 @@ action="<?= BASE_URL; ?>/index.php?url=importacao/importar"
 method="POST"
 enctype="multipart/form-data"
 >
+
+<?= \Core\Csrf::input(); ?>
 
 <div class="row">
 
@@ -82,11 +102,12 @@ Selecione uma lista
 <?php foreach($listas as $lista){ ?>
 
 <option
-value="<?= $lista['LST_ID']; ?>"
-<?= isset($listaSelecionada) && $listaSelecionada == $lista['LST_ID'] ? 'selected' : ''; ?>
+value="<?= (int) $lista['LST_ID']; ?>"
+data-nome="<?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?>"
+<?= isset($listaSelecionada) && (int) $listaSelecionada === (int) $lista['LST_ID'] ? 'selected' : ''; ?>
 >
-<?= $lista['LST_Nome']; ?>
-(<?= $lista['total_contatos']; ?> contatos)
+<?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?>
+(<?= (int) $lista['total_contatos']; ?> contatos)
 </option>
 
 <?php } ?>
@@ -188,11 +209,11 @@ class="table table-bordered table-striped table-hover datatable"
 
 <tr>
 
-<td><?= $contato['CON_ID']; ?></td>
+<td><?= (int) $contato['CON_ID']; ?></td>
 
-<td><?= $contato['CON_Nome']; ?></td>
+<td><?= htmlspecialchars($contato['CON_Nome'], ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= formatarTelefone($contato['CON_Telefone']); ?></td>
+<td><?= htmlspecialchars(formatarTelefone($contato['CON_Telefone']), ENT_QUOTES, 'UTF-8'); ?></td>
 
 <td>
 <?= date(
@@ -218,6 +239,36 @@ class="table table-bordered table-striped table-hover datatable"
 <script>
 
 $(document).ready(function(){
+
+    function atualizarAlertaListaSelecionada()
+    {
+        const option = $('#lista_id option:selected');
+        const nome = option.data('nome');
+
+        if(nome){
+            $('#nomeListaImportacao').text(nome);
+            $('#alertaListaImportacao').show();
+        }else{
+            $('#nomeListaImportacao').text('');
+            $('#alertaListaImportacao').hide();
+        }
+    }
+
+    function alternarNovaLista()
+    {
+        atualizarAlertaListaSelecionada();
+
+        if($('#lista_id').val() === 'nova'){
+            $('#areaNovaLista').show();
+            $('#nova_lista').prop('required', true);
+        }else{
+            $('#areaNovaLista').hide();
+            $('#nova_lista').prop('required', false);
+        }
+    }
+
+    $('#lista_id').on('change', alternarNovaLista);
+    alternarNovaLista();
 
     $('#tabelaContatos').DataTable({
         language: {

@@ -56,7 +56,8 @@ class ListaContatoController extends Controller
             Auth::usuario();
 
         $id =
-            $_GET['id']
+            $_POST['id']
+            ?? $_GET['id']
             ?? null;
 
         if(!$id){
@@ -110,8 +111,53 @@ class ListaContatoController extends Controller
         );
     }
 
+    public function criar()
+    {
+        $this->validarCsrfPost();
+
+        $usuario =
+            Auth::usuario();
+
+        $nome =
+            trim(
+                $_POST['nome']
+                ?? ''
+            );
+
+        if($nome == ''){
+
+            Session::flash(
+                'error',
+                'Informe o nome da lista.'
+            );
+
+            $this->redirect('listaContato');
+
+            return;
+        }
+
+        $listaId =
+            $this->listaModel
+            ->criar(
+                $usuario['cliente_id'],
+                $nome
+            );
+
+        Session::flash(
+            'success',
+            'Lista criada com sucesso.'
+        );
+
+        $this->redirect(
+            'listaContato/visualizar&id='
+            . $listaId
+        );
+    }
+
     public function salvarEdicao()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
@@ -189,11 +235,13 @@ class ListaContatoController extends Controller
 
     public function inativar()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
         $id =
-            $_GET['id']
+            $_POST['id']
             ?? null;
 
         if(!$id){
@@ -262,14 +310,16 @@ class ListaContatoController extends Controller
 
     public function removerContato()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
         $listaId =
-            $_GET['lista'] ?? null;
+            $_POST['lista'] ?? null;
 
         $contatoId =
-            $_GET['contato'] ?? null;
+            $_POST['contato'] ?? null;
 
         if(!$listaId || !$contatoId){
 
@@ -324,6 +374,8 @@ class ListaContatoController extends Controller
 
     public function adicionarContato()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
@@ -434,11 +486,13 @@ class ListaContatoController extends Controller
 
     public function duplicar()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
         $id =
-            $_GET['id'] ?? null;
+            $_POST['id'] ?? null;
 
         if(!$id){
 

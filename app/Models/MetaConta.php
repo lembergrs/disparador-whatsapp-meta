@@ -179,6 +179,26 @@ class MetaConta
         );
     }
 
+    public function buscarPorCliente($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM meta_contas
+            WHERE MTA_ID = ?
+            AND CLI_ID = ?
+            AND MTA_Ativo = 'S'
+            LIMIT 1
+        "
+        );
+
+        $sql->execute([
+            $id,
+            $clienteId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function contarAtivasPorCliente(
         $clienteId,
         $ignorarContaId = null
@@ -348,67 +368,46 @@ class MetaConta
 
     public function atualizar($id, $dados)
     {
+        $camposToken = '';
+        $params = [
+            $dados['cliente'],
+            $dados['nome'],
+            $dados['phone_number_id'],
+            $dados['waba_id']
+        ];
+
+        if(trim((string) ($dados['token'] ?? '')) !== ''){
+            $camposToken = 'MTA_Token = ?, ';
+            $params[] = $dados['token'];
+        }
+
+        $params = array_merge($params, [
+            $dados['url_base'],
+            $dados['numero'],
+            $dados['webhook_verify_token'],
+            $dados['auto_resposta_ativa'],
+            $dados['auto_resposta_texto'],
+            $dados['auto_resposta_intervalo_minutos'],
+            $id
+        ]);
+
         $sql = $this->db->prepare("
-
             UPDATE meta_contas SET
-
                 CLI_ID = ?,
-
                 MTA_Nome = ?,
-
                 MTA_PhoneNumberId = ?,
-
                 MTA_WabaId = ?,
-
-                MTA_Token = ?,
-
+                {$camposToken}
                 MTA_UrlBase = ?,
-
                 MTA_NumeroTelefone = ?,
-
                 MTA_WebhookVerifyToken = ?,
-
                 MTA_AutoRespostaAtiva = ?,
-
                 MTA_AutoRespostaTexto = ?,
-
                 MTA_AutoRespostaIntervaloMinutos = ?
-
             WHERE MTA_ID = ?
-
         ");
 
-
-
-
-
-        return $sql->execute([
-
-            $dados['cliente'],
-
-            $dados['nome'],
-
-            $dados['phone_number_id'],
-
-            $dados['waba_id'],
-
-            $dados['token'],
-
-            $dados['url_base'],
-
-            $dados['numero'],
-
-            $dados['webhook_verify_token'],
-
-            $dados['auto_resposta_ativa'],
-
-            $dados['auto_resposta_texto'],
-
-            $dados['auto_resposta_intervalo_minutos'],
-
-            $id
-
-        ]);
+        return $sql->execute($params);
     }
 
 

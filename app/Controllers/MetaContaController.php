@@ -130,6 +130,8 @@ class MetaContaController extends Controller
 
     public function salvar()
     {
+        $this->validarCsrfPost();
+
         $clienteId =
             (int) ($_POST['cliente'] ?? 0);
 
@@ -149,6 +151,11 @@ class MetaContaController extends Controller
             $this->redirect(
                 'metaConta'
             );
+        }
+
+        if(trim((string) ($_POST['token'] ?? '')) === ''){
+            Session::flash('error', 'Informe o token da Meta.');
+            $this->redirect('metaConta');
         }
 
         $dados =
@@ -210,6 +217,8 @@ class MetaContaController extends Controller
 
     public function inativar()
     {
+        $this->validarCsrfPost();
+
         $id = $_GET['id'];
 
         $this->metaModel->inativar(
@@ -236,6 +245,8 @@ class MetaContaController extends Controller
 
     public function testar()
     {
+        $this->validarCsrfPost();
+
         $id = $_GET['id'];
 
         try{
@@ -286,6 +297,8 @@ class MetaContaController extends Controller
 
     public function atualizar()
     {
+        $this->validarCsrfPost();
+
         $id =
             (int) ($_POST['id'] ?? 0);
 
