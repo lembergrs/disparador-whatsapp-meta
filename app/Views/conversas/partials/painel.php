@@ -43,38 +43,46 @@ if(!function_exists('formatarNumeroBR')){
 
     ?>
 
-    <div class="card-header bg-light">
+    <div class="card-header bg-light conversa-painel-header">
 
-        <strong>
-            <?= htmlspecialchars($nomeSelecionado); ?>
-        </strong>
+        <div class="d-flex justify-content-between align-items-start conversa-painel-header-linha">
 
-        <br>
+            <div class="conversa-painel-titulo">
 
-        <small class="text-muted">
-            <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
-        </small>
+                <strong>
+                    <?= htmlspecialchars($nomeSelecionado); ?>
+                </strong>
 
-        <br>
+                <small class="text-muted d-block">
+                    <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
+                </small>
 
-        <small class="text-muted">
-            <i class="fas fa-user-headset"></i>
-            <?= !empty($conversaSelecionada['ResponsavelNome'])
-                ? htmlspecialchars($conversaSelecionada['ResponsavelNome'])
-                : 'Sem responsável'; ?>
-        </small>
+            </div>
 
-        <?php if(!empty($podeAtribuirConversa)){ ?>
-            <button
-                type="button"
-                class="btn btn-xs btn-outline-info float-right btn-atribuir"
-                data-id="<?= $conversaSelecionada['CVS_ID']; ?>"
-                data-responsavel="<?= (int) ($conversaSelecionada['ResponsavelId'] ?? 0); ?>"
-            >
-                <i class="fas fa-user-plus"></i>
-                Atribuir
-            </button>
-        <?php } ?>
+            <div class="text-right conversa-painel-responsavel">
+
+                <small class="text-muted d-block">
+                    <i class="fas fa-user-headset"></i>
+                    <?= !empty($conversaSelecionada['ResponsavelNome'])
+                        ? htmlspecialchars($conversaSelecionada['ResponsavelNome'])
+                        : 'Sem responsável'; ?>
+                </small>
+
+                <?php if(!empty($podeAtribuirConversa)){ ?>
+                    <button
+                        type="button"
+                        class="btn btn-xs btn-outline-info btn-atribuir mt-1"
+                        data-id="<?= $conversaSelecionada['CVS_ID']; ?>"
+                        data-responsavel="<?= (int) ($conversaSelecionada['ResponsavelId'] ?? 0); ?>"
+                    >
+                        <i class="fas fa-user-plus"></i>
+                        Atribuir
+                    </button>
+                <?php } ?>
+
+            </div>
+
+        </div>
 
     </div>
 

@@ -147,7 +147,8 @@ class Conversa
         $status = '',
         $etiqueta = '',
         $usuario = null,
-        $responsavel = ''
+        $responsavel = '',
+        $manterConversaId = null
     )
     {
         $where = [];
@@ -162,6 +163,7 @@ class Conversa
         $status = trim($status);
         $etiqueta = (int) $etiqueta;
         $responsavel = trim((string) $responsavel);
+        $manterConversaId = (int) $manterConversaId;
 
         if($busca != ''){
 
@@ -192,7 +194,12 @@ class Conversa
 
         if($status == 'N'){
 
-            $where[] = "c.CVS_NaoLida = 'S'";
+            if($manterConversaId > 0){
+                $where[] = "(c.CVS_NaoLida = 'S' OR c.CVS_ID = ?)";
+                $params[] = $manterConversaId;
+            }else{
+                $where[] = "c.CVS_NaoLida = 'S'";
+            }
 
         }elseif($status == 'L'){
 
