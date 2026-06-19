@@ -42,6 +42,8 @@ class UsuarioController extends Controller
 
     public function salvar()
     {
+        $this->validarCsrfPost();
+
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){
             $this->redirect('usuario');
         }
@@ -100,6 +102,8 @@ class UsuarioController extends Controller
 
     public function senha()
     {
+        $this->validarCsrfPost();
+
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){
             $this->redirect('usuario');
         }
@@ -125,11 +129,15 @@ class UsuarioController extends Controller
 
     public function inativar()
     {
+        $this->validarCsrfPost();
+
         $this->alterarStatus('N', 'Usuário inativado.');
     }
 
     public function ativar()
     {
+        $this->validarCsrfPost();
+
         $clienteId = $this->clienteIdPermitido();
         $id = (int) ($_GET['id'] ?? 0);
         $clienteModel = new Cliente();

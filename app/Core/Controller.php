@@ -27,6 +27,11 @@ class Controller
 
     }
 
+    protected function validarCsrfPost()
+    {
+        Csrf::exigirPost();
+    }
+
     protected function redirect($url)
     {
         header(
