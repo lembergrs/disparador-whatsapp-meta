@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/config/env.php';
+
+configurarErrosAplicacao();
+
 $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params([
     'lifetime' => 0,
@@ -11,9 +15,6 @@ session_set_cookie_params([
 
 session_start();
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 /*
 |--------------------------------------------------------------------------

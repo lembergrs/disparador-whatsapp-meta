@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/env.php';
+
+defined('APP_ENV') || define('APP_ENV', app_env());
+
 $host = $_SERVER['HTTP_HOST'] ?? '';
 
 if ($host === 'disparador.test') {
@@ -19,8 +23,8 @@ if ($host === 'disparador.test') {
 
 }
 
-define('RECAPTCHA_SITE_KEY', '6LdDLBQtAAAAAEp5UhSPe_cikIC5u3VDrtq1-rse');
-define('RECAPTCHA_SECRET_KEY', '6LdDLBQtAAAAAPB-YaekMjxjXwJY9V05mMJnUoZG');
+defined('RECAPTCHA_SITE_KEY') || define('RECAPTCHA_SITE_KEY', env_valor('RECAPTCHA_SITE_KEY', ''));
+defined('RECAPTCHA_SECRET_KEY') || define('RECAPTCHA_SECRET_KEY', env_valor('RECAPTCHA_SECRET_KEY', ''));
 
 // Taxa segura inicial de disparos para WhatsApp Cloud API.
 // Ajuste conforme qualidade, limites e aprovação da conta na Meta.
@@ -31,19 +35,11 @@ defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIM
 defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
 
 // App Secret usado para validar X-Hub-Signature-256 do webhook da Meta.
-defined('META_APP_SECRET') || define('META_APP_SECRET', getenv('META_APP_SECRET') ?: '');
+defined('META_APP_SECRET') || define('META_APP_SECRET', env_valor('META_APP_SECRET', ''));
 
 
-/*
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'whatsapp_disparador');
-define('DB_USER', 'root'); 
-define('DB_PASS', ''); // teste1
-define('DB_PORT', '3306');
-*/
-
-define('DB_HOST', 'rosemegamania.com');
-define('DB_NAME', 'u795697383_disparador');
-define('DB_USER', 'u795697383_wpdisp'); 
-define('DB_PASS', '4|D|+wRKp@A');
-define('DB_PORT', '3306');
+defined('DB_HOST') || define('DB_HOST', env_valor('DB_HOST', 'localhost'));
+defined('DB_NAME') || define('DB_NAME', env_valor('DB_NAME', 'whatsapp_disparador'));
+defined('DB_USER') || define('DB_USER', env_valor('DB_USER', 'root'));
+defined('DB_PASS') || define('DB_PASS', env_valor('DB_PASS', ''));
+defined('DB_PORT') || define('DB_PORT', env_valor('DB_PORT', '3306'));
