@@ -30,6 +30,10 @@ defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIM
 // Dias de tolerância financeira após vencimento antes do bloqueio operacional.
 defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
 
+// App Secret usado para validar X-Hub-Signature-256 do webhook da Meta.
+defined('META_APP_SECRET') || define('META_APP_SECRET', getenv('META_APP_SECRET') ?: '');
+
+
 /*
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'whatsapp_disparador');

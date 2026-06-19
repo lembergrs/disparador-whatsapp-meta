@@ -61,6 +61,8 @@ class FinanceiroController extends Controller
 
     public function escolherPlano()
     {
+        $this->validarCsrfPost();
+
         Auth::clienteAdmin();
 
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){

@@ -58,15 +58,15 @@ Crie as colunas para salvar a configuração de auto resposta.
 
 <tr>
 
-<td><?= $conta['MTA_ID']; ?></td>
+<td><?= (int) $conta['MTA_ID']; ?></td>
 
-<td><?= $conta['CLI_Nome']; ?></td>
+<td><?= htmlspecialchars($conta['CLI_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= $conta['MTA_Nome']; ?></td>
+<td><?= htmlspecialchars($conta['MTA_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= $conta['MTA_NumeroTelefone']; ?></td>
+<td><?= htmlspecialchars($conta['MTA_NumeroTelefone'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= $conta['MTA_Status']; ?></td>
+<td><?= htmlspecialchars($conta['MTA_Status'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
 <td>
 
@@ -74,29 +74,27 @@ Crie as colunas para salvar a configuração de auto resposta.
 type="button"
 class="btn btn-info btn-sm btnEditarMeta"
 
-data-id="<?= $conta['MTA_ID']; ?>"
+data-id="<?= (int) $conta['MTA_ID']; ?>"
 
-data-cliente="<?= $conta['CLI_ID']; ?>"
+data-cliente="<?= (int) $conta['CLI_ID']; ?>"
 
-data-nome="<?= $conta['MTA_Nome']; ?>"
+data-nome="<?= htmlspecialchars($conta['MTA_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-phone="<?= $conta['MTA_PhoneNumberId']; ?>"
+data-phone="<?= htmlspecialchars($conta['MTA_PhoneNumberId'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-waba="<?= $conta['MTA_WabaId']; ?>"
+data-waba="<?= htmlspecialchars($conta['MTA_WabaId'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-token="<?= htmlspecialchars($conta['MTA_Token']); ?>"
+data-webhook-token="<?= htmlspecialchars($conta['MTA_WebhookVerifyToken'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-webhook-token="<?= htmlspecialchars($conta['MTA_WebhookVerifyToken'] ?? ''); ?>"
+data-url="<?= htmlspecialchars($conta['MTA_UrlBase'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-url="<?= $conta['MTA_UrlBase']; ?>"
+data-numero="<?= htmlspecialchars($conta['MTA_NumeroTelefone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-numero="<?= $conta['MTA_NumeroTelefone']; ?>"
-
-data-auto-resposta-ativa="<?= $conta['MTA_AutoRespostaAtiva'] ?? 'N'; ?>"
+data-auto-resposta-ativa="<?= htmlspecialchars($conta['MTA_AutoRespostaAtiva'] ?? 'N', ENT_QUOTES, 'UTF-8'); ?>"
 
 data-auto-resposta-texto="<?= htmlspecialchars($conta['MTA_AutoRespostaTexto'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 
-data-auto-resposta-intervalo="<?= $conta['MTA_AutoRespostaIntervaloMinutos'] ?? 1440; ?>"
+data-auto-resposta-intervalo="<?= (int) ($conta['MTA_AutoRespostaIntervaloMinutos'] ?? 1440); ?>"
 >
 
 <i class="fas fa-edit"></i>
@@ -104,7 +102,7 @@ data-auto-resposta-intervalo="<?= $conta['MTA_AutoRespostaIntervaloMinutos'] ?? 
 </button>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=metaConta/testar&id=<?= $conta['MTA_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=metaConta/testar&id=<?= (int) $conta['MTA_ID']; ?>"
 class="btn btn-success btn-sm"
 >
 
@@ -113,9 +111,10 @@ class="btn btn-success btn-sm"
 </a>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=metaConta/inativar&id=<?= $conta['MTA_ID']; ?>"
+href="#"
+data-post-url="<?= BASE_URL; ?>/index.php?url=metaConta/inativar&id=<?= (int) $conta['MTA_ID']; ?>"
 class="btn btn-danger btn-sm"
-onclick="return confirm('Deseja inativar esta conta?')"
+data-confirm="Deseja inativar esta conta?"
 >
 
 <i class="fas fa-trash"></i>
@@ -237,7 +236,6 @@ required
 name="token"
 class="form-control"
 rows="4"
-required
 ></textarea>
 
 </div>

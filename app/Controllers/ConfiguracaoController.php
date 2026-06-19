@@ -52,6 +52,8 @@ class ConfiguracaoController extends Controller
 
     public function salvarAutoResposta()
     {
+        $this->validarCsrfPost();
+
         $usuario = Auth::usuario();
 
         if(

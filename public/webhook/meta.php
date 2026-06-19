@@ -91,14 +91,16 @@ $input =
         'php://input'
     );
 
-file_put_contents(
-    __DIR__ . '/meta.log',
-    date('Y-m-d H:i:s')
-    . "\n"
-    . $input
-    . "\n\n",
-    FILE_APPEND
-);
+if(!validarAssinaturaMeta($input)){
+    http_response_code(403);
+    registrarLogWebhookMeta('assinatura_invalida');
+    echo 'Assinatura inválida';
+    exit;
+}
+
+registrarLogWebhookMeta('payload_recebido', [
+    'bytes' => strlen($input)
+]);
 
 $payload =
     json_decode(
@@ -508,6 +510,47 @@ function enviarAutoRespostaTexto($metaConta, $numero, $texto)
         'response' => json_decode($response, true),
         'curl_error' => $curlError
     ];
+}
+
+function validarAssinaturaMeta($input)
+{
+    $appSecret = defined('META_APP_SECRET') ? (string) META_APP_SECRET : '';
+
+    if($appSecret === ''){
+        return false;
+    }
+
+    $assinatura = $_SERVER['HTTP_X_HUB_SIGNATURE_256'] ?? '';
+
+    if(strpos($assinatura, 'sha256=') !== 0){
+        return false;
+    }
+
+    $esperada = 'sha256=' . hash_hmac('sha256', $input, $appSecret);
+
+    return hash_equals($esperada, $assinatura);
+}
+
+function registrarLogWebhookMeta($acao, $dados = [])
+{
+    $diretorioLog = __DIR__ . '/../../storage/logs';
+
+    if(!is_dir($diretorioLog)){
+        mkdir($diretorioLog, 0775, true);
+    }
+
+    $linha = [
+        'data' => date('Y-m-d H:i:s'),
+        'acao' => $acao,
+        'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+        'dados' => $dados
+    ];
+
+    file_put_contents(
+        $diretorioLog . '/meta-webhook.log',
+        json_encode($linha, JSON_UNESCAPED_UNICODE) . PHP_EOL,
+        FILE_APPEND
+    );
 }
 
 function colunaExiste($db, $tabela, $coluna)

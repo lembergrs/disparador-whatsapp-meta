@@ -16,7 +16,7 @@ class MetaService
 
 
 
-    public function __construct($metaId)
+    public function __construct($metaId, $clienteId = null)
     {
         $this->db =
             Database::getInstance();
@@ -24,6 +24,14 @@ class MetaService
 
 
 
+
+        $whereCliente = '';
+        $params = [$metaId];
+
+        if($clienteId !== null){
+            $whereCliente = ' AND CLI_ID = ? ';
+            $params[] = $clienteId;
+        }
 
         $sql = $this->db->prepare("
 
@@ -33,10 +41,11 @@ class MetaService
 
             WHERE MTA_ID = ?
             AND MTA_Ativo = 'S'
+            {$whereCliente}
 
         ");
 
-        $sql->execute([$metaId]);
+        $sql->execute($params);
 
 
 

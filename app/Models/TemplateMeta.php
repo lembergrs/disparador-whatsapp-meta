@@ -323,6 +323,29 @@ class TemplateMeta
         );
     }
 
+    public function buscarPorCliente($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT t.*
+            FROM templates_meta t
+            INNER JOIN meta_contas m
+                ON m.MTA_ID = t.MTA_ID
+            WHERE t.TMP_ID = ?
+            AND m.CLI_ID = ?
+            AND t.TMP_Ativo = 'S'
+            AND m.MTA_Ativo = 'S'
+            LIMIT 1
+        "
+        );
+
+        $sql->execute([
+            $id,
+            $clienteId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function inativarAusentes(
         $metaId,
         $idsMeta

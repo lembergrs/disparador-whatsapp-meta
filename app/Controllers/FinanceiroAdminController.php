@@ -40,6 +40,8 @@ class FinanceiroAdminController extends Controller
 
     public function salvarPlano()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         if($_SERVER['REQUEST_METHOD'] != 'POST'){
@@ -81,6 +83,8 @@ class FinanceiroAdminController extends Controller
 
     public function editarPlano()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         if($_SERVER['REQUEST_METHOD'] != 'POST'){
@@ -134,6 +138,8 @@ class FinanceiroAdminController extends Controller
 
     public function inativarPlano()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -162,6 +168,8 @@ class FinanceiroAdminController extends Controller
 
     public function marcarPago()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -243,6 +251,8 @@ class FinanceiroAdminController extends Controller
 
     public function cancelarCobranca()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         $id = (int) ($_GET['id'] ?? 0);
@@ -266,6 +276,8 @@ class FinanceiroAdminController extends Controller
 
     public function processarVencimentos()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         try{
@@ -294,6 +306,8 @@ class FinanceiroAdminController extends Controller
 
     public function gerarCobrancasRecorrentes()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         try{
@@ -323,6 +337,8 @@ class FinanceiroAdminController extends Controller
 
     public function alterarPlanoCliente()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         if($_SERVER['REQUEST_METHOD'] != 'POST'){
@@ -433,6 +449,8 @@ class FinanceiroAdminController extends Controller
 
     public function suspenderCliente()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         $clienteId = (int) ($_GET['id'] ?? 0);
@@ -468,6 +486,8 @@ class FinanceiroAdminController extends Controller
     }
     public function reativarCliente()
     {
+        $this->validarCsrfPost();
+
         Auth::admin();
 
         $clienteId = (int) ($_GET['id'] ?? 0);

@@ -169,7 +169,7 @@ class="table table-bordered table-striped table-hover datatable"
 <?php if($cliente['CLI_Ativo'] == 'N'){ ?>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=cliente/aprovar&id=<?= $cliente['CLI_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=cliente/aprovar&id=<?= (int) $cliente['CLI_ID']; ?>"
 class="btn btn-success btn-sm"
 onclick="return confirm('Deseja aprovar este cadastro?')"
 >
@@ -216,7 +216,7 @@ data-observacoes="<?= htmlspecialchars($cliente['CLI_Observacoes']); ?>"
 <?php if($cliente['CLI_StatusCadastro'] != 'inativo'){ ?>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=cliente/inativar&id=<?= $cliente['CLI_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=cliente/inativar&id=<?= (int) $cliente['CLI_ID']; ?>"
 class="btn btn-danger btn-sm"
 onclick="return confirm('Deseja inativar?')"
 >
@@ -230,7 +230,7 @@ onclick="return confirm('Deseja inativar?')"
 <?php if($cliente['CLI_StatusCadastro'] == 'inativo'){ ?>
 
 <a
-href="<?= rtrim(BASE_URL, '/') ?>/index.php?url=cliente/reativar&id=<?= $cliente['CLI_ID']; ?>"
+href="#" data-post-url="<?= rtrim(BASE_URL, '/') ?>/index.php?url=cliente/reativar&id=<?= (int) $cliente['CLI_ID']; ?>"
 class="btn btn-success btn-sm"
 onclick="return confirm('Deseja reativar este cliente?')"
 >

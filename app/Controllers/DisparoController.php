@@ -83,18 +83,27 @@ class DisparoController extends Controller
 
     public function enviar()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
 
         $template =
             $this->templateModel
-            ->buscar(
-                $_POST['template']
+            ->buscarPorCliente(
+                (int) ($_POST['template'] ?? 0),
+                $usuario['CLI_ID']
             );
+
+        if(!$template || (int) $template['MTA_ID'] !== (int) ($_POST['meta'] ?? 0)){
+            \Core\Session::flash('error', 'Template inválido.');
+            $this->redirect('disparo');
+        }
 
         $meta =
             new MetaService(
-                $_POST['meta']
+                (int) ($_POST['meta'] ?? 0),
+                $usuario['CLI_ID']
             );
 
         $entradaNumeros =
@@ -307,6 +316,11 @@ class DisparoController extends Controller
         );
     }
 
+    private function validarCsrfAjaxSilencioso()
+    {
+        return \Core\Csrf::validarPost();
+    }
+
     private function extrairVariaveisTemplate($template)
     {
         $componentes = json_decode(
@@ -462,13 +476,20 @@ class DisparoController extends Controller
             $usuario =
                 Auth::usuario();
 
+            if(!$this->validarCsrfAjaxSilencioso()){
+                http_response_code(403);
+                echo json_encode(['sucesso' => false, 'erro' => 'Token de segurança inválido.']);
+                return;
+            }
+
             $template =
                 $this->templateModel
-                ->buscar(
-                    $_POST['template']
+                ->buscarPorCliente(
+                    (int) ($_POST['template'] ?? 0),
+                    $usuario['CLI_ID']
                 );
 
-            if(!$template){
+            if(!$template || (int) $template['MTA_ID'] !== (int) ($_POST['meta'] ?? 0)){
                 throw new \Exception('Template não encontrado.');
             }
 
@@ -501,7 +522,8 @@ class DisparoController extends Controller
 
             $meta =
                 new \Services\MetaService(
-                    $_POST['meta']
+                    (int) ($_POST['meta'] ?? 0),
+                    $usuario['CLI_ID']
                 );
 
             $response =
