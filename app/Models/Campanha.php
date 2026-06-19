@@ -130,6 +130,32 @@ class Campanha
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarPorCliente($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT
+                c.*,
+                t.TMP_Nome,
+                t.TMP_Componentes,
+                t.TMP_Idioma,
+                t.MTA_ID
+            FROM campanhas c
+            LEFT JOIN templates_meta t
+                ON t.TMP_ID = c.TMP_ID
+            WHERE c.CAM_ID = ?
+            AND c.CLI_ID = ?
+            LIMIT 1
+        "
+        );
+
+        $sql->execute([
+            $id,
+            $clienteId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function listarFila($campanhaId)
     {
         $sql = $this->db->prepare("
@@ -151,6 +177,33 @@ class Campanha
         ");
 
         $sql->execute([$campanhaId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function listarFilaPorCliente($campanhaId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT
+                f.*,
+                ct.CON_Nome,
+                ct.CON_Telefone
+            FROM fila_envio f
+            INNER JOIN campanhas cp
+                ON cp.CAM_ID = f.CAM_ID
+            INNER JOIN contatos ct
+                ON ct.CON_ID = f.CON_ID
+                AND ct.CLI_ID = cp.CLI_ID
+            WHERE f.CAM_ID = ?
+            AND cp.CLI_ID = ?
+            ORDER BY f.FIL_ID ASC
+        "
+        );
+
+        $sql->execute([
+            $campanhaId,
+            $clienteId
+        ]);
 
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -195,6 +248,30 @@ class Campanha
 
         $sql->execute([
             $campanhaId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarContatoExemploPorCliente($campanhaId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT c.*
+            FROM fila_envio f
+            INNER JOIN campanhas cp
+                ON cp.CAM_ID = f.CAM_ID
+            INNER JOIN contatos c
+                ON c.CON_ID = f.CON_ID
+                AND c.CLI_ID = cp.CLI_ID
+            WHERE f.CAM_ID = ?
+            AND cp.CLI_ID = ?
+            LIMIT 1
+        "
+        );
+
+        $sql->execute([
+            $campanhaId,
+            $clienteId
         ]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
@@ -248,6 +325,28 @@ class Campanha
 
         return $sql->execute([
             $campanhaId
+        ]);
+    }
+
+    public function resetarFilaPorCliente($campanhaId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            UPDATE fila_envio f
+            INNER JOIN campanhas c
+                ON c.CAM_ID = f.CAM_ID
+            SET
+                f.FIL_Status = 'pendente',
+                f.FIL_Tentativas = 0,
+                f.FIL_Erro = NULL,
+                f.FIL_DataEnvio = NULL
+            WHERE f.CAM_ID = ?
+            AND c.CLI_ID = ?
+        "
+        );
+
+        return $sql->execute([
+            $campanhaId,
+            $clienteId
         ]);
     }
 
