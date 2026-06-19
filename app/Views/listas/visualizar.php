@@ -1,5 +1,7 @@
 <?php
 
+if(!function_exists('formatarTelefone')){
+
 function formatarTelefone($telefone)
 {
     $telefone =
@@ -33,6 +35,8 @@ function formatarTelefone($telefone)
     }
 
     return $telefone;
+}
+
 }
 
 ?>
@@ -100,13 +104,14 @@ function formatarTelefone($telefone)
     <div class="card-header">
 
         <h3 class="card-title">
-            <?= $lista['LST_Nome']; ?>
+            <i class="fas fa-list"></i>
+            <?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?>
         </h3>
 
         <div class="card-tools">
 
             <a
-            href="<?= BASE_URL; ?>/index.php?url=importacao&lista=<?= $lista['LST_ID']; ?>"
+            href="<?= BASE_URL; ?>/index.php?url=importacao&lista=<?= (int) $lista['LST_ID']; ?>"
             class="btn btn-success btn-sm"
             >
 
@@ -167,11 +172,15 @@ function formatarTelefone($telefone)
 
             <tr>
 
-                <td><?= $contato['CON_Nome']; ?></td>
+                <td><?= htmlspecialchars($contato['CON_Nome'], ENT_QUOTES, 'UTF-8'); ?></td>
 
                 <td>
-                    <?= formatarTelefone(
-                        $contato['CON_Telefone']
+                    <?= htmlspecialchars(
+                        formatarTelefone(
+                            $contato['CON_Telefone']
+                        ),
+                        ENT_QUOTES,
+                        'UTF-8'
                     ); ?>
                 </td>
 
@@ -185,9 +194,12 @@ function formatarTelefone($telefone)
                 <td>
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=listaContato/removerContato&lista=<?= $lista['LST_ID']; ?>&contato=<?= $contato['CON_ID']; ?>"
+                    href="#"
+                    data-post-url="<?= BASE_URL; ?>/index.php?url=listaContato/removerContato"
+                    data-field-lista="<?= (int) $lista['LST_ID']; ?>"
+                    data-field-contato="<?= (int) $contato['CON_ID']; ?>"
+                    data-confirm="Deseja remover este contato da lista?"
                     class="btn btn-danger btn-sm"
-                    onclick="return confirm('Deseja remover este contato da lista?')"
                     >
                         <i class="fas fa-trash"></i>
                     </a>
@@ -220,10 +232,12 @@ method="POST"
 action="<?= BASE_URL; ?>/index.php?url=listaContato/adicionarContato"
 >
 
+<?= \Core\Csrf::input(); ?>
+
 <input
 type="hidden"
 name="lista_id"
-value="<?= $lista['LST_ID']; ?>"
+value="<?= (int) $lista['LST_ID']; ?>"
 >
 
 <div class="modal-header">

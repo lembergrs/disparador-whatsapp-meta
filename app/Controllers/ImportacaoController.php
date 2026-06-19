@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Upload;
 use Core\Spreadsheet;
+use Core\Session;
 
 use Models\Contato;
 use Models\ListaContato;
@@ -44,13 +45,29 @@ class ImportacaoController extends Controller
             $_GET['lista']
             ?? '';
 
+        $listaSelecionadaDados = null;
+
+        if($listaSelecionada !== ''){
+
+            $listaSelecionadaDados =
+                $this->listaModel->buscar(
+                    $listaSelecionada,
+                    $usuario['cliente_id']
+                );
+
+            if(!$listaSelecionadaDados){
+                $listaSelecionada = '';
+            }
+        }
+
         $this->view(
             'importacao/index',
             [
                 'titulo' => 'Importação',
                 'contatos' => $contatos,
                 'listas' => $listas,
-                'listaSelecionada' => $listaSelecionada
+                'listaSelecionada' => $listaSelecionada,
+                'listaSelecionadaDados' => $listaSelecionadaDados
             ]
         );
     }
@@ -59,13 +76,14 @@ class ImportacaoController extends Controller
     {
         $this->validarCsrfPost();
 
+        $arquivo = null;
+        $listaId = $_POST['lista_id'] ?? '';
+
         try{
 
             $usuario = Auth::usuario();
 
             $clienteId = $usuario['cliente_id'];
-
-            $listaId = $_POST['lista_id'] ?? '';
 
             if($listaId == 'nova'){
 
@@ -79,6 +97,12 @@ class ImportacaoController extends Controller
                     $this->listaModel->criar(
                         $clienteId,
                         $nomeLista
+                    );
+
+                $lista =
+                    $this->listaModel->buscar(
+                        $listaId,
+                        $clienteId
                     );
 
             }else{
@@ -203,10 +227,23 @@ class ImportacaoController extends Controller
                 unlink($arquivo);
             }
 
-            $_SESSION['sucesso'] =
-                "{$importados} novo(s) contato(s) importado(s). "
-                . "{$vinculados} contato(s) vinculado(s) à lista. "
-                . "{$ignorados} linha(s) ignorada(s).";
+            $nomeListaImportada =
+                $lista['LST_Nome']
+                ?? 'selecionada';
+
+            Session::flash(
+                'success',
+                "{$vinculados} contatos importados com sucesso para a lista {$nomeListaImportada}. "
+                . "{$importados} novo(s) contato(s) criado(s). "
+                . "{$ignorados} linha(s) ignorada(s)."
+            );
+
+            $this->redirect(
+                'listaContato/visualizar&id='
+                . $listaId
+            );
+
+            return;
 
         }catch(\Exception $e){
 
@@ -214,11 +251,19 @@ class ImportacaoController extends Controller
                 unlink($arquivo);
             }
 
-            $_SESSION['erro'] =
-                $e->getMessage();
+            Session::flash(
+                'error',
+                $e->getMessage()
+            );
 
         }
 
-        $this->redirect('importacao');
+        $redirect = 'importacao';
+
+        if(!empty($listaId) && $listaId !== 'nova'){
+            $redirect .= '&lista=' . urlencode($listaId);
+        }
+
+        $this->redirect($redirect);
     }
 }
