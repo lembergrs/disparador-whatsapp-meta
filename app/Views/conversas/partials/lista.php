@@ -65,9 +65,9 @@ if(!$ativa && $conversa['CVS_NaoLida'] == 'S'){
 ?>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
+href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= (int) $conversa['CVS_ID']; ?>"
 class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
-data-id="<?= $conversa['CVS_ID']; ?>"
+data-id="<?= (int) $conversa['CVS_ID']; ?>"
 title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 >
 
@@ -76,7 +76,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
     <div class="conversa-lista-nome">
 
         <strong>
-            <?= htmlspecialchars($nome); ?>
+            <?= htmlspecialchars($nome, ENT_QUOTES, 'UTF-8'); ?>
         </strong>
 
     </div>
@@ -94,7 +94,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
         <button
             type="button"
             class="btn btn-xs btn-outline-secondary btn-marcar-nao-lida"
-            data-id="<?= $conversa['CVS_ID']; ?>"
+            data-id="<?= (int) $conversa['CVS_ID']; ?>"
             title="Marcar como não lida"
         >
             <i class="far fa-envelope"></i>
@@ -103,7 +103,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
         <button
             type="button"
             class="btn btn-xs btn-outline-primary btn-etiquetas"
-            data-id="<?= $conversa['CVS_ID']; ?>"
+            data-id="<?= (int) $conversa['CVS_ID']; ?>"
             title="Etiquetas"
         >
             <i class="fas fa-tags"></i>
@@ -114,7 +114,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
             <button
                 type="button"
                 class="btn btn-xs btn-outline-info btn-atribuir"
-                data-id="<?= $conversa['CVS_ID']; ?>"
+                data-id="<?= (int) $conversa['CVS_ID']; ?>"
                 data-responsavel="<?= (int) ($conversa['ResponsavelId'] ?? 0); ?>"
                 title="Atribuir"
             >
@@ -130,13 +130,13 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
 <div class="conversa-lista-meta <?= $ativa ? 'text-white' : 'text-muted'; ?>">
 
     <small>
-        <?= htmlspecialchars($numeroFormatado); ?>
+        <?= htmlspecialchars($numeroFormatado, ENT_QUOTES, 'UTF-8'); ?>
     </small>
 
     <small class="conversa-lista-responsavel">
         <i class="fas fa-user-headset"></i>
         <?= !empty($conversa['ResponsavelNome'])
-            ? htmlspecialchars($conversa['ResponsavelNome'])
+            ? htmlspecialchars($conversa['ResponsavelNome'], ENT_QUOTES, 'UTF-8')
             : 'Sem responsável'; ?>
     </small>
 
@@ -155,8 +155,8 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
 
             <?php if($nomeEtiqueta != ''){ ?>
 
-                <span class="badge badge-<?= htmlspecialchars($corEtiqueta); ?>">
-                    <?= htmlspecialchars($nomeEtiqueta); ?>
+                <span class="badge badge-<?= htmlspecialchars($corEtiqueta, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?= htmlspecialchars($nomeEtiqueta, ENT_QUOTES, 'UTF-8'); ?>
                 </span>
 
             <?php } ?>
@@ -167,7 +167,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
 <?php } ?>
 
 <small class="conversa-ultima-mensagem <?= $ativa ? 'text-white' : 'text-muted'; ?>">
-    <?= htmlspecialchars($conversa['CVS_UltimaMensagem']); ?>
+    <?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
 </small>
 
 </a>

@@ -44,11 +44,12 @@ class Conversa
                 MTA_ID,
                 CVS_Numero,
                 CVS_Nome,
-                CVS_DataUltimaMensagem
+                CVS_DataUltimaMensagem,
+                CVS_DataAtualizacao
             )
             VALUES
             (
-                ?, ?, ?, ?, NOW()
+                ?, ?, ?, ?, NOW(), NOW()
             )
         ");
 
@@ -113,7 +114,8 @@ class Conversa
                     CVS_UltimaMensagem = ?,
                     CVS_DataUltimaMensagem = NOW(),
                     CVS_NaoLida = 'S',
-                    CVS_QtdeNaoLidas = CVS_QtdeNaoLidas + 1
+                    CVS_QtdeNaoLidas = CVS_QtdeNaoLidas + 1,
+                    CVS_DataAtualizacao = NOW()
                 WHERE CVS_ID = ?
 
             ");
@@ -130,7 +132,8 @@ class Conversa
             UPDATE conversas
             SET
                 CVS_UltimaMensagem = ?,
-                CVS_DataUltimaMensagem = NOW()
+                CVS_DataUltimaMensagem = NOW(),
+                CVS_DataAtualizacao = NOW()
             WHERE CVS_ID = ?
 
         ");
@@ -383,7 +386,9 @@ class Conversa
         if($usuarioId === null){
             $sql = $this->db->prepare("
                 UPDATE conversas
-                SET CON_Responsavel_USU_ID = NULL
+                SET
+                    CON_Responsavel_USU_ID = NULL,
+                    CVS_DataAtualizacao = NOW()
                 WHERE CVS_ID = ?
                 AND CLI_ID = ?
             ");
@@ -414,7 +419,9 @@ class Conversa
 
         $sql = $this->db->prepare("
             UPDATE conversas
-            SET CON_Responsavel_USU_ID = ?
+            SET
+                CON_Responsavel_USU_ID = ?,
+                CVS_DataAtualizacao = NOW()
             WHERE CVS_ID = ?
             AND CLI_ID = ?
         ");
@@ -439,7 +446,8 @@ class Conversa
             UPDATE conversas
             SET
                 CVS_NaoLida = 'N',
-                CVS_QtdeNaoLidas = 0
+                CVS_QtdeNaoLidas = 0,
+                CVS_DataAtualizacao = NOW()
             WHERE CVS_ID = ?
             AND CLI_ID = ?
 
@@ -460,7 +468,8 @@ class Conversa
                 CVS_QtdeNaoLidas = CASE 
                     WHEN CVS_QtdeNaoLidas <= 0 THEN 1 
                     ELSE CVS_QtdeNaoLidas 
-                END
+                END,
+                CVS_DataAtualizacao = NOW()
             WHERE CVS_ID = ?
             AND CLI_ID = ?
         ");
@@ -499,7 +508,7 @@ class Conversa
     {
         $sql = $this->db->prepare("
 
-            SELECT MAX(CVS_DataUltimaMensagem) AS ultima
+            SELECT MAX(COALESCE(CVS_DataAtualizacao, CVS_DataUltimaMensagem)) AS ultima
 
             FROM conversas
 
@@ -620,7 +629,24 @@ class Conversa
 
         }
 
+        $this->tocarAtualizacao($conversaId, $clienteId);
+
         return true;
+    }
+
+    private function tocarAtualizacao($conversaId, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            UPDATE conversas
+            SET CVS_DataAtualizacao = NOW()
+            WHERE CVS_ID = ?
+            AND CLI_ID = ?
+        ");
+
+        return $sql->execute([
+            $conversaId,
+            $clienteId
+        ]);
     }
 
     public function criarEtiqueta($clienteId, $nome, $cor = 'secondary')
