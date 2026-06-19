@@ -163,7 +163,11 @@ function formatarNumeroBR($numero)
 
 </div>
 
-<div id="conversasResizeHandle" class="conversas-resize-handle" title="Arraste para ajustar a altura"></div>
+<div id="conversasResizeHandle" class="conversas-resize-handle" title="Arraste para ajustar a altura">
+    <span class="conversas-resize-indicator">
+        <i class="fas fa-arrows-alt-v"></i>
+    </span>
+</div>
 
 <div class="modal fade" id="modalEtiquetas" tabindex="-1">
     <div class="modal-dialog">

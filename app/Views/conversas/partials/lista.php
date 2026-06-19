@@ -68,6 +68,7 @@ if(!$ativa && $conversa['CVS_NaoLida'] == 'S'){
 href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= $conversa['CVS_ID']; ?>"
 class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
 data-id="<?= $conversa['CVS_ID']; ?>"
+title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
 >
 
 <div class="d-flex justify-content-between align-items-start conversa-lista-topo">
@@ -84,17 +85,15 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
         <?php if($conversa['CVS_NaoLida'] == 'S'){ ?>
 
-            <span class="badge badge-success mb-1 badge-nao-lida">
+            <span class="badge badge-success badge-nao-lida conversa-badge-novas">
                 <?= $conversa['CVS_QtdeNaoLidas'] > 0 ? $conversa['CVS_QtdeNaoLidas'] : 'Novo'; ?>
             </span>
-
-            <br>
 
         <?php } ?>
 
         <button
             type="button"
-            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-secondary'; ?> btn-marcar-nao-lida"
+            class="btn btn-xs btn-outline-secondary btn-marcar-nao-lida"
             data-id="<?= $conversa['CVS_ID']; ?>"
             title="Marcar como não lida"
         >
@@ -103,7 +102,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
         <button
             type="button"
-            class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-primary'; ?> btn-etiquetas"
+            class="btn btn-xs btn-outline-primary btn-etiquetas"
             data-id="<?= $conversa['CVS_ID']; ?>"
             title="Etiquetas"
         >
@@ -114,7 +113,7 @@ data-id="<?= $conversa['CVS_ID']; ?>"
 
             <button
                 type="button"
-                class="btn btn-xs <?= $ativa ? 'btn-light' : 'btn-outline-info'; ?> btn-atribuir"
+                class="btn btn-xs btn-outline-info btn-atribuir"
                 data-id="<?= $conversa['CVS_ID']; ?>"
                 data-responsavel="<?= (int) ($conversa['ResponsavelId'] ?? 0); ?>"
                 title="Atribuir"
