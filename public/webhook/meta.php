@@ -267,6 +267,15 @@ foreach($entries as $entry){
 
                 ]);
 
+
+                processarAutoResposta(
+                    $db,
+                    $conversaModel,
+                    $metaConta,
+                    $conversaId,
+                    $numero
+                );
+
             }
 
         }
@@ -354,6 +363,196 @@ http_response_code(200);
 echo 'EVENT_RECEIVED';
 
 
+
+
+function processarAutoResposta($db, $conversaModel, $metaConta, $conversaId, $numero)
+{
+    try{
+
+        if(
+            ($metaConta['MTA_AutoRespostaAtiva'] ?? 'N') != 'S'
+            ||
+            trim($metaConta['MTA_AutoRespostaTexto'] ?? '') == ''
+        ){
+            return;
+        }
+
+        if(!colunaExiste($db, 'conversas', 'CVS_DataUltimaAutoResposta')){
+            registrarLogAutoResposta(
+                $metaConta,
+                $conversaId,
+                $numero,
+                'ignorada_coluna_cvs_data_ultima_auto_resposta_ausente'
+            );
+            return;
+        }
+
+        $sql = $db->prepare("
+            SELECT CVS_DataUltimaAutoResposta
+            FROM conversas
+            WHERE CVS_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $conversaId
+        ]);
+
+        $ultima = $sql->fetchColumn();
+        $intervalo = max(5, (int) ($metaConta['MTA_AutoRespostaIntervaloMinutos'] ?? 1440));
+
+        if($ultima && strtotime($ultima) > strtotime('-' . $intervalo . ' minutes')){
+            registrarLogAutoResposta(
+                $metaConta,
+                $conversaId,
+                $numero,
+                'ignorada_por_intervalo'
+            );
+            return;
+        }
+
+        $response = enviarAutoRespostaTexto(
+            $metaConta,
+            $numero,
+            trim($metaConta['MTA_AutoRespostaTexto'])
+        );
+
+        $messageId = $response['response']['messages'][0]['id'] ?? null;
+
+        if($response['http_code'] < 200 || $response['http_code'] >= 300 || !$messageId){
+            registrarLogAutoResposta(
+                $metaConta,
+                $conversaId,
+                $numero,
+                'erro_envio',
+                json_encode($response['response'], JSON_UNESCAPED_UNICODE)
+            );
+            return;
+        }
+
+        $conversaModel->salvarMensagem([
+            'conversa_id' => $conversaId,
+            'direcao' => 'enviada',
+            'tipo' => 'text',
+            'texto' => trim($metaConta['MTA_AutoRespostaTexto']),
+            'message_id' => $messageId,
+            'status' => 'aguardando_confirmacao',
+            'retorno' => $response,
+            'data_mensagem' => date('Y-m-d H:i:s')
+        ]);
+
+        $db->prepare("
+            UPDATE conversas
+            SET CVS_DataUltimaAutoResposta = NOW()
+            WHERE CVS_ID = ?
+        ")->execute([
+            $conversaId
+        ]);
+
+        registrarLogAutoResposta(
+            $metaConta,
+            $conversaId,
+            $numero,
+            'enviada'
+        );
+
+    }catch(Exception $e){
+
+        registrarLogAutoResposta(
+            $metaConta,
+            $conversaId,
+            $numero,
+            'erro',
+            $e->getMessage()
+        );
+    }
+}
+
+function enviarAutoRespostaTexto($metaConta, $numero, $texto)
+{
+    $url = rtrim($metaConta['MTA_UrlBase'], '/')
+        . '/'
+        . $metaConta['MTA_PhoneNumberId']
+        . '/messages';
+
+    $payload = [
+        'messaging_product' => 'whatsapp',
+        'to' => $numero,
+        'type' => 'text',
+        'text' => [
+            'preview_url' => false,
+            'body' => $texto
+        ]
+    ];
+
+    $curl = curl_init();
+
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $metaConta['MTA_Token']
+        ]
+    ]);
+
+    $response = curl_exec($curl);
+    $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($curl);
+    curl_close($curl);
+
+    return [
+        'http_code' => $httpCode,
+        'response' => json_decode($response, true),
+        'curl_error' => $curlError
+    ];
+}
+
+function colunaExiste($db, $tabela, $coluna)
+{
+    $sql = $db->prepare("
+        SELECT COUNT(*)
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+    ");
+
+    $sql->execute([
+        $tabela,
+        $coluna
+    ]);
+
+    return (int) $sql->fetchColumn() > 0;
+}
+
+function registrarLogAutoResposta($metaConta, $conversaId, $numero, $acao, $erro = null)
+{
+    $linha = sprintf(
+        "[%s] MTA_ID=%s CLI_ID=%s conversa_id=%s numero=%s acao=%s%s\n",
+        date('Y-m-d H:i:s'),
+        $metaConta['MTA_ID'] ?? '',
+        $metaConta['CLI_ID'] ?? '',
+        $conversaId,
+        $numero,
+        $acao,
+        $erro ? ' erro=' . $erro : ''
+    );
+
+    $diretorioLog = __DIR__ . '/../../storage/logs';
+
+    if(!is_dir($diretorioLog)){
+        mkdir($diretorioLog, 0775, true);
+    }
+
+    file_put_contents(
+        $diretorioLog . '/meta_autoresposta.log',
+        $linha,
+        FILE_APPEND
+    );
+}
 
 function mapearStatusMeta($status)
 {

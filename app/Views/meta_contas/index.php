@@ -26,6 +26,15 @@ Crie a coluna para salvar o Verify Token do webhook.
 
 <?php } ?>
 
+<?php if(empty($colunasAutoRespostaExistem)){ ?>
+
+<div class="alert alert-warning">
+As colunas de <strong>auto resposta</strong> não foram encontradas na tabela <strong>meta_contas</strong>.
+Crie as colunas para salvar a configuração de auto resposta.
+</div>
+
+<?php } ?>
+
 <table class="table table-bordered table-striped table-hover datatable">
 
 <thead>
@@ -82,6 +91,12 @@ data-webhook-token="<?= htmlspecialchars($conta['MTA_WebhookVerifyToken'] ?? '')
 data-url="<?= $conta['MTA_UrlBase']; ?>"
 
 data-numero="<?= $conta['MTA_NumeroTelefone']; ?>"
+
+data-auto-resposta-ativa="<?= $conta['MTA_AutoRespostaAtiva'] ?? 'N'; ?>"
+
+data-auto-resposta-texto="<?= htmlspecialchars($conta['MTA_AutoRespostaTexto'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+
+data-auto-resposta-intervalo="<?= $conta['MTA_AutoRespostaIntervaloMinutos'] ?? 1440; ?>"
 >
 
 <i class="fas fa-edit"></i>
@@ -299,6 +314,55 @@ class="form-control"
 >
 
 </div>
+
+</div>
+
+
+<hr>
+
+<h5>Auto resposta</h5>
+
+<div class="alert alert-info">
+Essa mensagem será enviada automaticamente quando esse número receber uma mensagem. Ela não usa template e só funciona dentro da janela de atendimento de 24 horas da Meta.
+</div>
+
+<div class="form-group">
+
+<label>Ativar auto resposta</label>
+
+<select
+name="auto_resposta_ativa"
+class="form-control"
+>
+<option value="N">Não</option>
+<option value="S">Sim</option>
+</select>
+
+</div>
+
+<div class="form-group">
+
+<label>Texto da auto resposta</label>
+
+<textarea
+name="auto_resposta_texto"
+class="form-control"
+rows="4"
+></textarea>
+
+</div>
+
+<div class="form-group">
+
+<label>Intervalo para repetir auto resposta, em minutos</label>
+
+<input
+type="number"
+name="auto_resposta_intervalo_minutos"
+class="form-control"
+min="5"
+value="1440"
+>
 
 </div>
 

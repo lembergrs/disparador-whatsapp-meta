@@ -41,6 +41,40 @@ class MetaContaController extends Controller
         );
     }
 
+
+    private function prepararDadosAutoResposta($dados)
+    {
+        $dados['auto_resposta_ativa'] =
+            ($dados['auto_resposta_ativa'] ?? 'N') == 'S'
+            ? 'S'
+            : 'N';
+
+        $dados['auto_resposta_texto'] =
+            trim(
+                $dados['auto_resposta_texto'] ?? ''
+            );
+
+        $dados['auto_resposta_intervalo_minutos'] =
+            max(
+                5,
+                (int) ($dados['auto_resposta_intervalo_minutos'] ?? 1440)
+            );
+
+        if($dados['auto_resposta_ativa'] == 'S' && $dados['auto_resposta_texto'] == ''){
+
+            Session::flash(
+                'error',
+                'Informe o texto da auto resposta para ativá-la.'
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
+        return $dados;
+    }
+
     private function prepararDadosWebhookVerifyToken($dados)
     {
         $dados['webhook_verify_token'] =
@@ -82,7 +116,9 @@ class MetaContaController extends Controller
 
                 'clientes' => $clientes,
 
-                'colunaWebhookVerifyTokenExiste' => $colunaWebhookVerifyTokenExiste
+                'colunaWebhookVerifyTokenExiste' => $colunaWebhookVerifyTokenExiste,
+
+                'colunasAutoRespostaExistem' => $this->metaModel->colunasAutoRespostaExistem()
 
             ]
         );
@@ -116,8 +152,10 @@ class MetaContaController extends Controller
         }
 
         $dados =
-            $this->prepararDadosWebhookVerifyToken(
-                $_POST
+            $this->prepararDadosAutoResposta(
+                $this->prepararDadosWebhookVerifyToken(
+                    $_POST
+                )
             );
 
         if(!$this->metaModel->colunaWebhookVerifyTokenExiste()){
@@ -125,6 +163,18 @@ class MetaContaController extends Controller
             Session::flash(
                 'error',
                 'A coluna MTA_WebhookVerifyToken não existe em meta_contas. Crie a coluna antes de salvar o token do webhook.'
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
+        if(!$this->metaModel->colunasAutoRespostaExistem()){
+
+            Session::flash(
+                'error',
+                'As colunas de auto resposta não existem em meta_contas. Crie as colunas antes de salvar a configuração.'
             );
 
             $this->redirect(
@@ -287,8 +337,10 @@ class MetaContaController extends Controller
         }
 
         $dados =
-            $this->prepararDadosWebhookVerifyToken(
-                $_POST
+            $this->prepararDadosAutoResposta(
+                $this->prepararDadosWebhookVerifyToken(
+                    $_POST
+                )
             );
 
         if(!$this->metaModel->colunaWebhookVerifyTokenExiste()){
@@ -296,6 +348,18 @@ class MetaContaController extends Controller
             Session::flash(
                 'error',
                 'A coluna MTA_WebhookVerifyToken não existe em meta_contas. Crie a coluna antes de salvar o token do webhook.'
+            );
+
+            $this->redirect(
+                'metaConta'
+            );
+        }
+
+        if(!$this->metaModel->colunasAutoRespostaExistem()){
+
+            Session::flash(
+                'error',
+                'As colunas de auto resposta não existem em meta_contas. Crie as colunas antes de salvar a configuração.'
             );
 
             $this->redirect(

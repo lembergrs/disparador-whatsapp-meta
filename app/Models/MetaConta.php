@@ -48,7 +48,7 @@ class MetaConta
 
 
 
-    public function colunaWebhookVerifyTokenExiste()
+    private function colunaExiste($coluna)
     {
         try{
 
@@ -60,11 +60,13 @@ class MetaConta
 
                 WHERE TABLE_SCHEMA = DATABASE()
                 AND TABLE_NAME = 'meta_contas'
-                AND COLUMN_NAME = 'MTA_WebhookVerifyToken'
+                AND COLUMN_NAME = ?
 
             " );
 
-            $sql->execute();
+            $sql->execute([
+                $coluna
+            ]);
 
             return (int) $sql->fetchColumn() > 0;
 
@@ -72,6 +74,23 @@ class MetaConta
 
             return false;
         }
+    }
+
+    public function colunaWebhookVerifyTokenExiste()
+    {
+        return $this->colunaExiste(
+            'MTA_WebhookVerifyToken'
+        );
+    }
+
+    public function colunasAutoRespostaExistem()
+    {
+        return
+            $this->colunaExiste('MTA_AutoRespostaAtiva')
+            &&
+            $this->colunaExiste('MTA_AutoRespostaTexto')
+            &&
+            $this->colunaExiste('MTA_AutoRespostaIntervaloMinutos');
     }
 
     public function salvar($dados)
@@ -89,6 +108,9 @@ class MetaConta
                 MTA_UrlBase,
                 MTA_NumeroTelefone,
                 MTA_WebhookVerifyToken,
+                MTA_AutoRespostaAtiva,
+                MTA_AutoRespostaTexto,
+                MTA_AutoRespostaIntervaloMinutos,
                 MTA_Status,
                 MTA_Ativo
 
@@ -97,7 +119,7 @@ class MetaConta
             VALUES
             (
 
-                ?, ?, ?, ?, ?, ?, ?, ?, 'desconectado', 'S'
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'desconectado', 'S'
 
             )
 
@@ -123,7 +145,13 @@ class MetaConta
 
             $dados['numero'],
 
-            $dados['webhook_verify_token']
+            $dados['webhook_verify_token'],
+
+            $dados['auto_resposta_ativa'],
+
+            $dados['auto_resposta_texto'],
+
+            $dados['auto_resposta_intervalo_minutos']
 
         ]);
     }
@@ -338,7 +366,13 @@ class MetaConta
 
                 MTA_NumeroTelefone = ?,
 
-                MTA_WebhookVerifyToken = ?
+                MTA_WebhookVerifyToken = ?,
+
+                MTA_AutoRespostaAtiva = ?,
+
+                MTA_AutoRespostaTexto = ?,
+
+                MTA_AutoRespostaIntervaloMinutos = ?
 
             WHERE MTA_ID = ?
 
@@ -365,6 +399,12 @@ class MetaConta
             $dados['numero'],
 
             $dados['webhook_verify_token'],
+
+            $dados['auto_resposta_ativa'],
+
+            $dados['auto_resposta_texto'],
+
+            $dados['auto_resposta_intervalo_minutos'],
 
             $id
 
