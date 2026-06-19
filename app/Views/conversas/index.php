@@ -47,7 +47,7 @@ function formatarNumeroBR($numero)
                     id="filtroBusca"
                     class="form-control form-control-sm mb-2"
                     placeholder="Buscar nome ou telefone..."
-                    value="<?= htmlspecialchars($busca ?? ''); ?>"
+                    value="<?= htmlspecialchars($busca ?? '', ENT_QUOTES, 'UTF-8'); ?>"
                     autocomplete="off"
                 >
 
@@ -90,7 +90,7 @@ function formatarNumeroBR($numero)
                                     value="<?= $etq['ETQ_ID']; ?>"
                                     <?= (($etiqueta ?? '') == $etq['ETQ_ID']) ? 'selected' : ''; ?>
                                 >
-                                    <?= htmlspecialchars($etq['ETQ_Nome']); ?>
+                                    <?= htmlspecialchars($etq['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?>
                                 </option>
 
                             <?php } ?>
@@ -121,7 +121,7 @@ function formatarNumeroBR($numero)
                                     value="<?= (int) $atendente['USU_ID']; ?>"
                                     <?= (($responsavel ?? '') == $atendente['USU_ID']) ? 'selected' : ''; ?>
                                 >
-                                    <?= htmlspecialchars($atendente['USU_Nome']); ?>
+                                    <?= htmlspecialchars($atendente['USU_Nome'], ENT_QUOTES, 'UTF-8'); ?>
                                 </option>
 
                             <?php } ?>
@@ -211,14 +211,15 @@ function formatarNumeroBR($numero)
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="conversa_id" id="responsavelConversaId">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="form-group">
                         <label>Responsável</label>
                         <select name="responsavel_id" id="responsavelUsuarioId" class="form-control">
                             <option value="">Sem responsável</option>
                             <?php foreach(($atendentes ?? []) as $atendente){ ?>
                                 <option value="<?= (int) $atendente['USU_ID']; ?>">
-                                    <?= htmlspecialchars($atendente['USU_Nome']); ?>
-                                    (<?= htmlspecialchars($atendente['USU_Nivel']); ?>)
+                                    <?= htmlspecialchars($atendente['USU_Nome'], ENT_QUOTES, 'UTF-8'); ?>
+                                    (<?= htmlspecialchars($atendente['USU_Nivel'], ENT_QUOTES, 'UTF-8'); ?>)
                                 </option>
                             <?php } ?>
                         </select>
@@ -244,6 +245,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
     let conversaAberta =
         '<?= $conversaSelecionada['CVS_ID'] ?? ''; ?>';
+
+    const csrfTokenConversas =
+        '<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>';
 
     let ultimaAtualizacaoConversas = '';
 
@@ -327,11 +331,17 @@ document.addEventListener('DOMContentLoaded', function(){
                 + 'conversa/ajaxMensagens&id='
                 + conversaAberta
                 + '&marcar_lida='
-                + (marcarLida || 'N'),
+                + (marcarLida || 'N')
+                + '&csrf_token='
+                + encodeURIComponent(csrfTokenConversas),
             method: 'GET'
         }).done(function(html){
             $('#areaMensagens').html(html);
             rolarMensagensParaFinal();
+        }).fail(function(xhr){
+            if(xhr.status == 403){
+                bloquearConversaPorPerdaDeAcesso();
+            }
         }).always(function(){
             atualizandoMensagens = false;
         });
@@ -343,6 +353,49 @@ document.addEventListener('DOMContentLoaded', function(){
 
         item.removeClass('font-weight-bold');
         item.find('.badge-nao-lida').remove();
+    }
+
+
+    function bloquearConversaPorPerdaDeAcesso()
+    {
+        conversaAberta = '';
+
+        $('#painelConversa').html(
+            '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">' +
+                'Esta conversa foi transferida ou não está mais atribuída a você.' +
+            '</div>'
+        );
+
+        atualizarListaConversas(true);
+    }
+
+    function carregarConversa(conversaId)
+    {
+        $('#painelConversa').html(
+            '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">' +
+                '<i class="fas fa-spinner fa-spin mr-2"></i> Carregando conversa...' +
+            '</div>'
+        );
+
+        $.ajax({
+            url:
+                urlBase
+                + 'conversa/ajaxConversa&id='
+                + conversaId
+                + '&csrf_token='
+                + encodeURIComponent(csrfTokenConversas),
+            method: 'GET'
+        }).done(function(html){
+            $('#painelConversa').html(html);
+            rolarMensagensParaFinal();
+
+            $('#listaConversas .item-conversa').removeClass('active');
+            $('#listaConversas .item-conversa[data-id="' + conversaAberta + '"]').addClass('active');
+        }).fail(function(xhr){
+            if(xhr.status == 403){
+                bloquearConversaPorPerdaDeAcesso();
+            }
+        });
     }
 
     rolarMensagensParaFinal();
@@ -501,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 'POST',
 
             data:
-                form.serialize(),
+                form.serialize() + '&csrf_token=' + encodeURIComponent(csrfTokenConversas),
 
             dataType:
                 'json',
@@ -568,23 +621,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
         marcarConversaComoLidaVisualmente(conversaId);
 
-        $('#painelConversa').html(
-            '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">' +
-                '<i class="fas fa-spinner fa-spin mr-2"></i> Carregando conversa...' +
-            '</div>'
-        );
-
-        $('#painelConversa').load(
-            urlBase + 'conversa/ajaxConversa&id=' + conversaId,
-            function(){
-
-                rolarMensagensParaFinal();
-
-                $('#listaConversas .item-conversa').removeClass('active');
-                $('#listaConversas .item-conversa[data-id="' + conversaAberta + '"]').addClass('active');
-
-            }
-        );
+        carregarConversa(conversaId);
 
     });
 
@@ -619,12 +656,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     atualizarListaConversas(false);
 
                     if(conversaAberta != ''){
-                        $('#painelConversa').load(
-                            urlBase + 'conversa/ajaxConversa&id=' + conversaAberta,
-                            function(){
-                                rolarMensagensParaFinal();
-                            }
-                        );
+                        carregarConversa(conversaAberta);
                     }
 
                     return;
@@ -668,7 +700,8 @@ document.addEventListener('DOMContentLoaded', function(){
             urlBase + 'conversa/marcarNaoLidaAjax',
 
             {
-                conversa_id: conversaId
+                conversa_id: conversaId,
+                csrf_token: csrfTokenConversas
             },
 
             function(retorno){
@@ -772,7 +805,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
             {
                 nome: nome,
-                cor: cor
+                cor: cor,
+                csrf_token: csrfTokenConversas
             },
 
             function(retorno){

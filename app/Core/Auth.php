@@ -20,7 +20,47 @@ class Auth
             exit;
         }
 
+        self::validarUsuarioAtivo();
+
         self::validarBloqueioFinanceiro();
+    }
+
+    private static function validarUsuarioAtivo()
+    {
+        $usuario = self::usuario();
+
+        if(!$usuario || empty($usuario['id'])){
+            return;
+        }
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            SELECT USU_Ativo
+            FROM usuarios
+            WHERE USU_ID = ?
+            LIMIT 1
+        "
+        );
+
+        $sql->execute([
+            $usuario['id']
+        ]);
+
+        $ativo = $sql->fetchColumn();
+
+        if($ativo !== 'S'){
+            session_destroy();
+            session_start();
+
+            header(
+                "Location: " .
+                BASE_URL .
+                "/login"
+            );
+
+            exit;
+        }
     }
 
     public static function admin()

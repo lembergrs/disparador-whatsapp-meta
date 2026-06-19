@@ -22,15 +22,9 @@ if(!function_exists('categoriaTemplatePtBr')){
 <div class="card-header">
 
 <form
-method="GET"
-action="<?= BASE_URL; ?>/index.php"
+method="POST"
+action="<?= BASE_URL; ?>/index.php?url=template/sincronizar"
 class="form-inline"
->
-
-<input
-type="hidden"
-name="url"
-value="template/sincronizar"
 >
 
 <select
@@ -195,9 +189,9 @@ data-componentes="<?= htmlspecialchars(
 </button>
 
 <a
-href="<?= BASE_URL; ?>/index.php?url=template/inativar&id=<?= $template['TMP_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=template/inativar" data-field-id="<?= (int) $template['TMP_ID']; ?>"
 class="btn btn-danger btn-sm"
-onclick="return confirm('Deseja remover este template da listagem? Ele não será excluído da Meta.')"
+data-confirm="Deseja remover este template da listagem? Ele não será excluído da Meta."
 >
     <i class="fas fa-trash"></i>
 </a>

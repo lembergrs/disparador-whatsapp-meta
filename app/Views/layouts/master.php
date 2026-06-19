@@ -398,6 +398,7 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 <script>
 
+const CSRF_TOKEN = '<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>';
 const BASE_URL = '<?= BASE_URL; ?>';
 const META_APP_ID = '1598345545186185';
 const META_CONFIGURATION_ID = '1493119295619741';
@@ -412,6 +413,51 @@ window.fbAsyncInit = function() {
     });
 
 };
+
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('form[method="post"], form[method="POST"]').forEach(function(form){
+        if(!form.querySelector('input[name="csrf_token"]')){
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrf_token';
+            input.value = CSRF_TOKEN;
+            form.appendChild(input);
+        }
+    });
+
+    document.querySelectorAll('[data-post-url]').forEach(function(link){
+        link.addEventListener('click', function(e){
+            e.preventDefault();
+
+            if(link.dataset.confirm && !confirm(link.dataset.confirm)){
+                return;
+            }
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = link.dataset.postUrl;
+
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrf_token';
+            csrf.value = CSRF_TOKEN;
+            form.appendChild(csrf);
+
+            Object.keys(link.dataset).forEach(function(key){
+                if(key.indexOf('field') === 0){
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key.substring(5).replace(/^./, function(c){ return c.toLowerCase(); });
+                    input.value = link.dataset[key];
+                    form.appendChild(input);
+                }
+            });
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    });
+});
 
 </script>
 

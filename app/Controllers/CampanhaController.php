@@ -77,8 +77,20 @@ class CampanhaController extends Controller
 
     public function criar()
     {
+        $this->validarCsrfPost();
+
         $usuario =
             Auth::usuario();
+
+        $listaModel = new ListaContato();
+        $lista = $listaModel->buscar($_POST['lista'] ?? 0, $usuario['CLI_ID']);
+
+        $template = $this->templateModel->buscarPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
+
+        if(!$lista || !$template){
+            Session::flash('error', 'Lista ou template inválido.');
+            $this->redirect('campanha');
+        }
 
         $campanhaId =
             $this->campanhaModel->salvar([
@@ -172,11 +184,18 @@ class CampanhaController extends Controller
             $this->redirect('campanha');
         }
 
+        $usuario = Auth::usuario();
+
         $campanha =
-            $this->campanhaModel->buscar($id);
+            $this->campanhaModel->buscarPorCliente($id, $usuario['CLI_ID']);
+
+        if(!$campanha){
+            \Core\Session::flash('error', 'Campanha não encontrada.');
+            $this->redirect('campanha');
+        }
 
         $fila =
-            $this->campanhaModel->listarFila($id);
+            $this->campanhaModel->listarFilaPorCliente($id, $usuario['CLI_ID']);
 
         $this->view(
             'campanhas/detalhes',
@@ -190,9 +209,11 @@ class CampanhaController extends Controller
 
     public function cancelar()
     {
+        $this->validarCsrfPost();
+
         $usuario = Auth::usuario();
 
-        $id = $_GET['id'] ?? null;
+        $id = $_POST['id'] ?? null;
 
         if(!$id){
 
@@ -219,11 +240,18 @@ class CampanhaController extends Controller
 
     public function preview()
     {
+        $usuario = Auth::usuario();
+
         $id = $_GET['id'];
 
         $campanha =
             $this->campanhaModel
-            ->buscar($id);
+            ->buscarPorCliente($id, $usuario['CLI_ID']);
+
+        if(!$campanha){
+            \Core\Session::flash('error', 'Campanha não encontrada.');
+            $this->redirect('campanha');
+        }
 
 
 
@@ -231,7 +259,7 @@ class CampanhaController extends Controller
 
         $contato =
             $this->campanhaModel
-            ->buscarContatoExemplo($id);
+            ->buscarContatoExemploPorCliente($id, $usuario['CLI_ID']);
 
 
 
@@ -348,6 +376,8 @@ class CampanhaController extends Controller
 
     public function reagendar()
     {
+        $this->validarCsrfPost();
+
         $usuario = Auth::usuario();
 
         $id =
@@ -374,8 +404,9 @@ class CampanhaController extends Controller
             $dataAgendamento
         );
 
-        $this->campanhaModel->resetarFila(
-            $id
+        $this->campanhaModel->resetarFilaPorCliente(
+            $id,
+            $usuario['CLI_ID']
         );
 
         \Core\Session::flash(
@@ -390,6 +421,10 @@ class CampanhaController extends Controller
 
     public function enviarTeste()
     {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+
         $campanhaId =
             $_POST['campanha_id'];
 
@@ -397,10 +432,15 @@ class CampanhaController extends Controller
             $_POST['telefone'];
 
         $campanha =
-            $this->campanhaModel->buscar($campanhaId);
+            $this->campanhaModel->buscarPorCliente($campanhaId, $usuario['CLI_ID']);
+
+        if(!$campanha){
+            \Core\Session::flash('error', 'Campanha não encontrada.');
+            $this->redirect('campanha');
+        }
 
         $contato =
-            $this->campanhaModel->buscarContatoExemplo($campanhaId);
+            $this->campanhaModel->buscarContatoExemploPorCliente($campanhaId, $usuario['CLI_ID']);
 
         $variavelModel =
             new \Models\CampanhaVariavel();
@@ -442,7 +482,8 @@ class CampanhaController extends Controller
 
             $meta =
                 new MetaService(
-                    $campanha['MTA_ID']
+                    $campanha['MTA_ID'],
+                    $usuario['CLI_ID']
                 );
 
             $retorno =

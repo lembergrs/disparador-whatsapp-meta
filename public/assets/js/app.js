@@ -351,9 +351,7 @@ $(document).ready(function(){
                 $(this).data('waba')
             );
 
-            $('[name=token]').val(
-                $(this).data('token')
-            );
+            $('[name=token]').val('');
 
             $('[name=webhook_verify_token]').val(
                 $(this).data('webhook-token')
@@ -1918,7 +1916,7 @@ $(document).ready(function(){
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/enviarAjax',
                 method: 'POST',
-                data: montarDadosEnvio(destino),
+                data: Object.assign(montarDadosEnvio(destino), {csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')}),
                 dataType: 'json',
 
                 success: function(retorno){

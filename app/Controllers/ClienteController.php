@@ -59,6 +59,8 @@ class ClienteController extends Controller
 
     public function salvar()
     {
+        $this->validarCsrfPost();
+
         try{
 
             /*
@@ -225,6 +227,8 @@ class ClienteController extends Controller
 
     public function inativar()
     {
+        $this->validarCsrfPost();
+
         if(empty($_GET['id'])){
 
             Session::flash(
@@ -276,6 +280,8 @@ class ClienteController extends Controller
 
     public function reativar()
     {
+        $this->validarCsrfPost();
+
         if(empty($_GET['id'])){
 
             Session::flash(
@@ -327,6 +333,8 @@ class ClienteController extends Controller
 
     public function aprovar()
     {
+        $this->validarCsrfPost();
+
         if (empty($_GET['id'])) {
 
             Session::flash(
