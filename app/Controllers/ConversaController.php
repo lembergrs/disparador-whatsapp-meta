@@ -5,6 +5,7 @@ namespace Controllers;
 use Core\Controller;
 use Core\Auth;
 use Core\Session;
+use Core\Csrf;
 use Models\Conversa;
 use Models\Usuario;
 use Services\MetaService;
@@ -53,7 +54,7 @@ class ConversaController extends Controller
 
         $atendentes = [];
 
-        if(($usuario['nivel'] ?? null) == 'cliente_admin'){
+        if($this->podeGerenciarConversas($usuario)){
             $usuarioModel = new Usuario();
             $atendentes = $usuarioModel
                 ->listarAtivosAtendimentoPorCliente(
@@ -62,7 +63,7 @@ class ConversaController extends Controller
         }
 
         $podeAtribuirConversa =
-            ($usuario['nivel'] ?? null) == 'cliente_admin';
+            $this->podeGerenciarConversas($usuario);
 
         $conversaSelecionada = null;
         $mensagens = [];
@@ -109,7 +110,7 @@ class ConversaController extends Controller
                 'etiqueta' => $etiqueta,
                 'responsavel' => $responsavel,
                 'atendentes' => $atendentes,
-                'podeAtribuirConversa' => ($usuario['nivel'] ?? null) == 'cliente_admin',
+                'podeAtribuirConversa' => $this->podeGerenciarConversas($usuario),
                 'conversaSelecionada' => $conversaSelecionada,
                 'mensagens' => $mensagens,
                 'janelaAberta' => $janelaAberta
@@ -126,6 +127,17 @@ class ConversaController extends Controller
 
         $mensagem =
             trim($_POST['mensagem'] ?? '');
+
+        if(!Csrf::validar($_POST['csrf_token'] ?? '')){
+            Session::flash(
+                'error',
+                'Token de segurança inválido.'
+            );
+
+            $this->redirect('conversa');
+
+            return;
+        }
 
         if(!$conversaId || $mensagem == ''){
 
@@ -279,6 +291,50 @@ class ConversaController extends Controller
         return time() <= $limite;
     }
 
+    private function podeGerenciarConversas($usuario)
+    {
+        return in_array(
+            $usuario['nivel'] ?? null,
+            ['cliente_admin', 'cliente'],
+            true
+        );
+    }
+
+    private function validarCsrfAjax()
+    {
+        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+
+        if(!Csrf::validar($token)){
+            http_response_code(403);
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Token de segurança inválido.'
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private function acessoPerdidoAjax($json = false)
+    {
+        http_response_code(403);
+
+        if($json){
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => false,
+                'acesso_perdido' => true,
+                'erro' => 'Esta conversa foi transferida ou não está mais atribuída a você.'
+            ]);
+            return;
+        }
+
+        echo '<div class="card-body text-center text-muted d-flex align-items-center justify-content-center">Esta conversa foi transferida ou não está mais atribuída a você.</div>';
+    }
+
     public function verificarAtualizacao()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -338,7 +394,7 @@ class ConversaController extends Controller
             );
 
         $podeAtribuirConversa =
-            ($usuario['nivel'] ?? null) == 'cliente_admin';
+            $this->podeGerenciarConversas($usuario);
 
         $conversaSelecionada = null;
 
@@ -378,7 +434,8 @@ class ConversaController extends Controller
             );
 
         if(!$conversa){
-            exit;
+            $this->acessoPerdidoAjax(false);
+            return;
         }
 
         $mensagens =
@@ -387,6 +444,11 @@ class ConversaController extends Controller
             );
 
         if($marcarLida == 'S'){
+
+            if(!Csrf::validar($_GET['csrf_token'] ?? '')){
+                $this->acessoPerdidoAjax(false);
+                return;
+            }
 
             $this->conversaModel->marcarComoLida(
                 $id,
@@ -401,6 +463,10 @@ class ConversaController extends Controller
     public function enviarAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
+
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
 
         try{
 
@@ -430,11 +496,7 @@ class ConversaController extends Controller
                 );
 
             if(!$conversa){
-
-                echo json_encode([
-                    'sucesso' => false,
-                    'erro' => 'Conversa não encontrada.'
-                ]);
+                $this->acessoPerdidoAjax(true);
 
                 return;
             }
@@ -531,6 +593,10 @@ class ConversaController extends Controller
     {
         header('Content-Type: application/json; charset=utf-8');
 
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
         $usuario = Auth::usuario();
 
         $id =
@@ -553,10 +619,7 @@ class ConversaController extends Controller
         );
 
         if(!$conversa){
-            echo json_encode([
-                'sucesso' => false,
-                'erro' => 'Conversa não encontrada.'
-            ]);
+            $this->acessoPerdidoAjax(true);
 
             return;
         }
@@ -612,6 +675,10 @@ class ConversaController extends Controller
     {
         header('Content-Type: application/json; charset=utf-8');
 
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
         $usuario = Auth::usuario();
 
         $id =
@@ -641,10 +708,7 @@ class ConversaController extends Controller
         );
 
         if(!$conversa){
-            echo json_encode([
-                'sucesso' => false,
-                'erro' => 'Conversa não encontrada.'
-            ]);
+            $this->acessoPerdidoAjax(true);
 
             return;
         }
@@ -664,6 +728,10 @@ class ConversaController extends Controller
     public function criarEtiquetaAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
+
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
 
         $usuario = Auth::usuario();
 
@@ -715,7 +783,7 @@ class ConversaController extends Controller
         $usuario = Auth::usuario();
 
         $podeAtribuirConversa =
-            ($usuario['nivel'] ?? null) == 'cliente_admin';
+            $this->podeGerenciarConversas($usuario);
 
         $conversaSelecionada = null;
         $mensagens = [];
@@ -745,11 +813,16 @@ class ConversaController extends Controller
                         $id
                     );
 
-                $this->conversaModel->marcarComoLida(
-                    $id,
-                    $usuario['CLI_ID']
-                );
+                if(Csrf::validar($_GET['csrf_token'] ?? '')){
+                    $this->conversaModel->marcarComoLida(
+                        $id,
+                        $usuario['CLI_ID']
+                    );
+                }
 
+            }else{
+                $this->acessoPerdidoAjax(false);
+                return;
             }
 
         }
@@ -763,9 +836,13 @@ class ConversaController extends Controller
     {
         header('Content-Type: application/json; charset=utf-8');
 
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
         $usuario = Auth::usuario();
 
-        if(($usuario['nivel'] ?? null) != 'cliente_admin'){
+        if(!$this->podeGerenciarConversas($usuario)){
             http_response_code(403);
 
             echo json_encode([
@@ -808,7 +885,7 @@ class ConversaController extends Controller
 
     private function responsavelPermitido($usuario, $responsavel)
     {
-        if(($usuario['nivel'] ?? null) != 'cliente_admin'){
+        if(!$this->podeGerenciarConversas($usuario)){
             return '';
         }
 

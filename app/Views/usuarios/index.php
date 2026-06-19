@@ -63,9 +63,9 @@
                                     Editar
                                 </button>
                                 <?php if($u['USU_Ativo'] == 'S'){ ?>
-                                    <a class="btn btn-sm btn-warning" href="<?= BASE_URL; ?>/index.php?url=usuario/inativar&id=<?= (int) $u['USU_ID']; ?><?= $adminInterno ? '&cliente=' . (int) $clienteSelecionadoId : ''; ?>" onclick="return confirm('Inativar usuário?')">Inativar</a>
+                                    <a class="btn btn-sm btn-warning" href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=usuario/inativar&id=<?= (int) $u['USU_ID']; ?><?= $adminInterno ? '&cliente=' . (int) $clienteSelecionadoId : ''; ?>" data-confirm="Inativar usuário?">Inativar</a>
                                 <?php }else{ ?>
-                                    <a class="btn btn-sm btn-success" href="<?= BASE_URL; ?>/index.php?url=usuario/ativar&id=<?= (int) $u['USU_ID']; ?><?= $adminInterno ? '&cliente=' . (int) $clienteSelecionadoId : ''; ?>">Ativar</a>
+                                    <a class="btn btn-sm btn-success" href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=usuario/ativar&id=<?= (int) $u['USU_ID']; ?><?= $adminInterno ? '&cliente=' . (int) $clienteSelecionadoId : ''; ?>">Ativar</a>
                                 <?php } ?>
                                 <form method="post" action="<?= BASE_URL; ?>/index.php?url=usuario/senha" class="d-inline">
                                     <?php if($adminInterno){ ?>
