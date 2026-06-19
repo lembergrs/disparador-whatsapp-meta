@@ -50,7 +50,7 @@ if(!function_exists('formatarNumeroBR')){
             <div class="conversa-painel-titulo">
 
                 <strong>
-                    <?= htmlspecialchars($nomeSelecionado); ?>
+                    <?= htmlspecialchars($nomeSelecionado, ENT_QUOTES, 'UTF-8'); ?>
                 </strong>
 
                 <small class="text-muted d-block">
@@ -64,7 +64,7 @@ if(!function_exists('formatarNumeroBR')){
                 <small class="text-muted d-block">
                     <i class="fas fa-user-headset"></i>
                     <?= !empty($conversaSelecionada['ResponsavelNome'])
-                        ? htmlspecialchars($conversaSelecionada['ResponsavelNome'])
+                        ? htmlspecialchars($conversaSelecionada['ResponsavelNome'], ENT_QUOTES, 'UTF-8')
                         : 'Sem responsável'; ?>
                 </small>
 
@@ -114,7 +114,13 @@ if(!function_exists('formatarNumeroBR')){
                 <input
                     type="hidden"
                     name="conversa_id"
-                    value="<?= $conversaSelecionada['CVS_ID']; ?>"
+                    value="<?= (int) $conversaSelecionada['CVS_ID']; ?>"
+                >
+
+                <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>"
                 >
 
                 <div class="input-group">

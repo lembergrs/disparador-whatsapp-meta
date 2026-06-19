@@ -13,7 +13,13 @@ foreach($etiquetasConversa as $etq){
     <input
         type="hidden"
         name="conversa_id"
-        value="<?= htmlspecialchars($id); ?>"
+        value="<?= (int) $id; ?>"
+    >
+
+    <input
+        type="hidden"
+        name="csrf_token"
+        value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>"
     >
 
     <div class="form-group">
@@ -37,18 +43,18 @@ foreach($etiquetasConversa as $etq){
                 <input
                     type="checkbox"
                     class="custom-control-input"
-                    id="etiqueta_<?= $etiqueta['ETQ_ID']; ?>"
+                    id="etiqueta_<?= (int) $etiqueta['ETQ_ID']; ?>"
                     name="etiquetas[]"
-                    value="<?= $etiqueta['ETQ_ID']; ?>"
+                    value="<?= (int) $etiqueta['ETQ_ID']; ?>"
                     <?= in_array($etiqueta['ETQ_ID'], $selecionadas) ? 'checked' : ''; ?>
                 >
 
                 <label
                     class="custom-control-label"
-                    for="etiqueta_<?= $etiqueta['ETQ_ID']; ?>"
+                    for="etiqueta_<?= (int) $etiqueta['ETQ_ID']; ?>"
                 >
-                    <span class="badge badge-<?= htmlspecialchars($etiqueta['ETQ_Cor']); ?>">
-                        <?= htmlspecialchars($etiqueta['ETQ_Nome']); ?>
+                    <span class="badge badge-<?= htmlspecialchars($etiqueta['ETQ_Cor'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?= htmlspecialchars($etiqueta['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?>
                     </span>
                 </label>
 
