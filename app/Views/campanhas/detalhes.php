@@ -13,7 +13,11 @@ function statusBadge($status)
         'enviado' => 'success',
         'enviada' => 'success',
         'entregue' => 'primary',
+        'delivered' => 'primary',
+        'lido' => 'success',
         'lida' => 'success',
+        'read' => 'success',
+        'failed' => 'danger',
         'falhou' => 'danger',
         'erro' => 'danger'
     ];

@@ -70,4 +70,41 @@ class Disparo
 
         ]);
     }
+
+    public function buscarPorMessageIds($clienteId, array $messageIds)
+    {
+        $messageIds = array_values(
+            array_filter(
+                array_unique($messageIds),
+                function($messageId){
+                    return is_string($messageId) && trim($messageId) !== '';
+                }
+            )
+        );
+
+        if(empty($messageIds)){
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($messageIds), '?'));
+
+        $sql = $this->db->prepare("
+            SELECT
+                DSP_MessageId,
+                DSP_Status,
+                DSP_Retorno
+            FROM disparos
+            WHERE CLI_ID = ?
+            AND DSP_MessageId IN ({$placeholders})
+        ");
+
+        $sql->execute(
+            array_merge(
+                [$clienteId],
+                $messageIds
+            )
+        );
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
