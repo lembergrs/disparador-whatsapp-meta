@@ -1802,6 +1802,10 @@ $(document).ready(function(){
         {
             let dados = [
                 {
+                    name: 'csrf_token',
+                    value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
+                },
+                {
                     name: 'meta',
                     value: $('#meta').val()
                 },
