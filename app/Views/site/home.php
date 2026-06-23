@@ -7,6 +7,11 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <link rel="icon" type="image/x-icon" href="<?= ASSET_URL ?>/img/favicon.ico?v=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= ASSET_URL ?>/img/favicon.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= ASSET_URL ?>/img/favicon.png">
+    <meta name="theme-color" content="#28A745">
+
     <meta
     name="description"
     content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
