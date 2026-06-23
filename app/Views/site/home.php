@@ -546,89 +546,99 @@
         </div>
 
         <?php
-        $planosSite = [
-            [
-                'nome' => 'Básico',
-                'valor' => 'R$ 97,00/mês',
-                'numeros' => '1 número WhatsApp',
-                'usuarios' => '1 usuário',
-                'mensagens' => '2.500 mensagens/mês',
-                'cor' => 'success'
-            ],
-            [
-                'nome' => 'Profissional',
-                'valor' => 'R$ 197,00/mês',
-                'numeros' => '2 números WhatsApp',
-                'usuarios' => '3 usuários',
-                'mensagens' => '10.000 mensagens/mês',
-                'cor' => 'primary'
-            ],
-            [
-                'nome' => 'Plus',
-                'valor' => 'R$ 397,00/mês',
-                'numeros' => '5 números WhatsApp',
-                'usuarios' => '10 usuários',
-                'mensagens' => '30.000 mensagens/mês',
-                'cor' => 'success'
-            ],
+        $planos = is_array($planos ?? null) ? $planos : [];
+        $coresPermitidas = [
+            'primary',
+            'secondary',
+            'success',
+            'danger',
+            'warning',
+            'info',
+            'light',
+            'dark'
         ];
+
+        $formatarQuantidade = function($quantidade, $singular, $plural){
+            $quantidade = (int) $quantidade;
+            $texto = $quantidade === 1 ? $singular : $plural;
+
+            return number_format($quantidade, 0, ',', '.') . ' ' . $texto;
+        };
         ?>
 
-        <div class="row">
+        <?php if(!empty($planos)){ ?>
 
-            <?php foreach($planosSite as $plano){ ?>
+            <div class="row">
 
-                <div class="col-md-4 mb-4">
+                <?php foreach($planos as $plano){ ?>
 
-                    <div class="card border-<?= $plano['cor']; ?> h-100">
+                    <?php
+                    $corPlano = in_array($plano['PLA_Cor'] ?? '', $coresPermitidas, true)
+                        ? $plano['PLA_Cor']
+                        : 'primary';
 
-                        <div class="card-body p-4 text-center">
+                    $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
+                    ?>
 
-                            <span class="badge badge-<?= $plano['cor']; ?> mb-3">
-                                <?= htmlspecialchars($plano['nome']); ?>
-                            </span>
+                    <div class="col-md-4 mb-4">
 
-                            <h4 class="font-weight-bold">
-                                <?= htmlspecialchars($plano['valor']); ?>
-                            </h4>
+                        <div class="card border-<?= $corPlano; ?> h-100">
 
-                            <p class="text-muted">
-                                <?= htmlspecialchars($plano['numeros']); ?>
-                            </p>
+                            <div class="card-body p-4 text-center">
 
-                            <hr>
+                                <span class="badge badge-<?= $corPlano; ?> mb-3">
+                                    <?= htmlspecialchars($plano['PLA_Nome']); ?>
+                                </span>
 
-                            <p>
-                                <i class="fas fa-users text-success"></i>
-                                <?= htmlspecialchars($plano['usuarios']); ?>
-                            </p>
+                                <h4 class="font-weight-bold">
+                                    R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês
+                                </h4>
 
-                            <p>
-                                <i class="fas fa-paper-plane text-primary"></i>
-                                <?= htmlspecialchars($plano['mensagens']); ?>
-                            </p>
+                                <p class="text-muted">
+                                    <?= $formatarQuantidade($plano['PLA_LimiteNumeros'] ?? 0, 'número WhatsApp', 'números WhatsApp'); ?>
+                                </p>
 
-                            <p>
-                                <i class="fas fa-check text-success"></i>
-                                Campanhas, listas, templates e conversas
-                            </p>
+                                <hr>
 
-                            <a
-                            href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
-                            class="btn btn-outline-success btn-block"
-                            >
-                                Começar teste gratuito
-                            </a>
+                                <p>
+                                    <i class="fas fa-users text-success"></i>
+                                    <?= $formatarQuantidade($plano['PLA_LimiteUsuarios'] ?? 0, 'usuário', 'usuários'); ?>
+                                </p>
+
+                                <p>
+                                    <i class="fas fa-paper-plane text-primary"></i>
+                                    <?= $formatarQuantidade($plano['PLA_LimiteMensagens'] ?? 0, 'mensagem/mês', 'mensagens/mês'); ?>
+                                </p>
+
+                                <p>
+                                    <i class="fas fa-check text-success"></i>
+                                    Campanhas, listas, templates e conversas
+                                </p>
+
+                                <a
+                                href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
+                                class="btn btn-outline-success btn-block"
+                                >
+                                    Começar teste gratuito
+                                </a>
+
+                            </div>
 
                         </div>
 
                     </div>
 
-                </div>
+                <?php } ?>
 
-            <?php } ?>
+            </div>
 
-        </div>
+        <?php }else{ ?>
+
+            <div class="alert alert-light border text-center mb-0">
+                Os planos estão sendo atualizados. Solicite acesso para receber uma proposta adequada à sua operação.
+            </div>
+
+        <?php } ?>
 
         <p class="text-center text-muted mt-3 mb-0">
             Valores e limites podem ser ajustados conforme a necessidade da operação.
