@@ -1124,6 +1124,83 @@ $(document).ready(function(){
         return numero;
     }
 
+    function obterParteTelefoneLinhaDisparo(linha)
+    {
+        linha = String(linha || '');
+
+        let indiceVirgula = linha.indexOf(',');
+
+        if(indiceVirgula === -1){
+            return {
+                telefone: linha,
+                complemento: ''
+            };
+        }
+
+        return {
+            telefone: linha.substring(0, indiceVirgula),
+            complemento: linha.substring(indiceVirgula)
+        };
+    }
+
+    function formatarLinhaNumeroDestinoDisparo(linha)
+    {
+        let partesLinha = obterParteTelefoneLinhaDisparo(linha);
+        let numeroLimpo = limparNumeroDisparo(partesLinha.telefone);
+
+        if(numeroLimpo === ''){
+            return null;
+        }
+
+        return formatarNumeroDisparo(numeroLimpo) + partesLinha.complemento;
+    }
+
+    function contarNumerosDestinoDisparo()
+    {
+        let campo = $('#numerosDestino');
+
+        if(!campo.length){
+            return 0;
+        }
+
+        let total = 0;
+        let linhas = campo.val().split(/\r?\n/);
+
+        linhas.forEach(function(linha){
+            if(String(linha || '').trim() === ''){
+                return;
+            }
+
+            let partesLinha = obterParteTelefoneLinhaDisparo(linha);
+
+            if(limparNumeroDisparo(partesLinha.telefone) !== ''){
+                total++;
+            }
+        });
+
+        return total;
+    }
+
+    function atualizarContadorNumerosDestinoDisparo()
+    {
+        $('#contadorNumerosDestino').text(
+            'Números identificados: ' + contarNumerosDestinoDisparo()
+        );
+    }
+
+    let timeoutContadorNumerosDestinoDisparo = null;
+
+    function agendarAtualizacaoContadorNumerosDestinoDisparo()
+    {
+        if(timeoutContadorNumerosDestinoDisparo){
+            clearTimeout(timeoutContadorNumerosDestinoDisparo);
+        }
+
+        timeoutContadorNumerosDestinoDisparo = setTimeout(function(){
+            atualizarContadorNumerosDestinoDisparo();
+        }, 150);
+    }
+
     function escapeHtmlDisparo(texto)
     {
         return String(texto ?? '')
@@ -1429,38 +1506,31 @@ $(document).ready(function(){
         $('#previewTemplateDisparo').show();
     }
 
+    $(document).on('input paste', '#numerosDestino', function(){
+        agendarAtualizacaoContadorNumerosDestinoDisparo();
+    });
+
     $(document).on('blur', '#numerosDestino', function(){
 
         let linhas = $(this).val().split(/\r?\n/);
         let formatadas = [];
 
         linhas.forEach(function(linha){
-            linha = linha.trim();
-
-            if(linha === ''){
+            if(String(linha || '').trim() === ''){
                 return;
             }
 
-            let partes = linha.split(',');
-            let numero = partes.shift();
-            let numeroLimpo = limparNumeroDisparo(numero);
+            let linhaFormatada = formatarLinhaNumeroDestinoDisparo(linha);
 
-            if(numeroLimpo === ''){
+            if(linhaFormatada === null){
                 return;
-            }
-
-            let linhaFormatada = formatarNumeroDisparo(numeroLimpo);
-
-            if(partes.length > 0){
-                linhaFormatada += ',' + partes.map(function(valor){
-                    return valor.trim();
-                }).join(',');
             }
 
             formatadas.push(linhaFormatada);
         });
 
         $(this).val(formatadas.join("\n"));
+        atualizarContadorNumerosDestinoDisparo();
 
     });
 
@@ -1538,6 +1608,7 @@ $(document).ready(function(){
     $('#telefoneTeste').mask('(00) 00000-0000');
 
     atualizarAjudaNumerosDestinoDisparo(0);
+    atualizarContadorNumerosDestinoDisparo();
 
     let cancelarDisparo = false;
     let intervaloStatusDisparo = null;
