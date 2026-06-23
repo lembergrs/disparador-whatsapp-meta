@@ -104,11 +104,11 @@
                 </span>
 
                 <h1 class="site-hero-title">
-                    Envie campanhas oficiais pelo WhatsApp e centralize todo o atendimento da sua empresa.
+                    Campanhas oficiais e atendimento centralizado pelo WhatsApp.
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    API Oficial da Meta, múltiplos atendentes, campanhas em massa, listas de contatos e central de conversas em uma única plataforma.
+                    Use a API Oficial da Meta para enviar campanhas, organizar contatos e atender clientes em uma única plataforma.
                 </p>
 
                 <div class="mt-4">
@@ -804,7 +804,7 @@
                 </h2>
 
                 <p class="text-muted mb-0">
-                    O Disparador.net é desenvolvido e mantido pela RL2 Net, empresa responsável pela operação, suporte e evolução da plataforma.
+                    O Disparador.net é desenvolvido e mantido pela RL2 Net, empresa com operação em Curitiba/PR e foco em soluções digitais para pequenas e médias empresas.
                 </p>
 
             </div>
@@ -846,7 +846,8 @@
 
             <div class="col-md-6 text-center text-md-left mb-2 mb-md-0">
 
-                © 2026 RL2 Net - Todos os direitos reservados.
+                © 2026 RL2 Net - Todos os direitos reservados.<br>
+                Disparador.net é uma plataforma da RL2 Net.
 
             </div>
 
