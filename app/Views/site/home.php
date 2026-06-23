@@ -3,9 +3,22 @@
 <head>
     <meta charset="UTF-8">
 
-    <title>Disparador | WhatsApp Business API</title>
+    <title>Disparador.net | Plataforma Oficial para WhatsApp Business</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta
+    name="description"
+    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    >
+
+    <meta property="og:title" content="Disparador.net | Plataforma Oficial para WhatsApp Business">
+    <meta
+    property="og:description"
+    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= BASE_URL; ?>/index.php?url=site">
 
     <link
     rel="stylesheet"
@@ -31,7 +44,7 @@
         <a class="navbar-brand d-flex align-items-center" href="<?= BASE_URL; ?>/index.php?url=site">
             <img
             src="<?= ASSET_URL; ?>/img/logo-disparador.png"
-            alt="Disparador"
+            alt="Disparador.net"
             class="site-logo"
             >
         </a>
@@ -54,7 +67,7 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#como-funciona">Como funciona</a>
+                    <a class="nav-link" href="#como-funciona">Ver como funciona</a>
                 </li>
 
                 <li class="nav-item">
@@ -79,7 +92,7 @@
                     class="btn btn-success ml-lg-2 site-btn-main"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
-                        Começar agora
+                        Solicitar acesso
                     </a>
                 </li>
 
@@ -104,12 +117,11 @@
                 </span>
 
                 <h1 class="site-hero-title">
-                    Transforme seu WhatsApp em uma plataforma de <span>campanhas e atendimento</span>.
+                    Campanhas oficiais e atendimento centralizado pelo WhatsApp.
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    Com o Disparador, sua empresa cria templates oficiais, organiza listas,
-                    envia campanhas e centraliza conversas em uma única ferramenta.
+                    Use a API Oficial da Meta para enviar campanhas, organizar contatos e atender clientes em uma única plataforma.
                 </p>
 
                 <div class="mt-4">
@@ -118,14 +130,14 @@
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
                     >
-                        Começar agora
+                        Solicitar acesso
                     </a>
 
                     <a
                     href="#como-funciona"
                     class="btn btn-outline-secondary btn-lg site-btn-outline ml-lg-2 mt-2 mt-lg-0"
                     >
-                        Como funciona
+                        Ver como funciona
                     </a>
 
                 </div>
@@ -144,7 +156,7 @@
 
                     <span>
                         <i class="fas fa-check text-success"></i>
-                        Multiempresa
+                        Sem celular conectado
                     </span>
 
                 </div>
@@ -156,7 +168,7 @@
                 <div class="site-dashboard-mockup">
 
                     <div class="site-mockup-top">
-                        Painel Disparador
+                        Demonstração da Plataforma
                     </div>
 
                     <div class="site-mockup-body">
@@ -164,11 +176,11 @@
                         <div class="mb-3">
 
                             <small class="text-muted">
-                                Status da plataforma
+                                Recursos principais
                             </small>
 
                             <h5 class="font-weight-bold mb-0">
-                                Operação em produção
+                                Tudo para campanhas e atendimento em um só lugar
                             </h5>
 
                         </div>
@@ -178,10 +190,8 @@
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">API Meta</small>
-                                    <h4 class="mb-0 text-success">
-                                        Operacional
-                                    </h4>
+                                    <i class="fas fa-bullhorn text-success mr-2"></i>
+                                    <strong>Campanhas WhatsApp</strong>
                                 </div>
 
                             </div>
@@ -189,10 +199,26 @@
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">Webhooks</small>
-                                    <h4 class="mb-0 text-success">
-                                        Ativos
-                                    </h4>
+                                    <i class="fas fa-comments text-success mr-2"></i>
+                                    <strong>Central de Conversas</strong>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <i class="fas fa-file-alt text-success mr-2"></i>
+                                    <strong>Templates Oficiais</strong>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <i class="fas fa-list text-success mr-2"></i>
+                                    <strong>Listas de Contatos</strong>
                                 </div>
 
                             </div>
@@ -202,29 +228,19 @@
                         <div class="site-mini-card">
 
                             <strong>
-                                Últimos 30 dias
+                                Operação profissional
                             </strong>
 
                             <div class="mt-3">
 
                                 <p class="mb-2">
                                     <i class="fas fa-check-circle text-success"></i>
-                                    Plataforma implantada em ambiente de produção
-                                </p>
-
-                                <p class="mb-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    Integração com API Oficial da Meta configurada
-                                </p>
-
-                                <p class="mb-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    Templates oficiais criados e sincronizados
+                                    Multiatendimento para organizar o trabalho da equipe
                                 </p>
 
                                 <p class="mb-0">
                                     <i class="fas fa-check-circle text-success"></i>
-                                    Central de conversas e campanhas disponíveis
+                                    API Oficial da Meta para campanhas e atendimento
                                 </p>
 
                             </div>
@@ -238,7 +254,7 @@
                                 <i class="fab fa-whatsapp fa-2x text-success mr-3"></i>
 
                                 <div>
-                                    <strong>Disparador WhatsApp Business</strong><br>
+                                    <strong>Disparador.net WhatsApp Business</strong><br>
                                     <small class="text-muted">
                                         Plataforma preparada para campanhas, atendimento e múltiplos números.
                                     </small>
@@ -276,9 +292,7 @@
 
             <p class="text-muted mx-auto" style="max-width: 750px;">
 
-                O Disparador utiliza a API Oficial do WhatsApp Business Platform
-                para envio de mensagens, gerenciamento de templates e integração
-                com números comerciais.
+                O Disparador.net utiliza a API Oficial do WhatsApp Business Platform para campanhas, atendimento e templates oficiais, sem WhatsApp Web e sem celular conectado.
 
             </p>
 
@@ -307,8 +321,7 @@
                                 </h5>
 
                                 <small class="text-muted">
-                                    API oficial para campanhas,
-                                    atendimento e automações.
+                                    API oficial para campanhas, atendimento multiatendente e templates aprovados pela Meta.
                                 </small>
 
                             </div>
@@ -326,8 +339,7 @@
                                 </h5>
 
                                 <small class="text-muted">
-                                    Infraestrutura utilizada por
-                                    milhões de empresas no mundo.
+                                    Infraestrutura oficial para operar campanhas e atendimento em um ambiente mais seguro.
                                 </small>
 
                             </div>
@@ -353,7 +365,7 @@
                                 <i class="fas fa-check-circle text-success"></i>
 
                                 <div class="small mt-2">
-                                    Templates Homologados
+                                    Templates oficiais
                                 </div>
 
                             </div>
@@ -363,7 +375,7 @@
                                 <i class="fas fa-check-circle text-success"></i>
 
                                 <div class="small mt-2">
-                                    Cloud API
+                                    Sem celular conectado
                                 </div>
 
                             </div>
@@ -373,7 +385,7 @@
                                 <i class="fas fa-check-circle text-success"></i>
 
                                 <div class="small mt-2">
-                                    Ambiente Seguro
+                                    Ambiente mais seguro
                                 </div>
 
                             </div>
@@ -387,7 +399,7 @@
                 <p class="text-center text-muted small mt-3 mb-0">
 
                     Meta, WhatsApp e seus respectivos logotipos são marcas de seus proprietários.
-                    O Disparador utiliza a infraestrutura oficial do WhatsApp Business Platform.
+                    Operação pela API Oficial da Meta, reduzindo riscos de automações não autorizadas.
 
                 </p>
 
@@ -422,32 +434,32 @@
                 [
                     'icon' => 'fas fa-bullhorn',
                     'titulo' => 'Campanhas WhatsApp',
-                    'texto' => 'Envie campanhas para listas de contatos usando templates oficiais da Meta.'
+                    'texto' => 'Alcance seus clientes com campanhas usando templates oficiais aprovados pela Meta.'
                 ],
                 [
                     'icon' => 'fas fa-file-alt',
                     'titulo' => 'Templates oficiais',
-                    'texto' => 'Crie, sincronize e utilize templates aprovados para iniciar conversas.'
+                    'texto' => 'Crie, sincronize e utilize modelos aprovados para iniciar conversas com segurança.'
                 ],
                 [
                     'icon' => 'fas fa-list',
                     'titulo' => 'Listas de contatos',
-                    'texto' => 'Importe contatos e organize sua base por campanhas, públicos ou segmentos.'
+                    'texto' => 'Importe contatos, organize públicos e segmente campanhas por listas.'
                 ],
                 [
                     'icon' => 'fas fa-comments',
                     'titulo' => 'Central de conversas',
-                    'texto' => 'Receba mensagens dos clientes e acompanhe tudo em uma tela estilo WhatsApp Web.'
+                    'texto' => 'Atenda mensagens recebidas em uma central simples, organizada e multiatendente.'
                 ],
                 [
                     'icon' => 'fas fa-tags',
                     'titulo' => 'Etiquetas e filtros',
-                    'texto' => 'Classifique conversas por status, assunto, prioridade ou etapa do atendimento.'
+                    'texto' => 'Classifique conversas por status, prioridade, assunto ou etapa do atendimento.'
                 ],
                 [
                     'icon' => 'fab fa-whatsapp',
                     'titulo' => 'Múltiplos números',
-                    'texto' => 'Prepare sua operação para conectar mais de um número WhatsApp por cliente.'
+                    'texto' => 'Conecte mais de um número WhatsApp conforme o plano contratado e a operação da empresa.'
                 ],
             ];
             ?>
@@ -497,7 +509,7 @@
             </h2>
 
             <p class="text-muted">
-                Um fluxo simples para começar a usar o WhatsApp de forma profissional.
+                Um fluxo simples para começar a usar campanhas e atendimento em uma plataforma oficial.
             </p>
 
         </div>
@@ -506,26 +518,26 @@
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">1</div>
-                <h5 class="font-weight-bold">Crie sua conta</h5>
-                <p class="text-muted">Crie sua conta grátis e acesse o painel para conectar seu WhatsApp.</p>
+                <h5 class="font-weight-bold">Solicite seu acesso</h5>
+                <p class="text-muted">Cadastre sua empresa e acesse o painel do Disparador.net.</p>
             </div>
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">2</div>
-                <h5 class="font-weight-bold">Conecte o WhatsApp</h5>
+                <h5 class="font-weight-bold">Conecte seu WhatsApp</h5>
                 <p class="text-muted">Vincule seu número à plataforma oficial da Meta.</p>
             </div>
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">3</div>
-                <h5 class="font-weight-bold">Importe contatos</h5>
+                <h5 class="font-weight-bold">Importe seus contatos</h5>
                 <p class="text-muted">Crie listas e organize sua base de clientes.</p>
             </div>
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">4</div>
-                <h5 class="font-weight-bold">Envie e atenda</h5>
-                <p class="text-muted">Dispare campanhas e acompanhe as conversas.</p>
+                <h5 class="font-weight-bold">Venda e atenda mais</h5>
+                <p class="text-muted">Envie campanhas e acompanhe as conversas em uma única central.</p>
             </div>
 
         </div>
@@ -550,61 +562,100 @@
 
         </div>
 
-        <div class="row">
+        <?php
+        $planos = is_array($planos ?? null) ? $planos : [];
+        $coresPermitidas = [
+            'primary',
+            'secondary',
+            'success',
+            'danger',
+            'warning',
+            'info',
+            'light',
+            'dark'
+        ];
 
-            <?php foreach($planos as $plano){ ?>
+        $formatarQuantidade = function($quantidade, $singular, $plural){
+            $quantidade = (int) $quantidade;
+            $texto = $quantidade === 1 ? $singular : $plural;
 
-                <div class="col-md-4 mb-4">
+            return number_format($quantidade, 0, ',', '.') . ' ' . $texto;
+        };
+        ?>
 
-                    <div class="card border-<?= $plano['PLA_Cor'] ?: 'primary'; ?> h-100">
+        <?php if(!empty($planos)){ ?>
 
-                        <div class="card-body p-4 text-center">
+            <div class="row">
 
-                            <span class="badge badge-<?= $plano['PLA_Cor'] ?: 'primary'; ?> mb-3">
-                                <?= htmlspecialchars($plano['PLA_Nome']); ?>
-                            </span>
+                <?php foreach($planos as $plano){ ?>
 
-                            <h4 class="font-weight-bold">
-                                R$ <?= number_format($plano['PLA_Valor'], 2, ',', '.'); ?>
-                            </h4>
+                    <?php
+                    $corPlano = in_array($plano['PLA_Cor'] ?? '', $coresPermitidas, true)
+                        ? $plano['PLA_Cor']
+                        : 'primary';
 
-                            <p class="text-muted">
-                                <?= $plano['PLA_LimiteNumeros']; ?> número(s) WhatsApp
-                            </p>
+                    $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
+                    ?>
 
-                            <hr>
+                    <div class="col-md-4 mb-4">
 
-                            <p>
-                                <i class="fab fa-whatsapp text-success"></i>
-                                <?= $plano['PLA_LimiteUsuarios']; ?> usuário(s)
-                            </p>
+                        <div class="card border-<?= $corPlano; ?> h-100">
 
-                            <p>
-                                <i class="fas fa-paper-plane text-primary"></i>
-                                <?= number_format($plano['PLA_LimiteMensagens'], 0, ',', '.'); ?> mensagens/mês
-                            </p>
+                            <div class="card-body p-4 text-center">
 
-                            <p>
-                                <i class="fas fa-check text-success"></i>
-                                Campanhas, listas, templates e conversas
-                            </p>
+                                <span class="badge badge-<?= $corPlano; ?> mb-3">
+                                    <?= htmlspecialchars($plano['PLA_Nome']); ?>
+                                </span>
 
-                            <a
-                            href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
-                            class="btn btn-outline-success btn-block"
-                            >
-                                Solicitar acesso
-                            </a>
+                                <h4 class="font-weight-bold">
+                                    R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês
+                                </h4>
+
+                                <p class="text-muted">
+                                    <?= $formatarQuantidade($plano['PLA_LimiteNumeros'] ?? 0, 'número WhatsApp', 'números WhatsApp'); ?>
+                                </p>
+
+                                <hr>
+
+                                <p>
+                                    <i class="fas fa-users text-success"></i>
+                                    <?= $formatarQuantidade($plano['PLA_LimiteUsuarios'] ?? 0, 'usuário', 'usuários'); ?>
+                                </p>
+
+                                <p>
+                                    <i class="fas fa-paper-plane text-primary"></i>
+                                    <?= $formatarQuantidade($plano['PLA_LimiteMensagens'] ?? 0, 'mensagem/mês', 'mensagens/mês'); ?>
+                                </p>
+
+                                <p>
+                                    <i class="fas fa-check text-success"></i>
+                                    Campanhas, listas, templates e conversas
+                                </p>
+
+                                <a
+                                href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
+                                class="btn btn-outline-success btn-block"
+                                >
+                                    Solicitar acesso
+                                </a>
+
+                            </div>
 
                         </div>
 
                     </div>
 
-                </div>
+                <?php } ?>
 
-            <?php } ?>
+            </div>
 
-        </div>
+        <?php }else{ ?>
+
+            <div class="alert alert-light border text-center mb-0">
+                Os planos estão sendo atualizados. Solicite acesso para receber uma proposta adequada à sua operação.
+            </div>
+
+        <?php } ?>
 
         <p class="text-center text-muted mt-3 mb-0">
             Valores e limites podem ser ajustados conforme a necessidade da operação.
@@ -627,16 +678,15 @@
                 </span>
 
                 <h2 class="site-section-title">
-                    Estime o custo das mensagens da Meta
+                    Simule o custo estimado das mensagens da Meta
                 </h2>
 
                 <p class="text-muted">
-                    Informe o tipo de mensagem e a quantidade estimada para ter uma ideia
-                    do custo aproximado cobrado pela Meta para números do Brasil.
+                    Informe o tipo de mensagem e a quantidade estimada para planejar o custo aproximado que a Meta pode cobrar conforme categoria, país e regras vigentes.
                 </p>
 
                 <p class="text-muted small">
-                    A mensalidade da plataforma Disparador não está incluída nesta simulação.
+                    A mensalidade do Disparador.net é separada e não está incluída nesta simulação.
                 </p>
 
             </div>
@@ -692,9 +742,7 @@
                         </div>
 
                         <small class="text-muted">
-                            Valores estimados com base em tabela pública da Meta para o Brasil.
-                            A cobrança real pode variar conforme categoria, país do destinatário,
-                            moeda, regras vigentes e mensagens efetivamente entregues.
+                            Esta é apenas uma estimativa, não um valor final garantido. A cobrança real pode variar conforme categoria, país do destinatário, moeda, regras vigentes e mensagens efetivamente entregues.
                         </small>
 
                     </div>
@@ -725,33 +773,56 @@
 
             <div class="col-md-8">
 
-                <div class="site-faq-item">
-                    <h5>O Disparador usa WhatsApp Web?</h5>
-                    <p class="text-muted">
-                        Não. A plataforma foi desenvolvida para operar com a API oficial do WhatsApp Business da Meta.
-                    </p>
-                </div>
+                <?php
+                $perguntasFrequentes = [
+                    'O Disparador.net usa WhatsApp Web?' => 'Não. A plataforma opera com a API Oficial do WhatsApp Business da Meta.',
+                    'Preciso deixar o celular ligado?' => 'Não. A operação acontece pela infraestrutura oficial da Meta, sem depender de sessão aberta em navegador.',
+                    'Posso usar meu número atual?' => 'Sim, desde que o número atenda aos requisitos da Meta para conexão com a API Oficial do WhatsApp Business.',
+                    'Posso importar contatos?' => 'Sim. Você pode importar contatos, criar listas e organizar públicos para campanhas.',
+                    'Posso ter mais de um atendente?' => 'Sim. Os planos permitem diferentes quantidades de usuários para atendimento.',
+                    'Posso ter mais de um número WhatsApp?' => 'Sim. A plataforma permite múltiplos números conforme o plano contratado.',
+                    'A Meta cobra pelas mensagens?' => 'A Meta pode cobrar pelas mensagens conforme categoria, país e regras vigentes. O Disparador.net mostra uma estimativa para ajudar no planejamento.',
+                    'Como solicito acesso?' => 'Preencha o cadastro para que a equipe avalie a configuração necessária e oriente os próximos passos de ativação.',
+                ];
+                ?>
 
-                <div class="site-faq-item">
-                    <h5>Preciso deixar celular ligado?</h5>
-                    <p class="text-muted">
-                        Não. A operação acontece pela estrutura oficial da Meta, sem depender de sessão de navegador.
-                    </p>
-                </div>
+                <?php foreach($perguntasFrequentes as $pergunta => $resposta){ ?>
+                    <div class="site-faq-item">
+                        <h5><?= htmlspecialchars($pergunta); ?></h5>
+                        <p class="text-muted">
+                            <?= htmlspecialchars($resposta); ?>
+                        </p>
+                    </div>
+                <?php } ?>
 
-                <div class="site-faq-item">
-                    <h5>Posso importar contatos?</h5>
-                    <p class="text-muted">
-                        Sim. Você pode organizar seus contatos em listas para facilitar campanhas e segmentações.
-                    </p>
-                </div>
+            </div>
 
-                <div class="site-faq-item">
-                    <h5>Posso ter mais de um número?</h5>
-                    <p class="text-muted">
-                        Sim. A plataforma está preparada para múltiplos números por cliente, conforme o plano contratado.
-                    </p>
-                </div>
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="py-5 bg-light">
+
+    <div class="container">
+
+        <div class="row justify-content-center">
+
+            <div class="col-md-8 text-center">
+
+                <span class="badge badge-success mb-3">
+                    Credibilidade
+                </span>
+
+                <h2 class="site-section-title">
+                    Uma plataforma da RL2 Net
+                </h2>
+
+                <p class="text-muted mb-0">
+                    O Disparador.net é desenvolvido e mantido pela RL2 Net, empresa com operação em Curitiba/PR e foco em soluções digitais para pequenas e médias empresas.
+                </p>
 
             </div>
 
@@ -770,14 +841,14 @@
         </h2>
 
         <p class="lead">
-            Cadastre sua empresa e comece a organizar campanhas, contatos e conversas.
+            Cadastre sua empresa e comece a organizar campanhas, contatos e conversas em uma plataforma oficial.
         </p>
 
         <a
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
         >
-            Criar conta
+            Solicitar acesso
         </a>
 
     </div>
@@ -792,7 +863,9 @@
 
             <div class="col-md-6 text-center text-md-left mb-2 mb-md-0">
 
-                © <?= date('Y'); ?> Disparador RL2 Net. Todos os direitos reservados.
+                © 2026 RL2 Net - Todos os direitos reservados.<br>
+                Disparador.net é uma plataforma da RL2 Net.<br>
+                Contato: contato@disparador.net
 
             </div>
 

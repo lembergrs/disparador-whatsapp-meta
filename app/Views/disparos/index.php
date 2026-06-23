@@ -167,8 +167,22 @@ class="mb-3"
                 ></textarea>
 
                 <small
+                id="dicaFormatosNumerosDestino"
+                class="text-muted d-block mt-1"
+                >
+                    Você pode colar números em vários formatos. Ex.: 41999990000, (41) 99999-0000 ou +55 41 99999-0000.
+                </small>
+
+                <small
+                id="contadorNumerosDestino"
+                class="text-muted d-block mt-1"
+                >
+                    Números identificados: 0
+                </small>
+
+                <small
                 id="ajudaNumerosDestino"
-                class="text-muted d-block"
+                class="text-muted d-block mt-2"
                 >
                     <strong>Formato esperado:</strong><br>
                     Número
