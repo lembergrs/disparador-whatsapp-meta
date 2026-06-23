@@ -24,10 +24,13 @@ class ComposerStaticInit53a593eb1ff2da391c7a5f821724a16a
         ),
         'M' =>
         array (
+            'Models\\' => 7,
             'Matrix\\' => 7,
         ),
         'C' =>
         array (
+            'Core\\' => 5,
+            'Controllers\\' => 12,
             'Complex\\' => 8,
         ),
     );
@@ -54,9 +57,21 @@ class ComposerStaticInit53a593eb1ff2da391c7a5f821724a16a
         array (
             0 => __DIR__ . '/..' . '/phpoffice/phpspreadsheet/src/PhpSpreadsheet',
         ),
+        'Models\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/app/Models',
+        ),
         'Matrix\\' =>
         array (
             0 => __DIR__ . '/..' . '/markbaker/matrix/classes/src',
+        ),
+        'Core\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/app/Core',
+        ),
+        'Controllers\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/app/Controllers',
         ),
         'Complex\\' =>
         array (

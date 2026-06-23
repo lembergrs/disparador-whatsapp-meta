@@ -11,6 +11,9 @@ return array(
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-factory/src', $vendorDir . '/psr/http-message/src'),
     'Psr\\Http\\Client\\' => array($vendorDir . '/psr/http-client/src'),
     'PhpOffice\\PhpSpreadsheet\\' => array($vendorDir . '/phpoffice/phpspreadsheet/src/PhpSpreadsheet'),
+    'Models\\' => array($baseDir . '/app/Models'),
     'Matrix\\' => array($vendorDir . '/markbaker/matrix/classes/src'),
+    'Core\\' => array($baseDir . '/app/Core'),
+    'Controllers\\' => array($baseDir . '/app/Controllers'),
     'Complex\\' => array($vendorDir . '/markbaker/complex/classes/src'),
 );
