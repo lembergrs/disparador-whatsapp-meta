@@ -155,7 +155,7 @@
                 <div class="site-dashboard-mockup">
 
                     <div class="site-mockup-top">
-                        Painel Disparador.net
+                        Demonstração da Plataforma
                     </div>
 
                     <div class="site-mockup-body">
@@ -163,11 +163,11 @@
                         <div class="mb-3">
 
                             <small class="text-muted">
-                                Campanhas enviadas
+                                Recursos principais
                             </small>
 
                             <h5 class="font-weight-bold mb-0">
-                                12.450 no mês
+                                Tudo para campanhas e atendimento em um só lugar
                             </h5>
 
                         </div>
@@ -177,10 +177,8 @@
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">Conversas abertas</small>
-                                    <h4 class="mb-0 text-success">
-                                        1.280
-                                    </h4>
+                                    <i class="fas fa-bullhorn text-success mr-2"></i>
+                                    <strong>Campanhas WhatsApp</strong>
                                 </div>
 
                             </div>
@@ -188,10 +186,26 @@
                             <div class="col-md-6">
 
                                 <div class="site-mini-card">
-                                    <small class="text-muted">Mensagens entregues</small>
-                                    <h4 class="mb-0 text-success">
-                                        98%
-                                    </h4>
+                                    <i class="fas fa-comments text-success mr-2"></i>
+                                    <strong>Central de Conversas</strong>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <i class="fas fa-file-alt text-success mr-2"></i>
+                                    <strong>Templates Oficiais</strong>
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <div class="site-mini-card">
+                                    <i class="fas fa-list text-success mr-2"></i>
+                                    <strong>Listas de Contatos</strong>
                                 </div>
 
                             </div>
@@ -201,29 +215,19 @@
                         <div class="site-mini-card">
 
                             <strong>
-                                Últimos 30 dias
+                                Operação profissional
                             </strong>
 
                             <div class="mt-3">
 
                                 <p class="mb-2">
                                     <i class="fas fa-check-circle text-success"></i>
-                                    Contatos cadastrados e organizados por listas
-                                </p>
-
-                                <p class="mb-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    Campanhas enviadas com templates oficiais
-                                </p>
-
-                                <p class="mb-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    Mensagens entregues acompanhadas no painel
+                                    Multiatendimento para organizar o trabalho da equipe
                                 </p>
 
                                 <p class="mb-0">
                                     <i class="fas fa-check-circle text-success"></i>
-                                    Conversas abertas centralizadas para atendimento
+                                    API Oficial da Meta para campanhas e atendimento
                                 </p>
 
                             </div>
