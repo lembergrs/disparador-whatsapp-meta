@@ -4,7 +4,7 @@
 /public/temp/
 /.env
 /ContinuacaoProjeto.txt
-
+.env
 *.log
 Thumbs.db
 .DS_Store
