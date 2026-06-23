@@ -20,7 +20,7 @@ class SiteController extends Controller
         $planos = $planoModel->listarAtivos();
 
         $this->view('site/home', [
-            'titulo' => 'Disparador WhatsApp',
+            'titulo' => 'Disparador.net WhatsApp',
             'planos' => $planos
         ], false);
     }

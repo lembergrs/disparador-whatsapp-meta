@@ -5,7 +5,7 @@
 
 <meta charset="UTF-8">
 
-<title><?= $titulo ?? 'Disparador'; ?></title>
+<title><?= $titulo ?? 'Disparador.net'; ?></title>
 
 <meta
 name="viewport"

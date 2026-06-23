@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Termos de Uso | Disparador RL2 Net</title>
+    <title>Termos de Uso | Disparador.net RL2 Net</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
@@ -21,14 +21,14 @@
             <p class="text-muted">Última atualização: Junho de 2026</p>
 
             <p>
-                Os presentes Termos de Uso regulam a utilização da plataforma Disparador,
+                Os presentes Termos de Uso regulam a utilização da plataforma Disparador.net,
                 desenvolvida e operada pela RL2 Net.
             </p>
 
             <h4>1. Objeto</h4>
 
             <p>
-                A plataforma Disparador permite a integração com a Plataforma WhatsApp Business
+                A plataforma Disparador.net permite a integração com a Plataforma WhatsApp Business
                 da Meta para envio, recebimento e gerenciamento de mensagens, campanhas e atendimentos.
             </p>
 

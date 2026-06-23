@@ -14,7 +14,7 @@ Session::remove('cadastro_dados');
 
     <meta charset="utf-8">
 
-    <title>Cadastro | Disparador RL2 Net</title>
+    <title>Cadastro | Disparador.net RL2 Net</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -39,7 +39,7 @@ Session::remove('cadastro_dados');
         <a href="<?= BASE_URL; ?>/index.php?url=site">
             <img
             src="<?= ASSET_URL; ?>/img/logo-disparador.png"
-            alt="Disparador"
+            alt="Disparador.net"
             style="max-height:85px; max-width:320px;"
             >
         </a>
@@ -59,7 +59,7 @@ Session::remove('cadastro_dados');
                     </span>
 
                     <h2 class="font-weight-bold mb-3">
-                        Crie sua conta grátis no Disparador
+                        Crie sua conta grátis no Disparador.net
                     </h2>
 
                     <p class="text-muted">
@@ -402,7 +402,7 @@ Session::remove('cadastro_dados');
                         class="btn btn-success btn-block"
                         disabled
                         >
-                            Criar conta grátis
+                            Começar teste gratuito
                         </button>
 
                     </form>
