@@ -1,5 +1,12 @@
 <?php
 
+<<<<<<< HEAD
+=======
+require_once __DIR__ . '/../config/env.php';
+
+configurarErrosAplicacao();
+
+>>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
 $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 session_set_cookie_params([
     'lifetime' => 0,

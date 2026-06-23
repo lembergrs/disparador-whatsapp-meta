@@ -1540,6 +1540,8 @@ $(document).ready(function(){
     atualizarAjudaNumerosDestinoDisparo(0);
 
     let cancelarDisparo = false;
+    let intervaloStatusDisparo = null;
+    let statusDisparoPorMessageId = {};
 
     $(document).on('click', '#btnPararDisparo', function(){
 
@@ -1556,6 +1558,12 @@ $(document).ready(function(){
         e.preventDefault();
 
         cancelarDisparo = false;
+        statusDisparoPorMessageId = {};
+
+        if(intervaloStatusDisparo){
+            clearInterval(intervaloStatusDisparo);
+            intervaloStatusDisparo = null;
+        }
 
         let form = $(this);
         let parse = parseDestinosDisparo();
@@ -1802,6 +1810,10 @@ $(document).ready(function(){
         {
             let dados = [
                 {
+                    name: 'csrf_token',
+                    value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
+                },
+                {
                     name: 'meta',
                     value: $('#meta').val()
                 },
@@ -1869,6 +1881,139 @@ $(document).ready(function(){
             };
         }
 
+        function labelStatusWebhookDisparo(status)
+        {
+            const labels = {
+                enviado: 'Enviado',
+                sent: 'Enviado',
+                enviada: 'Enviado',
+                entregue: 'Entregue',
+                delivered: 'Entregue',
+                lido: 'Lido',
+                lida: 'Lido',
+                read: 'Lido',
+                erro: 'Erro',
+                failed: 'Erro',
+                falhou: 'Erro',
+                aguardando_confirmacao: 'Aguardando confirmação'
+            };
+
+            return labels[status] || status || 'Aguardando confirmação';
+        }
+
+        function classeStatusWebhookDisparo(status)
+        {
+            const classes = {
+                enviado: 'badge-success',
+                sent: 'badge-success',
+                enviada: 'badge-success',
+                entregue: 'badge-primary',
+                delivered: 'badge-primary',
+                lido: 'badge-success',
+                lida: 'badge-success',
+                read: 'badge-success',
+                erro: 'badge-danger',
+                failed: 'badge-danger',
+                falhou: 'badge-danger',
+                aguardando_confirmacao: 'badge-info'
+            };
+
+            return classes[status] || 'badge-secondary';
+        }
+
+        function motivoStatusWebhookDisparo(status)
+        {
+            const motivos = {
+                enviado: 'Mensagem enviada pela Meta.',
+                sent: 'Mensagem enviada pela Meta.',
+                enviada: 'Mensagem enviada pela Meta.',
+                entregue: 'Mensagem entregue ao destinatário.',
+                delivered: 'Mensagem entregue ao destinatário.',
+                lido: 'Mensagem lida pelo destinatário.',
+                lida: 'Mensagem lida pelo destinatário.',
+                read: 'Mensagem lida pelo destinatário.',
+                erro: 'A Meta informou falha no envio.',
+                failed: 'A Meta informou falha no envio.',
+                falhou: 'A Meta informou falha no envio.'
+            };
+
+            return motivos[status] || 'Aguardando confirmação da Meta.';
+        }
+
+        function iniciarMonitoramentoStatusDisparo()
+        {
+            if(intervaloStatusDisparo){
+                clearInterval(intervaloStatusDisparo);
+            }
+
+            intervaloStatusDisparo = setInterval(function(){
+                const messageIds = Object.keys(statusDisparoPorMessageId);
+
+                if(messageIds.length == 0){
+                    return;
+                }
+
+                $.ajax({
+                    url: BASE_URL + '/index.php?url=disparo/statusAjax',
+                    method: 'POST',
+                    data: {
+                        csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
+                        message_ids: messageIds
+                    },
+                    dataType: 'json',
+                    success: function(retorno){
+                        if(!retorno.sucesso || !Array.isArray(retorno.statuses)){
+                            return;
+                        }
+
+                        retorno.statuses.forEach(function(item){
+                            const messageId = item.DSP_MessageId;
+                            const status = item.DSP_Status;
+                            const registro = statusDisparoPorMessageId[messageId];
+
+                            if(!registro || !status || status == 'aguardando_confirmacao'){
+                                return;
+                            }
+
+                            $('#linha_numero_' + registro.index + ' td:eq(1)').html(
+                                '<span class="badge ' + classeStatusWebhookDisparo(status) + '">' +
+                                escapeHtmlDisparo(labelStatusWebhookDisparo(status)) +
+                                '</span>'
+                            );
+
+                            $('#linha_numero_' + registro.index + ' td:eq(2)').html(
+                                '<span class="text-muted">' +
+                                escapeHtmlDisparo(motivoStatusWebhookDisparo(status)) +
+                                '</span>'
+                            );
+
+                            aplicarDetalhesLinha(
+                                registro.index,
+                                montarDetalhesEnvioDisparo(
+                                    registro.destino,
+                                    {
+                                        message_id: messageId,
+                                        retorno: item.DSP_Retorno
+                                    },
+                                    labelStatusWebhookDisparo(status),
+                                    motivoStatusWebhookDisparo(status)
+                                )
+                            );
+
+                            if(['erro', 'failed', 'falhou', 'lido', 'lida', 'read'].includes(status)){
+                                delete statusDisparoPorMessageId[messageId];
+                            }
+                        });
+
+                        if(Object.keys(statusDisparoPorMessageId).length == 0){
+                            clearInterval(intervaloStatusDisparo);
+                            intervaloStatusDisparo = null;
+                        }
+                    }
+                });
+            }, 5000);
+        }
+
         function aplicarDetalhesLinha(index, detalhesEnvio)
         {
             let detalhes = encodeDetalhesDisparo(detalhesEnvio);
@@ -1916,7 +2061,16 @@ $(document).ready(function(){
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/enviarAjax',
                 method: 'POST',
+<<<<<<< HEAD
                 data: Object.assign(montarDadosEnvio(destino), {csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')}),
+=======
+                data: montarDadosEnvio(destino).concat([
+                    {
+                        name: 'csrf_token',
+                        value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
+                    }
+                ]),
+>>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
                 dataType: 'json',
 
                 success: function(retorno){
@@ -1932,6 +2086,15 @@ $(document).ready(function(){
                         $('#linha_numero_' + atual + ' td:eq(2)').html(
                             '<span class="text-info">Enviado para processamento pela Meta</span>'
                         );
+
+                        if(retorno.message_id){
+                            statusDisparoPorMessageId[retorno.message_id] = {
+                                index: atual,
+                                destino: destino
+                            };
+
+                            iniciarMonitoramentoStatusDisparo();
+                        }
 
                     }else{
 
@@ -2035,6 +2198,12 @@ $(document).ready(function(){
         $('#listaStatusNumeros').html('');
 
         cancelarDisparo = false;
+        statusDisparoPorMessageId = {};
+
+        if(intervaloStatusDisparo){
+            clearInterval(intervaloStatusDisparo);
+            intervaloStatusDisparo = null;
+        }
 
     });
 
@@ -2325,4 +2494,8 @@ function validarCnpj(cnpj)
     return true;
 }
 
+<<<<<<< HEAD
 /* force deploy app.js */
+=======
+/* force deploy app.js */
+>>>>>>> 891617e7af133d0d629f77617230112bf4fa196b

@@ -321,6 +321,53 @@ class DisparoController extends Controller
         return \Core\Csrf::validarPost();
     }
 
+<<<<<<< HEAD
+=======
+    public function statusAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $token =
+            $_POST['csrf_token']
+            ?? $_GET['csrf_token']
+            ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+
+        if(!\Core\Csrf::validar($token)){
+            http_response_code(403);
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Token de segurança inválido.'
+            ]);
+            return;
+        }
+
+        $usuario = Auth::usuario();
+
+        $messageIds =
+            $_POST['message_ids']
+            ?? $_GET['message_ids']
+            ?? [];
+
+        if(is_string($messageIds)){
+            $messageIds = explode(',', $messageIds);
+        }
+
+        if(!is_array($messageIds)){
+            $messageIds = [];
+        }
+
+        $disparo = new Disparo();
+
+        echo json_encode([
+            'sucesso' => true,
+            'statuses' => $disparo->buscarPorMessageIds(
+                $usuario['CLI_ID'],
+                $messageIds
+            )
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+>>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
     private function extrairVariaveisTemplate($template)
     {
         $componentes = json_decode(
