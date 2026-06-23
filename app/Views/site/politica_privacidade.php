@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Política de Privacidade | Disparador RL2 Net</title>
+    <title>Política de Privacidade | Disparador.net RL2 Net</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
@@ -26,7 +26,7 @@
 
             <p>
                 Esta Política de Privacidade descreve como as informações são coletadas, utilizadas,
-                armazenadas e protegidas na plataforma Disparador, sistema de comunicação e automação
+                armazenadas e protegidas na plataforma Disparador.net, sistema de comunicação e automação
                 integrado à Plataforma WhatsApp Business.
             </p>
 
