@@ -14,7 +14,7 @@ Session::remove('cadastro_dados');
 
     <meta charset="utf-8">
 
-    <title>Cadastro | Disparador RL2 Net</title>
+    <title>Cadastro | Disparador.net RL2 Net</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -39,7 +39,7 @@ Session::remove('cadastro_dados');
         <a href="<?= BASE_URL; ?>/index.php?url=site">
             <img
             src="<?= ASSET_URL; ?>/img/logo-disparador.png"
-            alt="Disparador"
+            alt="Disparador.net"
             style="max-height:85px; max-width:320px;"
             >
         </a>
@@ -59,11 +59,11 @@ Session::remove('cadastro_dados');
                     </span>
 
                     <h2 class="font-weight-bold mb-3">
-                        Crie sua conta grátis no Disparador
+                        Solicite acesso ao Disparador.net
                     </h2>
 
                     <p class="text-muted">
-                        Cadastre sua empresa, acesse o painel imediatamente e conecte seu WhatsApp para iniciar o teste gratuito.
+                        Cadastre sua empresa para que nossa equipe oriente os próximos passos de ativação na plataforma.
                     </p>
 
                     <hr>
@@ -89,7 +89,7 @@ Session::remove('cadastro_dados');
                     </p>
 
                     <div class="alert alert-info mt-4 mb-0">
-                        Após criar sua conta, conecte seu WhatsApp Business para iniciar o teste de até 7 dias ou 200 mensagens.
+                        Após o cadastro, nossa equipe orienta a configuração necessária para ativar seu WhatsApp Business na plataforma.
                     </div>
 
                 </div>
@@ -109,7 +109,7 @@ Session::remove('cadastro_dados');
                     </h4>
 
                     <p class="text-muted mb-4">
-                        Preencha os dados abaixo para criar sua conta. Depois, conecte seu WhatsApp para iniciar o teste.
+                        Preencha os dados abaixo para solicitar acesso. Depois, nossa equipe orienta a configuração do WhatsApp.
                     </p>
 
                     <?php if($flash): ?>
@@ -402,7 +402,7 @@ Session::remove('cadastro_dados');
                         class="btn btn-success btn-block"
                         disabled
                         >
-                            Criar conta grátis
+                            Solicitar acesso
                         </button>
 
                     </form>
