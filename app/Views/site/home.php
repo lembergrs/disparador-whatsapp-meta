@@ -864,7 +864,8 @@
             <div class="col-md-6 text-center text-md-left mb-2 mb-md-0">
 
                 © 2026 RL2 Net - Todos os direitos reservados.<br>
-                Disparador.net é uma plataforma da RL2 Net.
+                Disparador.net é uma plataforma da RL2 Net.<br>
+                Contato: contato@disparador.net
 
             </div>
 

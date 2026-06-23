@@ -84,7 +84,7 @@
 
             <p>
                 <strong>RL2 Net</strong><br>
-                E-mail: lembergrs@hotmail.com
+                E-mail: contato@disparador.net
             </p>
 
             <h4>7. Alterações</h4>
