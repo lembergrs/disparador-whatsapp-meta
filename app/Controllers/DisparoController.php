@@ -321,8 +321,6 @@ class DisparoController extends Controller
         return \Core\Csrf::validarPost();
     }
 
-<<<<<<< HEAD
-=======
     public function statusAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -367,7 +365,6 @@ class DisparoController extends Controller
         ], JSON_UNESCAPED_UNICODE);
     }
 
->>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
     private function extrairVariaveisTemplate($template)
     {
         $componentes = json_decode(

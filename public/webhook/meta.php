@@ -600,17 +600,10 @@ function registrarLogAutoResposta($metaConta, $conversaId, $numero, $acao, $erro
 function mapearStatusMeta($status)
 {
     $mapa = [
-<<<<<<< HEAD
-        'sent' => 'enviada',
-        'delivered' => 'entregue',
-        'read' => 'lida',
-        'failed' => 'falhou'
-=======
         'sent' => 'enviado',
         'delivered' => 'entregue',
         'read' => 'lido',
         'failed' => 'erro'
->>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
     ];
 
     return $mapa[$status] ?? $status;

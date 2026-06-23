@@ -2061,16 +2061,12 @@ $(document).ready(function(){
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/enviarAjax',
                 method: 'POST',
-<<<<<<< HEAD
-                data: Object.assign(montarDadosEnvio(destino), {csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')}),
-=======
                 data: montarDadosEnvio(destino).concat([
                     {
                         name: 'csrf_token',
                         value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
                     }
                 ]),
->>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
                 dataType: 'json',
 
                 success: function(retorno){
@@ -2493,9 +2489,3 @@ function validarCnpj(cnpj)
 
     return true;
 }
-
-<<<<<<< HEAD
-/* force deploy app.js */
-=======
-/* force deploy app.js */
->>>>>>> 891617e7af133d0d629f77617230112bf4fa196b
