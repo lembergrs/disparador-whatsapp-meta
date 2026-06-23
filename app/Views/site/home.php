@@ -3,9 +3,22 @@
 <head>
     <meta charset="UTF-8">
 
-    <title>Disparador.net | WhatsApp Business API</title>
+    <title>Disparador.net | Plataforma Oficial para WhatsApp Business</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta
+    name="description"
+    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    >
+
+    <meta property="og:title" content="Disparador.net | Plataforma Oficial para WhatsApp Business">
+    <meta
+    property="og:description"
+    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    >
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="<?= BASE_URL; ?>/index.php?url=site">
 
     <link
     rel="stylesheet"
@@ -79,7 +92,7 @@
                     class="btn btn-success ml-lg-2 site-btn-main"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
-                        Começar teste gratuito
+                        Solicitar acesso
                     </a>
                 </li>
 
@@ -117,7 +130,7 @@
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
                     >
-                        Começar teste gratuito
+                        Solicitar acesso
                     </a>
 
                     <a
@@ -505,7 +518,7 @@
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">1</div>
-                <h5 class="font-weight-bold">Crie sua conta grátis</h5>
+                <h5 class="font-weight-bold">Solicite seu acesso</h5>
                 <p class="text-muted">Cadastre sua empresa e acesse o painel do Disparador.net.</p>
             </div>
 
@@ -623,7 +636,7 @@
                                 href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                                 class="btn btn-outline-success btn-block"
                                 >
-                                    Começar teste gratuito
+                                    Solicitar acesso
                                 </a>
 
                             </div>
@@ -769,7 +782,7 @@
                     'Posso ter mais de um atendente?' => 'Sim. Os planos permitem diferentes quantidades de usuários para atendimento.',
                     'Posso ter mais de um número WhatsApp?' => 'Sim. A plataforma permite múltiplos números conforme o plano contratado.',
                     'A Meta cobra pelas mensagens?' => 'A Meta pode cobrar pelas mensagens conforme categoria, país e regras vigentes. O Disparador.net mostra uma estimativa para ajudar no planejamento.',
-                    'Existe teste gratuito?' => 'Sim. A empresa pode iniciar em período de avaliação conforme as regras comerciais vigentes.',
+                    'Como solicito acesso?' => 'Preencha o cadastro para que a equipe avalie a configuração necessária e oriente os próximos passos de ativação.',
                 ];
                 ?>
 
@@ -835,7 +848,7 @@
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
         >
-            Começar teste gratuito
+            Solicitar acesso
         </a>
 
     </div>
@@ -851,7 +864,8 @@
             <div class="col-md-6 text-center text-md-left mb-2 mb-md-0">
 
                 © 2026 RL2 Net - Todos os direitos reservados.<br>
-                Disparador.net é uma plataforma da RL2 Net.
+                Disparador.net é uma plataforma da RL2 Net.<br>
+                Contato: contato@disparador.net
 
             </div>
 
