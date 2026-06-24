@@ -32,12 +32,13 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
 
             <div class="login-image-placeholder">
 
-                <img
-                src="<?= ASSET_URL; ?>/img/logo-disparador.png"
-                alt="Disparador"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-                >
-
+                <a class="navbar-brand d-flex align-items-center" href="<?= BASE_URL; ?>/index.php?url=site">
+                    <img
+                    src="<?= ASSET_URL; ?>/img/logo-disparador.png"
+                    alt="Disparador"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                    >
+                </a>
                 <div class="login-icon-fallback">
 
                     <i class="fab fa-whatsapp"></i>
