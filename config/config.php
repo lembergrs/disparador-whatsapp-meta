@@ -38,8 +38,8 @@ defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLE
 defined('META_APP_SECRET') || define('META_APP_SECRET', env_valor('META_APP_SECRET', ''));
 
 
-defined('DB_HOST') || define('DB_HOST', env_valor('DB_HOST', 'localhost'));
-defined('DB_NAME') || define('DB_NAME', env_valor('DB_NAME', 'whatsapp_disparador'));
-defined('DB_USER') || define('DB_USER', env_valor('DB_USER', 'root'));
+defined('DB_HOST') || define('DB_HOST', env_valor('DB_HOST'));
+defined('DB_NAME') || define('DB_NAME', env_valor('DB_NAME'));
+defined('DB_USER') || define('DB_USER', env_valor('DB_USER'));
 defined('DB_PASS') || define('DB_PASS', env_valor('DB_PASS', ''));
 defined('DB_PORT') || define('DB_PORT', env_valor('DB_PORT', '3306'));
