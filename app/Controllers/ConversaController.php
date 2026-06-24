@@ -91,11 +91,6 @@ class ConversaController extends Controller
                         $conversaSelecionada['CVS_ID']
                     );
 
-                $this->conversaModel
-                    ->marcarComoLida(
-                        $conversaSelecionada['CVS_ID'],
-                        $usuario['CLI_ID']
-                    );
             }
         }
 
@@ -419,9 +414,6 @@ class ConversaController extends Controller
         $id =
             $_GET['id'] ?? null;
 
-        $marcarLida =
-            $_GET['marcar_lida'] ?? 'N';
-
         if(!$id){
             exit;
         }
@@ -443,21 +435,57 @@ class ConversaController extends Controller
                 $id
             );
 
-        if($marcarLida == 'S'){
+        require __DIR__ . '/../Views/conversas/partials/mensagens.php';
+    }
 
-            if(!Csrf::validar($_GET['csrf_token'] ?? '')){
-                $this->acessoPerdidoAjax(false);
-                return;
-            }
+    public function marcarLidaAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
 
-            $this->conversaModel->marcarComoLida(
-                $id,
-                $usuario['CLI_ID']
-            );
-
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'){
+            http_response_code(405);
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Método inválido.'
+            ]);
+            return;
         }
 
-        require __DIR__ . '/../Views/conversas/partials/mensagens.php';
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
+        $usuario = Auth::usuario();
+        $id = $_POST['id'] ?? null;
+
+        if(!$id){
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Conversa não informada.'
+            ]);
+            return;
+        }
+
+        $conversa = $this->conversaModel->buscarAcessivel(
+            $id,
+            $usuario['CLI_ID'],
+            $usuario
+        );
+
+        if(!$conversa){
+            $this->acessoPerdidoAjax(true);
+            return;
+        }
+
+        $this->conversaModel->marcarComoLida(
+            $id,
+            $usuario['CLI_ID']
+        );
+
+        echo json_encode([
+            'sucesso' => true
+        ]);
     }
 
     public function enviarAjax()
@@ -812,13 +840,6 @@ class ConversaController extends Controller
                     $this->janelaAtendimentoAberta(
                         $id
                     );
-
-                if(Csrf::validar($_GET['csrf_token'] ?? '')){
-                    $this->conversaModel->marcarComoLida(
-                        $id,
-                        $usuario['CLI_ID']
-                    );
-                }
 
             }else{
                 $this->acessoPerdidoAjax(false);
