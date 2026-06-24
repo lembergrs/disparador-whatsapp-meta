@@ -61,14 +61,13 @@ href="#"
 
 <li class="nav-item">
 
-<a
-href="<?= BASE_URL; ?>/index.php?url=login/sair"
-class="nav-link"
->
+<form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
+<button type="submit" class="nav-link btn btn-link p-0">
 
 Sair
 
-</a>
+</button>
+</form>
 
 </li>
 

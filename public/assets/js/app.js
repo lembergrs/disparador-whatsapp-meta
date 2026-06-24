@@ -900,7 +900,6 @@ $(document).ready(function(){
 
         }catch(e){
 
-            console.log(e);
             return;
 
         }
@@ -1011,7 +1010,6 @@ $(document).ready(function(){
 
         }catch(e){
 
-            console.log(e);
             return;
 
         }
@@ -1726,363 +1724,199 @@ $(document).ready(function(){
         });
 
         let total = parse.destinos.length;
-        let enviados = 0;
-        let erros = 0;
-        let cancelados = 0;
-        let atual = 0;
+        let loteId = null;
+        let pollingLote = null;
 
-        let autoScrollStatusDisparo = true;
-        const limiteProximoFimDisparo = 80;
-
-        function estaProximoFimStatusDisparo()
+        function montarDestinoFila(destino)
         {
-            let box = $('#boxStatusNumeros');
+            let variaveis = {};
 
-            if(!box.length){
-                return true;
-            }
-
-            let elemento = box[0];
-            let distanciaFim = elemento.scrollHeight
-                - elemento.scrollTop
-                - elemento.clientHeight;
-
-            return distanciaFim < limiteProximoFimDisparo;
-        }
-
-        $('#boxStatusNumeros')
-            .off('scroll.disparoAutoScroll')
-            .on('scroll.disparoAutoScroll', function(){
-                autoScrollStatusDisparo =
-                    estaProximoFimStatusDisparo();
+            parse.variaveis.forEach(function(v, index){
+                variaveis[v] = destino.valores[index] || '';
             });
 
-        function rolarStatus()
-        {
-            let box = $('#boxStatusNumeros');
-
-            if(box.length && autoScrollStatusDisparo){
-                box.stop(true).animate(
-                    {scrollTop: box[0].scrollHeight},
-                    150
-                );
-            }
+            return {
+                numero: destino.numero,
+                variaveis: variaveis
+            };
         }
 
-        function atualizarProgresso()
+        function badgeStatusFila(status)
         {
-            let percentual =
-                Math.round(
-                    (atual / total) * 100
-                );
+            const labels = {
+                pendente: 'Na fila',
+                processando: 'Enviando',
+                aguardando_confirmacao: 'Aguardando confirmação',
+                enviado: 'Enviado',
+                entregue: 'Entregue',
+                lido: 'Lido',
+                erro: 'Erro',
+                failed: 'Erro'
+            };
+
+            const classes = {
+                pendente: 'badge-secondary',
+                processando: 'badge-info',
+                aguardando_confirmacao: 'badge-info',
+                enviado: 'badge-success',
+                entregue: 'badge-primary',
+                lido: 'badge-success',
+                erro: 'badge-danger',
+                failed: 'badge-danger'
+            };
+
+            return '<span class="badge ' + (classes[status] || 'badge-secondary') + '">' +
+                escapeHtmlDisparo(labels[status] || status || 'Na fila') +
+                '</span>';
+        }
+
+        function atualizarResumoFila(lote, itens)
+        {
+            let concluidos = 0;
+            let enviados = 0;
+            let erros = 0;
+            let pendentes = 0;
+            let iniciouProcessamento = false;
+
+            itens.forEach(function(item){
+                if(['processando','aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                    iniciouProcessamento = true;
+                }
+
+                if(['aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                    concluidos++;
+                }
+
+                if(['aguardando_confirmacao','enviado','entregue','lido'].includes(item.DMI_Status)){
+                    enviados++;
+                }
+
+                if(['erro','failed'].includes(item.DMI_Status)){
+                    erros++;
+                }
+
+                if(['pendente','processando'].includes(item.DMI_Status)){
+                    pendentes++;
+                }
+            });
+
+            let percentual = total > 0 ? Math.round((concluidos / total) * 100) : 0;
 
             $('#barraProgressoDisparo')
                 .css('width', percentual + '%')
                 .html(percentual + '%');
 
-            $('#textoProgressoDisparo')
-                .html(
-                    'Processando '
-                    + atual
-                    + ' de '
-                    + total
-                    + ' | Aceitos: '
-                    + enviados
-                    + ' | Erros: '
-                    + erros
-                    + ' | Cancelados: '
-                    + cancelados
-                );
-        }
-
-        function finalizarEnvio(tipo)
-        {
-            $('#btnEnviarDisparo')
-                .prop('disabled', false)
-                .html('<i class="fas fa-paper-plane"></i> Enviar Template');
-
-            $('#btnPararDisparo')
-                .prop('disabled', false)
-                .html('<i class="fas fa-stop"></i> Parar envio');
-
-            $('#barraProgressoDisparo')
-                .removeClass('progress-bar-animated');
-
-            if(tipo == 'cancelado'){
-
+            if(!iniciouProcessamento){
                 $('#textoProgressoDisparo').html(
-                    'Envio cancelado pelo usuário.'
+                    'Aguardando o início do processamento. O servidor verifica novos envios automaticamente.'
                 );
+            }else{
+                $('#textoProgressoDisparo').html(
+                    'Processamento iniciado. Enviando... | Processados: ' + concluidos +
+                    ' de ' + total + ' | Aceitos: ' + enviados +
+                    ' | Erros: ' + erros + ' | Pendentes: ' + pendentes
+                );
+            }
+
+            if(lote && lote.DML_Status == 'concluido'){
+                $('#barraProgressoDisparo')
+                    .removeClass('progress-bar-animated')
+                    .css('width', '100%')
+                    .html('100%');
+
+                $('#textoProgressoDisparo').html('Processamento concluído.');
 
                 $('#resumoFinalDisparo').html(`
-                    <div class="alert alert-warning mt-3">
-                        <strong>Envio cancelado.</strong><br>
-                        Aceitos: ${enviados} | Erros: ${erros} | Cancelados: ${cancelados}
+                    <div class="alert ${erros > 0 || pendentes > 0 ? 'alert-warning' : 'alert-success'} mt-3">
+                        <strong>Processamento concluído.</strong><br>
+                        Total: ${total} | Aceitos: ${enviados} | Erros: ${erros} | Pendentes: ${pendentes} | Status final: ${escapeHtmlDisparo(lote.DML_Status || 'concluido')}
                         <br>
                         <button
                         type="button"
                         class="btn btn-sm btn-outline-secondary mt-2"
                         id="btnVoltarEdicaoDisparo"
                         >
-                            Editar números
+                            Novo envio
                         </button>
                     </div>
                 `);
 
+                if(pollingLote){
+                    clearInterval(pollingLote);
+                    pollingLote = null;
+                }
+            }
+        }
+
+        function descricaoStatusFila(item)
+        {
+            if(item.DMI_Erro){
+                return escapeHtmlDisparo(item.DMI_Erro);
+            }
+
+            const descricoes = {
+                pendente: 'Aguardando processamento pelo servidor.',
+                processando: 'Enviando...',
+                aguardando_confirmacao: 'Enviado para a Meta. Aguardando confirmação.',
+                enviado: 'Mensagem enviada pela Meta.',
+                entregue: 'Mensagem entregue ao destinatário.',
+                lido: 'Mensagem lida pelo destinatário.',
+                erro: 'Erro ao processar envio.',
+                failed: 'A Meta informou falha no envio.'
+            };
+
+            return '<span class="text-muted">' +
+                escapeHtmlDisparo(descricoes[item.DMI_Status] || item.DMI_MessageId || 'Aguardando processamento pelo servidor.') +
+                '</span>';
+        }
+
+        function atualizarItensFila(itens)
+        {
+            itens.forEach(function(item, index){
+                $('#linha_numero_' + index + ' td:eq(1)').html(
+                    badgeStatusFila(item.DMI_Status)
+                );
+
+                $('#linha_numero_' + index + ' td:eq(2)').html(
+                    descricaoStatusFila(item)
+                );
+
+                aplicarDetalhesLinha(
+                    index,
+                    {
+                        numero: item.DMI_Numero,
+                        status: item.DMI_Status,
+                        mensagem_amigavel: item.DMI_Erro || item.DMI_MessageId || 'Aguardando processamento pelo servidor.',
+                        message_id: item.DMI_MessageId || null,
+                        retorno_meta_api: item.DMI_Retorno || null
+                    }
+                );
+            });
+        }
+
+        function consultarLote()
+        {
+            if(!loteId){
                 return;
             }
 
-            $('#barraProgressoDisparo')
-                .css('width', '100%')
-                .html('100%');
-
-            $('#textoProgressoDisparo').html(
-                'Envio concluído.'
-            );
-
-            $('#resumoFinalDisparo').html(`
-                <div class="alert ${erros > 0 ? 'alert-warning' : 'alert-success'} mt-3">
-                    <strong>Envio concluído.</strong><br>
-                    Aceitos: ${enviados} | Erros: ${erros}
-                    <br>
-                    <button
-                    type="button"
-                    class="btn btn-sm btn-outline-secondary mt-2"
-                    id="btnVoltarEdicaoDisparo"
-                    >
-                        Novo envio
-                    </button>
-                </div>
-            `);
-        }
-
-        function cancelarPendentes()
-        {
-            for(let i = atual; i < total; i++){
-
-                $('#linha_numero_' + i + ' td:eq(1)').html(
-                    '<span class="badge badge-warning">Cancelado</span>'
-                );
-
-                $('#linha_numero_' + i + ' td:eq(2)').html(
-                    '<span class="text-muted">Envio cancelado antes de iniciar.</span>'
-                );
-
-                cancelados++;
-
-            }
-
-            atualizarProgresso();
-            rolarStatus();
-            finalizarEnvio('cancelado');
-        }
-
-        function montarDadosEnvio(destino)
-        {
-            let dados = [
-                {
-                    name: 'csrf_token',
-                    value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
+            $.ajax({
+                url: BASE_URL + '/index.php?url=disparo/statusLoteAjax',
+                method: 'POST',
+                data: {
+                    csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
+                    lote_id: loteId
                 },
-                {
-                    name: 'meta',
-                    value: $('#meta').val()
-                },
-                {
-                    name: 'template',
-                    value: $('#template').val()
-                },
-                {
-                    name: 'numero',
-                    value: destino.numero
-                }
-            ];
-
-            parse.variaveis.forEach(function(v, index){
-                dados.push({
-                    name: 'variaveis[' + v + ']',
-                    value: destino.valores[index] || ''
-                });
-            });
-
-            return dados;
-        }
-
-        function mensagemCurtaErroDisparo(erro)
-        {
-            erro = String(erro || 'Erro ao enviar mensagem').trim();
-
-            if(erro.length == 0){
-                return 'Erro ao enviar mensagem';
-            }
-
-            if(erro.includes('Invalid parameter')){
-                return 'Erro nos parâmetros do template.';
-            }
-
-            if(erro.includes('Parameter name')){
-                return 'Erro nos nomes das variáveis do template.';
-            }
-
-            if(erro.includes('Unsupported post request')){
-                return 'Erro ao conectar com a Meta.';
-            }
-
-            if(erro.length > 120){
-                return erro.substring(0, 117) + '...';
-            }
-
-            return erro;
-        }
-
-        function montarDetalhesEnvioDisparo(destino, retorno, status, motivo)
-        {
-            return {
-                numero: (retorno && retorno.numero_formatado)
-                    ? retorno.numero_formatado
-                    : destino.numero_formatado,
-                status: status,
-                mensagem_amigavel: motivo,
-                message_id: retorno ? (retorno.message_id || null) : null,
-                erro_tecnico: retorno ? (retorno.erro || null) : null,
-                retorno_meta_api: retorno ? (retorno.retorno || retorno) : null,
-                payload_enviado: retorno && retorno.retorno
-                    ? (retorno.retorno.payload || null)
-                    : null
-            };
-        }
-
-        function labelStatusWebhookDisparo(status)
-        {
-            const labels = {
-                enviado: 'Enviado',
-                sent: 'Enviado',
-                enviada: 'Enviado',
-                entregue: 'Entregue',
-                delivered: 'Entregue',
-                lido: 'Lido',
-                lida: 'Lido',
-                read: 'Lido',
-                erro: 'Erro',
-                failed: 'Erro',
-                falhou: 'Erro',
-                aguardando_confirmacao: 'Aguardando confirmação'
-            };
-
-            return labels[status] || status || 'Aguardando confirmação';
-        }
-
-        function classeStatusWebhookDisparo(status)
-        {
-            const classes = {
-                enviado: 'badge-success',
-                sent: 'badge-success',
-                enviada: 'badge-success',
-                entregue: 'badge-primary',
-                delivered: 'badge-primary',
-                lido: 'badge-success',
-                lida: 'badge-success',
-                read: 'badge-success',
-                erro: 'badge-danger',
-                failed: 'badge-danger',
-                falhou: 'badge-danger',
-                aguardando_confirmacao: 'badge-info'
-            };
-
-            return classes[status] || 'badge-secondary';
-        }
-
-        function motivoStatusWebhookDisparo(status)
-        {
-            const motivos = {
-                enviado: 'Mensagem enviada pela Meta.',
-                sent: 'Mensagem enviada pela Meta.',
-                enviada: 'Mensagem enviada pela Meta.',
-                entregue: 'Mensagem entregue ao destinatário.',
-                delivered: 'Mensagem entregue ao destinatário.',
-                lido: 'Mensagem lida pelo destinatário.',
-                lida: 'Mensagem lida pelo destinatário.',
-                read: 'Mensagem lida pelo destinatário.',
-                erro: 'A Meta informou falha no envio.',
-                failed: 'A Meta informou falha no envio.',
-                falhou: 'A Meta informou falha no envio.'
-            };
-
-            return motivos[status] || 'Aguardando confirmação da Meta.';
-        }
-
-        function iniciarMonitoramentoStatusDisparo()
-        {
-            if(intervaloStatusDisparo){
-                clearInterval(intervaloStatusDisparo);
-            }
-
-            intervaloStatusDisparo = setInterval(function(){
-                const messageIds = Object.keys(statusDisparoPorMessageId);
-
-                if(messageIds.length == 0){
-                    return;
-                }
-
-                $.ajax({
-                    url: BASE_URL + '/index.php?url=disparo/statusAjax',
-                    method: 'POST',
-                    data: {
-                        csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
-                        message_ids: messageIds
-                    },
-                    dataType: 'json',
-                    success: function(retorno){
-                        if(!retorno.sucesso || !Array.isArray(retorno.statuses)){
-                            return;
-                        }
-
-                        retorno.statuses.forEach(function(item){
-                            const messageId = item.DSP_MessageId;
-                            const status = item.DSP_Status;
-                            const registro = statusDisparoPorMessageId[messageId];
-
-                            if(!registro || !status || status == 'aguardando_confirmacao'){
-                                return;
-                            }
-
-                            $('#linha_numero_' + registro.index + ' td:eq(1)').html(
-                                '<span class="badge ' + classeStatusWebhookDisparo(status) + '">' +
-                                escapeHtmlDisparo(labelStatusWebhookDisparo(status)) +
-                                '</span>'
-                            );
-
-                            $('#linha_numero_' + registro.index + ' td:eq(2)').html(
-                                '<span class="text-muted">' +
-                                escapeHtmlDisparo(motivoStatusWebhookDisparo(status)) +
-                                '</span>'
-                            );
-
-                            aplicarDetalhesLinha(
-                                registro.index,
-                                montarDetalhesEnvioDisparo(
-                                    registro.destino,
-                                    {
-                                        message_id: messageId,
-                                        retorno: item.DSP_Retorno
-                                    },
-                                    labelStatusWebhookDisparo(status),
-                                    motivoStatusWebhookDisparo(status)
-                                )
-                            );
-
-                            if(['erro', 'failed', 'falhou', 'lido', 'lida', 'read'].includes(status)){
-                                delete statusDisparoPorMessageId[messageId];
-                            }
-                        });
-
-                        if(Object.keys(statusDisparoPorMessageId).length == 0){
-                            clearInterval(intervaloStatusDisparo);
-                            intervaloStatusDisparo = null;
-                        }
+                dataType: 'json',
+                success: function(retorno){
+                    if(!retorno.sucesso){
+                        return;
                     }
-                });
-            }, 5000);
+
+                    atualizarItensFila(retorno.itens || []);
+                    atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
+                }
+            });
         }
 
         function aplicarDetalhesLinha(index, detalhesEnvio)
@@ -2105,153 +1939,62 @@ $(document).ready(function(){
             `);
         }
 
-        function enviarProximo()
-        {
-            if(cancelarDisparo){
-                cancelarPendentes();
-                return;
-            }
+        $('#textoProgressoDisparo').html('Salvando destinos na fila...');
 
-            if(atual >= total){
-                finalizarEnvio('concluido');
-                return;
-            }
-
-            let destino = parse.destinos[atual];
-
-            $('#linha_numero_' + atual + ' td:eq(1)').html(
-                '<span class="badge badge-info">Enviando...</span>'
-            );
-
-            $('#linha_numero_' + atual + ' td:eq(2)').html(
-                '<span class="text-muted">Aguardando resposta da Meta...</span>'
-            );
-
-            rolarStatus();
-
-            $.ajax({
-                url: BASE_URL + '/index.php?url=disparo/enviarAjax',
-                method: 'POST',
-                data: montarDadosEnvio(destino).concat([
-                    {
-                        name: 'csrf_token',
-                        value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
-                    }
-                ]),
-                dataType: 'json',
-
-                success: function(retorno){
-
-                    if(retorno.sucesso){
-
-                        enviados++;
-
-                        $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-info">Aguardando confirmação</span>'
-                        );
-
-                        $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            '<span class="text-info">Enviado para processamento pela Meta</span>'
-                        );
-
-                        if(retorno.message_id){
-                            statusDisparoPorMessageId[retorno.message_id] = {
-                                index: atual,
-                                destino: destino
-                            };
-
-                            iniciarMonitoramentoStatusDisparo();
-                        }
-
-                    }else{
-
-                        erros++;
-
-                        $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-danger">Erro</span>'
-                        );
-
-                        $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            escapeHtmlDisparo(
-                                mensagemCurtaErroDisparo(retorno.erro)
-                            )
-                        );
-
-                    }
-
-                    let motivoDetalhe = retorno.sucesso
-                        ? 'Aguardando confirmação da Meta'
-                        : mensagemCurtaErroDisparo(retorno.erro);
-
-                    aplicarDetalhesLinha(
-                        atual,
-                        montarDetalhesEnvioDisparo(
-                            destino,
-                            retorno,
-                            retorno.sucesso ? 'Aguardando confirmação' : 'Erro',
-                            motivoDetalhe
-                        )
+        $.ajax({
+            url: BASE_URL + '/index.php?url=disparo/criarLoteAjax',
+            method: 'POST',
+            data: {
+                csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
+                meta: $('#meta').val(),
+                template: $('#template').val(),
+                destinos_json: JSON.stringify(parse.destinos.map(montarDestinoFila))
+            },
+            dataType: 'json',
+            success: function(retorno){
+                if(!retorno.sucesso){
+                    $('#resumoFinalDisparo').html(
+                        '<div class="alert alert-danger mt-3">' +
+                        escapeHtmlDisparo(retorno.erro || 'Erro ao criar lote.') +
+                        '</div>'
                     );
-
-                    if(retorno.numero_formatado){
-                        $('#linha_numero_' + atual + ' td:eq(0)').contents().first()[0].textContent =
-                            retorno.numero_formatado;
-                    }
-
-                },
-
-                error: function(xhr){
-
-                    erros++;
-
-                    $('#linha_numero_' + atual + ' td:eq(1)').html(
-                        '<span class="badge badge-danger">Erro</span>'
-                    );
-
-                    $('#linha_numero_' + atual + ' td:eq(2)').html(
-                        'Falha na requisição de envio.'
-                    );
-
-                    aplicarDetalhesLinha(
-                        atual,
-                        montarDetalhesEnvioDisparo(
-                            destino,
-                            {
-                                erro: 'Falha na requisição de envio.',
-                                retorno: {
-                                    status: xhr.status,
-                                    responseText: xhr.responseText
-                                }
-                            },
-                            'Erro',
-                            'Falha na requisição de envio.'
-                        )
-                    );
-
-                },
-
-                complete: function(){
-
-                    atual++;
-
-                    atualizarProgresso();
-                    rolarStatus();
-
-                    setTimeout(
-                        enviarProximo,
-                        200
-                    );
-
+                    $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+                    return;
                 }
-            });
-        }
 
-        setTimeout(function(){
+                loteId = retorno.lote_id;
 
-            atualizarProgresso();
-            enviarProximo();
+                $('#textoProgressoDisparo').html(
+                    'Lote criado com sucesso. O envio foi colocado na fila e será iniciado automaticamente em instantes.'
+                );
 
-        }, 500);
+                $('#resumoFinalDisparo').html(`
+                    <div class="alert alert-info mt-3">
+                        <strong>Lote #${loteId} criado com sucesso.</strong><br>
+                        O envio foi colocado na fila e será iniciado automaticamente em instantes.
+                    </div>
+                `);
+
+                $('#listaStatusNumeros tr').each(function(){
+                    $(this).find('td:eq(1)').html(
+                        '<span class="badge badge-secondary">Na fila</span>'
+                    );
+
+                    $(this).find('td:eq(2)').html(
+                        '<span class="text-muted">Aguardando processamento pelo servidor.</span>'
+                    );
+                });
+
+                consultarLote();
+                pollingLote = setInterval(consultarLote, 7000);
+            },
+            error: function(xhr){
+                $('#resumoFinalDisparo').html(
+                    '<div class="alert alert-danger mt-3">Falha ao criar lote de disparo manual.</div>'
+                );
+                $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+            }
+        });
 
     });
 
