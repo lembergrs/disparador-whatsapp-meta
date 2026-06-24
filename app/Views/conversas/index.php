@@ -329,21 +329,39 @@ document.addEventListener('DOMContentLoaded', function(){
             url:
                 urlBase
                 + 'conversa/ajaxMensagens&id='
-                + conversaAberta
-                + '&marcar_lida='
-                + (marcarLida || 'N')
-                + '&csrf_token='
-                + encodeURIComponent(csrfTokenConversas),
+                + conversaAberta,
             method: 'GET'
         }).done(function(html){
             $('#areaMensagens').html(html);
             rolarMensagensParaFinal();
+
+            if(marcarLida == 'S'){
+                marcarConversaComoLida(conversaAberta);
+            }
         }).fail(function(xhr){
             if(xhr.status == 403){
                 bloquearConversaPorPerdaDeAcesso();
             }
         }).always(function(){
             atualizandoMensagens = false;
+        });
+    }
+
+    function marcarConversaComoLida(conversaId)
+    {
+        $.ajax({
+            url: urlBase + 'conversa/marcarLidaAjax',
+            method: 'POST',
+            data: {
+                id: conversaId,
+                csrf_token: csrfTokenConversas
+            }
+        }).done(function(){
+            marcarConversaComoLidaVisualmente(conversaId);
+        }).fail(function(xhr){
+            if(xhr.status == 403){
+                bloquearConversaPorPerdaDeAcesso();
+            }
         });
     }
 
@@ -391,6 +409,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
             $('#listaConversas .item-conversa').removeClass('active');
             $('#listaConversas .item-conversa[data-id="' + conversaAberta + '"]').addClass('active');
+            marcarConversaComoLida(conversaId);
         }).fail(function(xhr){
             if(xhr.status == 403){
                 bloquearConversaPorPerdaDeAcesso();
@@ -399,6 +418,10 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     rolarMensagensParaFinal();
+
+    if(conversaAberta != ''){
+        marcarConversaComoLida(conversaAberta);
+    }
     
     let intervaloAtualizacao = null;
     let atualizandoConversas = false;
@@ -618,8 +641,6 @@ document.addEventListener('DOMContentLoaded', function(){
 
         conversaAberta =
             conversaId;
-
-        marcarConversaComoLidaVisualmente(conversaId);
 
         carregarConversa(conversaId);
 

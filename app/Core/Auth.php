@@ -14,7 +14,7 @@ class Auth
             header(
                 "Location: " .
                 BASE_URL .
-                "/login"
+                "/index.php?url=login"
             );
 
             exit;
@@ -56,7 +56,7 @@ class Auth
             header(
                 "Location: " .
                 BASE_URL .
-                "/login"
+                "/index.php?url=login"
             );
 
             exit;

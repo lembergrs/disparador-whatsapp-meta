@@ -21,11 +21,15 @@ use Services\MetaService;
 use Services\ControlePlanoService;
 use Models\Conversa;
 use Models\ConsumoMensal;
+use Models\Disparo;
 
 $modoTeste = false; // troque para false para envio real
 $limitePorExecucao = 50;
+$limiteDisparoManualPorExecucao = 20;
 
 $db = Database::getInstance();
+
+processarDisparosManuais($db, $limiteDisparoManualPorExecucao, $modoTeste);
 
 $campanhas = $db->query("
     SELECT *
@@ -177,7 +181,9 @@ foreach($campanhas as $campanha){
                 echo "Telefone: {$item['CON_Telefone']}\n";
                 echo "Template: {$template['TMP_Nome']}\n";
                 echo "Parâmetros:\n";
-                print_r($parametros);
+                foreach($parametros as $chave => $valor){
+                    echo $chave . ': ' . $valor . "\n";
+                }
                 echo "-------------------------\n";
 
                 $retorno = [
@@ -422,4 +428,209 @@ function extrairErroMetaWorker($retorno)
     return is_array($retorno)
         ? json_encode($retorno, JSON_UNESCAPED_UNICODE)
         : 'Erro ao enviar mensagem';
+}
+
+
+function processarDisparosManuais($db, $limite, $modoTeste = false)
+{
+    $db->query("
+        UPDATE disparo_manual_lotes
+        SET DML_Status = 'processando', DML_DataAtualizacao = NOW()
+        WHERE DML_Status = 'pendente'
+    ");
+
+    $stmt = $db->prepare("
+        SELECT
+            i.*,
+            l.MTA_ID,
+            l.TMP_ID,
+            t.*
+        FROM disparo_manual_itens i
+        INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+        INNER JOIN templates_meta t ON t.TMP_ID = l.TMP_ID
+        WHERE i.DMI_Status = 'pendente'
+        AND l.DML_Status IN ('pendente','processando')
+        ORDER BY i.DMI_ID ASC
+        LIMIT {$limite}
+    ");
+
+    $stmt->execute();
+    $itens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if(empty($itens)){
+        finalizarLotesManuaisConcluidos($db);
+        return;
+    }
+
+    $metaCache = [];
+    $disparoModel = new Disparo();
+    $conversaModel = new Conversa();
+    $consumo = new ConsumoMensal();
+    $controlePlano = new ControlePlanoService();
+
+    foreach($itens as $item){
+        $db->prepare("
+            UPDATE disparo_manual_itens
+            SET DMI_Status = 'processando', DMI_DataAtualizacao = NOW()
+            WHERE DMI_ID = ?
+            AND DMI_Status = 'pendente'
+        ")->execute([$item['DMI_ID']]);
+
+        $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);
+
+        if(!is_array($variaveis)){
+            $variaveis = [];
+        }
+
+        try{
+            if($modoTeste){
+                $retorno = [
+                    'messages' => [
+                        ['id' => 'SIMULACAO_MANUAL_' . $item['DMI_ID']]
+                    ]
+                ];
+            }else{
+                $metaKey = $item['MTA_ID'] . ':' . $item['CLI_ID'];
+
+                if(empty($metaCache[$metaKey])){
+                    $metaCache[$metaKey] = new MetaService($item['MTA_ID'], $item['CLI_ID']);
+                }
+
+                $retorno = $metaCache[$metaKey]->enviarTemplate(
+                    $item['DMI_Numero'],
+                    $item,
+                    $variaveis
+                );
+            }
+
+            if(isset($retorno['messages'][0]['id'])){
+                $messageId = $retorno['messages'][0]['id'];
+
+                $db->prepare("
+                    UPDATE disparo_manual_itens
+                    SET
+                        DMI_Status = 'aguardando_confirmacao',
+                        DMI_MessageId = ?,
+                        DMI_Retorno = ?,
+                        DMI_Erro = NULL,
+                        DMI_DataEnvio = NOW(),
+                        DMI_DataAtualizacao = NOW()
+                    WHERE DMI_ID = ?
+                ")->execute([
+                    $messageId,
+                    json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                    $item['DMI_ID']
+                ]);
+
+                $disparoModel->salvar([
+                    'cliente' => $item['CLI_ID'],
+                    'meta' => $item['MTA_ID'],
+                    'template_id' => $item['TMP_ID'],
+                    'numero' => $item['DMI_Numero'],
+                    'template' => $item['TMP_Nome'],
+                    'variaveis' => $variaveis,
+                    'message_id' => $messageId,
+                    'status' => 'aguardando_confirmacao',
+                    'retorno' => $retorno
+                ]);
+
+                $consumo->registrarMensagem($item['CLI_ID']);
+                $controlePlano->registrarUso($item['CLI_ID']);
+
+                $conversaId = $conversaModel->buscarOuCriar(
+                    $item['CLI_ID'],
+                    $item['MTA_ID'],
+                    $item['DMI_Numero'],
+                    null
+                );
+
+                $conversaModel->salvarMensagem([
+                    'conversa_id' => $conversaId,
+                    'direcao' => 'enviada',
+                    'tipo' => 'template',
+                    'texto' => $item['TMP_Nome'],
+                    'message_id' => $messageId,
+                    'status' => 'aguardando_confirmacao',
+                    'retorno' => $retorno,
+                    'data_mensagem' => date('Y-m-d H:i:s')
+                ]);
+            }else{
+                registrarErroDisparoManual($db, $item['DMI_ID'], extrairErroMetaWorker($retorno), $retorno);
+            }
+
+        }catch(Exception $e){
+            registrarErroDisparoManual($db, $item['DMI_ID'], $e->getMessage());
+        }
+
+        recalcularLoteManual($db, $item['DML_ID']);
+        aplicarLimiteEnvio($retorno ?? null);
+    }
+
+    finalizarLotesManuaisConcluidos($db);
+}
+
+function registrarErroDisparoManual($db, $itemId, $erro, $retorno = null)
+{
+    $db->prepare("
+        UPDATE disparo_manual_itens
+        SET
+            DMI_Status = 'erro',
+            DMI_Erro = ?,
+            DMI_Retorno = ?,
+            DMI_DataAtualizacao = NOW()
+        WHERE DMI_ID = ?
+    ")->execute([
+        $erro,
+        json_encode($retorno, JSON_UNESCAPED_UNICODE),
+        $itemId
+    ]);
+}
+
+function recalcularLoteManual($db, $loteId)
+{
+    $stmt = $db->prepare("
+        SELECT
+            COUNT(*) total,
+            SUM(CASE WHEN DMI_Status IN ('aguardando_confirmacao','enviado','entregue','lido') THEN 1 ELSE 0 END) enviados,
+            SUM(CASE WHEN DMI_Status = 'erro' THEN 1 ELSE 0 END) erros,
+            SUM(CASE WHEN DMI_Status IN ('pendente','processando') THEN 1 ELSE 0 END) pendentes
+        FROM disparo_manual_itens
+        WHERE DML_ID = ?
+    ");
+
+    $stmt->execute([$loteId]);
+    $dados = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    $status = ((int) ($dados['pendentes'] ?? 0) > 0) ? 'processando' : 'concluido';
+
+    $db->prepare("
+        UPDATE disparo_manual_lotes
+        SET
+            DML_Total = ?,
+            DML_TotalEnviados = ?,
+            DML_TotalErros = ?,
+            DML_Status = ?,
+            DML_DataAtualizacao = NOW(),
+            DML_DataConclusao = CASE WHEN ? = 'concluido' THEN NOW() ELSE DML_DataConclusao END
+        WHERE DML_ID = ?
+    ")->execute([
+        (int) ($dados['total'] ?? 0),
+        (int) ($dados['enviados'] ?? 0),
+        (int) ($dados['erros'] ?? 0),
+        $status,
+        $status,
+        $loteId
+    ]);
+}
+
+function finalizarLotesManuaisConcluidos($db)
+{
+    $stmt = $db->query("
+        SELECT DML_ID
+        FROM disparo_manual_lotes
+        WHERE DML_Status IN ('pendente','processando')
+    ");
+
+    foreach($stmt->fetchAll(PDO::FETCH_ASSOC) as $lote){
+        recalcularLoteManual($db, $lote['DML_ID']);
+    }
 }
