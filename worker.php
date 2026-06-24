@@ -177,7 +177,9 @@ foreach($campanhas as $campanha){
                 echo "Telefone: {$item['CON_Telefone']}\n";
                 echo "Template: {$template['TMP_Nome']}\n";
                 echo "Parâmetros:\n";
-                print_r($parametros);
+                foreach($parametros as $chave => $valor){
+                    echo $chave . ': ' . $valor . "\n";
+                }
                 echo "-------------------------\n";
 
                 $retorno = [
