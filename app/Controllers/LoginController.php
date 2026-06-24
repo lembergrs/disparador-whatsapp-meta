@@ -5,6 +5,7 @@ namespace Controllers;
 use Core\Controller;
 use Core\Database;
 use Core\Session;
+use Core\Csrf;
 use PDO;
 
 class LoginController extends Controller
@@ -137,6 +138,13 @@ class LoginController extends Controller
 
     public function sair()
     {
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'){
+            http_response_code(405);
+            $this->redirect('login');
+        }
+
+        Csrf::exigirPost();
+
         session_destroy();
 
         session_start();

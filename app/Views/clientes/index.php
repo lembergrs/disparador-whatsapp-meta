@@ -1,3 +1,12 @@
+<?php
+if(!function_exists('escClienteAttr')){
+    function escClienteAttr($valor)
+    {
+        return htmlspecialchars((string) ($valor ?? ''), ENT_QUOTES, 'UTF-8');
+    }
+}
+?>
+
 <div class="card">
 
 <div class="card-header">
@@ -74,12 +83,12 @@ class="table table-bordered table-striped table-hover datatable"
 <tr>
 
 <td>
-<?= $cliente['CLI_ID']; ?>
+<?= (int) $cliente['CLI_ID']; ?>
 </td>
 
 <td>
 
-<?= $cliente['CLI_Nome']; ?>
+<?= escClienteAttr($cliente['CLI_Nome']); ?>
 
 <?php if(!empty($cliente['CLI_RazaoSocial'])){ ?>
 
@@ -87,7 +96,7 @@ class="table table-bordered table-striped table-hover datatable"
 
 <small class="text-muted">
 
-<?= $cliente['CLI_RazaoSocial']; ?>
+<?= escClienteAttr($cliente['CLI_RazaoSocial']); ?>
 
 </small>
 
@@ -96,15 +105,15 @@ class="table table-bordered table-striped table-hover datatable"
 </td>
 
 <td>
-<?= $cliente['CLI_CPF_CNPJ']; ?>
+<?= escClienteAttr($cliente['CLI_CPF_CNPJ']); ?>
 </td>
 
 <td>
-<?= $cliente['CLI_Email']; ?>
+<?= escClienteAttr($cliente['CLI_Email']); ?>
 </td>
 
 <td>
-<?= $cliente['CLI_Telefone']; ?>
+<?= escClienteAttr($cliente['CLI_Telefone']); ?>
 </td>
 
 <td>
@@ -150,13 +159,13 @@ class="table table-bordered table-striped table-hover datatable"
 
 <td>
 <?php if(!empty($cliente['ASS_PlanoNome'])){ ?>
-    <strong><?= htmlspecialchars($cliente['ASS_PlanoNome']); ?></strong><br>
+    <strong><?= escClienteAttr($cliente['ASS_PlanoNome']); ?></strong><br>
     <small class="text-muted">
-        <?= htmlspecialchars($cliente['ASS_Ciclo']); ?> |
+        <?= escClienteAttr($cliente['ASS_Ciclo']); ?> |
         R$ <?= number_format($cliente['ASS_Valor'], 2, ',', '.'); ?>
     </small><br>
     <small>
-        <?= ucfirst($cliente['ASS_Status']); ?> |
+        <?= escClienteAttr(ucfirst($cliente['ASS_Status'])); ?> |
         Próx.: <?= $cliente['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($cliente['ASS_DataProximaCobranca'])) : '-'; ?>
     </small>
 <?php }else{ ?>
@@ -184,27 +193,27 @@ onclick="return confirm('Deseja aprovar este cadastro?')"
 type="button"
 class="btn btn-info btn-sm btnEditarCliente"
 
-data-id="<?= $cliente['CLI_ID']; ?>"
+data-id="<?= (int) $cliente['CLI_ID']; ?>"
 
-data-nome="<?= htmlspecialchars($cliente['CLI_Nome']); ?>"
+data-nome="<?= escClienteAttr($cliente['CLI_Nome']); ?>"
 
-data-razao="<?= htmlspecialchars($cliente['CLI_RazaoSocial']); ?>"
+data-razao="<?= escClienteAttr($cliente['CLI_RazaoSocial']); ?>"
 
-data-email="<?= htmlspecialchars($cliente['CLI_Email']); ?>"
+data-email="<?= escClienteAttr($cliente['CLI_Email']); ?>"
 
-data-telefone="<?= $cliente['CLI_Telefone']; ?>"
+data-telefone="<?= escClienteAttr($cliente['CLI_Telefone']); ?>"
 
-data-documento="<?= $cliente['CLI_CPF_CNPJ']; ?>"
+data-documento="<?= escClienteAttr($cliente['CLI_CPF_CNPJ']); ?>"
 
-data-tipo="<?= $cliente['CLI_TipoPessoa']; ?>"
+data-tipo="<?= escClienteAttr($cliente['CLI_TipoPessoa']); ?>"
 
 data-mensalidade="<?= number_format($cliente['CLI_ValorMensalidade'],2,',','.'); ?>"
 
-data-vencimento="<?= $cliente['CLI_Vencimento']; ?>"
+data-vencimento="<?= escClienteAttr($cliente['CLI_Vencimento']); ?>"
 
-data-status="<?= $cliente['CLI_StatusPagamento']; ?>"
+data-status="<?= escClienteAttr($cliente['CLI_StatusPagamento']); ?>"
 
-data-observacoes="<?= htmlspecialchars($cliente['CLI_Observacoes']); ?>"
+data-observacoes="<?= escClienteAttr($cliente['CLI_Observacoes']); ?>"
 >
 
 <i class="fas fa-edit"></i>

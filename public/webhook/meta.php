@@ -352,6 +352,22 @@ foreach($entries as $entry){
                     $messageId
                 ]);
 
+                $db->prepare("
+                    UPDATE disparo_manual_itens
+                    SET
+                        DMI_Status = ?,
+                        DMI_Erro = CASE WHEN ? IS NOT NULL THEN ? ELSE DMI_Erro END,
+                        DMI_Retorno = ?,
+                        DMI_DataAtualizacao = NOW()
+                    WHERE DMI_MessageId = ?
+                ")->execute([
+                    $statusInterno,
+                    $erroMeta,
+                    $erroMeta,
+                    $retornoStatus,
+                    $messageId
+                ]);
+
             }
 
         }
