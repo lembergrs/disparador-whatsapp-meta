@@ -1773,15 +1773,30 @@ $(document).ready(function(){
         function atualizarResumoFila(lote, itens)
         {
             let concluidos = 0;
+            let enviados = 0;
             let erros = 0;
+            let pendentes = 0;
+            let iniciouProcessamento = false;
 
             itens.forEach(function(item){
+                if(['processando','aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                    iniciouProcessamento = true;
+                }
+
                 if(['aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
                     concluidos++;
                 }
 
+                if(['aguardando_confirmacao','enviado','entregue','lido'].includes(item.DMI_Status)){
+                    enviados++;
+                }
+
                 if(['erro','failed'].includes(item.DMI_Status)){
                     erros++;
+                }
+
+                if(['pendente','processando'].includes(item.DMI_Status)){
+                    pendentes++;
                 }
             });
 
@@ -1791,10 +1806,17 @@ $(document).ready(function(){
                 .css('width', percentual + '%')
                 .html(percentual + '%');
 
-            $('#textoProgressoDisparo').html(
-                'Lote #' + loteId + ' | Processados: ' + concluidos +
-                ' de ' + total + ' | Erros: ' + erros
-            );
+            if(!iniciouProcessamento){
+                $('#textoProgressoDisparo').html(
+                    'Aguardando o início do processamento. O servidor verifica novos envios automaticamente.'
+                );
+            }else{
+                $('#textoProgressoDisparo').html(
+                    'Processamento iniciado. Enviando... | Processados: ' + concluidos +
+                    ' de ' + total + ' | Aceitos: ' + enviados +
+                    ' | Erros: ' + erros + ' | Pendentes: ' + pendentes
+                );
+            }
 
             if(lote && lote.DML_Status == 'concluido'){
                 $('#barraProgressoDisparo')
@@ -1802,10 +1824,12 @@ $(document).ready(function(){
                     .css('width', '100%')
                     .html('100%');
 
+                $('#textoProgressoDisparo').html('Processamento concluído.');
+
                 $('#resumoFinalDisparo').html(`
-                    <div class="alert ${erros > 0 ? 'alert-warning' : 'alert-success'} mt-3">
-                        <strong>Processamento do lote concluído.</strong><br>
-                        Total: ${total} | Erros: ${erros}
+                    <div class="alert ${erros > 0 || pendentes > 0 ? 'alert-warning' : 'alert-success'} mt-3">
+                        <strong>Processamento concluído.</strong><br>
+                        Total: ${total} | Aceitos: ${enviados} | Erros: ${erros} | Pendentes: ${pendentes} | Status final: ${escapeHtmlDisparo(lote.DML_Status || 'concluido')}
                         <br>
                         <button
                         type="button"
@@ -1824,6 +1848,28 @@ $(document).ready(function(){
             }
         }
 
+        function descricaoStatusFila(item)
+        {
+            if(item.DMI_Erro){
+                return escapeHtmlDisparo(item.DMI_Erro);
+            }
+
+            const descricoes = {
+                pendente: 'Aguardando processamento pelo servidor.',
+                processando: 'Enviando...',
+                aguardando_confirmacao: 'Enviado para a Meta. Aguardando confirmação.',
+                enviado: 'Mensagem enviada pela Meta.',
+                entregue: 'Mensagem entregue ao destinatário.',
+                lido: 'Mensagem lida pelo destinatário.',
+                erro: 'Erro ao processar envio.',
+                failed: 'A Meta informou falha no envio.'
+            };
+
+            return '<span class="text-muted">' +
+                escapeHtmlDisparo(descricoes[item.DMI_Status] || item.DMI_MessageId || 'Aguardando processamento pelo servidor.') +
+                '</span>';
+        }
+
         function atualizarItensFila(itens)
         {
             itens.forEach(function(item, index){
@@ -1832,9 +1878,7 @@ $(document).ready(function(){
                 );
 
                 $('#linha_numero_' + index + ' td:eq(2)').html(
-                    item.DMI_Erro
-                        ? escapeHtmlDisparo(item.DMI_Erro)
-                        : '<span class="text-muted">' + escapeHtmlDisparo(item.DMI_MessageId || 'Aguardando processamento') + '</span>'
+                    descricaoStatusFila(item)
                 );
 
                 aplicarDetalhesLinha(
@@ -1842,7 +1886,7 @@ $(document).ready(function(){
                     {
                         numero: item.DMI_Numero,
                         status: item.DMI_Status,
-                        mensagem_amigavel: item.DMI_Erro || item.DMI_MessageId || 'Aguardando processamento',
+                        mensagem_amigavel: item.DMI_Erro || item.DMI_MessageId || 'Aguardando processamento pelo servidor.',
                         message_id: item.DMI_MessageId || null,
                         retorno_meta_api: item.DMI_Retorno || null
                     }
@@ -1921,12 +1965,25 @@ $(document).ready(function(){
                 loteId = retorno.lote_id;
 
                 $('#textoProgressoDisparo').html(
-                    'Lote #' + loteId + ' criado com ' + retorno.total + ' destino(s). Aguardando worker...'
+                    'Lote criado com sucesso. O envio foi colocado na fila e será iniciado automaticamente em instantes.'
                 );
 
-                $('#listaStatusNumeros tr td:nth-child(2)').html(
-                    '<span class="badge badge-secondary">Na fila</span>'
-                );
+                $('#resumoFinalDisparo').html(`
+                    <div class="alert alert-info mt-3">
+                        <strong>Lote #${loteId} criado com sucesso.</strong><br>
+                        O envio foi colocado na fila e será iniciado automaticamente em instantes.
+                    </div>
+                `);
+
+                $('#listaStatusNumeros tr').each(function(){
+                    $(this).find('td:eq(1)').html(
+                        '<span class="badge badge-secondary">Na fila</span>'
+                    );
+
+                    $(this).find('td:eq(2)').html(
+                        '<span class="text-muted">Aguardando processamento pelo servidor.</span>'
+                    );
+                });
 
                 consultarLote();
                 pollingLote = setInterval(consultarLote, 7000);
