@@ -39,7 +39,6 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
                     >
                 </a>
-
                 <div class="login-icon-fallback">
 
                     <i class="fab fa-whatsapp"></i>
