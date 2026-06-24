@@ -1731,6 +1731,8 @@ $(document).ready(function(){
 
         let autoScrollStatusDisparo = true;
         const limiteProximoFimDisparo = 80;
+        const tamanhoLoteDisparo = 10;
+        const pausaEntreLotesDisparo = 3000;
 
         function estaProximoFimStatusDisparo()
         {
@@ -1852,6 +1854,10 @@ $(document).ready(function(){
                     </button>
                 </div>
             `);
+
+            if(Object.keys(statusDisparoPorMessageId).length > 0){
+                iniciarMonitoramentoStatusDisparo();
+            }
         }
 
         function cancelarPendentes()
@@ -2103,6 +2109,110 @@ $(document).ready(function(){
             `);
         }
 
+        function montarDestinoLote(destino)
+        {
+            let variaveis = {};
+
+            parse.variaveis.forEach(function(v, index){
+                variaveis[v] = destino.valores[index] || '';
+            });
+
+            return {
+                numero: destino.numero,
+                variaveis: variaveis
+            };
+        }
+
+        function aplicarResultadoEnvio(index, destino, retorno)
+        {
+            if(retorno.sucesso){
+
+                enviados++;
+
+                $('#linha_numero_' + index + ' td:eq(1)').html(
+                    '<span class="badge badge-info">Aguardando confirmação</span>'
+                );
+
+                $('#linha_numero_' + index + ' td:eq(2)').html(
+                    '<span class="text-info">Enviado para processamento pela Meta</span>'
+                );
+
+                if(retorno.message_id){
+                    statusDisparoPorMessageId[retorno.message_id] = {
+                        index: index,
+                        destino: destino
+                    };
+                }
+
+            }else{
+
+                erros++;
+
+                $('#linha_numero_' + index + ' td:eq(1)').html(
+                    '<span class="badge badge-danger">Erro</span>'
+                );
+
+                $('#linha_numero_' + index + ' td:eq(2)').html(
+                    escapeHtmlDisparo(
+                        mensagemCurtaErroDisparo(retorno.erro)
+                    )
+                );
+
+            }
+
+            let motivoDetalhe = retorno.sucesso
+                ? 'Aguardando confirmação da Meta'
+                : mensagemCurtaErroDisparo(retorno.erro);
+
+            aplicarDetalhesLinha(
+                index,
+                montarDetalhesEnvioDisparo(
+                    destino,
+                    retorno,
+                    retorno.sucesso ? 'Aguardando confirmação' : 'Erro',
+                    motivoDetalhe
+                )
+            );
+
+            if(retorno.numero_formatado){
+                $('#linha_numero_' + index + ' td:eq(0)').contents().first()[0].textContent =
+                    retorno.numero_formatado;
+            }
+        }
+
+        function marcarLoteComoErro(lote, xhr)
+        {
+            lote.forEach(function(destino, offset){
+                const index = atual + offset;
+
+                erros++;
+
+                $('#linha_numero_' + index + ' td:eq(1)').html(
+                    '<span class="badge badge-danger">Erro</span>'
+                );
+
+                $('#linha_numero_' + index + ' td:eq(2)').html(
+                    'Falha na requisição do lote de envio.'
+                );
+
+                aplicarDetalhesLinha(
+                    index,
+                    montarDetalhesEnvioDisparo(
+                        destino,
+                        {
+                            erro: 'Falha na requisição do lote de envio.',
+                            retorno: {
+                                status: xhr.status,
+                                responseText: xhr.responseText
+                            }
+                        },
+                        'Erro',
+                        'Falha na requisição do lote de envio.'
+                    )
+                );
+            });
+        }
+
         function enviarProximo()
         {
             if(cancelarDisparo){
@@ -2115,131 +2225,72 @@ $(document).ready(function(){
                 return;
             }
 
-            let destino = parse.destinos[atual];
-
-            $('#linha_numero_' + atual + ' td:eq(1)').html(
-                '<span class="badge badge-info">Enviando...</span>'
+            let lote = parse.destinos.slice(
+                atual,
+                atual + tamanhoLoteDisparo
             );
 
-            $('#linha_numero_' + atual + ' td:eq(2)').html(
-                '<span class="text-muted">Aguardando resposta da Meta...</span>'
-            );
+            lote.forEach(function(destino, offset){
+                const index = atual + offset;
+
+                $('#linha_numero_' + index + ' td:eq(1)').html(
+                    '<span class="badge badge-info">Enviando...</span>'
+                );
+
+                $('#linha_numero_' + index + ' td:eq(2)').html(
+                    '<span class="text-muted">Aguardando processamento do lote...</span>'
+                );
+            });
 
             rolarStatus();
 
             $.ajax({
-                url: BASE_URL + '/index.php?url=disparo/enviarAjax',
+                url: BASE_URL + '/index.php?url=disparo/enviarLoteAjax',
                 method: 'POST',
-                data: montarDadosEnvio(destino).concat([
-                    {
-                        name: 'csrf_token',
-                        value: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '')
-                    }
-                ]),
+                data: {
+                    csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
+                    meta: $('#meta').val(),
+                    template: $('#template').val(),
+                    destinos_json: JSON.stringify(
+                        lote.map(montarDestinoLote)
+                    )
+                },
                 dataType: 'json',
 
                 success: function(retorno){
-
-                    if(retorno.sucesso){
-
-                        enviados++;
-
-                        $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-info">Aguardando confirmação</span>'
-                        );
-
-                        $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            '<span class="text-info">Enviado para processamento pela Meta</span>'
-                        );
-
-                        if(retorno.message_id){
-                            statusDisparoPorMessageId[retorno.message_id] = {
-                                index: atual,
-                                destino: destino
-                            };
-
-                            iniciarMonitoramentoStatusDisparo();
-                        }
-
-                    }else{
-
-                        erros++;
-
-                        $('#linha_numero_' + atual + ' td:eq(1)').html(
-                            '<span class="badge badge-danger">Erro</span>'
-                        );
-
-                        $('#linha_numero_' + atual + ' td:eq(2)').html(
-                            escapeHtmlDisparo(
-                                mensagemCurtaErroDisparo(retorno.erro)
-                            )
-                        );
-
+                    if(!retorno.sucesso || !Array.isArray(retorno.resultados)){
+                        marcarLoteComoErro(lote, {
+                            status: 200,
+                            responseText: retorno.erro || 'Retorno inválido do lote.'
+                        });
+                        return;
                     }
 
-                    let motivoDetalhe = retorno.sucesso
-                        ? 'Aguardando confirmação da Meta'
-                        : mensagemCurtaErroDisparo(retorno.erro);
+                    lote.forEach(function(destino, offset){
+                        const index = atual + offset;
+                        const resultado = retorno.resultados[offset] || {
+                            sucesso: false,
+                            erro: 'Destino sem retorno no lote.'
+                        };
 
-                    aplicarDetalhesLinha(
-                        atual,
-                        montarDetalhesEnvioDisparo(
-                            destino,
-                            retorno,
-                            retorno.sucesso ? 'Aguardando confirmação' : 'Erro',
-                            motivoDetalhe
-                        )
-                    );
-
-                    if(retorno.numero_formatado){
-                        $('#linha_numero_' + atual + ' td:eq(0)').contents().first()[0].textContent =
-                            retorno.numero_formatado;
-                    }
-
+                        aplicarResultadoEnvio(index, destino, resultado);
+                    });
                 },
 
                 error: function(xhr){
-
-                    erros++;
-
-                    $('#linha_numero_' + atual + ' td:eq(1)').html(
-                        '<span class="badge badge-danger">Erro</span>'
-                    );
-
-                    $('#linha_numero_' + atual + ' td:eq(2)').html(
-                        'Falha na requisição de envio.'
-                    );
-
-                    aplicarDetalhesLinha(
-                        atual,
-                        montarDetalhesEnvioDisparo(
-                            destino,
-                            {
-                                erro: 'Falha na requisição de envio.',
-                                retorno: {
-                                    status: xhr.status,
-                                    responseText: xhr.responseText
-                                }
-                            },
-                            'Erro',
-                            'Falha na requisição de envio.'
-                        )
-                    );
-
+                    marcarLoteComoErro(lote, xhr);
                 },
 
                 complete: function(){
-
-                    atual++;
+                    atual += lote.length;
 
                     atualizarProgresso();
                     rolarStatus();
 
                     setTimeout(
                         enviarProximo,
-                        200
+                        pausaEntreLotesDisparo
                     );
-
                 }
             });
         }

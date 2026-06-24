@@ -511,6 +511,138 @@ class DisparoController extends Controller
         return 'Erro ao enviar mensagem';
     }
 
+    private function processarEnvioManualDestino(
+        $usuario,
+        $template,
+        $metaId,
+        $numeroEntrada,
+        $variaveisRecebidas,
+        $variaveisTemplate,
+        $meta = null,
+        $disparo = null,
+        $conversaModel = null,
+        $consumo = null,
+        $controlePlano = null
+    ){
+        $numero = preg_replace('/\D/', '', $numeroEntrada ?? '');
+
+        if($numero == ''){
+            throw new \Exception('Número de destino não informado.');
+        }
+
+        if(substr($numero, 0, 2) != '55'){
+            $numero = '55' . $numero;
+        }
+
+        $variaveisEnvio =
+            $this->normalizarVariaveisDisparo(
+                $variaveisRecebidas,
+                $variaveisTemplate
+            );
+
+        $meta = $meta ?: new \Services\MetaService(
+            (int) $metaId,
+            $usuario['CLI_ID']
+        );
+
+        $response =
+            $meta->enviarTemplate(
+                $numero,
+                $template,
+                $variaveisEnvio
+            );
+
+        $messageId = null;
+        $status = 'erro';
+
+        if(isset($response['messages'][0]['id'])){
+
+            $messageId =
+                $response['messages'][0]['id'];
+
+            $status = 'aguardando_confirmacao';
+
+            $consumo = $consumo ?: new ConsumoMensal();
+            $consumo->registrarMensagem(
+                $usuario['CLI_ID']
+            );
+
+            $controlePlano = $controlePlano ?: new ControlePlanoService();
+            $controlePlano->registrarUso(
+                $usuario['CLI_ID']
+            );
+        }
+
+        $disparo = $disparo ?: new \Models\Disparo();
+
+        $disparo->salvar([
+            'cliente' => $usuario['CLI_ID'],
+            'meta' => $metaId,
+            'template_id' => $template['TMP_ID'],
+            'numero' => $numero,
+            'template' => $template['TMP_Nome'],
+            'variaveis' => $variaveisEnvio,
+            'message_id' => $messageId,
+            'status' => $status,
+            'retorno' => $response
+        ]);
+
+        $conversaModel = $conversaModel ?: new Conversa();
+
+        $conversaId =
+            $conversaModel->buscarOuCriar(
+                $usuario['CLI_ID'],
+                $metaId,
+                $numero,
+                null
+            );
+
+        $conversaModel->salvarMensagem([
+            'conversa_id' => $conversaId,
+            'direcao' => 'enviada',
+            'tipo' => 'template',
+            'texto' => $template['TMP_Nome'],
+            'message_id' => $messageId,
+            'status' => $status,
+            'retorno' => $response,
+            'data_mensagem' => date('Y-m-d H:i:s')
+        ]);
+
+        if($status == 'aguardando_confirmacao'){
+            return [
+                'sucesso' => true,
+                'status' => 'aguardando_confirmacao',
+                'numero' => $numero,
+                'numero_formatado' => $this->formatarNumero($numero),
+                'mensagem' => 'Aguardando confirmação da Meta',
+                'message_id' => $messageId,
+                'retorno' => $response
+            ];
+        }
+
+        return [
+            'sucesso' => false,
+            'status' => 'erro',
+            'numero' => $numero,
+            'numero_formatado' => $this->formatarNumero($numero),
+            'erro' => $this->extrairErroMeta($response),
+            'retorno' => $response
+        ];
+    }
+
+    private function pausaEntreEnviosManual()
+    {
+        $enviosPorSegundo = defined('WHATSAPP_ENVIOS_POR_SEGUNDO')
+            ? (int) WHATSAPP_ENVIOS_POR_SEGUNDO
+            : 5;
+
+        if($enviosPorSegundo <= 0){
+            $enviosPorSegundo = 1;
+        }
+
+        usleep((int) ceil(1000000 / $enviosPorSegundo));
+    }
+
     public function enviarAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -712,6 +844,123 @@ class DisparoController extends Controller
                 ]
             ]);
 
+        }
+    }
+
+    public function enviarLoteAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+
+            $usuario = Auth::usuario();
+
+            if(!$this->validarCsrfAjaxSilencioso()){
+                http_response_code(403);
+                echo json_encode(['sucesso' => false, 'erro' => 'Token de segurança inválido.']);
+                return;
+            }
+
+            $metaId = (int) ($_POST['meta'] ?? 0);
+
+            $template =
+                $this->templateModel
+                ->buscarPorCliente(
+                    (int) ($_POST['template'] ?? 0),
+                    $usuario['CLI_ID']
+                );
+
+            if(!$template || (int) $template['MTA_ID'] !== $metaId){
+                throw new \Exception('Template não encontrado.');
+            }
+
+            $destinosJson = $_POST['destinos_json'] ?? '[]';
+            $destinos = json_decode($destinosJson, true);
+
+            if(!is_array($destinos)){
+                throw new \Exception('Lote de destinos inválido.');
+            }
+
+            $destinos = array_slice($destinos, 0, 10);
+
+            if(empty($destinos)){
+                throw new \Exception('Nenhum destino informado para o lote.');
+            }
+
+            $variaveisTemplate =
+                $this->extrairVariaveisTemplate(
+                    $template
+                );
+
+            $meta = new \Services\MetaService(
+                $metaId,
+                $usuario['CLI_ID']
+            );
+
+            $disparo = new \Models\Disparo();
+            $conversaModel = new Conversa();
+            $consumo = new ConsumoMensal();
+            $controlePlano = new ControlePlanoService();
+
+            $resultados = [];
+            $totalDestinos = count($destinos);
+
+            foreach($destinos as $indice => $destino){
+
+                try{
+
+                    $variaveisRecebidas = [];
+
+                    if(isset($destino['variaveis']) && is_array($destino['variaveis'])){
+                        $variaveisRecebidas = $destino['variaveis'];
+                    }
+
+                    $resultados[] = $this->processarEnvioManualDestino(
+                        $usuario,
+                        $template,
+                        $metaId,
+                        $destino['numero'] ?? '',
+                        $variaveisRecebidas,
+                        $variaveisTemplate,
+                        $meta,
+                        $disparo,
+                        $conversaModel,
+                        $consumo,
+                        $controlePlano
+                    );
+
+                }catch(\Exception $e){
+
+                    $numero = $destino['numero'] ?? null;
+
+                    $resultados[] = [
+                        'sucesso' => false,
+                        'status' => 'erro',
+                        'numero' => $numero,
+                        'numero_formatado' => $this->formatarNumero($numero ?? ''),
+                        'erro' => $e->getMessage(),
+                        'retorno' => [
+                            'exception' => $e->getMessage()
+                        ]
+                    ];
+                }
+
+                if($indice < ($totalDestinos - 1)){
+                    $this->pausaEntreEnviosManual();
+                }
+            }
+
+            echo json_encode([
+                'sucesso' => true,
+                'resultados' => $resultados
+            ], JSON_UNESCAPED_UNICODE);
+
+        }catch(\Exception $e){
+
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
         }
     }
 
