@@ -10,6 +10,7 @@ use Models\Disparo;
 use Services\MetaService;
 use Models\Conversa;
 use Models\ConsumoMensal;
+use Models\DisparoManual;
 use Services\ControlePlanoService;
 
 class DisparoController extends Controller
@@ -957,6 +958,153 @@ class DisparoController extends Controller
 
         }catch(\Exception $e){
 
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    public function criarLoteAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+            $usuario = Auth::usuario();
+
+            if(!$this->validarCsrfAjaxSilencioso()){
+                http_response_code(403);
+                echo json_encode(['sucesso' => false, 'erro' => 'Token de segurança inválido.']);
+                return;
+            }
+
+            $metaId = (int) ($_POST['meta'] ?? 0);
+            $templateId = (int) ($_POST['template'] ?? 0);
+
+            $template = $this->templateModel->buscarPorCliente(
+                $templateId,
+                $usuario['CLI_ID']
+            );
+
+            if(!$template || (int) $template['MTA_ID'] !== $metaId){
+                throw new \Exception('Template não encontrado.');
+            }
+
+            $destinos = json_decode($_POST['destinos_json'] ?? '[]', true);
+
+            if(!is_array($destinos) || empty($destinos)){
+                throw new \Exception('Informe pelo menos um destino válido.');
+            }
+
+            $variaveisTemplate = $this->extrairVariaveisTemplate($template);
+            $model = new DisparoManual();
+            $itens = [];
+            $numerosUnicos = [];
+
+            foreach($destinos as $destino){
+                $numero = preg_replace('/\D/', '', $destino['numero'] ?? '');
+
+                if($numero == ''){
+                    throw new \Exception('Número de destino não informado.');
+                }
+
+                if(substr($numero, 0, 2) != '55'){
+                    $numero = '55' . $numero;
+                }
+
+                if(isset($numerosUnicos[$numero])){
+                    continue;
+                }
+
+                $variaveisRecebidas = [];
+
+                if(isset($destino['variaveis']) && is_array($destino['variaveis'])){
+                    $variaveisRecebidas = $destino['variaveis'];
+                }
+
+                $variaveisEnvio = $this->normalizarVariaveisDisparo(
+                    $variaveisRecebidas,
+                    $variaveisTemplate
+                );
+
+                $numerosUnicos[$numero] = true;
+                $itens[] = [
+                    'numero' => $numero,
+                    'variaveis' => $variaveisEnvio
+                ];
+            }
+
+            if(empty($itens)){
+                throw new \Exception('Nenhum destino válido para enfileirar.');
+            }
+
+            $loteId = $model->criarLote(
+                $usuario['CLI_ID'],
+                $metaId,
+                $templateId,
+                count($itens)
+            );
+
+            foreach($itens as $item){
+                $model->adicionarItem(
+                    $loteId,
+                    $usuario['CLI_ID'],
+                    $item['numero'],
+                    $item['variaveis']
+                );
+            }
+
+            echo json_encode([
+                'sucesso' => true,
+                'lote_id' => $loteId,
+                'total' => count($itens)
+            ], JSON_UNESCAPED_UNICODE);
+
+        }catch(\Exception $e){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    public function statusLoteAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+            $usuario = Auth::usuario();
+
+            $token = $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+
+            if(!\Core\Csrf::validar($token)){
+                http_response_code(403);
+                echo json_encode(['sucesso' => false, 'erro' => 'Token de segurança inválido.']);
+                return;
+            }
+
+            $loteId = (int) ($_POST['lote_id'] ?? $_GET['lote_id'] ?? 0);
+
+            if($loteId <= 0){
+                throw new \Exception('Lote não informado.');
+            }
+
+            $model = new DisparoManual();
+            $lote = $model->buscarLoteCliente($loteId, $usuario['CLI_ID']);
+
+            if(!$lote){
+                throw new \Exception('Lote não encontrado.');
+            }
+
+            $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+
+            echo json_encode([
+                'sucesso' => true,
+                'lote' => $lote,
+                'itens' => $itens
+            ], JSON_UNESCAPED_UNICODE);
+
+        }catch(\Exception $e){
             echo json_encode([
                 'sucesso' => false,
                 'erro' => $e->getMessage()
