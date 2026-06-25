@@ -494,15 +494,37 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 verificarAtualizacoes();
 
-            }, 60000);
+            }, 120000);
     }
 
     document.addEventListener('visibilitychange', function(){
 
-        if(!document.hidden){
-            verificarAtualizacoes();
+        if(document.hidden){
+            if(intervaloAtualizacao){
+                clearInterval(intervaloAtualizacao);
+                intervaloAtualizacao = null;
+            }
+            return;
         }
 
+        iniciarAtualizacaoAutomatica();
+        verificarAtualizacoes();
+
+    });
+
+
+    window.addEventListener('pagehide', function(){
+        if(intervaloAtualizacao){
+            clearInterval(intervaloAtualizacao);
+            intervaloAtualizacao = null;
+        }
+    });
+
+    window.addEventListener('beforeunload', function(){
+        if(intervaloAtualizacao){
+            clearInterval(intervaloAtualizacao);
+            intervaloAtualizacao = null;
+        }
     });
 
     iniciarAtualizacaoAutomatica();

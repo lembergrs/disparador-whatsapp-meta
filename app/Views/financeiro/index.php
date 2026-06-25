@@ -270,6 +270,7 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                             <form
                             method="post"
                             action="<?= BASE_URL; ?>/index.php?url=financeiro/escolherPlano"
+                            class="form-escolher-plano"
                             >
 
                                 <input
@@ -321,6 +322,25 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.form-escolher-plano').forEach(function(form){
+        form.addEventListener('submit', function(event){
+            if(form.dataset.enviando === 'S'){
+                event.preventDefault();
+                return false;
+            }
+
+            form.dataset.enviando = 'S';
+
+            const botao = form.querySelector('button[type="submit"]');
+
+            if(botao){
+                botao.disabled = true;
+                botao.dataset.textoOriginal = botao.textContent;
+                botao.textContent = 'Processando...';
+            }
+        });
+    });
+
     document.querySelectorAll('.select-ciclo-plano').forEach(function(select){
         select.addEventListener('change', function(){
             const card = select.closest('.card-body');
