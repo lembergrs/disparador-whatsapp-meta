@@ -43,6 +43,25 @@ defined('META_EMBEDDED_SIGNUP_REDIRECT_URI') || define('META_EMBEDDED_SIGNUP_RED
 defined('META_GRAPH_VERSION') || define('META_GRAPH_VERSION', env_valor('META_GRAPH_VERSION', ''));
 
 
+
+$asaasEnv = strtolower(trim((string) env_valor('ASAAS_ENV', 'sandbox')));
+$asaasBaseUrlSandbox = env_valor('ASAAS_API_BASE_URL_SANDBOX', 'https://sandbox.asaas.com/api/v3');
+$asaasBaseUrlProduction = env_valor('ASAAS_API_BASE_URL_PRODUCTION', 'https://api.asaas.com/v3');
+
+// Base segura da integração Asaas. Esta etapa não cria clientes nem cobranças.
+defined('ASAAS_ENV') || define('ASAAS_ENV', $asaasEnv);
+defined('ASAAS_API_KEY') || define('ASAAS_API_KEY', env_valor('ASAAS_API_KEY', ''));
+defined('ASAAS_WEBHOOK_TOKEN') || define('ASAAS_WEBHOOK_TOKEN', env_valor('ASAAS_WEBHOOK_TOKEN', ''));
+defined('ASAAS_API_BASE_URL') || define(
+    'ASAAS_API_BASE_URL',
+    $asaasEnv === 'production' ? $asaasBaseUrlProduction : $asaasBaseUrlSandbox
+);
+
+// TODO: criar cliente no Asaas.
+// TODO: criar cobrança no Asaas.
+// TODO: salvar asaas_customer_id.
+// TODO: salvar asaas_payment_id.
+
 defined('DB_HOST') || define('DB_HOST', env_valor('DB_HOST'));
 defined('DB_NAME') || define('DB_NAME', env_valor('DB_NAME'));
 defined('DB_USER') || define('DB_USER', env_valor('DB_USER'));
