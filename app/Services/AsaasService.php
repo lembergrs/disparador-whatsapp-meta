@@ -75,6 +75,13 @@ class AsaasService
             }
         }
 
+        echo '<pre>';
+        echo "HTTP: " . $httpCode . PHP_EOL;
+        echo "Erro cURL: " . curl_error($ch) . PHP_EOL;
+        echo "Resposta:" . PHP_EOL;
+        print_r($response);
+        die();
+
         return [
             'sucesso' => $erroCurl === '' && $httpCode >= 200 && $httpCode < 300,
             'http_code' => $httpCode,
