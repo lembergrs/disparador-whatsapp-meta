@@ -83,6 +83,76 @@ class AsaasService
         ];
     }
 
+
+    public function criarOuAtualizarCliente($cliente)
+    {
+        $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
+        $payload = $this->montarPayloadCliente($cliente);
+
+        if($customerId !== ''){
+            return $this->request('POST', '/customers/' . rawurlencode($customerId), $payload);
+        }
+
+        return $this->request('POST', '/customers', $payload);
+    }
+
+    public function criarCobranca($cliente, $cobranca)
+    {
+        $payload = [
+            'customer' => $cliente['CLI_ProviderCustomerId'],
+            'billingType' => 'UNDEFINED',
+            'dueDate' => $cobranca['COB_DataVencimento'],
+            'value' => (float) $cobranca['COB_Valor'],
+            'description' => $cobranca['descricao'] ?? 'Mensalidade Disparador.net',
+            'externalReference' => 'cobranca_' . $cobranca['COB_ID']
+        ];
+
+        return $this->request('POST', '/payments', $payload);
+    }
+
+    public function consultarCobranca($providerPaymentId)
+    {
+        return $this->request('GET', '/payments/' . rawurlencode($providerPaymentId));
+    }
+
+    public function buscarPixQrCode($providerPaymentId)
+    {
+        return $this->request('GET', '/payments/' . rawurlencode($providerPaymentId) . '/pixQrCode');
+    }
+
+    private function montarPayloadCliente($cliente)
+    {
+        $documento = preg_replace('/\D/', '', (string) ($cliente['CLI_CPF_CNPJ'] ?? ''));
+        $telefone = preg_replace('/\D/', '', (string) ($cliente['CLI_Telefone'] ?? ''));
+        $nome = trim((string) ($cliente['CLI_RazaoSocial'] ?? ''));
+
+        if($nome === ''){
+            $nome = trim((string) ($cliente['CLI_Nome'] ?? ''));
+        }
+
+        $payload = [
+            'name' => $nome,
+            'email' => trim((string) ($cliente['CLI_Email'] ?? '')),
+            'externalReference' => 'cliente_' . ($cliente['CLI_ID'] ?? '')
+        ];
+
+        if($documento !== ''){
+            $payload['cpfCnpj'] = $documento;
+        }
+
+        if($telefone !== ''){
+            if(strlen($telefone) >= 10){
+                $payload['mobilePhone'] = $telefone;
+            }else{
+                $payload['phone'] = $telefone;
+            }
+        }
+
+        return array_filter($payload, function($valor){
+            return $valor !== null && $valor !== '';
+        });
+    }
+
     public function testarConexao()
     {
         return $this->request('GET', '/myAccount');
