@@ -67,7 +67,7 @@ class AsaasController extends Controller
 
         if($registroEvento === 'duplicado'){
             if($this->eventoPagamentoConfirmado($evento)){
-                $this->ativarAssinaturaDaCobranca($cobranca);
+                $this->ativarAssinaturaDaCobranca($cobranca, $cobrancaModel);
             }
 
             return;
@@ -92,7 +92,7 @@ class AsaasController extends Controller
         if($this->eventoPagamentoConfirmado($evento)){
             $clienteModel = new Cliente();
             $clienteModel->marcarPagamentoProviderConfirmado($cobranca['CLI_ID']);
-            $this->ativarAssinaturaDaCobranca($cobranca);
+            $this->ativarAssinaturaDaCobranca($cobranca, $cobrancaModel);
         }
     }
 
@@ -101,15 +101,25 @@ class AsaasController extends Controller
         return in_array($evento, ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'], true);
     }
 
-    private function ativarAssinaturaDaCobranca($cobranca)
+    private function ativarAssinaturaDaCobranca($cobranca, Cobranca $cobrancaModel)
     {
         $assinaturaId = (int) ($cobranca['ASS_ID'] ?? 0);
+        $assinaturaModel = new Assinatura();
 
         if($assinaturaId <= 0){
-            return;
+            $assinatura = $assinaturaModel->buscarPendenteMaisRecente(
+                $cobranca['CLI_ID'],
+                $cobranca['PLA_ID']
+            );
+
+            if(!$assinatura){
+                return;
+            }
+
+            $assinaturaId = (int) $assinatura['ASS_ID'];
+            $cobrancaModel->vincularAssinatura($cobranca['COB_ID'], $assinaturaId);
         }
 
-        $assinaturaModel = new Assinatura();
         $assinaturaModel->ativar($assinaturaId);
     }
 

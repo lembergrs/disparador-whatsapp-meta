@@ -159,9 +159,27 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             ]);
 
+            $assinaturaModel = new Assinatura();
+            $assinaturaModel->criarOuAtualizarPorCliente(
+                $usuario['CLI_ID'],
+                $plano,
+                'pendente',
+                [
+                    'ciclo' => $ciclo,
+                    'valor' => $valorCiclo,
+                    'proxima_cobranca' => $proximaCobranca
+                ]
+            );
+
+            $assinaturaPagamento = $assinaturaModel->buscarParaPagamento(
+                $usuario['CLI_ID'],
+                $plano['PLA_ID']
+            );
+
             $cobrancaId = $cobrancaModel->criar([
                 'cliente' => $usuario['CLI_ID'],
                 'plano' => $plano['PLA_ID'],
+                'assinatura' => $assinaturaPagamento['ASS_ID'] ?? null,
                 'valor' => $valorCiclo,
                 'vencimento' => date('Y-m-d', strtotime('+3 days')),
                 'tipo' => 'mensalidade',
@@ -173,18 +191,6 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID'],
                 $cobrancaId,
                 $plano
-            );
-
-            $assinaturaModel = new Assinatura();
-            $assinaturaModel->criarOuAtualizarPorCliente(
-                $usuario['CLI_ID'],
-                $plano,
-                'pendente',
-                [
-                    'ciclo' => $ciclo,
-                    'valor' => $valorCiclo,
-                    'proxima_cobranca' => $proximaCobranca
-                ]
             );
 
             $db->commit();
