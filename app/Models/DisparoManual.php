@@ -87,7 +87,7 @@ class DisparoManual
             SELECT
                 COUNT(*) total,
                 SUM(CASE WHEN DMI_Status IN ('aguardando_confirmacao','enviado','entregue','lido') THEN 1 ELSE 0 END) enviados,
-                SUM(CASE WHEN DMI_Status = 'erro' THEN 1 ELSE 0 END) erros,
+                SUM(CASE WHEN DMI_Status IN ('erro','failed') THEN 1 ELSE 0 END) erros,
                 SUM(CASE WHEN DMI_Status IN ('pendente','processando') THEN 1 ELSE 0 END) pendentes
             FROM disparo_manual_itens
             WHERE DML_ID = ?

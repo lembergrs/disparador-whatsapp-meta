@@ -399,16 +399,18 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 const CSRF_TOKEN = '<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>';
 const BASE_URL = '<?= BASE_URL; ?>';
-const META_APP_ID = '1598345545186185';
-const META_CONFIGURATION_ID = '1493119295619741';
+window.META_APP_ID = '<?= htmlspecialchars(META_APP_ID, ENT_QUOTES, 'UTF-8'); ?>';
+window.META_CONFIGURATION_ID = '<?= htmlspecialchars(META_CONFIGURATION_ID, ENT_QUOTES, 'UTF-8'); ?>';
+window.META_EMBEDDED_SIGNUP_REDIRECT_URI = '<?= htmlspecialchars(META_EMBEDDED_SIGNUP_REDIRECT_URI, ENT_QUOTES, 'UTF-8'); ?>';
+window.META_GRAPH_VERSION = '<?= htmlspecialchars(META_GRAPH_VERSION, ENT_QUOTES, 'UTF-8'); ?>';
 
 window.fbAsyncInit = function() {
 
     FB.init({
-        appId: META_APP_ID,
+        appId: window.META_APP_ID,
         cookie: true,
         xfbml: false,
-        version: 'v23.0'
+        version: window.META_GRAPH_VERSION
     });
 
 };
