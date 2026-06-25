@@ -73,6 +73,12 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
             <strong><?= htmlspecialchars($cobranca['COB_Status']); ?></strong>
         </p>
 
+        <?php if(($cobranca['COB_ProviderStatus'] ?? '') === 'erro_cliente'){ ?>
+            <div class="alert alert-danger mb-2">
+                Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.
+            </div>
+        <?php } ?>
+
         <?php if(!empty($cobranca['COB_LinkPagamento'])){ ?>
             <a
             href="<?= htmlspecialchars($cobranca['COB_LinkPagamento']); ?>"

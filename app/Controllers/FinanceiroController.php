@@ -234,18 +234,43 @@ class FinanceiroController extends Controller
         $providerCustomerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
 
         if($providerCustomerId === ''){
+            $validacaoCliente = $this->validarDadosClienteAsaas($cliente);
+
+            if(!$validacaoCliente['valido']){
+                $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
+                    'provider' => 'asaas',
+                    'provider_status' => 'erro_cliente',
+                    'provider_payload' => $this->payloadErroProvider(
+                        0,
+                        $validacaoCliente['erros'],
+                        'Dados cadastrais obrigatórios ausentes ou inválidos para criar cliente no Asaas.',
+                        '/customers'
+                    )
+                ]);
+
+                return [
+                    'sucesso' => false,
+                    'mensagem' => 'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'
+                ];
+            }
+
             $resultadoCliente = $asaasService->criarOuAtualizarCliente($cliente);
 
             if(!$resultadoCliente['sucesso'] || empty($resultadoCliente['response']['id'])){
                 $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
                     'provider' => 'asaas',
                     'provider_status' => 'erro_cliente',
-                    'provider_payload' => $this->payloadProviderSeguro($resultadoCliente['response'] ?? [])
+                    'provider_payload' => $this->payloadErroProvider(
+                        $resultadoCliente['http_code'] ?? 0,
+                        $resultadoCliente['response']['errors'] ?? ($resultadoCliente['response'] ?? []),
+                        $resultadoCliente['erro'] ?? 'Falha ao criar cliente no Asaas.',
+                        '/customers'
+                    )
                 ]);
 
                 return [
                     'sucesso' => false,
-                    'mensagem' => 'Plano selecionado, mas não foi possível gerar o link de pagamento agora. Nossa equipe foi notificada para revisar a cobrança.'
+                    'mensagem' => 'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'
                 ];
             }
 
@@ -300,6 +325,73 @@ class FinanceiroController extends Controller
             'sucesso' => true,
             'mensagem' => 'Plano selecionado. A cobrança foi criada e o link de pagamento está disponível.'
         ];
+    }
+
+
+    private function validarDadosClienteAsaas($cliente)
+    {
+        $erros = [];
+        $nome = trim((string) ($cliente['CLI_RazaoSocial'] ?? ''));
+
+        if($nome === ''){
+            $nome = trim((string) ($cliente['CLI_Nome'] ?? ''));
+        }
+
+        $documento = preg_replace('/\D/', '', (string) ($cliente['CLI_CPF_CNPJ'] ?? ''));
+        $email = trim((string) ($cliente['CLI_Email'] ?? ''));
+
+        if($nome === ''){
+            $erros[] = 'Informe nome ou razão social.';
+        }
+
+        if($documento === ''){
+            $erros[] = 'Informe CPF/CNPJ.';
+        }
+
+        if($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+            $erros[] = 'Informe um e-mail válido.';
+        }
+
+        return [
+            'valido' => empty($erros),
+            'erros' => $erros
+        ];
+    }
+
+    private function payloadErroProvider($httpCode, $erros, $mensagem, $endpoint)
+    {
+        return json_encode([
+            'http_code' => (int) $httpCode,
+            'erros' => $this->normalizarErrosProvider($erros),
+            'mensagem' => $mensagem,
+            'endpoint' => $endpoint
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function normalizarErrosProvider($erros)
+    {
+        if(!is_array($erros)){
+            return [];
+        }
+
+        if(isset($erros['errors']) && is_array($erros['errors'])){
+            $erros = $erros['errors'];
+        }
+
+        $normalizados = [];
+
+        foreach($erros as $erro){
+            if(is_array($erro)){
+                $normalizados[] = [
+                    'code' => $erro['code'] ?? null,
+                    'description' => $erro['description'] ?? ($erro['message'] ?? null)
+                ];
+            }elseif(is_scalar($erro)){
+                $normalizados[] = ['description' => (string) $erro];
+            }
+        }
+
+        return $normalizados;
     }
 
     private function payloadProviderSeguro($payload)
