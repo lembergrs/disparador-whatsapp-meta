@@ -357,11 +357,58 @@ class="alert d-none"
 role="alert"
 ></div>
 
+
+<div
+class="modal fade"
+id="modalEmbeddedSignupMeta"
+tabindex="-1"
+role="dialog"
+aria-labelledby="modalEmbeddedSignupMetaTitulo"
+aria-hidden="true"
+>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEmbeddedSignupMetaTitulo">
+                    Conexão com a Meta
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>
+                    A configuração do WhatsApp será aberta em uma nova aba da Meta.
+                </p>
+
+                <p>
+                    Conclua todas as etapas nessa nova aba. Ao finalizar, você será redirecionado de volta para o Disparador.net.
+                </p>
+
+                <p class="mb-0">
+                    <strong>Não feche esta página até concluir o processo.</strong>
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    Entendi
+                </button>
+                <button type="button" class="btn btn-primary" id="btnReabrirEmbeddedSignupMeta">
+                    Abrir novamente, caso a nova aba não tenha aberto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 
 (function(){
 
     let ultimoSessionInfoMeta = null;
+    let ultimaUrlEmbeddedSignupMeta = null;
 
     function exibirFeedbackEmbeddedSignup(tipo, mensagem)
     {
@@ -385,6 +432,26 @@ role="alert"
 
         feedback.className = 'alert d-none';
         feedback.textContent = '';
+    }
+
+    function exibirModalEmbeddedSignupMeta()
+    {
+        if(typeof $ !== 'undefined' && $('#modalEmbeddedSignupMeta').modal){
+            $('#modalEmbeddedSignupMeta').modal('show');
+        }
+    }
+
+    function abrirEmbeddedSignupMeta()
+    {
+        if(!ultimaUrlEmbeddedSignupMeta){
+            return null;
+        }
+
+        return window.open(
+            ultimaUrlEmbeddedSignupMeta,
+            '_blank',
+            'noopener,noreferrer'
+        );
     }
 
     function sessionInfoListener(event)
@@ -467,24 +534,25 @@ role="alert"
         url.searchParams.set('extras', JSON.stringify(extras));
         url.searchParams.set('redirect_uri', redirectUri);
 
-        const signupUrl = url.toString();
-        const popup = window.open(
-            signupUrl,
-            'embeddedSignupMeta',
-            'width=720,height=800,scrollbars=yes,resizable=yes'
-        );
+        ultimaUrlEmbeddedSignupMeta = url.toString();
 
-        if(!popup || popup.closed || typeof popup.closed === 'undefined'){
-            window.open(signupUrl, '_blank', 'noopener');
-        }else{
-            popup.focus();
-        }
+        abrirEmbeddedSignupMeta();
+        exibirModalEmbeddedSignupMeta();
 
         exibirFeedbackEmbeddedSignup(
             'info',
-            'Abrimos a conexão da Meta em uma nova janela. Conclua as etapas por lá e volte para esta tela.'
+            'Abrimos a conexão da Meta em uma nova aba. Conclua as etapas por lá e volte para esta tela.'
         );
 
+    });
+
+    document.addEventListener('click', function(e){
+        if(!e.target.closest('#btnReabrirEmbeddedSignupMeta')){
+            return;
+        }
+
+        e.preventDefault();
+        abrirEmbeddedSignupMeta();
     });
 
 })();
