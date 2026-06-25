@@ -467,12 +467,23 @@ role="alert"
         url.searchParams.set('extras', JSON.stringify(extras));
         url.searchParams.set('redirect_uri', redirectUri);
 
-        exibirFeedbackEmbeddedSignup(
-            'info',
-            'Abrindo o Cadastro Incorporado hospedado da Meta. Conclua todas as etapas na próxima tela.'
+        const signupUrl = url.toString();
+        const popup = window.open(
+            signupUrl,
+            'embeddedSignupMeta',
+            'width=720,height=800,scrollbars=yes,resizable=yes'
         );
 
-        window.location.href = url.toString();
+        if(!popup || popup.closed || typeof popup.closed === 'undefined'){
+            window.open(signupUrl, '_blank', 'noopener');
+        }else{
+            popup.focus();
+        }
+
+        exibirFeedbackEmbeddedSignup(
+            'info',
+            'Abrimos a conexão da Meta em uma nova janela. Conclua as etapas por lá e volte para esta tela.'
+        );
 
     });
 
