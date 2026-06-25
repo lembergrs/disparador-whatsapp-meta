@@ -68,25 +68,6 @@ class AsaasService
         $erroCurl = curl_error($curl);
         $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
-echo '<pre>';
-
-echo "URL:\n";
-echo $url . "\n\n";
-
-echo "HTTP CODE:\n";
-echo $httpCode . "\n\n";
-
-echo "CURL ERROR:\n";
-echo curl_error($curl) . "\n\n"; // use o nome correto da variável
-
-echo "RESPONSE:\n";
-echo $response . "\n\n";
-
-echo "PAYLOAD:\n";
-print_r($payload);
-
-die();
-
         curl_close($curl);
 
         $responseDecodificado = null;
