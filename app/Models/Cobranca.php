@@ -301,45 +301,6 @@ class Cobranca
         return $sql->execute([$assinaturaId, $cobrancaId]);
     }
 
-    public function atualizarIntegracaoProvider($id, $dados)
-    {
-        $sets = [];
-        $params = [':id' => $id];
-        $mapa = [
-            'COB_Provider' => 'provider',
-            'COB_ProviderCustomerId' => 'provider_customer_id',
-            'COB_ProviderPaymentId' => 'provider_payment_id',
-            'COB_ProviderStatus' => 'provider_status',
-            'COB_ProviderPayload' => 'provider_payload',
-            'COB_LinkPagamento' => 'link_pagamento',
-            'COB_PixCopiaCola' => 'pix_copia_cola',
-            'COB_QrCode' => 'qr_code',
-            'COB_LinhaDigitavel' => 'linha_digitavel',
-            'COB_Status' => 'status',
-            'COB_DataPagamento' => 'data_pagamento'
-        ];
-
-        foreach($mapa as $coluna => $chave){
-            if($this->colunaExiste('cobrancas', $coluna) && array_key_exists($chave, $dados)){
-                $param = ':' . $chave;
-                $sets[] = $coluna . ' = ' . $param;
-                $params[$param] = $dados[$chave];
-            }
-        }
-
-        if($this->colunaExiste('cobrancas', 'COB_DataSincronizacaoProvider')){
-            $sets[] = 'COB_DataSincronizacaoProvider = NOW()';
-        }
-
-        if(empty($sets)){
-            return false;
-        }
-
-        $sql = $this->db->prepare("\n            UPDATE cobrancas\n            SET " . implode(', ', $sets) . "\n            WHERE COB_ID = :id\n        ");
-
-        return $sql->execute($params);
-    }
-
     public function buscarPorProviderPaymentId($provider, $providerPaymentId)
     {
         if(!$this->colunaExiste('cobrancas', 'COB_Provider') || !$this->colunaExiste('cobrancas', 'COB_ProviderPaymentId')){
