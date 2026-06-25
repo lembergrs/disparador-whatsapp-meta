@@ -5,6 +5,7 @@ namespace Controllers;
 use Core\Controller;
 use Models\Cliente;
 use Models\Cobranca;
+use Models\Assinatura;
 
 class AsaasController extends Controller
 {
@@ -65,6 +66,10 @@ class AsaasController extends Controller
         );
 
         if($registroEvento === 'duplicado'){
+            if($this->eventoPagamentoConfirmado($evento)){
+                $this->ativarAssinaturaDaCobranca($cobranca);
+            }
+
             return;
         }
 
@@ -78,16 +83,34 @@ class AsaasController extends Controller
             $dadosAtualizacao['status'] = $statusLocal;
         }
 
-        if(in_array($evento, ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'], true)){
+        if($this->eventoPagamentoConfirmado($evento)){
             $dadosAtualizacao['data_pagamento'] = date('Y-m-d H:i:s');
         }
 
         $cobrancaModel->atualizarIntegracaoProvider($cobranca['COB_ID'], $dadosAtualizacao);
 
-        if(in_array($evento, ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'], true)){
+        if($this->eventoPagamentoConfirmado($evento)){
             $clienteModel = new Cliente();
             $clienteModel->marcarPagamentoProviderConfirmado($cobranca['CLI_ID']);
+            $this->ativarAssinaturaDaCobranca($cobranca);
         }
+    }
+
+    private function eventoPagamentoConfirmado($evento)
+    {
+        return in_array($evento, ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'], true);
+    }
+
+    private function ativarAssinaturaDaCobranca($cobranca)
+    {
+        $assinaturaId = (int) ($cobranca['ASS_ID'] ?? 0);
+
+        if($assinaturaId <= 0){
+            return;
+        }
+
+        $assinaturaModel = new Assinatura();
+        $assinaturaModel->ativar($assinaturaId);
     }
 
     private function mapearStatusCobranca($evento)
