@@ -446,52 +446,33 @@ role="alert"
         e.preventDefault();
         limparFeedbackEmbeddedSignup();
 
-        if(typeof FB === 'undefined'){
+        const redirectUri = window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '';
+        const extras = {
+            version: 'v4',
+            sessionInfoVersion: '3',
+            featureType: 'whatsapp_business_app_onboarding'
+        };
+        const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
+
+        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID || !redirectUri){
             exibirFeedbackEmbeddedSignup(
                 'danger',
-                'SDK da Meta não carregado. Recarregue a página e tente novamente.'
+                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID, META_CONFIGURATION_ID e META_EMBEDDED_SIGNUP_REDIRECT_URI no .env.'
             );
             return;
         }
 
+        url.searchParams.set('app_id', window.META_APP_ID || '');
+        url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
+        url.searchParams.set('extras', JSON.stringify(extras));
+        url.searchParams.set('redirect_uri', redirectUri);
+
         exibirFeedbackEmbeddedSignup(
             'info',
-            'Abrindo o Cadastro Incorporado da Meta. Conclua todas as etapas no popup.'
+            'Abrindo o Cadastro Incorporado hospedado da Meta. Conclua todas as etapas na próxima tela.'
         );
 
-        FB.login(function(response){
-
-            if(response.authResponse && response.authResponse.code){
-                exibirFeedbackEmbeddedSignup(
-                    'success',
-                    'Código de autorização recebido da Meta. Aguarde a finalização da conexão do número.'
-                );
-                return;
-            }
-
-            if(ultimoSessionInfoMeta && ultimoSessionInfoMeta.event === 'FINISH'){
-                exibirFeedbackEmbeddedSignup(
-                    'warning',
-                    'O cadastro foi concluído na Meta, mas o código de autorização não foi retornado ao sistema.'
-                );
-                return;
-            }
-
-            exibirFeedbackEmbeddedSignup(
-                'warning',
-                'A conexão não foi concluída. Verifique se o popup da Meta foi autorizado até o final.'
-            );
-
-        }, {
-            config_id: META_CONFIGURATION_ID,
-            response_type: 'code',
-            override_default_response_type: true,
-            extras: {
-                setup: {},
-                feature: 'whatsapp_embedded_signup',
-                sessionInfoVersion: 3
-            }
-        });
+        window.location.href = url.toString();
 
     });
 
