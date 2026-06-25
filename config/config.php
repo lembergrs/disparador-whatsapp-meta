@@ -35,7 +35,12 @@ defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIM
 defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
 
 // App Secret usado para validar X-Hub-Signature-256 do webhook da Meta.
+defined('META_APP_ID') || define('META_APP_ID', env_valor('META_APP_ID', ''));
 defined('META_APP_SECRET') || define('META_APP_SECRET', env_valor('META_APP_SECRET', ''));
+defined('META_CONFIGURATION_ID') || define('META_CONFIGURATION_ID', env_valor('META_CONFIGURATION_ID', ''));
+defined('META_VERIFY_TOKEN') || define('META_VERIFY_TOKEN', env_valor('META_VERIFY_TOKEN', ''));
+defined('META_EMBEDDED_SIGNUP_REDIRECT_URI') || define('META_EMBEDDED_SIGNUP_REDIRECT_URI', env_valor('META_EMBEDDED_SIGNUP_REDIRECT_URI', ''));
+defined('META_GRAPH_VERSION') || define('META_GRAPH_VERSION', env_valor('META_GRAPH_VERSION', ''));
 
 
 defined('DB_HOST') || define('DB_HOST', env_valor('DB_HOST'));

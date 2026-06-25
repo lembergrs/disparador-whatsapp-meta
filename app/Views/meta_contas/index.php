@@ -295,7 +295,7 @@ Verify Token:
 type="text"
 name="url_base"
 class="form-control"
-value="https://graph.facebook.com/v23.0/"
+value="https://graph.facebook.com/<?= htmlspecialchars(META_GRAPH_VERSION, ENT_QUOTES, 'UTF-8'); ?>/"
 required
 >
 

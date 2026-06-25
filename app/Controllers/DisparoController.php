@@ -12,6 +12,7 @@ use Models\Conversa;
 use Models\ConsumoMensal;
 use Models\DisparoManual;
 use Services\ControlePlanoService;
+use Services\DisparoManualQueueService;
 
 class DisparoController extends Controller
 {
@@ -1058,6 +1059,79 @@ class DisparoController extends Controller
                 'sucesso' => true,
                 'lote_id' => $loteId,
                 'total' => count($itens)
+            ], JSON_UNESCAPED_UNICODE);
+
+        }catch(\Exception $e){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+
+
+    public function processarLoteAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+            if(($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST'){
+                http_response_code(405);
+                echo json_encode(['sucesso' => false, 'erro' => 'Método não permitido.']);
+                return;
+            }
+
+            $usuario = Auth::usuario();
+
+            if(!$this->validarCsrfAjaxSilencioso()){
+                http_response_code(403);
+                echo json_encode(['sucesso' => false, 'erro' => 'Token de segurança inválido.']);
+                return;
+            }
+
+            $loteId = (int) ($_POST['lote_id'] ?? 0);
+
+            if($loteId <= 0){
+                throw new \Exception('Lote não informado.');
+            }
+
+            $model = new DisparoManual();
+            $lote = $model->buscarLoteCliente($loteId, $usuario['CLI_ID']);
+
+            if(!$lote){
+                throw new \Exception('Lote não encontrado.');
+            }
+
+            if(!in_array($lote['DML_Status'], ['pendente', 'processando'], true)){
+                $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+
+                echo json_encode([
+                    'sucesso' => true,
+                    'processou' => false,
+                    'mensagem' => 'Lote sem pendências para processamento.',
+                    'lote' => $lote,
+                    'itens' => $itens
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            $service = new DisparoManualQueueService(false);
+            $resumo = $service->processarLote(
+                (int) $usuario['CLI_ID'],
+                $loteId,
+                5,
+                'ajax'
+            );
+
+            $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+
+            echo json_encode([
+                'sucesso' => true,
+                'processou' => true,
+                'resumo' => $resumo,
+                'lote' => $resumo['lote'] ?? $lote,
+                'itens' => $itens
             ], JSON_UNESCAPED_UNICODE);
 
         }catch(\Exception $e){
