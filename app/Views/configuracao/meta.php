@@ -357,11 +357,58 @@ class="alert d-none"
 role="alert"
 ></div>
 
+
+<div
+class="modal fade"
+id="modalEmbeddedSignupMeta"
+tabindex="-1"
+role="dialog"
+aria-labelledby="modalEmbeddedSignupMetaTitulo"
+aria-hidden="true"
+>
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEmbeddedSignupMetaTitulo">
+                    Conexão com a Meta
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p>
+                    A configuração do WhatsApp será aberta em uma nova aba da Meta.
+                </p>
+
+                <p>
+                    Conclua todas as etapas nessa nova aba. Ao finalizar, você será redirecionado de volta para o Disparador.net.
+                </p>
+
+                <p class="mb-0">
+                    <strong>Não feche esta página até concluir o processo.</strong>
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    Entendi
+                </button>
+                <button type="button" class="btn btn-primary" id="btnReabrirEmbeddedSignupMeta">
+                    Abrir novamente, caso a nova aba não tenha aberto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 
 (function(){
 
     let ultimoSessionInfoMeta = null;
+    let ultimaUrlEmbeddedSignupMeta = null;
 
     function exibirFeedbackEmbeddedSignup(tipo, mensagem)
     {
@@ -385,6 +432,26 @@ role="alert"
 
         feedback.className = 'alert d-none';
         feedback.textContent = '';
+    }
+
+    function exibirModalEmbeddedSignupMeta()
+    {
+        if(typeof $ !== 'undefined' && $('#modalEmbeddedSignupMeta').modal){
+            $('#modalEmbeddedSignupMeta').modal('show');
+        }
+    }
+
+    function abrirEmbeddedSignupMeta()
+    {
+        if(!ultimaUrlEmbeddedSignupMeta){
+            return null;
+        }
+
+        return window.open(
+            ultimaUrlEmbeddedSignupMeta,
+            '_blank',
+            'noopener,noreferrer'
+        );
     }
 
     function sessionInfoListener(event)
@@ -446,53 +513,46 @@ role="alert"
         e.preventDefault();
         limparFeedbackEmbeddedSignup();
 
-        if(typeof FB === 'undefined'){
+        const redirectUri = window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '';
+        const extras = {
+            version: 'v4',
+            sessionInfoVersion: '3',
+            featureType: 'whatsapp_business_app_onboarding'
+        };
+        const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
+
+        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID || !redirectUri){
             exibirFeedbackEmbeddedSignup(
                 'danger',
-                'SDK da Meta não carregado. Recarregue a página e tente novamente.'
+                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID, META_CONFIGURATION_ID e META_EMBEDDED_SIGNUP_REDIRECT_URI no .env.'
             );
             return;
         }
 
+        url.searchParams.set('app_id', window.META_APP_ID || '');
+        url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
+        url.searchParams.set('extras', JSON.stringify(extras));
+        url.searchParams.set('redirect_uri', redirectUri);
+
+        ultimaUrlEmbeddedSignupMeta = url.toString();
+
+        abrirEmbeddedSignupMeta();
+        exibirModalEmbeddedSignupMeta();
+
         exibirFeedbackEmbeddedSignup(
             'info',
-            'Abrindo o Cadastro Incorporado da Meta. Conclua todas as etapas no popup.'
+            'Abrimos a conexão da Meta em uma nova aba. Conclua as etapas por lá e volte para esta tela.'
         );
 
-        FB.login(function(response){
+    });
 
-            if(response.authResponse && response.authResponse.code){
-                exibirFeedbackEmbeddedSignup(
-                    'success',
-                    'Código de autorização recebido da Meta. Aguarde a finalização da conexão do número.'
-                );
-                return;
-            }
+    document.addEventListener('click', function(e){
+        if(!e.target.closest('#btnReabrirEmbeddedSignupMeta')){
+            return;
+        }
 
-            if(ultimoSessionInfoMeta && ultimoSessionInfoMeta.event === 'FINISH'){
-                exibirFeedbackEmbeddedSignup(
-                    'warning',
-                    'O cadastro foi concluído na Meta, mas o código de autorização não foi retornado ao sistema.'
-                );
-                return;
-            }
-
-            exibirFeedbackEmbeddedSignup(
-                'warning',
-                'A conexão não foi concluída. Verifique se o popup da Meta foi autorizado até o final.'
-            );
-
-        }, {
-            config_id: META_CONFIGURATION_ID,
-            response_type: 'code',
-            override_default_response_type: true,
-            extras: {
-                setup: {},
-                feature: 'whatsapp_embedded_signup',
-                sessionInfoVersion: 3
-            }
-        });
-
+        e.preventDefault();
+        abrirEmbeddedSignupMeta();
     });
 
 })();
