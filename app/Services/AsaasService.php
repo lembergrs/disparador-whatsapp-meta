@@ -20,21 +20,25 @@ class AsaasService
         $endpoint = '/' . ltrim((string) $endpoint, '/');
 
         if(!in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)){
-            return [
-                'sucesso' => false,
-                'http_code' => 0,
-                'response' => null,
-                'erro' => 'Método HTTP não suportado.'
-            ];
+            return $this->respostaPadronizada(
+                false,
+                0,
+                $endpoint,
+                $method,
+                null,
+                'Método HTTP não suportado.'
+            );
         }
 
         if(trim($this->apiKey) === ''){
-            return [
-                'sucesso' => false,
-                'http_code' => 0,
-                'response' => null,
-                'erro' => 'API Key do Asaas não configurada.'
-            ];
+            return $this->respostaPadronizada(
+                false,
+                0,
+                $endpoint,
+                $method,
+                null,
+                'API Key do Asaas não configurada.'
+            );
         }
 
         $curl = curl_init();
@@ -42,6 +46,7 @@ class AsaasService
         $headers = [
             'Accept: application/json',
             'Content-Type: application/json',
+            'User-Agent: Disparador.net/1.0 (contato@disparador.net)',
             'access_token: ' . $this->apiKey
         ];
 
@@ -75,12 +80,47 @@ class AsaasService
             }
         }
 
+        return $this->respostaPadronizada(
+            $erroCurl === '' && $httpCode >= 200 && $httpCode < 300,
+            $httpCode,
+            $endpoint,
+            $method,
+            $responseDecodificado,
+            $this->erroResumido($erroCurl, $responseDecodificado, $httpCode)
+        );
+    }
+
+    private function respostaPadronizada($sucesso, $httpCode, $endpoint, $method, $response, $erro)
+    {
         return [
-            'sucesso' => $erroCurl === '' && $httpCode >= 200 && $httpCode < 300,
+            'sucesso' => $sucesso,
             'http_code' => $httpCode,
-            'response' => $responseDecodificado,
-            'erro' => $erroCurl !== '' ? 'Falha de comunicação com o Asaas.' : null
+            'endpoint' => $endpoint,
+            'method' => $method,
+            'response' => $response,
+            'erro' => $erro
         ];
+    }
+
+    private function erroResumido($erroCurl, $response, $httpCode)
+    {
+        if($erroCurl !== ''){
+            return 'Falha de comunicação com o Asaas.';
+        }
+
+        if($httpCode >= 200 && $httpCode < 300){
+            return null;
+        }
+
+        if(is_array($response) && !empty($response['errors'][0]['description'])){
+            return $response['errors'][0]['description'];
+        }
+
+        if(is_array($response) && !empty($response['message'])){
+            return $response['message'];
+        }
+
+        return 'Falha ao processar requisição no Asaas.';
     }
 
 
