@@ -8,7 +8,8 @@
     "psr-4": {
       "Core\\": "app/Core/",
       "Controllers\\": "app/Controllers/",
-      "Models\\": "app/Models/"
+      "Models\\": "app/Models/",
+      "Services\\": "app/Services/"
     }
   },
   "require": {
