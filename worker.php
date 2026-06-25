@@ -24,6 +24,71 @@ use Models\Conversa;
 use Models\ConsumoMensal;
 use Models\Disparo;
 
+
+function adquirirWorkerLock($ttlSegundos = 600)
+{
+    $diretorio = __DIR__ . '/storage';
+
+    if(!is_dir($diretorio)){
+        mkdir($diretorio, 0770, true);
+    }
+
+    $arquivo = $diretorio . '/worker.lock';
+    $handle = fopen($arquivo, 'c+');
+
+    if(!$handle){
+        echo "Não foi possível criar lock do worker.\n";
+        return false;
+    }
+
+    if(!flock($handle, LOCK_EX | LOCK_NB)){
+        clearstatcache(true, $arquivo);
+        $idade = is_file($arquivo) ? time() - filemtime($arquivo) : 0;
+
+        $mensagem = $idade > $ttlSegundos
+            ? "Worker lock ativo há mais de {$ttlSegundos}s. Encerrando para evitar concorrência.\n"
+            : "Worker já em execução. Encerrando.\n";
+
+        echo $mensagem;
+        fclose($handle);
+        return false;
+    }
+
+    ftruncate($handle, 0);
+    fwrite($handle, (string) getmypid());
+    fflush($handle);
+
+    return [$handle, $arquivo];
+}
+
+function liberarWorkerLock($lock)
+{
+    if(!$lock || !is_array($lock)){
+        return;
+    }
+
+    [$handle, $arquivo] = $lock;
+
+    if(is_resource($handle)){
+        flock($handle, LOCK_UN);
+        fclose($handle);
+    }
+
+    if(is_file($arquivo)){
+        @unlink($arquivo);
+    }
+}
+
+$workerLock = adquirirWorkerLock(600);
+
+if(!$workerLock){
+    exit;
+}
+
+register_shutdown_function(function() use (&$workerLock){
+    liberarWorkerLock($workerLock);
+});
+
 $modoTeste = false; // troque para false para envio real
 $limitePorExecucao = 50;
 $limiteDisparoManualPorExecucao = 20;
@@ -431,3 +496,6 @@ function extrairErroMetaWorker($retorno)
         ? json_encode($retorno, JSON_UNESCAPED_UNICODE)
         : 'Erro ao enviar mensagem';
 }
+
+liberarWorkerLock($workerLock);
+$workerLock = null;

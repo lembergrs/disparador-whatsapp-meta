@@ -61,12 +61,35 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
             </strong>
         </p>
 
-        <p class="mb-0">
+        <p class="mb-1">
             Vencimento:
             <strong>
                 <?= date('d/m/Y', strtotime($cobranca['COB_DataVencimento'])); ?>
             </strong>
         </p>
+
+        <p class="mb-<?= !empty($cobranca['COB_LinkPagamento']) ? '2' : '0'; ?>">
+            Status:
+            <strong><?= htmlspecialchars($cobranca['COB_Status']); ?></strong>
+        </p>
+
+        <?php if(($cobranca['COB_ProviderStatus'] ?? '') === 'erro_cliente'){ ?>
+            <div class="alert alert-danger mb-2">
+                Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.
+            </div>
+        <?php } ?>
+
+        <?php if(!empty($cobranca['COB_LinkPagamento'])){ ?>
+            <a
+            href="<?= htmlspecialchars($cobranca['COB_LinkPagamento']); ?>"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-success"
+            >
+                <i class="fas fa-credit-card"></i>
+                Pagar agora
+            </a>
+        <?php } ?>
 
     </div>
 
@@ -247,6 +270,7 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                             <form
                             method="post"
                             action="<?= BASE_URL; ?>/index.php?url=financeiro/escolherPlano"
+                            class="form-escolher-plano"
                             >
 
                                 <input
@@ -298,6 +322,25 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.form-escolher-plano').forEach(function(form){
+        form.addEventListener('submit', function(event){
+            if(form.dataset.enviando === 'S'){
+                event.preventDefault();
+                return false;
+            }
+
+            form.dataset.enviando = 'S';
+
+            const botao = form.querySelector('button[type="submit"]');
+
+            if(botao){
+                botao.disabled = true;
+                botao.dataset.textoOriginal = botao.textContent;
+                botao.textContent = 'Processando...';
+            }
+        });
+    });
+
     document.querySelectorAll('.select-ciclo-plano').forEach(function(select){
         select.addEventListener('change', function(){
             const card = select.closest('.card-body');
