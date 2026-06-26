@@ -1629,6 +1629,10 @@ $(document).ready(function(){
         cancelarDisparo = false;
         statusDisparoPorMessageId = {};
 
+        if(typeof window.finalizarMonitoramentoLoteDisparo === 'function'){
+            window.finalizarMonitoramentoLoteDisparo();
+        }
+
         if(intervaloStatusDisparo){
             clearInterval(intervaloStatusDisparo);
             intervaloStatusDisparo = null;
@@ -1726,8 +1730,10 @@ $(document).ready(function(){
         let total = parse.destinos.length;
         let loteId = null;
         let pollingLote = null;
+        let timeoutProximoBloco = null;
         let processandoBlocoLote = false;
         let processamentoImediatoAtivo = false;
+        let consultandoLote = false;
 
         function montarDestinoFila(destino)
         {
@@ -1843,10 +1849,7 @@ $(document).ready(function(){
                     </div>
                 `);
 
-                if(pollingLote){
-                    clearInterval(pollingLote);
-                    pollingLote = null;
-                }
+                finalizarMonitoramentoLote();
             }
         }
 
@@ -1896,11 +1899,32 @@ $(document).ready(function(){
             });
         }
 
+        function finalizarMonitoramentoLote()
+        {
+            processamentoImediatoAtivo = false;
+            processandoBlocoLote = false;
+            consultandoLote = false;
+
+            if(pollingLote){
+                clearInterval(pollingLote);
+                pollingLote = null;
+            }
+
+            if(timeoutProximoBloco){
+                clearTimeout(timeoutProximoBloco);
+                timeoutProximoBloco = null;
+            }
+        }
+
+        window.finalizarMonitoramentoLoteDisparo = finalizarMonitoramentoLote;
+
         function consultarLote()
         {
-            if(!loteId){
+            if(!loteId || processandoBlocoLote || consultandoLote || document.hidden){
                 return;
             }
+
+            consultandoLote = true;
 
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/statusLoteAjax',
@@ -1917,6 +1941,9 @@ $(document).ready(function(){
 
                     atualizarItensFila(retorno.itens || []);
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
+                },
+                complete: function(){
+                    consultandoLote = false;
                 }
             });
         }
@@ -1938,13 +1965,27 @@ $(document).ready(function(){
                 return;
             }
 
-            setTimeout(processarProximoBloco, delay);
+            if(timeoutProximoBloco){
+                clearTimeout(timeoutProximoBloco);
+            }
+
+            timeoutProximoBloco = setTimeout(processarProximoBloco, delay);
         }
 
         function processarProximoBloco()
         {
-            if(!loteId || processandoBlocoLote || cancelarDisparo){
+            if(!loteId || processandoBlocoLote || consultandoLote || cancelarDisparo){
                 return;
+            }
+
+            if(document.hidden){
+                agendarProximoBloco(30000);
+                return;
+            }
+
+            if(timeoutProximoBloco){
+                clearTimeout(timeoutProximoBloco);
+                timeoutProximoBloco = null;
             }
 
             processandoBlocoLote = true;
@@ -1965,7 +2006,7 @@ $(document).ready(function(){
                         $('#textoProgressoDisparo').html(
                             'Não foi possível processar este bloco agora. O worker continuará como fallback.'
                         );
-                        agendarProximoBloco(7000);
+                        agendarProximoBloco(15000);
                         return;
                     }
 
@@ -1975,9 +2016,9 @@ $(document).ready(function(){
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
 
                     if(lotePossuiPendentes(retorno.lote || {}, retorno.itens || [])){
-                        agendarProximoBloco(2000);
+                        agendarProximoBloco(8000);
                     }else{
-                        processamentoImediatoAtivo = false;
+                        finalizarMonitoramentoLote();
                     }
                 },
                 error: function(){
@@ -1985,7 +2026,7 @@ $(document).ready(function(){
                     $('#textoProgressoDisparo').html(
                         'Falha temporária ao processar bloco. Nova tentativa em alguns segundos; o worker permanece como fallback.'
                     );
-                    agendarProximoBloco(8000);
+                    agendarProximoBloco(15000);
                 }
             });
         }
@@ -2057,9 +2098,9 @@ $(document).ready(function(){
                 });
 
                 consultarLote();
-                pollingLote = setInterval(consultarLote, 7000);
+                pollingLote = setInterval(consultarLote, 30000);
                 processamentoImediatoAtivo = true;
-                processarProximoBloco();
+                agendarProximoBloco(8000);
             },
             error: function(xhr){
                 $('#resumoFinalDisparo').html(
@@ -2082,6 +2123,10 @@ $(document).ready(function(){
 
         cancelarDisparo = false;
         statusDisparoPorMessageId = {};
+
+        if(typeof window.finalizarMonitoramentoLoteDisparo === 'function'){
+            window.finalizarMonitoramentoLoteDisparo();
+        }
 
         if(intervaloStatusDisparo){
             clearInterval(intervaloStatusDisparo);

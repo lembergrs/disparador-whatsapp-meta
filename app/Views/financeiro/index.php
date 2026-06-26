@@ -5,10 +5,49 @@ if(!function_exists('valorPlanoCicloFinanceiro')){
         return \Models\Plano::valorPorCiclo($plano, $ciclo);
     }
 }
+
+if(!function_exists('statusFaturaFinanceiro')){
+    function statusFaturaFinanceiro($status)
+    {
+        $status = (string) $status;
+        $mapa = [
+            'pendente' => 'Pendente',
+            'pago' => 'Pago',
+            'vencido' => 'Vencido',
+            'cancelado' => 'Cancelado',
+            'erro' => 'Erro'
+        ];
+
+        return $mapa[$status] ?? ucfirst($status ?: '-');
+    }
+}
+
+if(!function_exists('badgeFaturaFinanceiro')){
+    function badgeFaturaFinanceiro($status)
+    {
+        $classes = [
+            'pendente' => 'warning',
+            'pago' => 'success',
+            'vencido' => 'danger',
+            'cancelado' => 'secondary',
+            'erro' => 'danger'
+        ];
+
+        return $classes[$status] ?? 'secondary';
+    }
+}
+
+if(!function_exists('dataFinanceiro')){
+    function dataFinanceiro($data)
+    {
+        return $data ? date('d/m/Y', strtotime($data)) : '-';
+    }
+}
 ?>
 <?php
 
 $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
+$assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?? '') === 'ativa';
 
 ?>
 
@@ -40,37 +79,94 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <?php } ?>
 
-<?php if($cobranca){ ?>
 
-    <div class="alert alert-warning">
 
-        <h5>
-            <i class="fas fa-exclamation-triangle"></i>
-            Pagamento pendente
-        </h5>
-
-        <p class="mb-1">
-            Plano:
-            <strong><?= htmlspecialchars($cobranca['PLA_Nome']); ?></strong>
-        </p>
-
-        <p class="mb-1">
-            Valor:
-            <strong>
-                R$ <?= number_format($cobranca['COB_Valor'], 2, ',', '.'); ?>
-            </strong>
-        </p>
-
-        <p class="mb-0">
-            Vencimento:
-            <strong>
-                <?= date('d/m/Y', strtotime($cobranca['COB_DataVencimento'])); ?>
-            </strong>
-        </p>
-
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Minha Assinatura</h3>
     </div>
+    <div class="card-body">
+        <?php if(!empty($assinaturaAtual)){ ?>
+            <div class="row">
+                <div class="col-md-2"><small class="text-muted d-block">Plano contratado</small><strong><?= htmlspecialchars($assinaturaAtual['PLA_Nome']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Ciclo</small><strong><?= htmlspecialchars($assinaturaAtual['ASS_Ciclo']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Valor</small><strong>R$ <?= number_format($assinaturaAtual['ASS_Valor'], 2, ',', '.'); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Status</small><strong><?= ucfirst($assinaturaAtual['ASS_Status']); ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Próxima cobrança</small><strong><?= $assinaturaAtual['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataProximaCobranca'])) : '-'; ?></strong></div>
+                <div class="col-md-2"><small class="text-muted d-block">Data de início</small><strong><?= $assinaturaAtual['ASS_DataInicio'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataInicio'])) : '-'; ?></strong></div>
+            </div>
+        <?php }else{ ?>
+            <div class="alert alert-info mb-0">Você ainda não possui uma assinatura ativa.</div>
+        <?php } ?>
+    </div>
+</div>
 
-<?php } ?>
+<div class="card mb-3">
+    <div class="card-header">
+        <h3 class="card-title">Minhas Faturas</h3>
+    </div>
+    <div class="card-body p-0">
+        <?php if(!empty($faturas)){ ?>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Vencimento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Forma</th>
+                            <th>Data pagamento</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($faturas as $fatura){ ?>
+                            <?php $statusFatura = $fatura['COB_Status'] ?? ''; ?>
+                            <tr>
+                                <td><?= dataFinanceiro($fatura['COB_DataVencimento'] ?? null); ?></td>
+                                <td>R$ <?= number_format((float) ($fatura['COB_Valor'] ?? 0), 2, ',', '.'); ?></td>
+                                <td>
+                                    <span class="badge badge-<?= badgeFaturaFinanceiro($statusFatura); ?>">
+                                        <?= htmlspecialchars(statusFaturaFinanceiro($statusFatura)); ?>
+                                    </span>
+                                </td>
+                                <td><?= htmlspecialchars($fatura['COB_Forma'] ?? '-'); ?></td>
+                                <td><?= dataFinanceiro($fatura['COB_DataPagamento'] ?? null); ?></td>
+                                <td>
+                                    <?php if($statusFatura === 'pendente' && !empty($fatura['COB_LinkPagamento'])){ ?>
+                                        <a
+                                        href="<?= htmlspecialchars($fatura['COB_LinkPagamento']); ?>"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="btn btn-sm btn-success"
+                                        >
+                                            Pagar agora
+                                        </a>
+                                    <?php }else{ ?>
+                                        <span class="text-muted">-</span>
+                                    <?php } ?>
+                                </td>
+                            </tr>
+                            <?php if(($fatura['COB_ProviderStatus'] ?? '') === 'erro_cliente'){ ?>
+                                <tr>
+                                    <td colspan="6">
+                                        <div class="alert alert-danger mb-0">
+                                            Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php } ?>
+                        <?php } ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php }else{ ?>
+            <div class="p-3">
+                <div class="alert alert-info mb-0">Nenhuma fatura encontrada.</div>
+            </div>
+        <?php } ?>
+    </div>
+</div>
 
 <?php if(
     !empty($excedente)
@@ -126,32 +222,20 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 <?php } ?>
 
 
-<div class="card mb-3">
-    <div class="card-header">
-        <h3 class="card-title">Minha Assinatura</h3>
+<?php if($assinaturaAtiva){ ?>
+    <div class="mb-3">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnMostrarPlanosFinanceiro">
+            Ver planos / Alterar plano
+        </button>
     </div>
-    <div class="card-body">
-        <?php if(!empty($assinaturaAtual)){ ?>
-            <div class="row">
-                <div class="col-md-2"><small class="text-muted d-block">Plano contratado</small><strong><?= htmlspecialchars($assinaturaAtual['PLA_Nome']); ?></strong></div>
-                <div class="col-md-2"><small class="text-muted d-block">Ciclo</small><strong><?= htmlspecialchars($assinaturaAtual['ASS_Ciclo']); ?></strong></div>
-                <div class="col-md-2"><small class="text-muted d-block">Valor</small><strong>R$ <?= number_format($assinaturaAtual['ASS_Valor'], 2, ',', '.'); ?></strong></div>
-                <div class="col-md-2"><small class="text-muted d-block">Status</small><strong><?= ucfirst($assinaturaAtual['ASS_Status']); ?></strong></div>
-                <div class="col-md-2"><small class="text-muted d-block">Próxima cobrança</small><strong><?= $assinaturaAtual['ASS_DataProximaCobranca'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataProximaCobranca'])) : '-'; ?></strong></div>
-                <div class="col-md-2"><small class="text-muted d-block">Data de início</small><strong><?= $assinaturaAtual['ASS_DataInicio'] ? date('d/m/Y', strtotime($assinaturaAtual['ASS_DataInicio'])) : '-'; ?></strong></div>
-            </div>
-        <?php }else{ ?>
-            <div class="alert alert-info mb-0">Você ainda não possui uma assinatura ativa.</div>
-        <?php } ?>
-    </div>
-</div>
+<?php } ?>
 
-<div class="card">
+<div class="card" id="cardPlanosFinanceiro" <?= $assinaturaAtiva ? 'style="display:none;"' : ''; ?>>
 
     <div class="card-header">
 
         <h3 class="card-title">
-            Escolha seu plano
+            Planos disponíveis
         </h3>
 
     </div>
@@ -247,6 +331,7 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
                             <form
                             method="post"
                             action="<?= BASE_URL; ?>/index.php?url=financeiro/escolherPlano"
+                            class="form-escolher-plano"
                             >
 
                                 <input
@@ -298,6 +383,35 @@ $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    const btnMostrarPlanos = document.getElementById('btnMostrarPlanosFinanceiro');
+    const cardPlanos = document.getElementById('cardPlanosFinanceiro');
+
+    if(btnMostrarPlanos && cardPlanos){
+        btnMostrarPlanos.addEventListener('click', function(){
+            cardPlanos.style.display = '';
+            btnMostrarPlanos.style.display = 'none';
+        });
+    }
+
+    document.querySelectorAll('.form-escolher-plano').forEach(function(form){
+        form.addEventListener('submit', function(event){
+            if(form.dataset.enviando === 'S'){
+                event.preventDefault();
+                return false;
+            }
+
+            form.dataset.enviando = 'S';
+
+            const botao = form.querySelector('button[type="submit"]');
+
+            if(botao){
+                botao.disabled = true;
+                botao.dataset.textoOriginal = botao.textContent;
+                botao.textContent = 'Processando...';
+            }
+        });
+    });
+
     document.querySelectorAll('.select-ciclo-plano').forEach(function(select){
         select.addEventListener('change', function(){
             const card = select.closest('.card-body');
