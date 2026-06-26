@@ -59,6 +59,44 @@ href="#"
 
 <ul class="navbar-nav ml-auto">
 
+<?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){ ?>
+
+<li class="nav-item d-none d-sm-flex align-items-center text-muted px-2">
+<?= htmlspecialchars($usuario['nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+</li>
+
+<li class="nav-item d-none d-sm-flex align-items-center text-muted">|</li>
+
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="dropdownMinhaConta" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Minha Conta
+    </a>
+    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMinhaConta">
+        <span class="dropdown-item-text d-sm-none text-muted">
+            <?= htmlspecialchars($usuario['nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+        </span>
+        <div class="dropdown-divider d-sm-none"></div>
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta">
+            <i class="fas fa-user mr-2"></i> Meus Dados
+        </a>
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta#seguranca">
+            <i class="fas fa-lock mr-2"></i> Alterar Senha
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=financeiro">
+            <i class="fas fa-dollar-sign mr-2"></i> Financeiro
+        </a>
+        <div class="dropdown-divider"></div>
+        <form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
+            <button type="submit" class="dropdown-item">
+                <i class="fas fa-sign-out-alt mr-2"></i> Sair
+            </button>
+        </form>
+    </div>
+</li>
+
+<?php }else{ ?>
+
 <li class="nav-item">
 
 <form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
@@ -70,6 +108,8 @@ Sair
 </form>
 
 </li>
+
+<?php } ?>
 
 </ul>
 
@@ -203,25 +243,6 @@ $podeGerenciarConta = in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_a
 $usuario = Auth::usuario();
 
 ?>
-
-<?php if($podeGerenciarConta){ ?>
-<li class="nav-item">
-
-    <a
-    href="<?= BASE_URL; ?>/index.php?url=financeiro"
-    class="nav-link <?= str_contains($url, 'financeiro') ? 'active' : ''; ?>"
-    >
-
-        <i class="nav-icon fas fa-dollar-sign"></i>
-
-        <p>
-            Financeiro
-        </p>
-
-    </a>
-
-</li>
-<?php } ?>
 
 <?php if($podeGerenciarConta){ ?>
 <li class="nav-item">
