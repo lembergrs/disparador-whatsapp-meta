@@ -235,6 +235,14 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
     position: relative;
 }
 
+.planos-header-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    margin-left: auto;
+}
+
 .planos-carousel {
     display: flex;
     flex-wrap: nowrap;
@@ -253,25 +261,13 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
 }
 
 .planos-carousel-controle {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 2;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     opacity: 0.92;
-}
-
-.planos-carousel-controle-esquerda {
-    left: -0.5rem;
-}
-
-.planos-carousel-controle-direita {
-    right: -0.5rem;
 }
 
 .planos-carousel-controle:disabled {
@@ -291,8 +287,8 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
         min-width: 100%;
     }
 
-    .planos-carousel-controle {
-        display: none;
+    .planos-header-acoes {
+        gap: 0.1rem;
     }
 }
 </style>
@@ -305,22 +301,28 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
             Planos disponíveis
         </h3>
 
-        <?php if($assinaturaAtiva){ ?>
-            <button type="button" class="btn btn-tool text-muted" id="btnFecharPlanosFinanceiro" aria-label="Fechar planos">
-                <i class="fas fa-times"></i>
-                <span class="d-none d-sm-inline ml-1">Fechar</span>
+        <div class="planos-header-acoes">
+            <button type="button" class="btn btn-light btn-sm shadow-sm planos-carousel-controle" id="btnPlanosAnterior" aria-label="Plano anterior">
+                <i class="fas fa-chevron-left"></i>
             </button>
-        <?php } ?>
+
+            <button type="button" class="btn btn-light btn-sm shadow-sm planos-carousel-controle" id="btnPlanosProximo" aria-label="Próximo plano">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+
+            <?php if($assinaturaAtiva){ ?>
+                <button type="button" class="btn btn-tool text-muted ml-2" id="btnFecharPlanosFinanceiro" aria-label="Fechar planos">
+                    <i class="fas fa-times"></i>
+                    <span class="d-none d-sm-inline ml-1">Fechar</span>
+                </button>
+            <?php } ?>
+        </div>
 
     </div>
 
     <div class="card-body">
 
         <div class="planos-carousel-wrapper">
-            <button type="button" class="btn btn-light shadow-sm planos-carousel-controle planos-carousel-controle-esquerda" id="btnPlanosAnterior" aria-label="Plano anterior">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-
             <div class="planos-carousel" id="planosCarouselFinanceiro">
 
             <?php foreach($planos as $plano){ ?>
@@ -455,10 +457,6 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
             <?php } ?>
 
             </div>
-
-            <button type="button" class="btn btn-light shadow-sm planos-carousel-controle planos-carousel-controle-direita" id="btnPlanosProximo" aria-label="Próximo plano">
-                <i class="fas fa-chevron-right"></i>
-            </button>
         </div>
 
     </div>
@@ -504,18 +502,35 @@ document.addEventListener('DOMContentLoaded', function(){
 
     if(btnMostrarPlanos && cardPlanos){
         btnMostrarPlanos.addEventListener('click', function(){
-            cardPlanos.style.display = '';
             btnMostrarPlanos.style.display = 'none';
-            atualizarControlesPlanos();
+
+            if(window.jQuery){
+                window.jQuery(cardPlanos)
+                    .stop(true, true)
+                    .slideDown(250, atualizarControlesPlanos);
+            }else{
+                cardPlanos.style.display = '';
+                atualizarControlesPlanos();
+            }
         });
     }
 
     if(btnFecharPlanos && cardPlanos){
         btnFecharPlanos.addEventListener('click', function(){
-            cardPlanos.style.display = 'none';
+            if(window.jQuery){
+                window.jQuery(cardPlanos)
+                    .stop(true, true)
+                    .slideUp(250, function(){
+                        if(btnMostrarPlanos){
+                            btnMostrarPlanos.style.display = '';
+                        }
+                    });
+            }else{
+                cardPlanos.style.display = 'none';
 
-            if(btnMostrarPlanos){
-                btnMostrarPlanos.style.display = '';
+                if(btnMostrarPlanos){
+                    btnMostrarPlanos.style.display = '';
+                }
             }
         });
     }
