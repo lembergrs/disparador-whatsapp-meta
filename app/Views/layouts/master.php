@@ -29,6 +29,49 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+
+<style>
+.main-sidebar .brand-link.logo-disparador-brand {
+    align-items: center;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    min-height: 76px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+}
+
+.main-sidebar .brand-link.logo-disparador-brand .brand-text {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.logo-disparador-full {
+    display: block;
+    height: auto;
+    max-height: 52px;
+    max-width: 210px;
+    object-fit: contain;
+}
+
+.logo-disparador-mini {
+    display: none;
+    height: 36px;
+    object-fit: contain;
+    width: 36px;
+}
+
+body.sidebar-collapse .logo-disparador-full {
+    display: none;
+}
+
+body.sidebar-collapse .logo-disparador-mini {
+    display: block;
+}
+</style>
+
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -115,14 +158,18 @@ Sair
 
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
 
-<a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link">
+<a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link logo-disparador-brand">
 
 <span class="brand-text font-weight-light">
 <img
     src="<?= ASSET_URL; ?>/img/logo-disparador.png"
-    alt="Logo"
-    onerror="this.onerror=null; this.style.display='none'; if (this.nextElementSibling) { this.nextElementSibling.style.display='flex'; }"
-    width="230"
+    alt="Disparador"
+    class="logo-disparador-full"
+    >
+<img
+    src="<?= ASSET_URL; ?>/img/favicon.png"
+    alt="Disparador"
+    class="logo-disparador-mini"
     >
 </span>
 
