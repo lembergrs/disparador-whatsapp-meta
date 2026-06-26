@@ -7,11 +7,10 @@ use Core\Controller;
 use Core\Session;
 use Models\Cliente;
 use Models\Usuario;
+use Services\SenhaForteValidator;
 
 class ContaController extends Controller
 {
-    private const SENHA_MINIMA = 6;
-
     public function index()
     {
         Auth::cliente();
@@ -91,8 +90,8 @@ class ContaController extends Controller
             $this->redirect('conta#seguranca');
         }
 
-        if(strlen($novaSenha) < self::SENHA_MINIMA){
-            Session::flash('error', 'A nova senha deve ter pelo menos ' . self::SENHA_MINIMA . ' caracteres.');
+        if(!SenhaForteValidator::forte($novaSenha)){
+            Session::flash('error', SenhaForteValidator::mensagem());
             $this->redirect('conta#seguranca');
         }
 

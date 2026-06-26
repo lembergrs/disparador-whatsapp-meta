@@ -9,11 +9,10 @@ use PDO;
 use PDOException;
 use Models\Plano;
 use Services\DocumentoFiscalValidator;
+use Services\SenhaForteValidator;
 
 class SiteController extends Controller
 {
-    private const SENHA_MINIMA = 6;
-
     public function index()
     {
         $planoModel = new Plano();
@@ -87,10 +86,10 @@ class SiteController extends Controller
             );
         }
 
-        if (strlen($senha) < self::SENHA_MINIMA) {
+        if (!SenhaForteValidator::forte($senha)) {
             $this->voltarCadastroComDados(
                 $dadosCadastro,
-                'A senha deve ter pelo menos ' . self::SENHA_MINIMA . ' caracteres.'
+                SenhaForteValidator::mensagem()
             );
         }
 

@@ -171,12 +171,12 @@ $mensagemSuporte = 'Para alterar estas informações entre em contato com o supo
 
                     <div class="form-group">
                         <label>Nova senha</label>
-                        <input type="password" name="nova_senha" class="form-control" minlength="6" autocomplete="new-password" required>
+                        <input type="password" name="nova_senha" id="novaSenhaConta" class="form-control" minlength="8" data-password-strength autocomplete="new-password" required>
                     </div>
 
                     <div class="form-group">
                         <label>Confirmar senha</label>
-                        <input type="password" name="confirmar_senha" class="form-control" minlength="6" autocomplete="new-password" required>
+                        <input type="password" name="confirmar_senha" class="form-control" minlength="8" data-password-confirm="#novaSenhaConta" autocomplete="new-password" required>
                     </div>
                 </div>
 

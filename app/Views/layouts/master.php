@@ -55,27 +55,25 @@ href="#"
 
 </li>
 
+<li class="nav-item d-none d-sm-inline-block">
+    <a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="nav-link font-weight-bold">Disparador</a>
+</li>
+
 </ul>
 
 <ul class="navbar-nav ml-auto">
 
 <?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){ ?>
 
-<li class="nav-item d-none d-sm-flex align-items-center text-muted px-2">
-<?= htmlspecialchars($usuario['nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
-</li>
-
-<li class="nav-item d-none d-sm-flex align-items-center text-muted">|</li>
-
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="dropdownMinhaConta" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
         Minha Conta
     </a>
     <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMinhaConta">
-        <span class="dropdown-item-text d-sm-none text-muted">
+        <span class="dropdown-item-text text-muted font-weight-bold">
             <?= htmlspecialchars($usuario['nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
         </span>
-        <div class="dropdown-divider d-sm-none"></div>
+        <div class="dropdown-divider"></div>
         <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta">
             <i class="fas fa-user mr-2"></i> Meus Dados
         </a>
@@ -133,20 +131,6 @@ Sair
 </a>
 
 <div class="sidebar">
-
-<div class="user-panel mt-3 pb-3 mb-3 d-flex">
-
-<div class="info">
-
-<a href="#" class="d-block">
-
-<?= $usuario['nome']; ?>
-
-</a>
-
-</div>
-
-</div>
 
 <nav class="mt-2">
 
@@ -492,6 +476,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
+
+<script src="<?= ASSET_URL; ?>/js/password-strength.js"></script>
 
 <script src="<?= ASSET_URL; ?>/js/app.js"></script>
 
