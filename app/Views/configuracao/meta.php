@@ -513,18 +513,16 @@ aria-hidden="true"
         e.preventDefault();
         limparFeedbackEmbeddedSignup();
 
-        const redirectUri = window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '';
         const extras = {
-            version: 'v4',
             sessionInfoVersion: '3',
-            featureType: 'whatsapp_business_app_onboarding'
+            version: 'v4'
         };
         const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
 
-        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID || !redirectUri){
+        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID){
             exibirFeedbackEmbeddedSignup(
                 'danger',
-                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID, META_CONFIGURATION_ID e META_EMBEDDED_SIGNUP_REDIRECT_URI no .env.'
+                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID e META_CONFIGURATION_ID no .env.'
             );
             return;
         }
@@ -532,7 +530,6 @@ aria-hidden="true"
         url.searchParams.set('app_id', window.META_APP_ID || '');
         url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
         url.searchParams.set('extras', JSON.stringify(extras));
-        url.searchParams.set('redirect_uri', redirectUri);
 
         ultimaUrlEmbeddedSignupMeta = url.toString();
 
