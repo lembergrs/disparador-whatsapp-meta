@@ -8,6 +8,8 @@ use Core\Database;
 use Models\Cliente;
 use Core\Session;
 use PDOException;
+use Services\DocumentoFiscalValidator;
+use Services\SenhaForteValidator;
 
 class ClienteController extends Controller
 {
@@ -60,6 +62,27 @@ class ClienteController extends Controller
     public function salvar()
     {
         $this->validarCsrfPost();
+
+        if(!DocumentoFiscalValidator::valido($_POST['cpf_cnpj'] ?? '')){
+            Session::flash(
+                'error',
+                'Informe um CPF ou CNPJ válido.'
+            );
+
+            $this->redirect('cliente');
+        }
+
+        $senhaInformada = (string) ($_POST['senha'] ?? '');
+        $criandoCliente = empty($_POST['id']);
+
+        if(($criandoCliente || $senhaInformada !== '') && !SenhaForteValidator::forte($senhaInformada)){
+            Session::flash(
+                'error',
+                SenhaForteValidator::mensagem()
+            );
+
+            $this->redirect('cliente');
+        }
 
         try{
 

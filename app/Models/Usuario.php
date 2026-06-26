@@ -14,6 +14,38 @@ class Usuario
         $this->db = Database::getInstance();
     }
 
+    public function buscar($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM usuarios
+            WHERE USU_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([$id]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function alterarSenhaAutenticado($id, $clienteId, $senha)
+    {
+        $sql = $this->db->prepare("
+            UPDATE usuarios
+            SET USU_Senha = ?
+            WHERE USU_ID = ?
+            AND CLI_ID = ?
+            AND USU_Nivel IN ('cliente', 'cliente_admin', 'cliente_usuario')
+        ");
+
+        return $sql->execute([
+            password_hash($senha, PASSWORD_DEFAULT),
+            $id,
+            $clienteId
+        ]);
+    }
+
+
     public function listarPorCliente($clienteId)
     {
         $sql = $this->db->prepare("

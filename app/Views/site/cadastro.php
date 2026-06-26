@@ -298,9 +298,11 @@ Session::remove('cadastro_dados');
                                     <input
                                     type="password"
                                     name="senha"
+                                    id="senhaCadastroPublico"
                                     class="form-control"
+                                    data-password-strength
                                     autocomplete="new-password"
-                                    minlength="6"
+                                    minlength="8"
                                     required
                                     >
 
@@ -308,7 +310,7 @@ Session::remove('cadastro_dados');
                                     id="erroSenhaCadastro"
                                     class="invalid-feedback"
                                     >
-                                        A senha deve ter pelo menos 6 caracteres.
+                                        A senha deve atender aos requisitos de segurança.
                                     </div>
 
                                 </div>
@@ -325,6 +327,7 @@ Session::remove('cadastro_dados');
                                     type="password"
                                     name="confirmar_senha"
                                     class="form-control"
+                                    data-password-confirm="#senhaCadastroPublico"
                                     autocomplete="new-password"
                                     required
                                     >
@@ -533,7 +536,7 @@ $(function(){
         }
     }
 
-    const tamanhoMinimoSenha = 6;
+    const tamanhoMinimoSenha = 8;
 
     function apenasNumeros(valor)
     {
@@ -643,10 +646,19 @@ $(function(){
         return marcarCampo(campo, valido);
     }
 
+    function senhaForteCadastro(senha)
+    {
+        return senha.length >= tamanhoMinimoSenha
+            && /[A-Z]/.test(senha)
+            && /[a-z]/.test(senha)
+            && /\d/.test(senha)
+            && /[^A-Za-z0-9]/.test(senha);
+    }
+
     function validarSenhaCadastro()
     {
         let campo = $('[name="senha"]');
-        let valido = campo.val().length >= tamanhoMinimoSenha;
+        let valido = senhaForteCadastro(campo.val());
 
         marcarCampo(campo, valido);
         validarConfirmacaoSenhaCadastro();
@@ -705,6 +717,7 @@ $(function(){
 });
 
 </script>
+<script src="<?= ASSET_URL; ?>/js/password-strength.js"></script>
 
 </body>
 </html>
