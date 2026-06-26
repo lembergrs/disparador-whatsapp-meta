@@ -41,6 +41,41 @@ class Cobranca
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
+
+    public function contarPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT COUNT(*)
+            FROM cobrancas
+            WHERE CLI_ID = ?
+        ");
+
+        $sql->execute([$clienteId]);
+
+        return (int) $sql->fetchColumn();
+    }
+
+    public function listarPorClientePaginado($clienteId, $limit, $offset)
+    {
+        $limit = max(1, min(50, (int) $limit));
+        $offset = max(0, (int) $offset);
+
+        $sql = $this->db->prepare("
+            SELECT c.*, p.PLA_Nome
+            FROM cobrancas c
+            LEFT JOIN planos p ON p.PLA_ID = c.PLA_ID
+            WHERE c.CLI_ID = :cliente
+            ORDER BY c.COB_ID DESC
+            LIMIT {$limit} OFFSET {$offset}
+        ");
+
+        $sql->bindValue(':cliente', $clienteId, PDO::PARAM_INT);
+        $sql->execute();
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function criar($dados)
     {
         $campos = [

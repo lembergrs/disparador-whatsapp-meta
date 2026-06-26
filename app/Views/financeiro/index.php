@@ -101,70 +101,50 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-header">
-        <h3 class="card-title">Minhas Faturas</h3>
+<div class="card mb-3" id="cardMinhasFaturas">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <h3 class="card-title mb-0">Minhas Faturas</h3>
+
+        <div class="d-flex align-items-center">
+            <label for="faturasPerPage" class="mb-0 mr-2 text-muted small">Exibir:</label>
+            <select id="faturasPerPage" class="form-control form-control-sm" style="width:auto;">
+                <?php foreach([5, 10, 20, 50] as $opcaoPerPage){ ?>
+                    <option value="<?= $opcaoPerPage; ?>" <?= ((int) ($faturasPerPageDefault ?? 5)) === $opcaoPerPage ? 'selected' : ''; ?>>
+                        <?= $opcaoPerPage; ?>
+                    </option>
+                <?php } ?>
+            </select>
+        </div>
     </div>
+
     <div class="card-body p-0">
-        <?php if(!empty($faturas)){ ?>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Vencimento</th>
-                            <th>Valor</th>
-                            <th>Status</th>
-                            <th>Forma</th>
-                            <th>Data pagamento</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach($faturas as $fatura){ ?>
-                            <?php $statusFatura = $fatura['COB_Status'] ?? ''; ?>
-                            <tr>
-                                <td><?= dataFinanceiro($fatura['COB_DataVencimento'] ?? null); ?></td>
-                                <td>R$ <?= number_format((float) ($fatura['COB_Valor'] ?? 0), 2, ',', '.'); ?></td>
-                                <td>
-                                    <span class="badge badge-<?= badgeFaturaFinanceiro($statusFatura); ?>">
-                                        <?= htmlspecialchars(statusFaturaFinanceiro($statusFatura)); ?>
-                                    </span>
-                                </td>
-                                <td><?= htmlspecialchars($fatura['COB_Forma'] ?? '-'); ?></td>
-                                <td><?= dataFinanceiro($fatura['COB_DataPagamento'] ?? null); ?></td>
-                                <td>
-                                    <?php if($statusFatura === 'pendente' && !empty($fatura['COB_LinkPagamento'])){ ?>
-                                        <a
-                                        href="<?= htmlspecialchars($fatura['COB_LinkPagamento']); ?>"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="btn btn-sm btn-success"
-                                        >
-                                            Pagar agora
-                                        </a>
-                                    <?php }else{ ?>
-                                        <span class="text-muted">-</span>
-                                    <?php } ?>
-                                </td>
-                            </tr>
-                            <?php if(($fatura['COB_ProviderStatus'] ?? '') === 'erro_cliente'){ ?>
-                                <tr>
-                                    <td colspan="6">
-                                        <div class="alert alert-danger mb-0">
-                                            Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php } ?>
-                        <?php } ?>
-                    </tbody>
-                </table>
-            </div>
-        <?php }else{ ?>
-            <div class="p-3">
-                <div class="alert alert-info mb-0">Nenhuma fatura encontrada.</div>
-            </div>
-        <?php } ?>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Vencimento</th>
+                        <th>Valor</th>
+                        <th>Status</th>
+                        <th>Forma</th>
+                        <th>Data pagamento</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="faturasTabelaCorpo">
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">Carregando faturas...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card-footer d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+        <span id="faturasContador" class="text-muted small mb-2 mb-md-0">Carregando faturas...</span>
+
+        <nav aria-label="Paginação de faturas">
+            <ul class="pagination pagination-sm mb-0" id="faturasPaginacao"></ul>
+        </nav>
     </div>
 </div>
 
@@ -471,6 +451,81 @@ document.addEventListener('DOMContentLoaded', function(){
     const planosCarousel = document.getElementById('planosCarouselFinanceiro');
     const btnPlanosAnterior = document.getElementById('btnPlanosAnterior');
     const btnPlanosProximo = document.getElementById('btnPlanosProximo');
+    const faturasTabelaCorpo = document.getElementById('faturasTabelaCorpo');
+    const faturasPaginacao = document.getElementById('faturasPaginacao');
+    const faturasContador = document.getElementById('faturasContador');
+    const faturasPerPage = document.getElementById('faturasPerPage');
+    let faturasRequest = null;
+
+    function carregarFaturas(pagina){
+        if(!faturasTabelaCorpo || !faturasPaginacao || !faturasContador || !faturasPerPage || !window.jQuery){
+            return;
+        }
+
+        const perPage = parseInt(faturasPerPage.value, 10) || 5;
+
+        if(faturasRequest){
+            faturasRequest.abort();
+        }
+
+        faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Carregando faturas...</td></tr>';
+        faturasContador.textContent = 'Carregando faturas...';
+
+        faturasRequest = window.jQuery.ajax({
+            url: '<?= BASE_URL; ?>/index.php?url=financeiro/faturasAjax',
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                page: pagina || 1,
+                per_page: perPage
+            }
+        })
+        .done(function(resposta){
+            if(!resposta || !resposta.sucesso){
+                faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
+                faturasPaginacao.innerHTML = '';
+                faturasContador.textContent = 'Erro ao carregar faturas';
+                return;
+            }
+
+            faturasTabelaCorpo.innerHTML = resposta.html || '';
+            faturasPaginacao.innerHTML = resposta.paginacao_html || '';
+            faturasContador.textContent = resposta.contador_html || '';
+        })
+        .fail(function(xhr, status){
+            if(status === 'abort'){
+                return;
+            }
+
+            faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
+            faturasPaginacao.innerHTML = '';
+            faturasContador.textContent = 'Erro ao carregar faturas';
+        })
+        .always(function(){
+            faturasRequest = null;
+        });
+    }
+
+    if(faturasPerPage){
+        faturasPerPage.addEventListener('change', function(){
+            carregarFaturas(1);
+        });
+    }
+
+    if(faturasPaginacao){
+        faturasPaginacao.addEventListener('click', function(event){
+            const link = event.target.closest('.pagina-faturas');
+
+            if(!link){
+                return;
+            }
+
+            event.preventDefault();
+            carregarFaturas(parseInt(link.dataset.page, 10) || 1);
+        });
+    }
+
+    carregarFaturas(1);
 
     function atualizarControlesPlanos(){
         if(!planosCarousel || !btnPlanosAnterior || !btnPlanosProximo){
