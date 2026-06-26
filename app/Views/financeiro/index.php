@@ -230,19 +230,98 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
     </div>
 <?php } ?>
 
+<style>
+.planos-carousel-wrapper {
+    position: relative;
+}
+
+.planos-carousel {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.5rem;
+    scrollbar-width: thin;
+}
+
+.planos-carousel-item {
+    flex: 0 0 calc((100% - 2rem) / 3);
+    min-width: 280px;
+    scroll-snap-align: start;
+}
+
+.planos-carousel-controle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.92;
+}
+
+.planos-carousel-controle-esquerda {
+    left: -0.5rem;
+}
+
+.planos-carousel-controle-direita {
+    right: -0.5rem;
+}
+
+.planos-carousel-controle:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+@media (max-width: 991.98px) {
+    .planos-carousel-item {
+        flex-basis: calc((100% - 1rem) / 2);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .planos-carousel-item {
+        flex-basis: 100%;
+        min-width: 100%;
+    }
+
+    .planos-carousel-controle {
+        display: none;
+    }
+}
+</style>
+
 <div class="card" id="cardPlanosFinanceiro" <?= $assinaturaAtiva ? 'style="display:none;"' : ''; ?>>
 
-    <div class="card-header">
+    <div class="card-header d-flex align-items-center justify-content-between">
 
-        <h3 class="card-title">
+        <h3 class="card-title mb-0">
             Planos disponíveis
         </h3>
+
+        <?php if($assinaturaAtiva){ ?>
+            <button type="button" class="btn btn-tool text-muted" id="btnFecharPlanosFinanceiro" aria-label="Fechar planos">
+                <i class="fas fa-times"></i>
+                <span class="d-none d-sm-inline ml-1">Fechar</span>
+            </button>
+        <?php } ?>
 
     </div>
 
     <div class="card-body">
 
-        <div class="row">
+        <div class="planos-carousel-wrapper">
+            <button type="button" class="btn btn-light shadow-sm planos-carousel-controle planos-carousel-controle-esquerda" id="btnPlanosAnterior" aria-label="Plano anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <div class="planos-carousel" id="planosCarouselFinanceiro">
 
             <?php foreach($planos as $plano){ ?>
 
@@ -264,7 +343,7 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                 $valorAnualPlano = valorPlanoCicloFinanceiro($plano, 'anual');
                 ?>
 
-                <div class="col-md-4 mb-4">
+                <div class="planos-carousel-item mb-3">
 
                     <div class="card h-100">
 
@@ -375,6 +454,11 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
 
             <?php } ?>
 
+            </div>
+
+            <button type="button" class="btn btn-light shadow-sm planos-carousel-controle planos-carousel-controle-direita" id="btnPlanosProximo" aria-label="Próximo plano">
+                <i class="fas fa-chevron-right"></i>
+            </button>
         </div>
 
     </div>
@@ -384,14 +468,78 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const btnMostrarPlanos = document.getElementById('btnMostrarPlanosFinanceiro');
+    const btnFecharPlanos = document.getElementById('btnFecharPlanosFinanceiro');
     const cardPlanos = document.getElementById('cardPlanosFinanceiro');
+    const planosCarousel = document.getElementById('planosCarouselFinanceiro');
+    const btnPlanosAnterior = document.getElementById('btnPlanosAnterior');
+    const btnPlanosProximo = document.getElementById('btnPlanosProximo');
+
+    function atualizarControlesPlanos(){
+        if(!planosCarousel || !btnPlanosAnterior || !btnPlanosProximo){
+            return;
+        }
+
+        const maxScroll = planosCarousel.scrollWidth - planosCarousel.clientWidth;
+        const deveExibirControles = maxScroll > 2;
+
+        btnPlanosAnterior.style.display = deveExibirControles ? 'flex' : 'none';
+        btnPlanosProximo.style.display = deveExibirControles ? 'flex' : 'none';
+        btnPlanosAnterior.disabled = planosCarousel.scrollLeft <= 2;
+        btnPlanosProximo.disabled = planosCarousel.scrollLeft >= (maxScroll - 2);
+    }
+
+    function rolarPlanos(direcao){
+        if(!planosCarousel){
+            return;
+        }
+
+        const item = planosCarousel.querySelector('.planos-carousel-item');
+        const deslocamento = item ? item.getBoundingClientRect().width + 16 : planosCarousel.clientWidth;
+
+        planosCarousel.scrollBy({
+            left: direcao * deslocamento,
+            behavior: 'smooth'
+        });
+    }
 
     if(btnMostrarPlanos && cardPlanos){
         btnMostrarPlanos.addEventListener('click', function(){
             cardPlanos.style.display = '';
             btnMostrarPlanos.style.display = 'none';
+            atualizarControlesPlanos();
         });
     }
+
+    if(btnFecharPlanos && cardPlanos){
+        btnFecharPlanos.addEventListener('click', function(){
+            cardPlanos.style.display = 'none';
+
+            if(btnMostrarPlanos){
+                btnMostrarPlanos.style.display = '';
+            }
+        });
+    }
+
+    if(btnPlanosAnterior){
+        btnPlanosAnterior.addEventListener('click', function(){
+            rolarPlanos(-1);
+        });
+    }
+
+    if(btnPlanosProximo){
+        btnPlanosProximo.addEventListener('click', function(){
+            rolarPlanos(1);
+        });
+    }
+
+    if(planosCarousel){
+        planosCarousel.addEventListener('scroll', function(){
+            window.requestAnimationFrame(atualizarControlesPlanos);
+        });
+    }
+
+    window.addEventListener('resize', atualizarControlesPlanos);
+    atualizarControlesPlanos();
 
     document.querySelectorAll('.form-escolher-plano').forEach(function(form){
         form.addEventListener('submit', function(event){
