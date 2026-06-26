@@ -344,4 +344,71 @@ class Cliente
         );
     }
 
+
+
+
+    public function atualizarProviderPagamento($id, $provider, $providerCustomerId)
+    {
+        $sets = [];
+        $params = [':id' => $id];
+
+        if($this->colunaExiste('clientes', 'CLI_ProviderPagamento')){
+            $sets[] = 'CLI_ProviderPagamento = :provider';
+            $params[':provider'] = $provider;
+        }
+
+        if($this->colunaExiste('clientes', 'CLI_ProviderCustomerId')){
+            $sets[] = 'CLI_ProviderCustomerId = :customer_id';
+            $params[':customer_id'] = $providerCustomerId;
+        }
+
+        if($this->colunaExiste('clientes', 'CLI_DataSincronizacaoProvider')){
+            $sets[] = 'CLI_DataSincronizacaoProvider = NOW()';
+        }
+
+        if(empty($sets)){
+            return false;
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE clientes
+            SET " . implode(', ', $sets) . "
+            WHERE CLI_ID = :id
+        ");
+
+        return $sql->execute($params);
+    }
+
+    public function marcarPagamentoProviderConfirmado($id)
+    {
+        $sql = $this->db->prepare("
+            UPDATE clientes
+            SET CLI_StatusPagamento = 'pago'
+            WHERE CLI_ID = ?
+        ");
+
+        return $sql->execute([$id]);
+    }
+
+    private function colunaExiste($tabela, $coluna)
+    {
+        static $cache = [];
+
+        $chave = $tabela . '.' . $coluna;
+
+        if(array_key_exists($chave, $cache)){
+            return $cache[$chave];
+        }
+
+        $sql = $this->db->prepare("
+            SHOW COLUMNS FROM {$tabela} LIKE ?
+        ");
+
+        $sql->execute([$coluna]);
+
+        $cache[$chave] = (bool) $sql->fetch(PDO::FETCH_ASSOC);
+
+        return $cache[$chave];
+    }
+
 }

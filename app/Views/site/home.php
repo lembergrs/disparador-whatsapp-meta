@@ -39,6 +39,59 @@
     rel="stylesheet"
     href="<?= ASSET_URL; ?>/css/style.css?v=10"
     >
+
+    <style>
+    .site-planos-header-acoes {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .site-planos-carousel {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 1.5rem;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scroll-snap-type: x mandatory;
+        padding: 0.25rem 0 1rem;
+        scrollbar-width: thin;
+    }
+
+    .site-plano-carousel-item {
+        flex: 0 0 calc((100% - 3rem) / 3);
+        min-width: 280px;
+        scroll-snap-align: start;
+    }
+
+    .site-planos-carousel-controle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .site-planos-carousel-controle:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 991.98px) {
+        .site-plano-carousel-item {
+            flex-basis: calc((100% - 1.5rem) / 2);
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .site-plano-carousel-item {
+            flex-basis: 100%;
+            min-width: 100%;
+        }
+    }
+    </style>
 </head>
 
 <body>
@@ -590,7 +643,17 @@
 
         <?php if(!empty($planos)){ ?>
 
-            <div class="row">
+            <div class="site-planos-header-acoes" aria-label="Navegação dos planos">
+                <button type="button" class="btn btn-outline-success site-planos-carousel-controle" id="sitePlanosAnterior" aria-label="Plano anterior">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <button type="button" class="btn btn-outline-success site-planos-carousel-controle" id="sitePlanosProximo" aria-label="Próximo plano">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <div class="site-planos-carousel mt-4" id="sitePlanosCarousel">
 
                 <?php foreach($planos as $plano){ ?>
 
@@ -602,7 +665,7 @@
                     $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
                     ?>
 
-                    <div class="col-md-4 mb-4">
+                    <div class="site-plano-carousel-item">
 
                         <div class="card border-<?= $corPlano; ?> h-100">
 
@@ -895,6 +958,81 @@
 <script>
 
 document.addEventListener('DOMContentLoaded', function(){
+
+    const sitePlanosCarousel =
+        document.getElementById('sitePlanosCarousel');
+
+    const sitePlanosAnterior =
+        document.getElementById('sitePlanosAnterior');
+
+    const sitePlanosProximo =
+        document.getElementById('sitePlanosProximo');
+
+    function atualizarControlesPlanosSite()
+    {
+        if(!sitePlanosCarousel || !sitePlanosAnterior || !sitePlanosProximo){
+            return;
+        }
+
+        const maxScroll =
+            sitePlanosCarousel.scrollWidth - sitePlanosCarousel.clientWidth;
+
+        const deveExibirControles =
+            maxScroll > 2;
+
+        sitePlanosAnterior.style.display =
+            deveExibirControles ? 'inline-flex' : 'none';
+
+        sitePlanosProximo.style.display =
+            deveExibirControles ? 'inline-flex' : 'none';
+
+        sitePlanosAnterior.disabled =
+            sitePlanosCarousel.scrollLeft <= 2;
+
+        sitePlanosProximo.disabled =
+            sitePlanosCarousel.scrollLeft >= (maxScroll - 2);
+    }
+
+    function rolarPlanosSite(direcao)
+    {
+        if(!sitePlanosCarousel){
+            return;
+        }
+
+        const item =
+            sitePlanosCarousel.querySelector('.site-plano-carousel-item');
+
+        const deslocamento =
+            item
+                ? item.getBoundingClientRect().width + 24
+                : sitePlanosCarousel.clientWidth;
+
+        sitePlanosCarousel.scrollBy({
+            left: direcao * deslocamento,
+            behavior: 'smooth'
+        });
+    }
+
+    if(sitePlanosAnterior){
+        sitePlanosAnterior.addEventListener('click', function(){
+            rolarPlanosSite(-1);
+        });
+    }
+
+    if(sitePlanosProximo){
+        sitePlanosProximo.addEventListener('click', function(){
+            rolarPlanosSite(1);
+        });
+    }
+
+    if(sitePlanosCarousel){
+        sitePlanosCarousel.addEventListener('scroll', function(){
+            window.requestAnimationFrame(atualizarControlesPlanosSite);
+        });
+    }
+
+    window.addEventListener('resize', atualizarControlesPlanosSite);
+    atualizarControlesPlanosSite();
 
     const campoQuantidade =
         document.getElementById('simuladorMensagens');

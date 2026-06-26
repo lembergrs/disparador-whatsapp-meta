@@ -61,6 +61,16 @@ class Assinatura
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+
+    public function buscarPendenteMaisRecente($clienteId, $planoId)
+    {
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM assinaturas\n            WHERE CLI_ID = ?\n            AND PLA_ID = ?\n            AND ASS_Status = 'pendente'\n            ORDER BY ASS_ID DESC\n            LIMIT 1\n        ");
+
+        $sql->execute([$clienteId, $planoId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function listar()
     {
         $sql = $this->db->query("\n            SELECT a.*, c.CLI_Nome, p.PLA_Nome\n            FROM assinaturas a\n            INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID\n            INNER JOIN planos p ON p.PLA_ID = a.PLA_ID\n            ORDER BY a.ASS_ID DESC\n        ");

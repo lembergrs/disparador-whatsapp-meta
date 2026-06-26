@@ -10,6 +10,8 @@ use Models\Plano;
 use Models\Cobranca;
 use Models\MetaConta;
 use Models\Assinatura;
+use Models\Cliente;
+use Services\AsaasService;
 
 class FinanceiroController extends Controller
 {
@@ -52,11 +54,219 @@ class FinanceiroController extends Controller
                 'titulo' => 'Financeiro',
                 'planos' => $planos,
                 'cobranca' => $cobranca,
+                'faturasPerPageDefault' => 5,
                 'excedente' => $excedente,
                 'numerosAtivos' => $numerosAtivos,
                 'assinaturaAtual' => $assinaturaAtual
             ]
         );
+    }
+
+
+
+    public function faturasAjax()
+    {
+        Auth::clienteAdmin();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+            $usuario = Auth::usuario();
+            $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+
+            if($clienteId <= 0){
+                http_response_code(403);
+                echo json_encode([
+                    'sucesso' => false,
+                    'erro' => 'Acesso negado.'
+                ]);
+                return;
+            }
+
+            $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+            $page = max(1, (int) $page);
+
+            $perPage = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT) ?: 5;
+            $permitidos = [5, 10, 20, 50];
+
+            if(!in_array($perPage, $permitidos, true)){
+                $perPage = $perPage > 50 ? 50 : 5;
+            }
+
+            if(!in_array($perPage, $permitidos, true)){
+                $perPage = 5;
+            }
+
+            $cobrancaModel = new Cobranca();
+            $totalRegistros = $cobrancaModel->contarPorCliente($clienteId);
+            $totalPaginas = max(1, (int) ceil($totalRegistros / $perPage));
+            $page = min($page, $totalPaginas);
+            $offset = ($page - 1) * $perPage;
+
+            $faturas = $cobrancaModel->listarPorClientePaginado(
+                $clienteId,
+                $perPage,
+                $offset
+            );
+
+            echo json_encode([
+                'sucesso' => true,
+                'html' => $this->renderFaturasRows($faturas),
+                'paginacao_html' => $this->renderFaturasPaginacao($page, $totalPaginas),
+                'contador_html' => $this->renderFaturasContador($page, $perPage, $totalRegistros),
+                'pagina_atual' => $page,
+                'total_paginas' => $totalPaginas,
+                'total_registros' => $totalRegistros,
+                'per_page' => $perPage
+            ]);
+        }catch(\Throwable $e){
+            http_response_code(500);
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Não foi possível carregar as faturas no momento.'
+            ]);
+        }
+    }
+
+    private function renderFaturasRows(array $faturas)
+    {
+        if(empty($faturas)){
+            return '<tr><td colspan="6" class="text-center text-muted py-4">Nenhuma fatura encontrada.</td></tr>';
+        }
+
+        $html = '';
+
+        foreach($faturas as $fatura){
+            $statusFatura = (string) ($fatura['COB_Status'] ?? '');
+            $linkPagamento = (string) ($fatura['COB_LinkPagamento'] ?? '');
+
+            $html .= '<tr>';
+            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataVencimento'] ?? null) . '</td>';
+            $html .= '<td>R$ ' . number_format((float) ($fatura['COB_Valor'] ?? 0), 2, ',', '.') . '</td>';
+            $html .= '<td><span class="badge badge-' . $this->badgeFatura($statusFatura) . '">' . $this->e($this->statusFatura($statusFatura)) . '</span></td>';
+            $html .= '<td>' . $this->e($fatura['COB_Forma'] ?? '-') . '</td>';
+            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataPagamento'] ?? null) . '</td>';
+            $html .= '<td>';
+
+            if($statusFatura === 'pendente' && $linkPagamento !== ''){
+                $html .= '<a href="' . $this->e($linkPagamento) . '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-success">Pagar agora</a>';
+            }else{
+                $html .= '<span class="text-muted">-</span>';
+            }
+
+            $html .= '</td>';
+            $html .= '</tr>';
+
+            if(($fatura['COB_ProviderStatus'] ?? '') === 'erro_cliente'){
+                $html .= '<tr><td colspan="6"><div class="alert alert-danger mb-0">Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.</div></td></tr>';
+            }
+        }
+
+        return $html;
+    }
+
+    private function renderFaturasPaginacao($paginaAtual, $totalPaginas)
+    {
+        if($totalPaginas <= 1){
+            return '';
+        }
+
+        $html = '';
+        $html .= $this->itemPaginacaoFatura('Anterior', max(1, $paginaAtual - 1), $paginaAtual <= 1);
+
+        $inicio = max(1, $paginaAtual - 2);
+        $fim = min($totalPaginas, $paginaAtual + 2);
+
+        if($inicio > 1){
+            $html .= $this->itemPaginacaoFatura('1', 1, false, $paginaAtual === 1);
+
+            if($inicio > 2){
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+
+        for($i = $inicio; $i <= $fim; $i++){
+            $html .= $this->itemPaginacaoFatura((string) $i, $i, false, $paginaAtual === $i);
+        }
+
+        if($fim < $totalPaginas){
+            if($fim < ($totalPaginas - 1)){
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+
+            $html .= $this->itemPaginacaoFatura((string) $totalPaginas, $totalPaginas, false, $paginaAtual === $totalPaginas);
+        }
+
+        $html .= $this->itemPaginacaoFatura('Próxima', min($totalPaginas, $paginaAtual + 1), $paginaAtual >= $totalPaginas);
+
+        return $html;
+    }
+
+    private function itemPaginacaoFatura($label, $pagina, $disabled = false, $active = false)
+    {
+        $classes = ['page-item'];
+
+        if($disabled){
+            $classes[] = 'disabled';
+        }
+
+        if($active){
+            $classes[] = 'active';
+        }
+
+        if($disabled){
+            return '<li class="' . implode(' ', $classes) . '"><span class="page-link">' . $this->e($label) . '</span></li>';
+        }
+
+        return '<li class="' . implode(' ', $classes) . '"><a class="page-link pagina-faturas" href="#" data-page="' . (int) $pagina . '">' . $this->e($label) . '</a></li>';
+    }
+
+    private function renderFaturasContador($paginaAtual, $perPage, $totalRegistros)
+    {
+        if($totalRegistros <= 0){
+            return 'Mostrando 0 faturas';
+        }
+
+        $inicio = (($paginaAtual - 1) * $perPage) + 1;
+        $fim = min($totalRegistros, $paginaAtual * $perPage);
+
+        return 'Mostrando ' . $inicio . ' a ' . $fim . ' de ' . $totalRegistros . ' faturas';
+    }
+
+    private function statusFatura($status)
+    {
+        $mapa = [
+            'pendente' => 'Pendente',
+            'pago' => 'Pago',
+            'vencido' => 'Vencido',
+            'cancelado' => 'Cancelado',
+            'erro' => 'Erro'
+        ];
+
+        return $mapa[$status] ?? ucfirst($status ?: '-');
+    }
+
+    private function badgeFatura($status)
+    {
+        $classes = [
+            'pendente' => 'warning',
+            'pago' => 'success',
+            'vencido' => 'danger',
+            'cancelado' => 'secondary',
+            'erro' => 'danger'
+        ];
+
+        return $classes[$status] ?? 'secondary';
+    }
+
+    private function formatarDataFatura($data)
+    {
+        return $data ? date('d/m/Y', strtotime($data)) : '-';
+    }
+
+    private function e($valor)
+    {
+        return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
     }
 
     public function escolherPlano()
@@ -157,14 +367,6 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             ]);
 
-            $cobrancaModel->criar([
-                'cliente' => $usuario['CLI_ID'],
-                'plano' => $plano['PLA_ID'],
-                'valor' => $valorCiclo,
-                'vencimento' => date('Y-m-d', strtotime('+3 days')),
-                'tipo' => 'mensalidade'
-            ]);
-
             $assinaturaModel = new Assinatura();
             $assinaturaModel->criarOuAtualizarPorCliente(
                 $usuario['CLI_ID'],
@@ -177,6 +379,28 @@ class FinanceiroController extends Controller
                 ]
             );
 
+            $assinaturaPagamento = $assinaturaModel->buscarParaPagamento(
+                $usuario['CLI_ID'],
+                $plano['PLA_ID']
+            );
+
+            $cobrancaId = $cobrancaModel->criar([
+                'cliente' => $usuario['CLI_ID'],
+                'plano' => $plano['PLA_ID'],
+                'assinatura' => $assinaturaPagamento['ASS_ID'] ?? null,
+                'valor' => $valorCiclo,
+                'vencimento' => date('Y-m-d', strtotime('+3 days')),
+                'tipo' => 'mensalidade',
+                'provider' => 'asaas',
+                'provider_status' => 'local_pendente'
+            ]);
+
+            $resultadoAsaas = $this->sincronizarCobrancaAsaas(
+                $usuario['CLI_ID'],
+                $cobrancaId,
+                $plano
+            );
+
             $db->commit();
 
             $_SESSION['usuario']['CLI_Plano_DR'] =
@@ -186,8 +410,8 @@ class FinanceiroController extends Controller
                 'pendente';
 
             Session::flash(
-                'success',
-                'Plano selecionado. A cobrança foi criada.'
+                $resultadoAsaas['sucesso'] ? 'success' : 'warning',
+                $resultadoAsaas['mensagem']
             );
 
         }catch(\Exception $e){
@@ -202,4 +426,205 @@ class FinanceiroController extends Controller
 
         $this->redirect('financeiro');
     }
+
+
+
+    private function sincronizarCobrancaAsaas($clienteId, $cobrancaId, $plano)
+    {
+        $clienteModel = new Cliente();
+        $cobrancaModel = new Cobranca();
+        $asaasService = new AsaasService();
+
+        $cliente = $clienteModel->buscar($clienteId);
+        $cobranca = $cobrancaModel->buscar($cobrancaId);
+
+        if(!$cliente || !$cobranca){
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Plano selecionado, mas não foi possível sincronizar a cobrança neste momento.'
+            ];
+        }
+
+        $providerCustomerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
+
+        if($providerCustomerId === ''){
+            $validacaoCliente = $this->validarDadosClienteAsaas($cliente);
+
+            if(!$validacaoCliente['valido']){
+                $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
+                    'provider' => 'asaas',
+                    'provider_status' => 'erro_cliente',
+                    'provider_payload' => $this->payloadErroProvider(
+                        0,
+                        $validacaoCliente['erros'],
+                        'Dados cadastrais obrigatórios ausentes ou inválidos para criar cliente no Asaas.',
+                        '/customers'
+                    )
+                ]);
+
+                return [
+                    'sucesso' => false,
+                    'mensagem' => 'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'
+                ];
+            }
+
+            $resultadoCliente = $asaasService->criarOuAtualizarCliente($cliente);
+
+            if(!$resultadoCliente['sucesso'] || empty($resultadoCliente['response']['id'])){
+                $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
+                    'provider' => 'asaas',
+                    'provider_status' => 'erro_cliente',
+                    'provider_payload' => $this->payloadErroProvider(
+                        $resultadoCliente['http_code'] ?? 0,
+                        $resultadoCliente['response']['errors'] ?? ($resultadoCliente['response'] ?? []),
+                        $resultadoCliente['erro'] ?? 'Falha ao criar cliente no Asaas.',
+                        '/customers'
+                    )
+                ]);
+
+                return [
+                    'sucesso' => false,
+                    'mensagem' => 'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'
+                ];
+            }
+
+            $providerCustomerId = $resultadoCliente['response']['id'];
+            $clienteModel->atualizarProviderPagamento($clienteId, 'asaas', $providerCustomerId);
+            $cliente['CLI_ProviderPagamento'] = 'asaas';
+            $cliente['CLI_ProviderCustomerId'] = $providerCustomerId;
+        }
+
+        $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
+        $resultadoCobranca = $asaasService->criarCobranca($cliente, $cobranca);
+
+        if(!$resultadoCobranca['sucesso'] || empty($resultadoCobranca['response']['id'])){
+            $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
+                'provider' => 'asaas',
+                'provider_customer_id' => $providerCustomerId,
+                'provider_status' => 'erro_cobranca',
+                'provider_payload' => $this->payloadProviderSeguro($resultadoCobranca['response'] ?? [])
+            ]);
+
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'
+            ];
+        }
+
+        $pagamento = $resultadoCobranca['response'];
+        $pix = [];
+
+        if(!empty($pagamento['id'])){
+            $resultadoPix = $asaasService->buscarPixQrCode($pagamento['id']);
+
+            if($resultadoPix['sucesso'] && is_array($resultadoPix['response'])){
+                $pix = $resultadoPix['response'];
+            }
+        }
+
+        $cobrancaModel->atualizarIntegracaoProvider($cobrancaId, [
+            'provider' => 'asaas',
+            'provider_customer_id' => $providerCustomerId,
+            'provider_payment_id' => $pagamento['id'] ?? null,
+            'provider_status' => $pagamento['status'] ?? null,
+            'provider_payload' => $this->payloadProviderSeguro($pagamento),
+            'link_pagamento' => $pagamento['invoiceUrl'] ?? ($pagamento['bankSlipUrl'] ?? null),
+            'pix_copia_cola' => $pix['payload'] ?? null,
+            'qr_code' => $pix['encodedImage'] ?? null,
+            'linha_digitavel' => $pagamento['identificationField'] ?? null,
+            'status' => 'pendente'
+        ]);
+
+        return [
+            'sucesso' => true,
+            'mensagem' => 'Plano selecionado. A cobrança foi criada e o link de pagamento está disponível.'
+        ];
+    }
+
+
+    private function validarDadosClienteAsaas($cliente)
+    {
+        $erros = [];
+        $nome = trim((string) ($cliente['CLI_RazaoSocial'] ?? ''));
+
+        if($nome === ''){
+            $nome = trim((string) ($cliente['CLI_Nome'] ?? ''));
+        }
+
+        $documento = preg_replace('/\D/', '', (string) ($cliente['CLI_CPF_CNPJ'] ?? ''));
+        $email = trim((string) ($cliente['CLI_Email'] ?? ''));
+
+        if($nome === ''){
+            $erros[] = 'Informe nome ou razão social.';
+        }
+
+        if($documento === ''){
+            $erros[] = 'Informe CPF/CNPJ.';
+        }
+
+        if($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)){
+            $erros[] = 'Informe um e-mail válido.';
+        }
+
+        return [
+            'valido' => empty($erros),
+            'erros' => $erros
+        ];
+    }
+
+    private function payloadErroProvider($httpCode, $erros, $mensagem, $endpoint)
+    {
+        return json_encode([
+            'http_code' => (int) $httpCode,
+            'erros' => $this->normalizarErrosProvider($erros),
+            'mensagem' => $mensagem,
+            'endpoint' => $endpoint
+        ], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function normalizarErrosProvider($erros)
+    {
+        if(!is_array($erros)){
+            return [];
+        }
+
+        if(isset($erros['errors']) && is_array($erros['errors'])){
+            $erros = $erros['errors'];
+        }
+
+        $normalizados = [];
+
+        foreach($erros as $erro){
+            if(is_array($erro)){
+                $normalizados[] = [
+                    'code' => $erro['code'] ?? null,
+                    'description' => $erro['description'] ?? ($erro['message'] ?? null)
+                ];
+            }elseif(is_scalar($erro)){
+                $normalizados[] = ['description' => (string) $erro];
+            }
+        }
+
+        return $normalizados;
+    }
+
+    private function payloadProviderSeguro($payload)
+    {
+        if(!is_array($payload)){
+            return null;
+        }
+
+        $permitidos = [
+            'id', 'status', 'billingType', 'value', 'netValue', 'dueDate',
+            'invoiceUrl', 'bankSlipUrl', 'transactionReceiptUrl',
+            'customer', 'externalReference', 'description', 'dateCreated',
+            'paymentDate', 'clientPaymentDate', 'confirmedDate', 'deleted'
+        ];
+
+        return json_encode(
+            array_intersect_key($payload, array_flip($permitidos)),
+            JSON_UNESCAPED_UNICODE
+        );
+    }
+
 }
