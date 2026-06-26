@@ -148,8 +148,8 @@ class FinanceiroController extends Controller
             $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataPagamento'] ?? null) . '</td>';
             $html .= '<td>';
 
-            if($statusFatura === 'pendente' && $linkPagamento !== ''){
-                $html .= '<a href="' . $this->e($linkPagamento) . '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-success">Pagar agora</a>';
+            if($statusFatura === 'pendente' && $this->linkPagamentoValido($linkPagamento)){
+                $html .= '<button type="button" class="btn btn-sm btn-success btn-pagar-agora" data-link-pagamento="' . $this->e($linkPagamento) . '">Pagar agora</button>';
             }else{
                 $html .= '<span class="text-muted">-</span>';
             }
@@ -267,6 +267,21 @@ class FinanceiroController extends Controller
     private function e($valor)
     {
         return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
+    }
+
+    private function linkPagamentoValido($link)
+    {
+        $link = trim((string) $link);
+
+        if($link === ''){
+            return false;
+        }
+
+        return (bool) filter_var(
+            $link,
+            FILTER_VALIDATE_URL,
+            FILTER_FLAG_SCHEME_REQUIRED | FILTER_FLAG_HOST_REQUIRED
+        ) && in_array(strtolower((string) parse_url($link, PHP_URL_SCHEME)), ['http', 'https'], true);
     }
 
     public function escolherPlano()
