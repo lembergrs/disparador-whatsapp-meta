@@ -120,12 +120,25 @@ class FinanceiroController extends Controller
                 'per_page' => $perPage
             ]);
         }catch(\Throwable $e){
+            $this->registrarErroFaturasAjax($e);
+
             http_response_code(500);
             echo json_encode([
                 'sucesso' => false,
                 'erro' => 'Não foi possível carregar as faturas no momento.'
             ]);
         }
+    }
+
+    private function registrarErroFaturasAjax(\Throwable $e)
+    {
+        error_log(sprintf(
+            '[financeiro/faturasAjax] exception=%s mensagem=%s arquivo=%s linha=%d',
+            get_class($e),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
     }
 
     private function renderFaturasRows(array $faturas)
@@ -277,11 +290,18 @@ class FinanceiroController extends Controller
             return false;
         }
 
-        return (bool) filter_var(
-            $link,
-            FILTER_VALIDATE_URL,
-            FILTER_FLAG_SCHEME_REQUIRED | FILTER_FLAG_HOST_REQUIRED
-        ) && in_array(strtolower((string) parse_url($link, PHP_URL_SCHEME)), ['http', 'https'], true);
+        $partesUrl = parse_url($link);
+
+        if(
+            !is_array($partesUrl)
+            || empty($partesUrl['scheme'])
+            || empty($partesUrl['host'])
+        ){
+            return false;
+        }
+
+        return (bool) filter_var($link, FILTER_VALIDATE_URL)
+            && in_array(strtolower((string) $partesUrl['scheme']), ['http', 'https'], true);
     }
 
     public function escolherPlano()
