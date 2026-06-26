@@ -54,11 +54,219 @@ class FinanceiroController extends Controller
                 'titulo' => 'Financeiro',
                 'planos' => $planos,
                 'cobranca' => $cobranca,
+                'faturasPerPageDefault' => 5,
                 'excedente' => $excedente,
                 'numerosAtivos' => $numerosAtivos,
                 'assinaturaAtual' => $assinaturaAtual
             ]
         );
+    }
+
+
+
+    public function faturasAjax()
+    {
+        Auth::clienteAdmin();
+
+        header('Content-Type: application/json; charset=utf-8');
+
+        try{
+            $usuario = Auth::usuario();
+            $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+
+            if($clienteId <= 0){
+                http_response_code(403);
+                echo json_encode([
+                    'sucesso' => false,
+                    'erro' => 'Acesso negado.'
+                ]);
+                return;
+            }
+
+            $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+            $page = max(1, (int) $page);
+
+            $perPage = filter_input(INPUT_GET, 'per_page', FILTER_VALIDATE_INT) ?: 5;
+            $permitidos = [5, 10, 20, 50];
+
+            if(!in_array($perPage, $permitidos, true)){
+                $perPage = $perPage > 50 ? 50 : 5;
+            }
+
+            if(!in_array($perPage, $permitidos, true)){
+                $perPage = 5;
+            }
+
+            $cobrancaModel = new Cobranca();
+            $totalRegistros = $cobrancaModel->contarPorCliente($clienteId);
+            $totalPaginas = max(1, (int) ceil($totalRegistros / $perPage));
+            $page = min($page, $totalPaginas);
+            $offset = ($page - 1) * $perPage;
+
+            $faturas = $cobrancaModel->listarPorClientePaginado(
+                $clienteId,
+                $perPage,
+                $offset
+            );
+
+            echo json_encode([
+                'sucesso' => true,
+                'html' => $this->renderFaturasRows($faturas),
+                'paginacao_html' => $this->renderFaturasPaginacao($page, $totalPaginas),
+                'contador_html' => $this->renderFaturasContador($page, $perPage, $totalRegistros),
+                'pagina_atual' => $page,
+                'total_paginas' => $totalPaginas,
+                'total_registros' => $totalRegistros,
+                'per_page' => $perPage
+            ]);
+        }catch(\Throwable $e){
+            http_response_code(500);
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => 'Não foi possível carregar as faturas no momento.'
+            ]);
+        }
+    }
+
+    private function renderFaturasRows(array $faturas)
+    {
+        if(empty($faturas)){
+            return '<tr><td colspan="6" class="text-center text-muted py-4">Nenhuma fatura encontrada.</td></tr>';
+        }
+
+        $html = '';
+
+        foreach($faturas as $fatura){
+            $statusFatura = (string) ($fatura['COB_Status'] ?? '');
+            $linkPagamento = (string) ($fatura['COB_LinkPagamento'] ?? '');
+
+            $html .= '<tr>';
+            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataVencimento'] ?? null) . '</td>';
+            $html .= '<td>R$ ' . number_format((float) ($fatura['COB_Valor'] ?? 0), 2, ',', '.') . '</td>';
+            $html .= '<td><span class="badge badge-' . $this->badgeFatura($statusFatura) . '">' . $this->e($this->statusFatura($statusFatura)) . '</span></td>';
+            $html .= '<td>' . $this->e($fatura['COB_Forma'] ?? '-') . '</td>';
+            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataPagamento'] ?? null) . '</td>';
+            $html .= '<td>';
+
+            if($statusFatura === 'pendente' && $linkPagamento !== ''){
+                $html .= '<a href="' . $this->e($linkPagamento) . '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-success">Pagar agora</a>';
+            }else{
+                $html .= '<span class="text-muted">-</span>';
+            }
+
+            $html .= '</td>';
+            $html .= '</tr>';
+
+            if(($fatura['COB_ProviderStatus'] ?? '') === 'erro_cliente'){
+                $html .= '<tr><td colspan="6"><div class="alert alert-danger mb-0">Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.</div></td></tr>';
+            }
+        }
+
+        return $html;
+    }
+
+    private function renderFaturasPaginacao($paginaAtual, $totalPaginas)
+    {
+        if($totalPaginas <= 1){
+            return '';
+        }
+
+        $html = '';
+        $html .= $this->itemPaginacaoFatura('Anterior', max(1, $paginaAtual - 1), $paginaAtual <= 1);
+
+        $inicio = max(1, $paginaAtual - 2);
+        $fim = min($totalPaginas, $paginaAtual + 2);
+
+        if($inicio > 1){
+            $html .= $this->itemPaginacaoFatura('1', 1, false, $paginaAtual === 1);
+
+            if($inicio > 2){
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+
+        for($i = $inicio; $i <= $fim; $i++){
+            $html .= $this->itemPaginacaoFatura((string) $i, $i, false, $paginaAtual === $i);
+        }
+
+        if($fim < $totalPaginas){
+            if($fim < ($totalPaginas - 1)){
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+
+            $html .= $this->itemPaginacaoFatura((string) $totalPaginas, $totalPaginas, false, $paginaAtual === $totalPaginas);
+        }
+
+        $html .= $this->itemPaginacaoFatura('Próxima', min($totalPaginas, $paginaAtual + 1), $paginaAtual >= $totalPaginas);
+
+        return $html;
+    }
+
+    private function itemPaginacaoFatura($label, $pagina, $disabled = false, $active = false)
+    {
+        $classes = ['page-item'];
+
+        if($disabled){
+            $classes[] = 'disabled';
+        }
+
+        if($active){
+            $classes[] = 'active';
+        }
+
+        if($disabled){
+            return '<li class="' . implode(' ', $classes) . '"><span class="page-link">' . $this->e($label) . '</span></li>';
+        }
+
+        return '<li class="' . implode(' ', $classes) . '"><a class="page-link pagina-faturas" href="#" data-page="' . (int) $pagina . '">' . $this->e($label) . '</a></li>';
+    }
+
+    private function renderFaturasContador($paginaAtual, $perPage, $totalRegistros)
+    {
+        if($totalRegistros <= 0){
+            return 'Mostrando 0 faturas';
+        }
+
+        $inicio = (($paginaAtual - 1) * $perPage) + 1;
+        $fim = min($totalRegistros, $paginaAtual * $perPage);
+
+        return 'Mostrando ' . $inicio . ' a ' . $fim . ' de ' . $totalRegistros . ' faturas';
+    }
+
+    private function statusFatura($status)
+    {
+        $mapa = [
+            'pendente' => 'Pendente',
+            'pago' => 'Pago',
+            'vencido' => 'Vencido',
+            'cancelado' => 'Cancelado',
+            'erro' => 'Erro'
+        ];
+
+        return $mapa[$status] ?? ucfirst($status ?: '-');
+    }
+
+    private function badgeFatura($status)
+    {
+        $classes = [
+            'pendente' => 'warning',
+            'pago' => 'success',
+            'vencido' => 'danger',
+            'cancelado' => 'secondary',
+            'erro' => 'danger'
+        ];
+
+        return $classes[$status] ?? 'secondary';
+    }
+
+    private function formatarDataFatura($data)
+    {
+        return $data ? date('d/m/Y', strtotime($data)) : '-';
+    }
+
+    private function e($valor)
+    {
+        return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
     }
 
     public function escolherPlano()
