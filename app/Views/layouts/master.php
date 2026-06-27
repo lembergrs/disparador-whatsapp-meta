@@ -59,9 +59,19 @@ $url = $_GET['url'] ?? 'dashboard';
 .logo-disparador-mini {
     display: none;
     flex: 0 0 auto;
-    height: 36px;
-    object-fit: contain;
-    width: 36px;
+    height: 38px;
+    overflow: hidden;
+    position: relative;
+    width: 38px;
+}
+
+.logo-disparador-mini img {
+    height: 38px;
+    left: 0;
+    max-width: none;
+    position: absolute;
+    top: 0;
+    width: auto;
 }
 
 body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand {
@@ -178,11 +188,12 @@ Sair
     class="logo-disparador-full"
     >
 </span>
-<img
-    src="<?= ASSET_URL; ?>/img/favicon.png"
-    alt="Disparador"
-    class="logo-disparador-mini"
-    >
+<span class="logo-disparador-mini" aria-hidden="true">
+    <img
+        src="<?= ASSET_URL; ?>/img/logo-disparador.png"
+        alt=""
+        >
+</span>
 
 </a>
 
