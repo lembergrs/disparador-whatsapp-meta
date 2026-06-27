@@ -58,17 +58,38 @@ $url = $_GET['url'] ?? 'dashboard';
 
 .logo-disparador-mini {
     display: none;
-    height: 36px;
-    object-fit: contain;
-    width: 36px;
+    flex: 0 0 auto;
+    height: 38px;
+    overflow: hidden;
+    position: relative;
+    width: 38px;
 }
 
-body.sidebar-collapse .logo-disparador-full {
-    display: none;
+.logo-disparador-mini img {
+    height: 38px;
+    left: 0;
+    max-width: none;
+    position: absolute;
+    top: 0;
+    width: auto;
 }
 
-body.sidebar-collapse .logo-disparador-mini {
-    display: block;
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .brand-text {
+    display: none !important;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disparador-full {
+    display: none !important;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disparador-mini {
+    display: block !important;
 }
 </style>
 
@@ -166,11 +187,12 @@ Sair
     alt="Disparador"
     class="logo-disparador-full"
     >
-<img
-    src="<?= ASSET_URL; ?>/img/favicon.png"
-    alt="Disparador"
-    class="logo-disparador-mini"
-    >
+</span>
+<span class="logo-disparador-mini" aria-hidden="true">
+    <img
+        src="<?= ASSET_URL; ?>/img/logo-disparador.png"
+        alt=""
+        >
 </span>
 
 </a>
