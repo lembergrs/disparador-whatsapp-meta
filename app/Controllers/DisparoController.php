@@ -154,13 +154,15 @@ class DisparoController extends Controller
             }
 
             $itens = $model->listarItensCliente($loteId, $clienteId);
+            $itensSeguros = array_map(function($item){
+                return $this->itemSeguroHistorico($item);
+            }, $itens);
 
             echo json_encode([
                 'sucesso' => true,
                 'lote' => $this->loteSeguroHistorico($lote),
-                'itens' => array_map(function($item){
-                    return $this->itemSeguroHistorico($item);
-                }, $itens)
+                'resumo' => $this->resumoItensHistorico($itensSeguros),
+                'itens' => $itensSeguros
             ], JSON_UNESCAPED_UNICODE);
         }catch(\Throwable $e){
             http_response_code(500);
@@ -228,19 +230,140 @@ class DisparoController extends Controller
     private function itemSeguroHistorico(array $item)
     {
         $status = (string) ($item['DMI_Status'] ?? '');
+        $erro = (string) ($item['DMI_Erro'] ?? '');
 
         return [
-            'numero' => (string) ($item['DMI_Numero'] ?? ''),
+            'numero' => $this->formatarTelefoneDisparo($item['DMI_Numero'] ?? ''),
             'status' => $status,
             'status_label' => $this->statusItemDisparo($status),
-            'mensagem' => $this->mensagemItemDisparo($status, (string) ($item['DMI_Erro'] ?? '')),
-            'message_id' => $this->resumirTextoSeguro($item['DMI_MessageId'] ?? '', 120),
-            'data_cadastro' => (string) ($item['DMI_DataCadastro'] ?? ''),
-            'data_envio' => (string) ($item['DMI_DataEnvio'] ?? ''),
-            'data_atualizacao' => (string) ($item['DMI_DataAtualizacao'] ?? ''),
-            'erro' => $this->resumirTextoSeguro($item['DMI_Erro'] ?? '', 220),
-            'retorno' => $this->resumirRetornoMeta($item['DMI_Retorno'] ?? '')
+            'status_badge' => $this->badgeItemDisparo($status),
+            'mensagem' => $this->mensagemItemDisparo($status, $erro),
+            'data_cadastro' => $this->formatarDataHoraDisparo($item['DMI_DataCadastro'] ?? ''),
+            'data_envio' => $this->formatarDataHoraDisparo($item['DMI_DataEnvio'] ?? ''),
+            'data_atualizacao' => $this->formatarDataHoraDisparo($item['DMI_DataAtualizacao'] ?? ''),
+            'erro' => $this->erroAmigavelDisparo($erro)
         ];
+    }
+
+
+    private function resumoItensHistorico(array $itens)
+    {
+        $resumo = [
+            'total' => count($itens),
+            'enviadas' => 0,
+            'entregues' => 0,
+            'lidas' => 0,
+            'erros' => 0,
+            'progresso' => 0
+        ];
+
+        foreach($itens as $item){
+            $status = $item['status'] ?? '';
+
+            if(in_array($status, ['aguardando_confirmacao', 'enviado', 'sent', 'delivered', 'entregue', 'read', 'lido'], true)){
+                $resumo['enviadas']++;
+            }
+
+            if(in_array($status, ['delivered', 'entregue', 'read', 'lido'], true)){
+                $resumo['entregues']++;
+            }
+
+            if(in_array($status, ['read', 'lido'], true)){
+                $resumo['lidas']++;
+            }
+
+            if(in_array($status, ['failed', 'erro'], true)){
+                $resumo['erros']++;
+            }
+        }
+
+        if($resumo['total'] > 0){
+            $concluidas = $resumo['enviadas'] + $resumo['erros'];
+            $resumo['progresso'] = min(100, (int) round(($concluidas / $resumo['total']) * 100));
+        }
+
+        return $resumo;
+    }
+
+    private function badgeItemDisparo($status)
+    {
+        $mapa = [
+            'pendente' => 'warning',
+            'processando' => 'info',
+            'aguardando_confirmacao' => 'primary',
+            'enviado' => 'success',
+            'sent' => 'success',
+            'delivered' => 'success',
+            'entregue' => 'success',
+            'read' => 'purple',
+            'lido' => 'purple',
+            'failed' => 'danger',
+            'erro' => 'danger',
+            'cancelado' => 'secondary'
+        ];
+
+        return $mapa[$status] ?? 'secondary';
+    }
+
+    private function formatarTelefoneDisparo($numero)
+    {
+        $numero = preg_replace('/\D/', '', (string) $numero);
+
+        if(strlen($numero) > 11 && substr($numero, 0, 2) === '55'){
+            $numero = substr($numero, 2);
+        }
+
+        if(strlen($numero) === 11){
+            return sprintf('(%s) %s-%s', substr($numero, 0, 2), substr($numero, 2, 5), substr($numero, 7));
+        }
+
+        if(strlen($numero) === 10){
+            return sprintf('(%s) %s-%s', substr($numero, 0, 2), substr($numero, 2, 4), substr($numero, 6));
+        }
+
+        return $numero !== '' ? $numero : '-';
+    }
+
+    private function formatarDataHoraDisparo($data)
+    {
+        if(empty($data)){
+            return '-';
+        }
+
+        $timestamp = strtotime((string) $data);
+
+        if(!$timestamp){
+            return '-';
+        }
+
+        return date('d/m/Y H:i:s', $timestamp);
+    }
+
+    private function erroAmigavelDisparo($erro)
+    {
+        $erro = strtolower((string) $erro);
+
+        if(trim($erro) === ''){
+            return '-';
+        }
+
+        if(str_contains($erro, 'invalid') || str_contains($erro, 'inválido') || str_contains($erro, 'invalido')){
+            return 'Telefone inválido.';
+        }
+
+        if(str_contains($erro, 'whatsapp') && (str_contains($erro, 'not') || str_contains($erro, 'sem'))){
+            return 'Número sem WhatsApp.';
+        }
+
+        if(str_contains($erro, 'block') || str_contains($erro, 'bloque')){
+            return 'Telefone bloqueado.';
+        }
+
+        if(str_contains($erro, 'tempor') || str_contains($erro, 'timeout') || str_contains($erro, 'rate')){
+            return 'Erro temporário da Meta.';
+        }
+
+        return 'Não foi possível enviar para este número.';
     }
 
     private function statusItemDisparo($status)

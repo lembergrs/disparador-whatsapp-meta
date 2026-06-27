@@ -9,7 +9,7 @@ if(!function_exists('hDisparo')){
 if(!function_exists('dataDisparoHistorico')){
     function dataDisparoHistorico($data)
     {
-        return $data ? date('d/m/Y H:i', strtotime($data)) : '-';
+        return $data ? date('d/m/Y H:i:s', strtotime($data)) : '-';
     }
 }
 
@@ -59,6 +59,13 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
     return BASE_URL . '/index.php?' . http_build_query($params);
 };
 ?>
+
+<style>
+.badge-purple {
+    background-color: #6f42c1;
+    color: #fff;
+}
+</style>
 
 <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between">
     <div class="btn-group mb-2 mb-md-0" role="group" aria-label="Navegação de disparos">
@@ -126,7 +133,7 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
                 <div class="col-md-2">
                     <div class="form-group">
                         <label>Número</label>
-                        <input type="text" name="numero" class="form-control" value="<?= hDisparo($filtros['numero'] ?? ''); ?>" placeholder="5599999999999">
+                        <input type="text" name="numero" class="form-control telefone" value="<?= hDisparo($filtros['numero'] ?? ''); ?>" placeholder="5599999999999">
                     </div>
                 </div>
 
@@ -161,18 +168,10 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
             <table class="table table-striped table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Data</th>
-                        <th>Conta WhatsApp</th>
-                        <th>Template</th>
-                        <th>Total</th>
-                        <th>Na fila</th>
-                        <th>Processando</th>
-                        <th>Aguardando confirmação</th>
-                        <th>Enviados</th>
-                        <th>Entregues</th>
-                        <th>Lidos</th>
-                        <th>Erros</th>
+                        <th>Data/Hora do disparo</th>
+                        <th>Conta WhatsApp utilizada</th>
+                        <th>Template utilizado</th>
+                        <th>Quantidade total</th>
                         <th>Status geral</th>
                         <th>Ações</th>
                     </tr>
@@ -180,24 +179,16 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
                 <tbody>
                     <?php if(empty($lotes)){ ?>
                         <tr>
-                            <td colspan="14" class="text-center text-muted py-4">Nenhum lote de disparo manual encontrado.</td>
+                            <td colspan="6" class="text-center text-muted py-4">Nenhum lote de disparo manual encontrado.</td>
                         </tr>
                     <?php } ?>
 
                     <?php foreach($lotes as $lote){ ?>
                         <tr>
-                            <td>#<?= (int) $lote['DML_ID']; ?></td>
                             <td><?= hDisparo(dataDisparoHistorico($lote['DML_DataCadastro'] ?? null)); ?></td>
                             <td><?= hDisparo($lote['MTA_Nome'] ?? '-'); ?></td>
                             <td><?= hDisparo($lote['TMP_Nome'] ?? '-'); ?></td>
                             <td><?= (int) ($lote['total_itens'] ?? $lote['DML_Total'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_pendente'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_processando'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_aguardando_confirmacao'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_enviado'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_delivered'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_read'] ?? 0); ?></td>
-                            <td><?= (int) ($lote['total_erro'] ?? 0); ?></td>
                             <td>
                                 <span class="badge badge-<?= hDisparo(statusLoteDisparoBadge($lote['DML_Status'] ?? '')); ?>">
                                     <?= hDisparo(statusLoteDisparoLabel($lote['DML_Status'] ?? '')); ?>
@@ -205,7 +196,7 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-info btn-detalhes-lote" data-lote-id="<?= (int) $lote['DML_ID']; ?>">
-                                    Ver detalhes
+                                    Acompanhar
                                 </button>
                             </td>
                         </tr>
@@ -242,7 +233,7 @@ $montarUrl = function(array $extras = []) use ($paramsBase){
     <div class="modal-dialog modal-xl" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Detalhes do lote</h5>
+                <h5 class="modal-title">Acompanhar disparo</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -268,38 +259,67 @@ document.addEventListener('DOMContentLoaded', function(){
             .replace(/'/g, '&#039;');
     }
 
+    function badgeStatus(item){
+        return '<span class="badge badge-' + escapeHtml(item.status_badge || 'secondary') + '">' + escapeHtml(item.status_label || '-') + '</span>';
+    }
+
+    function renderResumo(lote, resumo){
+        const total = resumo.total || 0;
+        const progresso = resumo.progresso || 0;
+
+        return '<div class="card card-outline card-info" data-disparo-resumo>'
+            + '<div class="card-header"><h3 class="card-title">Resumo do disparo</h3></div>'
+            + '<div class="card-body">'
+            + '<div class="row mb-3">'
+            + '<div class="col-md-3 col-6 mb-2"><small class="text-muted d-block">Data do disparo</small><strong>' + escapeHtml(lote.data_cadastro || '-') + '</strong></div>'
+            + '<div class="col-md-3 col-6 mb-2"><small class="text-muted d-block">Conta WhatsApp</small><strong>' + escapeHtml(lote.conta || '-') + '</strong></div>'
+            + '<div class="col-md-3 col-6 mb-2"><small class="text-muted d-block">Template utilizado</small><strong>' + escapeHtml(lote.template || '-') + '</strong></div>'
+            + '<div class="col-md-3 col-6 mb-2"><small class="text-muted d-block">Quantidade total</small><strong>' + escapeHtml(total) + ' mensagens</strong></div>'
+            + '</div>'
+            + '<div class="progress mb-3" style="height: 22px;">'
+            + '<div class="progress-bar bg-success" role="progressbar" style="width:' + escapeHtml(progresso) + '%" aria-valuenow="' + escapeHtml(progresso) + '" aria-valuemin="0" aria-valuemax="100">' + escapeHtml(progresso) + '%</div>'
+            + '</div>'
+            + '<div class="row text-center" data-disparo-contadores>'
+            + '<div class="col-md-3 col-6 mb-2"><span class="text-success">●</span> <strong>' + escapeHtml(resumo.enviadas || 0) + '</strong><br><small>enviadas</small></div>'
+            + '<div class="col-md-3 col-6 mb-2"><span class="text-success">●</span> <strong>' + escapeHtml(resumo.entregues || 0) + '</strong><br><small>entregues</small></div>'
+            + '<div class="col-md-3 col-6 mb-2"><span style="color:#6f42c1;">●</span> <strong>' + escapeHtml(resumo.lidas || 0) + '</strong><br><small>lidas</small></div>'
+            + '<div class="col-md-3 col-6 mb-2"><span class="text-danger">●</span> <strong>' + escapeHtml(resumo.erros || 0) + '</strong><br><small>erros</small></div>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
+    }
+
     function renderDetalhes(resposta){
         const lote = resposta.lote || {};
+        const resumo = resposta.resumo || {};
         const itens = resposta.itens || [];
-        let html = '<div class="mb-3">'
-            + '<strong>Lote #' + escapeHtml(lote.id) + '</strong><br>'
-            + '<span class="text-muted">Conta: ' + escapeHtml(lote.conta) + ' | Template: ' + escapeHtml(lote.template) + ' | Status: ' + escapeHtml(lote.status_label) + '</span>'
-            + '</div>';
+        let html = renderResumo(lote, resumo);
 
-        html += '<div class="table-responsive"><table class="table table-sm table-striped table-bordered">'
+        html += '<div class="card" data-disparo-destinatarios>'
+            + '<div class="card-header"><h3 class="card-title">Destinatários</h3></div>'
+            + '<div class="card-body p-0"><div class="table-responsive">'
+            + '<table class="table table-sm table-striped table-bordered mb-0">'
             + '<thead><tr>'
-            + '<th>Número</th><th>Status</th><th>Mensagem</th><th>Message ID</th><th>Criado em</th><th>Envio/processamento</th><th>Atualização</th><th>Erro técnico</th><th>Retorno Meta</th>'
+            + '<th>Número</th><th>Status</th><th>Mensagem</th><th>Criado em</th><th>Envio/Processamento</th><th>Atualização</th><th>Erro</th>'
             + '</tr></thead><tbody>';
 
         if(itens.length === 0){
-            html += '<tr><td colspan="9" class="text-center text-muted py-4">Nenhum item encontrado.</td></tr>';
+            html += '<tr><td colspan="7" class="text-center text-muted py-4">Nenhum destinatário encontrado.</td></tr>';
         }
 
         itens.forEach(function(item){
-            html += '<tr>'
-                + '<td>' + escapeHtml(item.numero) + '</td>'
-                + '<td>' + escapeHtml(item.status_label) + '</td>'
-                + '<td>' + escapeHtml(item.mensagem) + '</td>'
-                + '<td><small>' + escapeHtml(item.message_id || '-') + '</small></td>'
+            html += '<tr data-disparo-item-status="' + escapeHtml(item.status || '') + '">'
+                + '<td>' + escapeHtml(item.numero || '-') + '</td>'
+                + '<td>' + badgeStatus(item) + '</td>'
+                + '<td>' + escapeHtml(item.mensagem || '-') + '</td>'
                 + '<td>' + escapeHtml(item.data_cadastro || '-') + '</td>'
                 + '<td>' + escapeHtml(item.data_envio || '-') + '</td>'
                 + '<td>' + escapeHtml(item.data_atualizacao || '-') + '</td>'
-                + '<td><small>' + escapeHtml(item.erro || '-') + '</small></td>'
-                + '<td><small>' + escapeHtml(item.retorno || '-') + '</small></td>'
+                + '<td>' + escapeHtml(item.erro || '-') + '</td>'
                 + '</tr>';
         });
 
-        html += '</tbody></table></div>';
+        html += '</tbody></table></div></div></div>';
         conteudo.innerHTML = html;
     }
 
