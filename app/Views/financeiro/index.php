@@ -202,6 +202,28 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
 <?php } ?>
 
 
+
+<div class="modal fade" id="modalConfirmacaoPagamentoAsaas" tabindex="-1" role="dialog" aria-labelledby="modalConfirmacaoPagamentoAsaasTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalConfirmacaoPagamentoAsaasTitulo">Pagamento seguro pelo Asaas</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Você será direcionado para o ambiente seguro do Asaas para concluir o pagamento.</p>
+                <p class="mb-0">Após o pagamento, esta tela será atualizada automaticamente assim que recebermos a confirmação.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnConfirmarPagamentoAsaas">Ir para o pagamento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php if($assinaturaAtiva){ ?>
     <div class="mb-3">
         <button type="button" class="btn btn-outline-secondary btn-sm" id="btnMostrarPlanosFinanceiro">
@@ -455,7 +477,11 @@ document.addEventListener('DOMContentLoaded', function(){
     const faturasPaginacao = document.getElementById('faturasPaginacao');
     const faturasContador = document.getElementById('faturasContador');
     const faturasPerPage = document.getElementById('faturasPerPage');
+    const modalConfirmacaoPagamento = document.getElementById('modalConfirmacaoPagamentoAsaas');
+    const btnConfirmarPagamento = document.getElementById('btnConfirmarPagamentoAsaas');
     let faturasRequest = null;
+    let linkPagamentoSelecionado = '';
+    let pagamentoEmAbertura = false;
 
     function carregarFaturas(pagina){
         if(!faturasTabelaCorpo || !faturasPaginacao || !faturasContador || !faturasPerPage || !window.jQuery){
@@ -522,6 +548,57 @@ document.addEventListener('DOMContentLoaded', function(){
 
             event.preventDefault();
             carregarFaturas(parseInt(link.dataset.page, 10) || 1);
+        });
+    }
+
+    if(faturasTabelaCorpo){
+        faturasTabelaCorpo.addEventListener('click', function(event){
+            const botaoPagamento = event.target.closest('.btn-pagar-agora');
+
+            if(!botaoPagamento || pagamentoEmAbertura){
+                return;
+            }
+
+            event.preventDefault();
+            linkPagamentoSelecionado = botaoPagamento.dataset.linkPagamento || '';
+
+            if(!linkPagamentoSelecionado || !modalConfirmacaoPagamento || !window.jQuery){
+                return;
+            }
+
+            if(btnConfirmarPagamento){
+                btnConfirmarPagamento.disabled = false;
+            }
+
+            window.jQuery(modalConfirmacaoPagamento).modal('show');
+        });
+    }
+
+    if(btnConfirmarPagamento){
+        btnConfirmarPagamento.addEventListener('click', function(){
+            if(!linkPagamentoSelecionado || pagamentoEmAbertura){
+                return;
+            }
+
+            pagamentoEmAbertura = true;
+            btnConfirmarPagamento.disabled = true;
+
+            window.open(linkPagamentoSelecionado, '_blank', 'noopener,noreferrer');
+
+            if(modalConfirmacaoPagamento && window.jQuery){
+                window.jQuery(modalConfirmacaoPagamento).modal('hide');
+            }
+
+            setTimeout(function(){
+                pagamentoEmAbertura = false;
+                btnConfirmarPagamento.disabled = false;
+            }, 1000);
+        });
+    }
+
+    if(modalConfirmacaoPagamento && window.jQuery){
+        window.jQuery(modalConfirmacaoPagamento).on('hidden.bs.modal', function(){
+            linkPagamentoSelecionado = '';
         });
     }
 

@@ -18,11 +18,25 @@ $(document).ready(function(){
 
     $('#gerarSenha').click(function(){
 
-        let senha = Math.random()
-        .toString(36)
-        .slice(-8);
+        const maiusculas = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        const minusculas = 'abcdefghijkmnopqrstuvwxyz';
+        const numeros = '23456789';
+        const especiais = '!@#$%&*?';
+        const todos = maiusculas + minusculas + numeros + especiais;
+        let senha = [
+            maiusculas[Math.floor(Math.random() * maiusculas.length)],
+            minusculas[Math.floor(Math.random() * minusculas.length)],
+            numeros[Math.floor(Math.random() * numeros.length)],
+            especiais[Math.floor(Math.random() * especiais.length)]
+        ];
 
-        $('#senha').val(senha);
+        while(senha.length < 10){
+            senha.push(todos[Math.floor(Math.random() * todos.length)]);
+        }
+
+        senha = senha.sort(function(){ return Math.random() - 0.5; }).join('');
+
+        $('#senha').val(senha).trigger('input');
 
     });
 
@@ -175,7 +189,7 @@ $(document).ready(function(){
             $(this).data('observacoes')
         );
 
-        $('#senha').val('');
+        $('#senha').val('').prop('required', false).trigger('input');
 
         $('#senha').attr(
             'placeholder',
@@ -213,6 +227,8 @@ $(document).ready(function(){
 
 
 
+
+        $('#senha').prop('required', true).trigger('input');
 
         $('#senha').attr(
             'placeholder',
