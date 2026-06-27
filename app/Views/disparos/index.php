@@ -1,3 +1,14 @@
+<div class="mb-3 d-flex flex-wrap align-items-center justify-content-between">
+    <div class="btn-group mb-2 mb-md-0" role="group" aria-label="Navegação de disparos">
+        <a href="<?= BASE_URL; ?>/index.php?url=disparo" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i> Novo Disparo
+        </a>
+        <a href="<?= BASE_URL; ?>/index.php?url=disparo/historico" class="btn btn-outline-primary">
+            <i class="fas fa-history"></i> Histórico de Disparos
+        </a>
+    </div>
+</div>
+
 <div class="card">
 
 <div class="card-header">
