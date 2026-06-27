@@ -29,6 +29,60 @@ $url = $_GET['url'] ?? 'dashboard';
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+
+<style>
+.main-sidebar .brand-link.logo-disparador-brand {
+    align-items: center;
+    background: #ffffff;
+    display: flex;
+    justify-content: center;
+    min-height: 76px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+}
+
+.main-sidebar .brand-link.logo-disparador-brand .brand-text {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.logo-disparador-full {
+    display: block;
+    height: auto;
+    max-height: 52px;
+    max-width: 210px;
+    object-fit: contain;
+}
+
+.logo-disparador-mini {
+    display: none;
+    flex: 0 0 auto;
+    height: 36px;
+    object-fit: contain;
+    width: 36px;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .brand-text {
+    display: none !important;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disparador-full {
+    display: none !important;
+}
+
+body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disparador-mini {
+    display: block !important;
+}
+</style>
+
 </head>
 
 <body class="hold-transition sidebar-mini">
@@ -59,6 +113,40 @@ href="#"
 
 <ul class="navbar-nav ml-auto">
 
+<?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){ ?>
+
+<li class="nav-item d-none d-sm-flex align-items-center text-muted px-2">
+<?= htmlspecialchars($usuario['nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+</li>
+
+<li class="nav-item d-none d-sm-flex align-items-center text-muted">|</li>
+
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="dropdownMinhaConta" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+        Minha Conta
+    </a>
+    <div class="dropdown-menu dropdown-menu-right" aria-labelledby="dropdownMinhaConta">
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta">
+            <i class="fas fa-user mr-2"></i> Meus Dados
+        </a>
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta#seguranca">
+            <i class="fas fa-lock mr-2"></i> Alterar Senha
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=financeiro">
+            <i class="fas fa-dollar-sign mr-2"></i> Financeiro
+        </a>
+        <div class="dropdown-divider"></div>
+        <form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
+            <button type="submit" class="dropdown-item">
+                <i class="fas fa-sign-out-alt mr-2"></i> Sair
+            </button>
+        </form>
+    </div>
+</li>
+
+<?php }else{ ?>
+
 <li class="nav-item">
 
 <form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
@@ -71,6 +159,8 @@ Sair
 
 </li>
 
+<?php } ?>
+
 </ul>
 
 </nav>
@@ -79,34 +169,24 @@ Sair
 
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
 
-<a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link">
+<a href="<?= BASE_URL; ?>/index.php?url=dashboard" class="brand-link logo-disparador-brand">
 
 <span class="brand-text font-weight-light">
 <img
-    src="<?= ASSET_URL; ?>/img/logo_disparador.png"
-    alt="Logo"
-    onerror="this.onerror=null; this.style.display='none'; if (this.nextElementSibling) { this.nextElementSibling.style.display='flex'; }"
-    width="230"
+    src="<?= ASSET_URL; ?>/img/logo-disparador.png"
+    alt="Disparador"
+    class="logo-disparador-full"
     >
 </span>
+<img
+    src="<?= ASSET_URL; ?>/img/favicon.png"
+    alt="Disparador"
+    class="logo-disparador-mini"
+    >
 
 </a>
 
 <div class="sidebar">
-
-<div class="user-panel mt-3 pb-3 mb-3 d-flex">
-
-<div class="info">
-
-<a href="#" class="d-block">
-
-<?= $usuario['nome']; ?>
-
-</a>
-
-</div>
-
-</div>
 
 <nav class="mt-2">
 
@@ -203,25 +283,6 @@ $podeGerenciarConta = in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_a
 $usuario = Auth::usuario();
 
 ?>
-
-<?php if($podeGerenciarConta){ ?>
-<li class="nav-item">
-
-    <a
-    href="<?= BASE_URL; ?>/index.php?url=financeiro"
-    class="nav-link <?= str_contains($url, 'financeiro') ? 'active' : ''; ?>"
-    >
-
-        <i class="nav-icon fas fa-dollar-sign"></i>
-
-        <p>
-            Financeiro
-        </p>
-
-    </a>
-
-</li>
-<?php } ?>
 
 <?php if($podeGerenciarConta){ ?>
 <li class="nav-item">
@@ -471,6 +532,8 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
 
 <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap4.min.js"></script>
+
+<script src="<?= ASSET_URL; ?>/js/password-strength.js"></script>
 
 <script src="<?= ASSET_URL; ?>/js/app.js"></script>
 

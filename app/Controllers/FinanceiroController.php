@@ -120,12 +120,25 @@ class FinanceiroController extends Controller
                 'per_page' => $perPage
             ]);
         }catch(\Throwable $e){
+            $this->registrarErroFaturasAjax($e);
+
             http_response_code(500);
             echo json_encode([
                 'sucesso' => false,
                 'erro' => 'Não foi possível carregar as faturas no momento.'
             ]);
         }
+    }
+
+    private function registrarErroFaturasAjax(\Throwable $e)
+    {
+        error_log(sprintf(
+            '[financeiro/faturasAjax] exception=%s mensagem=%s arquivo=%s linha=%d',
+            get_class($e),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        ));
     }
 
     private function renderFaturasRows(array $faturas)
@@ -148,8 +161,8 @@ class FinanceiroController extends Controller
             $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataPagamento'] ?? null) . '</td>';
             $html .= '<td>';
 
-            if($statusFatura === 'pendente' && $linkPagamento !== ''){
-                $html .= '<a href="' . $this->e($linkPagamento) . '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-success">Pagar agora</a>';
+            if($statusFatura === 'pendente' && $this->linkPagamentoValido($linkPagamento)){
+                $html .= '<button type="button" class="btn btn-sm btn-success btn-pagar-agora" data-link-pagamento="' . $this->e($linkPagamento) . '">Pagar agora</button>';
             }else{
                 $html .= '<span class="text-muted">-</span>';
             }
@@ -267,6 +280,28 @@ class FinanceiroController extends Controller
     private function e($valor)
     {
         return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
+    }
+
+    private function linkPagamentoValido($link)
+    {
+        $link = trim((string) $link);
+
+        if($link === ''){
+            return false;
+        }
+
+        $partesUrl = parse_url($link);
+
+        if(
+            !is_array($partesUrl)
+            || empty($partesUrl['scheme'])
+            || empty($partesUrl['host'])
+        ){
+            return false;
+        }
+
+        return (bool) filter_var($link, FILTER_VALIDATE_URL)
+            && in_array(strtolower((string) $partesUrl['scheme']), ['http', 'https'], true);
     }
 
     public function escolherPlano()

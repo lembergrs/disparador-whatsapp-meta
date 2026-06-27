@@ -275,6 +275,65 @@ class Cliente
     }
 
 
+    public function atualizarDadosConta($id, array $dados)
+    {
+        $sets = [
+            'CLI_Nome = :nome',
+            'CLI_Telefone = :telefone'
+        ];
+
+        $params = [
+            ':id' => $id,
+            ':nome' => $dados['nome'],
+            ':telefone' => preg_replace('/\D/', '', (string) ($dados['telefone'] ?? ''))
+        ];
+
+        if($this->colunaExiste('clientes', 'CLI_NomeFantasia')){
+            $sets[] = 'CLI_NomeFantasia = :nome_fantasia';
+            $params[':nome_fantasia'] = $dados['nome_fantasia'] ?? null;
+        }
+
+        $camposEndereco = [
+            'CLI_CEP' => 'cep',
+            'CLI_Logradouro' => 'logradouro',
+            'CLI_Numero' => 'numero',
+            'CLI_Complemento' => 'complemento',
+            'CLI_Bairro' => 'bairro',
+            'CLI_Cidade' => 'cidade',
+            'CLI_UF' => 'uf'
+        ];
+
+        foreach($camposEndereco as $coluna => $chave){
+            if($this->colunaExiste('clientes', $coluna) && array_key_exists($chave, $dados)){
+                $param = ':' . $chave;
+                $sets[] = $coluna . ' = ' . $param;
+                $params[$param] = $chave === 'cep'
+                    ? preg_replace('/\D/', '', (string) $dados[$chave])
+                    : trim((string) $dados[$chave]);
+            }
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE clientes
+            SET " . implode(', ', $sets) . "
+            WHERE CLI_ID = :id
+        ");
+
+        return $sql->execute($params);
+    }
+
+    public function colunasExistem(array $colunas)
+    {
+        $resultado = [];
+
+        foreach($colunas as $coluna){
+            $resultado[$coluna] = $this->colunaExiste('clientes', $coluna);
+        }
+
+        return $resultado;
+    }
+
+
 
 
 

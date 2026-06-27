@@ -544,6 +544,7 @@ type="text"
 name="senha"
 id="senha"
 class="form-control"
+data-password-strength
 >
 
 <div class="input-group-append">
