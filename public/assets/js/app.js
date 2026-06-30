@@ -579,6 +579,10 @@ $(document).ready(function(){
         '.btnVisualizarTemplate',
         function(){
 
+            if(typeof abrirPreviewTemplate === 'function'){
+                return;
+            }
+
             $('#tmpNome').html(
                 $(this).data('nome')
             );

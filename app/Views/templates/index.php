@@ -1214,6 +1214,24 @@ function escapeHtmlTemplatePreview(valor)
     return $('<div>').text(valor || '').html();
 }
 
+function traduzirStatusTemplateMeta(status)
+{
+    const mapa = {
+        APPROVED: 'Aprovado',
+        PENDING: 'Em análise',
+        REJECTED: 'Rejeitado',
+        PAUSED: 'Pausado',
+        DISABLED: 'Desativado',
+        IN_APPEAL: 'Em recurso',
+        PENDING_DELETION: 'Exclusão pendente',
+        DELETED: 'Excluído'
+    };
+
+    status = String(status || '');
+
+    return mapa[status.toUpperCase()] || status;
+}
+
 function normalizarUrlPreviewTemplate(url)
 {
     url = (url || '').trim();
@@ -1260,7 +1278,7 @@ function abrirPreviewTemplate(botao)
     botao = $(botao);
 
     $('#tmpNome').html(botao.data('nome'));
-    $('#tmpStatus').html(botao.data('status'));
+    $('#tmpStatus').html(escapeHtmlTemplatePreview(traduzirStatusTemplateMeta(botao.data('status'))));
     $('#tmpIdioma').html(botao.data('idioma'));
     $('#tmpCategoria').html(botao.data('categoria'));
 
