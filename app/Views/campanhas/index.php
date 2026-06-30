@@ -191,7 +191,10 @@ id="modalCampanha"
 <form
 method="POST"
 action="<?= BASE_URL; ?>/index.php?url=campanha/criar"
+enctype="multipart/form-data"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="modal-header">
 
@@ -253,6 +256,18 @@ data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes'
 <?php } ?>
 
 </select>
+
+<div id="areaHeaderMidiaCampanha" class="form-group" style="display:none">
+    <label>Mídia do template para esta campanha</label>
+    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media_campanha">
+        <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
+        <p class="mb-1">Clique ou arraste 1 arquivo. Ele será usado para todos os contatos.</p>
+        <small class="text-muted">Imagem: JPG/PNG/WEBP até 5 MB. Vídeo: MP4/3GPP até 16 MB. Documento: PDF até 10 MB.</small>
+        <input type="file" name="header_media_campanha" id="header_media_campanha" class="d-none" accept=".jpg,.jpeg,.png,.webp,.mp4,.3gpp,.pdf">
+    </div>
+    <div class="mt-2" id="headerMediaCampanhaNome"></div>
+    <img src="" alt="Preview da imagem" id="headerMediaCampanhaPreview" class="img-fluid rounded mt-2" style="display:none;max-height:180px;">
+</div>
 
 <div class="form-group">
 

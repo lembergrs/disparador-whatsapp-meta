@@ -402,7 +402,9 @@ class MetaService
 
         if(!empty($dados['header_tipo'])){
 
-            if($dados['header_tipo'] == 'TEXT'
+            $headerTipo = strtoupper((string) $dados['header_tipo']);
+
+            if($headerTipo == 'TEXT'
                 && !empty($dados['header'])){
 
                 $headerOriginal = $dados['header'];
@@ -439,18 +441,62 @@ class MetaService
                     'text' => $headerOriginal
                 ];
 
+            }elseif(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+
+                $handle = $dados['header_media_handle'] ?? null;
+
+                if(!$handle && !empty($_FILES['header_media'])){
+                    $mediaService = new MetaMediaService(
+                        $this->conta['MTA_ID'],
+                        $this->conta['CLI_ID'] ?? null
+                    );
+
+                    $upload = $mediaService->uploadTemplateHandle(
+                        $_FILES['header_media'],
+                        $headerTipo
+                    );
+
+                    $handle = $upload['handle'] ?? null;
+                    $dados['header_media_nome'] = $upload['nome_original'] ?? null;
+                }
+
+                if(!$handle){
+                    return [
+                        'error' => [
+                            'message' => 'Envie um arquivo de exemplo para o cabeçalho de mídia.'
+                        ]
+                    ];
+                }
+
+                $components[] = [
+                    'type' => 'HEADER',
+                    'format' => $headerTipo,
+                    'example' => [
+                        'header_handle' => [$handle]
+                    ]
+                ];
+
+                $componentesOriginais[] = [
+                    'type' => 'HEADER',
+                    'format' => $headerTipo,
+                    'example' => [
+                        'header_handle' => [$handle]
+                    ],
+                    'media_name' => $dados['header_media_nome'] ?? ($_FILES['header_media']['name'] ?? null)
+                ];
+
             }else{
 
                 $components[] = [
 
                     'type'   => 'HEADER',
-                    'format' => $dados['header_tipo']
+                    'format' => $headerTipo
 
                 ];
 
                 $componentesOriginais[] = [
                     'type'   => 'HEADER',
-                    'format' => $dados['header_tipo']
+                    'format' => $headerTipo
                 ];
 
             }
@@ -857,7 +903,8 @@ class MetaService
     public function enviarTemplate(
         $numero,
         $template,
-        $variaveis = []
+        $variaveis = [],
+        $midiaHeader = null
     )
     {
         $url =
@@ -918,6 +965,24 @@ class MetaService
 
 
 
+        $components = [];
+
+        $headerMidiaComponent = $this->montarHeaderMidiaEnvio(
+            $template,
+            $midiaHeader
+        );
+
+        if($headerMidiaComponent){
+            $components[] = $headerMidiaComponent;
+        }
+
+        if(!empty($parameters)){
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $parameters
+            ];
+        }
+
         $payload = [
 
             'messaging_product' => 'whatsapp',
@@ -939,25 +1004,15 @@ class MetaService
                     'code' =>
                     $template['TMP_Idioma']
 
-                ],
-
-                'components' => [
-
-                    [
-
-                        'type' => 'body',
-
-                        'parameters' => $parameters
-
-                    ]
-
                 ]
 
             ]
 
         ];
 
-
+        if(!empty($components)){
+            $payload['template']['components'] = $components;
+        }
 
 
 
@@ -1026,6 +1081,50 @@ class MetaService
         return $retorno;
     }
 
+
+
+
+    private function montarHeaderMidiaEnvio($template, $midiaHeader)
+    {
+        $tipo = strtoupper((string) ($template['TMP_HeaderTipo'] ?? ''));
+
+        if($tipo === ''){
+            $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+            if(is_array($componentes)){
+                foreach($componentes as $componente){
+                    if(($componente['type'] ?? '') == 'HEADER'){
+                        $tipo = strtoupper((string) ($componente['format'] ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+            return null;
+        }
+
+        if(!is_array($midiaHeader) || empty($midiaHeader['media_id'])){
+            return null;
+        }
+
+        $chave = strtolower($tipo);
+        $media = ['id' => $midiaHeader['media_id']];
+
+        if($tipo == 'DOCUMENT' && !empty($midiaHeader['filename'])){
+            $media['filename'] = $midiaHeader['filename'];
+        }
+
+        return [
+            'type' => 'header',
+            'parameters' => [
+                [
+                    'type' => $chave,
+                    $chave => $media
+                ]
+            ]
+        ];
+    }
 
 
 

@@ -23,6 +23,40 @@ class TemplateMeta
 
 
 
+    private function extrairHeaderMetadados(array $componentes)
+    {
+        $dados = [
+            'tipo' => null,
+            'modo' => 'nenhuma',
+            'url_exemplo' => null,
+            'handle' => null,
+            'documento_nome' => null
+        ];
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') != 'HEADER'){
+                continue;
+            }
+
+            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+            $dados['tipo'] = $tipo ?: null;
+
+            if(in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                $dados['modo'] = 'estatica';
+                $handles = $componente['example']['header_handle'] ?? [];
+                if(is_array($handles) && !empty($handles[0])){
+                    $dados['handle'] = $handles[0];
+                }
+                $dados['documento_nome'] = $componente['media_name'] ?? null;
+            }
+
+            break;
+        }
+
+        return $dados;
+    }
+
+
     public function salvarOuAtualizar(
         $metaId,
         $template
@@ -55,6 +89,8 @@ class TemplateMeta
                 $template['components'] ?? []
             );
 
+        $headerMetadados = $this->extrairHeaderMetadados($componentes);
+
 
 
 
@@ -69,6 +105,11 @@ class TemplateMeta
                     TMP_Categoria = ?,
                     TMP_Idioma = ?,
                     TMP_Status = ?,
+                    TMP_HeaderTipo = ?,
+                    TMP_HeaderMidiaModo = ?,
+                    TMP_HeaderMidiaUrlExemplo = ?,
+                    TMP_HeaderMidiaHandle = ?,
+                    TMP_HeaderDocumentoNome = ?,
                     TMP_Componentes = ?,
                     TMP_DataSync = NOW()
 
@@ -89,6 +130,16 @@ class TemplateMeta
                 $template['language'],
 
                 $template['status'],
+
+                $headerMetadados['tipo'],
+
+                $headerMetadados['modo'],
+
+                $headerMetadados['url_exemplo'],
+
+                $headerMetadados['handle'],
+
+                $headerMetadados['documento_nome'],
 
                 json_encode(
                     $componentes
@@ -116,6 +167,11 @@ class TemplateMeta
                 TMP_Categoria,
                 TMP_Idioma,
                 TMP_Status,
+                TMP_HeaderTipo,
+                TMP_HeaderMidiaModo,
+                TMP_HeaderMidiaUrlExemplo,
+                TMP_HeaderMidiaHandle,
+                TMP_HeaderDocumentoNome,
                 TMP_Componentes,
                 TMP_DataSync
 
@@ -124,7 +180,7 @@ class TemplateMeta
             VALUES
             (
 
-                ?, ?, ?, ?, ?, ?, ?, NOW()
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
 
             )
 
@@ -147,6 +203,16 @@ class TemplateMeta
             $template['language'],
 
             $template['status'],
+
+            $headerMetadados['tipo'],
+
+            $headerMetadados['modo'],
+
+            $headerMetadados['url_exemplo'],
+
+            $headerMetadados['handle'],
+
+            $headerMetadados['documento_nome'],
 
             json_encode(
                 $componentes

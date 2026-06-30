@@ -11,6 +11,7 @@ use Models\Contato;
 use Models\FilaEnvio;
 use Models\CampanhaVariavel;
 use Services\MetaService;
+use Services\MetaMediaService;
 use Models\ListaContato;
 use Models\ListaContatoItem;
 
@@ -75,6 +76,26 @@ class CampanhaController extends Controller
         );
     }
 
+    
+    private function tipoHeaderMidiaTemplate(array $template)
+    {
+        $tipo = strtoupper((string) ($template['TMP_HeaderTipo'] ?? ''));
+
+        if($tipo === ''){
+            $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+            if(is_array($componentes)){
+                foreach($componentes as $componente){
+                    if(($componente['type'] ?? '') == 'HEADER'){
+                        $tipo = strtoupper((string) ($componente['format'] ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        return in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) ? $tipo : null;
+    }
+
     public function criar()
     {
         $this->validarCsrfPost();
@@ -92,12 +113,25 @@ class CampanhaController extends Controller
             $this->redirect('campanha');
         }
 
+        $midiaHeader = [];
+        $tipoMidiaHeader = $this->tipoHeaderMidiaTemplate($template);
+
+        if($tipoMidiaHeader){
+            $mediaService = new MetaMediaService((int) $template['MTA_ID'], $usuario['CLI_ID']);
+            $midiaHeader = $mediaService->uploadMensagemMedia(
+                $_FILES['header_media_campanha'] ?? [],
+                $tipoMidiaHeader
+            );
+            $midiaHeader['tipo'] = $tipoMidiaHeader;
+        }
+
         $campanhaId =
             $this->campanhaModel->salvar([
 
                 'cliente_id' => $usuario['CLI_ID'],
                 'template_id' => $_POST['template'],
                 'lista_id' => $_POST['lista'],
+                'midia_header' => $midiaHeader,
                 'nome' => trim($_POST['nome']),
                 'descricao' => trim($_POST['descricao']),
                 'data_agendamento' =>

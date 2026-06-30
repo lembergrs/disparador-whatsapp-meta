@@ -188,6 +188,17 @@ data-componentes="<?= htmlspecialchars(
 
 </button>
 
+<button
+ type="button"
+ class="btn btn-warning btn-sm btnEditarTemplate"
+ data-id="<?= (int) $template['TMP_ID']; ?>"
+ data-nome="<?= htmlspecialchars($template['TMP_Nome'], ENT_QUOTES); ?>"
+ data-header-tipo="<?= htmlspecialchars($template['TMP_HeaderTipo'] ?? '', ENT_QUOTES); ?>"
+ data-documento="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
+>
+    <i class="fas fa-edit"></i>
+</button>
+
 <a
 href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=template/inativar" data-field-id="<?= (int) $template['TMP_ID']; ?>"
 class="btn btn-danger btn-sm"
@@ -286,6 +297,32 @@ aria-label="Close"
 
 </div>
 
+
+<div class="modal fade" id="modalEditarTemplate">
+<div class="modal-dialog">
+<div class="modal-content">
+<form method="POST" action="<?= BASE_URL; ?>/index.php?url=template/editar" enctype="multipart/form-data">
+    <?= \Core\Csrf::input(); ?>
+    <input type="hidden" name="id" id="editarTemplateId">
+    <div class="modal-header">
+        <h4 class="modal-title">Editar Template</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="modal-body">
+        <p><strong id="editarTemplateNome"></strong></p>
+        <p>Tipo atual do header: <span id="editarTemplateHeader" class="badge badge-info"></span></p>
+        <p id="editarTemplateMidiaAtual" class="text-muted"></p>
+        <div class="alert alert-warning mb-0">Templates aprovados pela Meta podem exigir criação de um novo template para alteração. Para substituir mídia com segurança, crie um novo template.</div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+        <button type="submit" class="btn btn-warning">Entendi</button>
+    </div>
+</form>
+</div>
+</div>
+</div>
+
 <div
 class="modal fade"
 id="modalNovoTemplate"
@@ -299,7 +336,10 @@ id="modalNovoTemplate"
 method="POST"
 action="<?= BASE_URL; ?>/index.php?url=template/criar"
 id="formNovoTemplate"
+enctype="multipart/form-data"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="modal-header">
 
@@ -465,9 +505,9 @@ Inglês
             >
                 <option value="">Sem Header</option>
                 <option value="TEXT">Texto</option>
-                <option value="IMAGE" disabled>Imagem em breve</option>
-                <option value="VIDEO" disabled>Vídeo em breve</option>
-                <option value="DOCUMENT" disabled>Documento em breve</option>   
+                <option value="IMAGE">Imagem</option>
+                <option value="VIDEO">Vídeo</option>
+                <option value="DOCUMENT">Documento/PDF</option>   
 
             </select>
 
@@ -498,9 +538,17 @@ Inglês
 
 </div>
 
-
-
-
+<div id="areaHeaderMidia" class="form-group" style="display:none">
+    <label>Arquivo do header</label>
+    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media">
+        <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
+        <p class="mb-1">Clique ou arraste o arquivo aqui.</p>
+        <small class="text-muted meta-media-help">Imagem: JPG, PNG ou WEBP até 5 MB. Vídeo: MP4/3GPP até 16 MB. Documento: PDF até 10 MB.</small>
+        <input type="file" name="header_media" id="header_media" class="d-none" accept=".jpg,.jpeg,.png,.webp,.mp4,.3gpp,.pdf">
+    </div>
+    <div class="mt-2" id="headerMediaNome"></div>
+    <img src="" alt="Preview da imagem" id="headerMediaPreview" class="img-fluid rounded mt-2" style="display:none;max-height:180px;">
+</div>
 
 <div class="form-group">
 
@@ -1091,6 +1139,12 @@ function abrirPreviewTemplate(botao)
             html += '<div class="alert alert-secondary"><strong>' + comp.text + '</strong></div>';
         }
 
+        if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(comp.format) >= 0){
+            let nomeMidia = comp.media_name || 'Mídia enviada para aprovação';
+            let iconeMidia = comp.format == 'IMAGE' ? 'fa-image' : (comp.format == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+            html += '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> Header ' + comp.format + ': ' + nomeMidia + '</div>';
+        }
+
         if(comp.type == 'BODY' && comp.text){
             html += '<div class="border rounded p-2 mb-2">' + comp.text.replace(/\n/g, '<br>') + '</div>';
         }
@@ -1148,5 +1202,59 @@ function formatarNomeTemplate(campo)
 
     campo.value = valor;
 }
+
+
+function configurarUploadMidiaMeta(dropSelector, inputSelector, nomeSelector, previewSelector)
+{
+    const drop = $(dropSelector);
+    const input = $(inputSelector);
+
+    drop.on('click', function(){ input.trigger('click'); });
+    drop.on('dragover', function(e){ e.preventDefault(); drop.addClass('border-primary'); });
+    drop.on('dragleave drop', function(e){ e.preventDefault(); drop.removeClass('border-primary'); });
+    drop.on('drop', function(e){
+        const files = e.originalEvent.dataTransfer.files;
+        if(files && files.length){
+            input[0].files = files;
+            input.trigger('change');
+        }
+    });
+
+    input.on('change', function(){
+        const file = this.files && this.files[0] ? this.files[0] : null;
+        $(nomeSelector).text(file ? file.name : '');
+        $(previewSelector).hide().attr('src', '');
+        if(file && file.type && file.type.indexOf('image/') === 0){
+            const reader = new FileReader();
+            reader.onload = function(e){ $(previewSelector).attr('src', e.target.result).show(); };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+const alterarTipoHeaderOriginal = typeof alterarTipoHeader === 'function' ? alterarTipoHeader : null;
+alterarTipoHeader = function(tipo){
+    if(alterarTipoHeaderOriginal){ alterarTipoHeaderOriginal(tipo); }
+    if(['IMAGE','VIDEO','DOCUMENT'].indexOf(tipo) >= 0){
+        $('#areaHeaderTexto').hide();
+        $('#areaHeaderMidia').show();
+        $('#header_media').prop('required', true);
+    }else{
+        $('#areaHeaderMidia').hide();
+        $('#header_media').prop('required', false).val('').trigger('change');
+    }
+};
+
+configurarUploadMidiaMeta('.meta-media-drop[data-input="header_media"]', '#header_media', '#headerMediaNome', '#headerMediaPreview');
+
+
+$(document).on('click', '.btnEditarTemplate', function(){
+    $('#editarTemplateId').val($(this).data('id'));
+    $('#editarTemplateNome').text($(this).data('nome'));
+    $('#editarTemplateHeader').text($(this).data('header-tipo') || 'Sem header');
+    let documento = $(this).data('documento') || '';
+    $('#editarTemplateMidiaAtual').text(documento ? ('Mídia atual: ' + documento) : 'Sem arquivo de mídia local exibível.');
+    $('#modalEditarTemplate').modal('show');
+});
 
 </script>

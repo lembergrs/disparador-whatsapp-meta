@@ -8,6 +8,7 @@ use Core\Session;
 use Models\TemplateMeta;
 use Models\MetaConta;
 use Services\MetaService;
+use Exception;
 
 class TemplateController extends Controller
 {
@@ -89,8 +90,13 @@ class TemplateController extends Controller
 
 
 
-        $response =
-            $meta->criarTemplate($_POST);
+        try{
+            $response =
+                $meta->criarTemplate($_POST);
+        }catch(Exception $e){
+            Session::flash('error', $e->getMessage());
+            $this->redirect('template');
+        }
 
 
 
@@ -137,6 +143,30 @@ class TemplateController extends Controller
         $this->redirect(
             'template'
         );
+    }
+
+
+
+    public function editar()
+    {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+        $id = (int) ($_POST['id'] ?? 0);
+
+        $template = $this->templateModel->buscarPorCliente($id, $usuario['CLI_ID']);
+
+        if(!$template){
+            Session::flash('error', 'Template inválido.');
+            $this->redirect('template');
+        }
+
+        Session::flash(
+            'error',
+            'Templates aprovados pela Meta podem exigir criação de um novo template para alteração.'
+        );
+
+        $this->redirect('template');
     }
 
 

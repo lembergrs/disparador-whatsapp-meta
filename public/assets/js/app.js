@@ -858,6 +858,13 @@ $(document).ready(function(){
 
                 }
 
+                if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                    let formato = String(comp.format || '').toUpperCase();
+                    let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                    let nome = comp.media_name || 'Mídia do template';
+                    previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> Header ${formato}: ${nome}</div>`;
+                }
+
                 if(comp.type == 'BODY' && comp.text){
 
                     previewHtml += `
@@ -2069,15 +2076,23 @@ $(document).ready(function(){
 
         $('#textoProgressoDisparo').html('Salvando destinos na fila...');
 
+        let formDataLote = new FormData();
+        formDataLote.append('csrf_token', (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''));
+        formDataLote.append('meta', $('#meta').val());
+        formDataLote.append('template', $('#template').val());
+        formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
+
+        let arquivoMidiaLote = $('#header_media_envio')[0];
+        if(arquivoMidiaLote && arquivoMidiaLote.files && arquivoMidiaLote.files[0]){
+            formDataLote.append('header_media_envio', arquivoMidiaLote.files[0]);
+        }
+
         $.ajax({
             url: BASE_URL + '/index.php?url=disparo/criarLoteAjax',
             method: 'POST',
-            data: {
-                csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
-                meta: $('#meta').val(),
-                template: $('#template').val(),
-                destinos_json: JSON.stringify(parse.destinos.map(montarDestinoFila))
-            },
+            data: formDataLote,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(retorno){
                 if(!retorno.sucesso){
@@ -2437,3 +2452,91 @@ function validarCnpj(cnpj)
 
     return true;
 }
+
+function tipoHeaderMidiaComponentesDisparador(componentes)
+{
+    if(!Array.isArray(componentes)){
+        return '';
+    }
+
+    for(let i = 0; i < componentes.length; i++){
+        if(componentes[i].type === 'HEADER'){
+            let tipo = String(componentes[i].format || '').toUpperCase();
+            return ['IMAGE', 'VIDEO', 'DOCUMENT'].indexOf(tipo) >= 0 ? tipo : '';
+        }
+    }
+
+    return '';
+}
+
+function configurarUploadMidiaDisparador(dropSelector, inputSelector, nomeSelector, previewSelector)
+{
+    const drop = $(dropSelector);
+    const input = $(inputSelector);
+
+    if(!drop.length || !input.length){
+        return;
+    }
+
+    drop.on('click', function(){ input.trigger('click'); });
+    drop.on('dragover', function(e){ e.preventDefault(); drop.addClass('border-primary'); });
+    drop.on('dragleave drop', function(e){ e.preventDefault(); drop.removeClass('border-primary'); });
+    drop.on('drop', function(e){
+        const files = e.originalEvent.dataTransfer.files;
+        if(files && files.length){
+            input[0].files = files;
+            input.trigger('change');
+        }
+    });
+
+    input.on('change', function(){
+        const file = this.files && this.files[0] ? this.files[0] : null;
+        $(nomeSelector).text(file ? file.name : '');
+        $(previewSelector).hide().attr('src', '');
+
+        if(file && file.type && file.type.indexOf('image/') === 0){
+            const reader = new FileReader();
+            reader.onload = function(e){ $(previewSelector).attr('src', e.target.result).show(); };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+$(function(){
+    configurarUploadMidiaDisparador('.meta-media-drop[data-input="header_media_envio"]', '#header_media_envio', '#headerMediaEnvioNome', '#headerMediaEnvioPreview');
+    configurarUploadMidiaDisparador('.meta-media-drop[data-input="header_media_campanha"]', '#header_media_campanha', '#headerMediaCampanhaNome', '#headerMediaCampanhaPreview');
+});
+
+$(document).on('change', '#template', function(){
+    let componentesBase64 = $(this).find(':selected').attr('data-componentes');
+    let tipo = '';
+
+    if(componentesBase64){
+        try{ tipo = tipoHeaderMidiaComponentesDisparador(JSON.parse(atob(componentesBase64))); }catch(e){}
+    }
+
+    if(tipo){
+        $('#areaHeaderMidiaDisparo').show();
+        $('#header_media_envio').prop('required', true);
+    }else{
+        $('#areaHeaderMidiaDisparo').hide();
+        $('#header_media_envio').prop('required', false).val('').trigger('change');
+    }
+});
+
+$(document).on('change', '#templateCampanha', function(){
+    let componentesBase64 = $(this).find(':selected').attr('data-componentes');
+    let tipo = '';
+
+    if(componentesBase64){
+        try{ tipo = tipoHeaderMidiaComponentesDisparador(JSON.parse(atob(componentesBase64))); }catch(e){}
+    }
+
+    if(tipo){
+        $('#areaHeaderMidiaCampanha').show();
+        $('#header_media_campanha').prop('required', true);
+    }else{
+        $('#areaHeaderMidiaCampanha').hide();
+        $('#header_media_campanha').prop('required', false).val('').trigger('change');
+    }
+});
