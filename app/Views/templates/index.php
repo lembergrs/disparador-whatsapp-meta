@@ -1222,6 +1222,8 @@ function normalizarUrlPreviewTemplate(url)
         return '';
     }
 
+    url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+
     if(/^https?:\/\//i.test(url) || url.indexOf('//') === 0 || url.indexOf('data:image/') === 0){
         return url;
     }
