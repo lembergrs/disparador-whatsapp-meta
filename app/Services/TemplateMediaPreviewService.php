@@ -45,7 +45,7 @@ class TemplateMediaPreviewService
         chmod($destino, 0644);
 
         return [
-            'url' => BASE_URL . '/uploads/templates/' . $nomeFisico,
+            'url' => rtrim(UPLOADS_PUBLIC_BASE_URL, '/') . '/templates/' . $nomeFisico,
             'path' => $destino,
             'nome_original' => $info['nome_original'],
             'mime' => $info['mime'],
