@@ -1269,7 +1269,7 @@ $(document).ready(function(){
             return '';
         }
 
-        url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+        //url = url.replace('/public/uploads/templates/', '/uploads/templates/');
 
         if(/^https?:\/\//i.test(url)){
             return url;
