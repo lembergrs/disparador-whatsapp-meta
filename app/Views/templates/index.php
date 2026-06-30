@@ -1,5 +1,10 @@
 <?php
 
+use Core\Session;
+
+$templateMetaErrorModal = Session::get('template_meta_error_modal');
+Session::remove('template_meta_error_modal');
+
 if(!function_exists('categoriaTemplatePtBr')){
 
     function categoriaTemplatePtBr($categoria)
@@ -345,6 +350,28 @@ aria-label="Close"
 
 </div>
 
+
+<?php if(!empty($templateMetaErrorModal) && is_array($templateMetaErrorModal)){ ?>
+<div class="modal fade" id="modalErroTemplateMeta" tabindex="-1" role="dialog" aria-labelledby="modalErroTemplateMetaTitulo" aria-hidden="true">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header bg-danger">
+        <h4 class="modal-title" id="modalErroTemplateMetaTitulo"><?= htmlspecialchars($templateMetaErrorModal['titulo'] ?? 'Não foi possível criar o template', ENT_QUOTES, 'UTF-8'); ?></h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="modal-body">
+        <?php if(!empty($templateMetaErrorModal['destaque'])){ ?>
+            <p><strong><?= htmlspecialchars($templateMetaErrorModal['destaque'], ENT_QUOTES, 'UTF-8'); ?></strong></p>
+        <?php } ?>
+        <p class="mb-0"><?= nl2br(htmlspecialchars($templateMetaErrorModal['mensagem'] ?? 'Não foi possível criar o template na Meta. Tente novamente.', ENT_QUOTES, 'UTF-8')); ?></p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+    </div>
+</div>
+</div>
+</div>
+<?php } ?>
 
 <div class="modal fade" id="modalEditarTemplate">
 <div class="modal-dialog">
@@ -1371,5 +1398,12 @@ $(document).on('click', '.btnEditarTemplate', function(){
     $('#editarTemplateMidiaAtual').text(documento ? ('Mídia atual: ' + documento) : 'Sem arquivo de mídia local exibível.');
     $('#modalEditarTemplate').modal('show');
 });
+
+
+<?php if(!empty($templateMetaErrorModal) && is_array($templateMetaErrorModal)){ ?>
+$(function(){
+    $('#modalErroTemplateMeta').modal('show');
+});
+<?php } ?>
 
 </script>

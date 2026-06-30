@@ -147,16 +147,9 @@ class TemplateController extends Controller
                 (new TemplateMediaPreviewService())->removerCopia($previewLocal);
             }
 
-            $erro =
-                $this->extrairErroTemplateMeta($response);
-
-
-
-
-
-            Session::flash(
-                'error',
-                $erro
+            Session::set(
+                'template_meta_error_modal',
+                $this->extrairErroTemplateMeta($response)
             );
         }
 
@@ -308,37 +301,42 @@ class TemplateController extends Controller
 
     private function extrairErroTemplateMeta($response)
     {
+        $modal = [
+            'titulo' => 'Não foi possível criar o template',
+            'destaque' => '',
+            'mensagem' => 'Não foi possível criar o template na Meta. Verifique os dados informados e tente novamente.'
+        ];
+
         if(!is_array($response)){
-            return 'Não foi possível criar o template na Meta. Tente novamente em alguns instantes.';
+            return $modal;
         }
 
         $erro = $response['error'] ?? [];
 
         if(!is_array($erro)){
-            return 'Não foi possível criar o template na Meta. Tente novamente em alguns instantes.';
+            return $modal;
         }
 
         $tituloUsuario = trim((string) ($erro['error_user_title'] ?? ''));
         $mensagemUsuario = trim((string) ($erro['error_user_msg'] ?? ''));
 
         if($mensagemUsuario !== ''){
-            if($this->erroCategoriaTemplateEmProcessamento($tituloUsuario, $mensagemUsuario)){
-                $mensagemUsuario = 'Já existe um template com este nome e idioma em processamento/exclusão na Meta. Aguarde o prazo informado pela Meta ou utilize outro nome para o template.';
-            }
+            $modal['destaque'] = $tituloUsuario;
+            $modal['mensagem'] = $this->erroCategoriaTemplateEmProcessamento($tituloUsuario, $mensagemUsuario)
+                ? 'Já existe um template com este nome e idioma em processamento/exclusão na Meta. Aguarde o prazo informado pela Meta ou utilize outro nome para o template.'
+                : $mensagemUsuario;
 
-            if($tituloUsuario !== ''){
-                return '<strong>' . htmlspecialchars($tituloUsuario, ENT_QUOTES, 'UTF-8') . '</strong><br>'
-                    . htmlspecialchars($mensagemUsuario, ENT_QUOTES, 'UTF-8');
-            }
-
-            return htmlspecialchars($mensagemUsuario, ENT_QUOTES, 'UTF-8');
+            return $modal;
         }
 
         if(!empty($erro['message'])){
-            return htmlspecialchars((string) $erro['message'], ENT_QUOTES, 'UTF-8');
+            $modal['destaque'] = $tituloUsuario;
+            $modal['mensagem'] = (string) $erro['message'];
+
+            return $modal;
         }
 
-        return 'Não foi possível criar o template na Meta. Verifique os dados informados e tente novamente.';
+        return $modal;
     }
 
     private function erroCategoriaTemplateEmProcessamento($titulo, $mensagem)

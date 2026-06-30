@@ -42,7 +42,7 @@ class TemplateMediaPreviewService
             throw new Exception('Não foi possível salvar a mídia de preview do template.');
         }
 
-        chmod($destino, 0640);
+        chmod($destino, 0644);
 
         return [
             'url' => BASE_URL . '/public/uploads/templates/' . $nomeFisico,
