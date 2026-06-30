@@ -20,6 +20,29 @@ if(!function_exists('categoriaTemplatePtBr')){
 
 }
 
+if(!function_exists('templateHeaderTipo')){
+    function templateHeaderTipo($template)
+    {
+        if(!empty($template['TMP_HeaderTipo'])){
+            return $template['TMP_HeaderTipo'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER'){
+                return $componente['format'] ?? '';
+            }
+        }
+
+        return '';
+    }
+}
+
 if(!function_exists('templateHeaderMidiaUrlExemplo')){
     function templateHeaderMidiaUrlExemplo($template)
     {
@@ -233,6 +256,7 @@ data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
     ENT_QUOTES
 ); ?>"
+data-header-tipo="<?= htmlspecialchars(templateHeaderTipo($template), ENT_QUOTES); ?>"
 data-header-midia-url="<?= htmlspecialchars(templateHeaderMidiaUrlExemplo($template), ENT_QUOTES); ?>"
 data-header-documento-nome="<?= htmlspecialchars(templateHeaderDocumentoNome($template), ENT_QUOTES); ?>"
 >
@@ -1190,6 +1214,45 @@ function escapeHtmlTemplatePreview(valor)
     return $('<div>').text(valor || '').html();
 }
 
+function normalizarUrlPreviewTemplate(url)
+{
+    url = (url || '').trim();
+
+    if(url === ''){
+        return '';
+    }
+
+    if(/^https?:\/\//i.test(url) || url.indexOf('//') === 0 || url.indexOf('data:image/') === 0){
+        return url;
+    }
+
+    if(url.charAt(0) !== '/'){
+        url = '/' + url;
+    }
+
+    return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + url;
+}
+
+function renderizarHeaderMidiaTemplate(formato, urlMidia, nomeMidia)
+{
+    formato = String(formato || '').toUpperCase();
+    urlMidia = normalizarUrlPreviewTemplate(urlMidia);
+    nomeMidia = nomeMidia || 'Mídia enviada para aprovação';
+
+    if(formato == 'IMAGE' && urlMidia){
+        return '<div class="mb-2"><img src="' + escapeHtmlTemplatePreview(urlMidia) + '" alt="Imagem do cabeçalho" class="img-fluid rounded border" style="max-width:100%;max-height:220px;"></div>';
+    }
+
+    if(formato == 'VIDEO' && urlMidia){
+        return '<div class="mb-2"><video controls class="w-100 rounded border" style="max-height:260px;"><source src="' + escapeHtmlTemplatePreview(urlMidia) + '"></video><small class="text-muted">' + escapeHtmlTemplatePreview(nomeMidia) + '</small></div>';
+    }
+
+    let iconeMidia = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+    let texto = formato == 'IMAGE' ? 'Imagem no cabeçalho' : (formato == 'VIDEO' ? 'Vídeo no cabeçalho' : nomeMidia);
+
+    return '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> ' + escapeHtmlTemplatePreview(texto) + '</div>';
+}
+
 function abrirPreviewTemplate(botao)
 {
     botao = $(botao);
@@ -1212,6 +1275,10 @@ function abrirPreviewTemplate(botao)
     }
 
     let html = '';
+    let headerMidiaRenderizado = false;
+    let headerTipoNormalizado = String(botao.attr('data-header-tipo') || '').toUpperCase();
+    let headerMidiaUrlNormalizada = botao.attr('data-header-midia-url') || '';
+    let headerDocumentoNomeNormalizado = botao.attr('data-header-documento-nome') || '';
 
     componentes.forEach(function(comp){
 
@@ -1219,19 +1286,12 @@ function abrirPreviewTemplate(botao)
             html += '<div class="alert alert-secondary"><strong>' + comp.text + '</strong></div>';
         }
 
-        if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(comp.format) >= 0){
-            let formato = comp.format;
-            let nomeMidia = botao.attr('data-header-documento-nome') || comp.media_name || 'Mídia enviada para aprovação';
-            let urlMidia = botao.attr('data-header-midia-url') || comp.media_url || '';
-            let iconeMidia = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
-
-            if(formato == 'IMAGE' && urlMidia){
-                html += '<div class="mb-2"><img src="' + escapeHtmlTemplatePreview(urlMidia) + '" alt="Imagem no cabeçalho" class="img-fluid rounded border" style="max-height:220px;"></div>';
-            }else if(formato == 'VIDEO' && urlMidia){
-                html += '<div class="mb-2"><video controls class="w-100 rounded border" style="max-height:260px;"><source src="' + escapeHtmlTemplatePreview(urlMidia) + '"></video><small class="text-muted">' + escapeHtmlTemplatePreview(nomeMidia) + '</small></div>';
-            }else{
-                html += '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> ' + escapeHtmlTemplatePreview(formato == 'IMAGE' ? 'Imagem no cabeçalho' : (formato == 'VIDEO' ? 'Vídeo no cabeçalho' : nomeMidia)) + '</div>';
-            }
+        if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+            let formato = String(comp.format || '').toUpperCase();
+            let nomeMidia = headerDocumentoNomeNormalizado || comp.media_name || 'Mídia enviada para aprovação';
+            let urlMidia = headerMidiaUrlNormalizada || comp.media_url || '';
+            html += renderizarHeaderMidiaTemplate(formato, urlMidia, nomeMidia);
+            headerMidiaRenderizado = true;
         }
 
         if(comp.type == 'BODY' && comp.text){
@@ -1254,6 +1314,14 @@ function abrirPreviewTemplate(botao)
         }
 
     });
+
+    if(!headerMidiaRenderizado && ['IMAGE','VIDEO','DOCUMENT'].indexOf(headerTipoNormalizado) >= 0){
+        html = renderizarHeaderMidiaTemplate(
+            headerTipoNormalizado,
+            headerMidiaUrlNormalizada,
+            headerDocumentoNomeNormalizado || 'Mídia enviada para aprovação'
+        ) + html;
+    }
 
     $('#templatePreview').html(html);
 
