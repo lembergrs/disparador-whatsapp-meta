@@ -309,18 +309,49 @@ class TemplateController extends Controller
     private function extrairErroTemplateMeta($response)
     {
         if(!is_array($response)){
-            return 'Erro ao criar template';
+            return 'Não foi possível criar o template na Meta. Tente novamente em alguns instantes.';
         }
 
-        if(!empty($response['error']['error_data']['details'])){
-            return $response['error']['error_data']['details'];
+        $erro = $response['error'] ?? [];
+
+        if(!is_array($erro)){
+            return 'Não foi possível criar o template na Meta. Tente novamente em alguns instantes.';
         }
 
-        if(!empty($response['error']['message'])){
-            return $response['error']['message'];
+        $tituloUsuario = trim((string) ($erro['error_user_title'] ?? ''));
+        $mensagemUsuario = trim((string) ($erro['error_user_msg'] ?? ''));
+
+        if($mensagemUsuario !== ''){
+            if($this->erroCategoriaTemplateEmProcessamento($tituloUsuario, $mensagemUsuario)){
+                $mensagemUsuario = 'Já existe um template com este nome e idioma em processamento/exclusão na Meta. Aguarde o prazo informado pela Meta ou utilize outro nome para o template.';
+            }
+
+            if($tituloUsuario !== ''){
+                return '<strong>' . htmlspecialchars($tituloUsuario, ENT_QUOTES, 'UTF-8') . '</strong><br>'
+                    . htmlspecialchars($mensagemUsuario, ENT_QUOTES, 'UTF-8');
+            }
+
+            return htmlspecialchars($mensagemUsuario, ENT_QUOTES, 'UTF-8');
         }
 
-        return 'Erro ao criar template';
+        if(!empty($erro['message'])){
+            return htmlspecialchars((string) $erro['message'], ENT_QUOTES, 'UTF-8');
+        }
+
+        return 'Não foi possível criar o template na Meta. Verifique os dados informados e tente novamente.';
     }
+
+    private function erroCategoriaTemplateEmProcessamento($titulo, $mensagem)
+    {
+        $texto = mb_strtolower((string) $titulo . ' ' . (string) $mensagem, 'UTF-8');
+
+        return strpos($texto, 'categoria') !== false
+            && (
+                strpos($texto, 'exclu') !== false
+                || strpos($texto, 'process') !== false
+                || strpos($texto, 'alterar a categoria') !== false
+            );
+    }
+
 
 }

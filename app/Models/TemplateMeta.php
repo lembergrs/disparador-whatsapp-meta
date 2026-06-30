@@ -141,6 +141,37 @@ class TemplateMeta
 
 
 
+    private function aplicarHeaderMetadadosComponentes(array $componentes, array $metadados)
+    {
+        foreach($componentes as &$componente){
+            if(($componente['type'] ?? '') != 'HEADER'){
+                continue;
+            }
+
+            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+
+            if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                break;
+            }
+
+            if(!empty($metadados['url_exemplo'])){
+                $componente['media_url'] = $metadados['url_exemplo'];
+            }
+
+            if(!empty($metadados['documento_nome'])){
+                $componente['media_name'] = $metadados['documento_nome'];
+            }
+
+            break;
+        }
+
+        unset($componente);
+
+        return $componentes;
+    }
+
+
+
     public function salvarOuAtualizar(
         $metaId,
         $template
@@ -180,7 +211,10 @@ class TemplateMeta
             $existe
         );
 
-
+        $componentes = $this->aplicarHeaderMetadadosComponentes(
+            $componentes,
+            $headerMetadados
+        );
 
 
 

@@ -15,6 +15,52 @@ if(!function_exists('categoriaTemplatePtBr')){
 
 }
 
+if(!function_exists('templateHeaderMidiaUrlExemplo')){
+    function templateHeaderMidiaUrlExemplo($template)
+    {
+        if(!empty($template['TMP_HeaderMidiaUrlExemplo'])){
+            return $template['TMP_HeaderMidiaUrlExemplo'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_url'])){
+                return $componente['media_url'];
+            }
+        }
+
+        return '';
+    }
+}
+
+if(!function_exists('templateHeaderDocumentoNome')){
+    function templateHeaderDocumentoNome($template)
+    {
+        if(!empty($template['TMP_HeaderDocumentoNome'])){
+            return $template['TMP_HeaderDocumentoNome'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_name'])){
+                return $componente['media_name'];
+            }
+        }
+
+        return '';
+    }
+}
+
 ?>
 
 <div class="card">
@@ -182,8 +228,8 @@ data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
     ENT_QUOTES
 ); ?>"
-data-header-midia-url="<?= htmlspecialchars($template['TMP_HeaderMidiaUrlExemplo'] ?? '', ENT_QUOTES); ?>"
-data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
+data-header-midia-url="<?= htmlspecialchars(templateHeaderMidiaUrlExemplo($template), ENT_QUOTES); ?>"
+data-header-documento-nome="<?= htmlspecialchars(templateHeaderDocumentoNome($template), ENT_QUOTES); ?>"
 >
 
 <i class="fas fa-eye"></i>
