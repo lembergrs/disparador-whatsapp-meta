@@ -829,6 +829,8 @@ $(document).ready(function(){
         let option = $(this).find(':selected');
 
         let componentesBase64 = option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#camposVariaveis').html('');
         $('#areaMapeamentoVariaveis').hide();
@@ -864,9 +866,16 @@ $(document).ready(function(){
 
                 if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
                     let formato = String(comp.format || '').toUpperCase();
-                    let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
-                    let nome = comp.media_name || 'Mídia do template';
-                    previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> Header ${formato}: ${nome}</div>`;
+
+                    if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                    }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                    }else{
+                        let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                        let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                        previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                    }
                 }
 
                 if(comp.type == 'BODY' && comp.text){
@@ -1017,6 +1026,8 @@ $(document).ready(function(){
 
         let componentesBase64 =
             option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#conteudoPreviewTemplateDisparo').html('');
         $('#previewTemplateDisparo').hide();
@@ -1053,6 +1064,20 @@ $(document).ready(function(){
                     </div>
                 `;
 
+            }
+
+            if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                let formato = String(comp.format || '').toUpperCase();
+
+                if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                }else{
+                    let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                    let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                    previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                }
             }
 
             if(comp.type == 'BODY' && comp.text){
@@ -1234,6 +1259,29 @@ $(document).ready(function(){
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function normalizarUrlMidiaTemplateDisparo(url)
+    {
+        url = String(url || '').trim();
+
+        if(url === ''){
+            return '';
+        }
+
+        url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+
+        if(/^https?:\/\//i.test(url)){
+            return url;
+        }
+
+        let base = String(typeof BASE_URL !== 'undefined' ? BASE_URL : '').replace(/\/$/, '');
+
+        if(url.charAt(0) === '/'){
+            return base + url;
+        }
+
+        return base + '/' + url.replace(/^\/+/, '');
     }
 
     function encodeDetalhesDisparo(dados)
@@ -1600,6 +1648,9 @@ $(document).ready(function(){
                     <option
                         value="${template.TMP_ID}"
                         data-componentes="${btoa(template.TMP_Componentes)}"
+                        data-header-tipo="${escapeHtmlDisparo(template.TMP_HeaderTipo || '')}"
+                        data-header-midia-url-exemplo="${escapeHtmlDisparo(template.TMP_HeaderMidiaUrlExemplo || '')}"
+                        data-header-documento-nome="${escapeHtmlDisparo(template.TMP_HeaderDocumentoNome || '')}"
                     >
                         ${template.TMP_Nome}
                     </option>
@@ -2086,10 +2137,6 @@ $(document).ready(function(){
         formDataLote.append('template', $('#template').val());
         formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
 
-        let arquivoMidiaLote = $('#header_media_envio')[0];
-        if(arquivoMidiaLote && arquivoMidiaLote.files && arquivoMidiaLote.files[0]){
-            formDataLote.append('header_media_envio', arquivoMidiaLote.files[0]);
-        }
 
         $.ajax({
             url: BASE_URL + '/index.php?url=disparo/criarLoteAjax',
@@ -2456,145 +2503,3 @@ function validarCnpj(cnpj)
 
     return true;
 }
-
-function tipoHeaderMidiaComponentesDisparador(componentes)
-{
-    if(!Array.isArray(componentes)){
-        return '';
-    }
-
-    for(let i = 0; i < componentes.length; i++){
-        if(componentes[i].type === 'HEADER'){
-            let tipo = String(componentes[i].format || '').toUpperCase();
-            return ['IMAGE', 'VIDEO', 'DOCUMENT'].indexOf(tipo) >= 0 ? tipo : '';
-        }
-    }
-
-    return '';
-}
-
-function ajudaMidiaHeaderDisparador(tipo)
-{
-    tipo = String(tipo || '').toUpperCase();
-
-    const config = {
-        IMAGE: {
-            ajuda: 'Imagem: JPG, PNG ou WEBP até 5 MB.',
-            accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
-        },
-        VIDEO: {
-            ajuda: 'Vídeo: MP4 ou 3GPP até 16 MB.',
-            accept: '.mp4,.3gp,.3gpp,video/mp4,video/3gpp'
-        },
-        DOCUMENT: {
-            ajuda: 'Documento: PDF até 10 MB.',
-            accept: '.pdf,application/pdf'
-        }
-    };
-
-    return config[tipo] || {ajuda: 'Selecione um tipo de mídia.', accept: ''};
-}
-
-function limparUploadMidiaDisparador(inputSelector, nomeSelector, previewSelector)
-{
-    $(inputSelector).val('');
-    $(nomeSelector).text('');
-    $(previewSelector).hide().attr('src', '');
-}
-
-function configurarUploadMidiaDisparador(dropSelector, inputSelector, nomeSelector, previewSelector)
-{
-    const drop = $(dropSelector);
-    const input = $(inputSelector);
-
-    if(!drop.length || !input.length){
-        return;
-    }
-
-    drop.on('click keydown', function(e){
-        if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' '){
-            return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const inputFile = input.get(0);
-        if(inputFile && !inputFile.disabled){
-            inputFile.click();
-        }
-    });
-
-    input.on('click', function(e){
-        e.stopPropagation();
-    });
-
-    drop.on('dragover', function(e){ e.preventDefault(); drop.addClass('border-primary'); });
-    drop.on('dragleave drop', function(e){ e.preventDefault(); drop.removeClass('border-primary'); });
-    drop.on('drop', function(e){
-        const files = e.originalEvent.dataTransfer.files;
-        if(files && files.length){
-            input[0].files = files;
-            input.trigger('change');
-        }
-    });
-
-    input.on('change', function(){
-        const file = this.files && this.files[0] ? this.files[0] : null;
-        $(nomeSelector).text(file ? file.name : '');
-        $(previewSelector).hide().attr('src', '');
-
-        if(file && file.type && file.type.indexOf('image/') === 0){
-            const reader = new FileReader();
-            reader.onload = function(e){ $(previewSelector).attr('src', e.target.result).show(); };
-            reader.readAsDataURL(file);
-        }
-    });
-}
-
-$(function(){
-    configurarUploadMidiaDisparador('.meta-media-drop[data-input="header_media_envio"]', '#header_media_envio', '#headerMediaEnvioNome', '#headerMediaEnvioPreview');
-    configurarUploadMidiaDisparador('.meta-media-drop[data-input="header_media_campanha"]', '#header_media_campanha', '#headerMediaCampanhaNome', '#headerMediaCampanhaPreview');
-});
-
-$(document).on('change', '#template', function(){
-    let componentesBase64 = $(this).find(':selected').attr('data-componentes');
-    let tipo = '';
-
-    if(componentesBase64){
-        try{ tipo = tipoHeaderMidiaComponentesDisparador(JSON.parse(atob(componentesBase64))); }catch(e){}
-    }
-
-    if(tipo){
-        const config = ajudaMidiaHeaderDisparador(tipo);
-        $('#areaHeaderMidiaDisparo').show();
-        $('#areaHeaderMidiaDisparo .meta-media-help').text(config.ajuda);
-        $('#header_media_envio').prop('required', true).prop('disabled', false).attr('accept', config.accept);
-        limparUploadMidiaDisparador('#header_media_envio', '#headerMediaEnvioNome', '#headerMediaEnvioPreview');
-    }else{
-        $('#areaHeaderMidiaDisparo').hide();
-        $('#header_media_envio').prop('required', false).prop('disabled', false).attr('accept', '');
-        limparUploadMidiaDisparador('#header_media_envio', '#headerMediaEnvioNome', '#headerMediaEnvioPreview');
-    }
-});
-
-$(document).on('change', '#templateCampanha', function(){
-    let componentesBase64 = $(this).find(':selected').attr('data-componentes');
-    let tipo = '';
-
-    if(componentesBase64){
-        try{ tipo = tipoHeaderMidiaComponentesDisparador(JSON.parse(atob(componentesBase64))); }catch(e){}
-    }
-
-    if(tipo){
-        const config = ajudaMidiaHeaderDisparador(tipo);
-        $('#areaHeaderMidiaCampanha').show();
-        $('#areaHeaderMidiaCampanha .meta-media-help').text(config.ajuda);
-        $('#header_media_campanha').prop('required', true).prop('disabled', false).attr('accept', config.accept);
-        limparUploadMidiaDisparador('#header_media_campanha', '#headerMediaCampanhaNome', '#headerMediaCampanhaPreview');
-    }else{
-        $('#areaHeaderMidiaCampanha').hide();
-        $('#header_media_campanha').prop('required', false).prop('disabled', false).attr('accept', '');
-        limparUploadMidiaDisparador('#header_media_campanha', '#headerMediaCampanhaNome', '#headerMediaCampanhaPreview');
-    }
-});

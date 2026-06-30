@@ -1091,13 +1091,26 @@ class MetaService
     private function montarHeaderMidiaEnvio($template, $midiaHeader)
     {
         $tipo = strtoupper((string) ($template['TMP_HeaderTipo'] ?? ''));
+        $urlTemplate = (string) ($template['TMP_HeaderMidiaUrlExemplo'] ?? '');
+        $documentoNomeTemplate = (string) ($template['TMP_HeaderDocumentoNome'] ?? '');
 
-        if($tipo === ''){
+        if($tipo === '' || $urlTemplate === '' || $documentoNomeTemplate === ''){
             $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
             if(is_array($componentes)){
                 foreach($componentes as $componente){
                     if(($componente['type'] ?? '') == 'HEADER'){
-                        $tipo = strtoupper((string) ($componente['format'] ?? ''));
+                        if($tipo === ''){
+                            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+                        }
+
+                        if($urlTemplate === ''){
+                            $urlTemplate = (string) ($componente['media_url'] ?? '');
+                        }
+
+                        if($documentoNomeTemplate === ''){
+                            $documentoNomeTemplate = (string) ($componente['media_name'] ?? '');
+                        }
+
                         break;
                     }
                 }
@@ -1108,15 +1121,26 @@ class MetaService
             return null;
         }
 
-        if(!is_array($midiaHeader) || empty($midiaHeader['media_id'])){
+        $midiaHeader = is_array($midiaHeader) ? $midiaHeader : [];
+        $mediaId = (string) ($midiaHeader['media_id'] ?? '');
+        $mediaLink = (string) ($midiaHeader['link'] ?? ($midiaHeader['url'] ?? $urlTemplate));
+        $mediaLink = str_replace('/public/uploads/templates/', '/uploads/templates/', $mediaLink);
+
+        if($mediaId === '' && $mediaLink === ''){
             return null;
         }
 
         $chave = strtolower($tipo);
-        $media = ['id' => $midiaHeader['media_id']];
+        $media = $mediaId !== ''
+            ? ['id' => $mediaId]
+            : ['link' => $mediaLink];
 
-        if($tipo == 'DOCUMENT' && !empty($midiaHeader['filename'])){
-            $media['filename'] = $midiaHeader['filename'];
+        if($tipo == 'DOCUMENT'){
+            $filename = (string) ($midiaHeader['filename'] ?? $documentoNomeTemplate);
+
+            if($filename !== ''){
+                $media['filename'] = $filename;
+            }
         }
 
         return [
@@ -1129,6 +1153,7 @@ class MetaService
             ]
         ];
     }
+
 
 
 

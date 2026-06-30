@@ -125,7 +125,9 @@ class Campanha
                 t.TMP_Componentes,
                 t.TMP_Idioma,
                 t.MTA_ID,
-                t.TMP_HeaderTipo
+                t.TMP_HeaderTipo,
+                t.TMP_HeaderMidiaUrlExemplo,
+                t.TMP_HeaderDocumentoNome
 
             FROM campanhas c
 
@@ -150,7 +152,9 @@ class Campanha
                 t.TMP_Componentes,
                 t.TMP_Idioma,
                 t.MTA_ID,
-                t.TMP_HeaderTipo
+                t.TMP_HeaderTipo,
+                t.TMP_HeaderMidiaUrlExemplo,
+                t.TMP_HeaderDocumentoNome
             FROM campanhas c
             LEFT JOIN templates_meta t
                 ON t.TMP_ID = c.TMP_ID

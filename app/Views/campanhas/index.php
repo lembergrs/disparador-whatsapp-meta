@@ -191,7 +191,6 @@ id="modalCampanha"
 <form
 method="POST"
 action="<?= BASE_URL; ?>/index.php?url=campanha/criar"
-enctype="multipart/form-data"
 >
 <?= \Core\Csrf::input(); ?>
 
@@ -249,6 +248,9 @@ Selecione
 <option
 value="<?= $template['TMP_ID']; ?>"
 data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes']), ENT_QUOTES); ?>"
+data-header-tipo="<?= htmlspecialchars($template['TMP_HeaderTipo'] ?? '', ENT_QUOTES); ?>"
+data-header-midia-url-exemplo="<?= htmlspecialchars($template['TMP_HeaderMidiaUrlExemplo'] ?? '', ENT_QUOTES); ?>"
+data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
 >
     <?= $template['TMP_Nome']; ?>
 </option>
@@ -257,17 +259,6 @@ data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes'
 
 </select>
 
-<div id="areaHeaderMidiaCampanha" class="form-group" style="display:none">
-    <label>Mídia do template para esta campanha</label>
-    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media_campanha" role="button" tabindex="0" style="cursor:pointer;">
-        <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
-        <p class="mb-1">Clique ou arraste 1 arquivo. Ele será usado para todos os contatos.</p>
-        <small class="text-muted meta-media-help">Selecione um template com mídia.</small>
-        <input type="file" name="header_media_campanha" id="header_media_campanha" class="d-none" accept="">
-    </div>
-    <div class="mt-2" id="headerMediaCampanhaNome"></div>
-    <img src="" alt="Preview da imagem" id="headerMediaCampanhaPreview" class="img-fluid rounded mt-2" style="display:none;max-height:180px;">
-</div>
 
 <div class="form-group">
 

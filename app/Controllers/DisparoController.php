@@ -13,7 +13,6 @@ use Models\ConsumoMensal;
 use Models\DisparoManual;
 use Services\ControlePlanoService;
 use Services\DisparoManualQueueService;
-use Services\MetaMediaService;
 
 class DisparoController extends Controller
 {
@@ -365,26 +364,6 @@ class DisparoController extends Controller
         }
 
         return 'Não foi possível enviar para este número.';
-    }
-
-
-    private function tipoHeaderMidiaTemplate(array $template)
-    {
-        $tipo = strtoupper((string) ($template['TMP_HeaderTipo'] ?? ''));
-
-        if($tipo === ''){
-            $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
-            if(is_array($componentes)){
-                foreach($componentes as $componente){
-                    if(($componente['type'] ?? '') == 'HEADER'){
-                        $tipo = strtoupper((string) ($componente['format'] ?? ''));
-                        break;
-                    }
-                }
-            }
-        }
-
-        return in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) ? $tipo : null;
     }
 
     private function statusItemDisparo($status)
@@ -1423,24 +1402,11 @@ class DisparoController extends Controller
                 throw new \Exception('Nenhum destino válido para enfileirar.');
             }
 
-            $midiaHeader = [];
-            $tipoMidiaHeader = $this->tipoHeaderMidiaTemplate($template);
-
-            if($tipoMidiaHeader){
-                $mediaService = new MetaMediaService($metaId, $usuario['CLI_ID']);
-                $midiaHeader = $mediaService->uploadMensagemMedia(
-                    $_FILES['header_media_envio'] ?? [],
-                    $tipoMidiaHeader
-                );
-                $midiaHeader['tipo'] = $tipoMidiaHeader;
-            }
-
             $loteId = $model->criarLote(
                 $usuario['CLI_ID'],
                 $metaId,
                 $templateId,
-                count($itens),
-                $midiaHeader
+                count($itens)
             );
 
             foreach($itens as $item){
