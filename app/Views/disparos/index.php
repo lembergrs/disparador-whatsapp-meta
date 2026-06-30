@@ -28,6 +28,8 @@ method="POST"
 id="formDisparo"
 action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="row">
 
@@ -95,7 +97,6 @@ Selecione primeiro a Conta Meta
 
 </div>
 
-</div>
 
 <div
 id="areaProgressoDisparo"

@@ -579,6 +579,10 @@ $(document).ready(function(){
         '.btnVisualizarTemplate',
         function(){
 
+            if(typeof abrirPreviewTemplate === 'function'){
+                return;
+            }
+
             $('#tmpNome').html(
                 $(this).data('nome')
             );
@@ -825,6 +829,8 @@ $(document).ready(function(){
         let option = $(this).find(':selected');
 
         let componentesBase64 = option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#camposVariaveis').html('');
         $('#areaMapeamentoVariaveis').hide();
@@ -856,6 +862,20 @@ $(document).ready(function(){
                         </div>
                     `;
 
+                }
+
+                if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                    let formato = String(comp.format || '').toUpperCase();
+
+                    if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                    }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                    }else{
+                        let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                        let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                        previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                    }
                 }
 
                 if(comp.type == 'BODY' && comp.text){
@@ -1006,6 +1026,8 @@ $(document).ready(function(){
 
         let componentesBase64 =
             option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#conteudoPreviewTemplateDisparo').html('');
         $('#previewTemplateDisparo').hide();
@@ -1042,6 +1064,20 @@ $(document).ready(function(){
                     </div>
                 `;
 
+            }
+
+            if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                let formato = String(comp.format || '').toUpperCase();
+
+                if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                }else{
+                    let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                    let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                    previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                }
             }
 
             if(comp.type == 'BODY' && comp.text){
@@ -1223,6 +1259,29 @@ $(document).ready(function(){
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function normalizarUrlMidiaTemplateDisparo(url)
+    {
+        url = String(url || '').trim();
+
+        if(url === ''){
+            return '';
+        }
+
+        url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+
+        if(/^https?:\/\//i.test(url)){
+            return url;
+        }
+
+        let base = String(typeof BASE_URL !== 'undefined' ? BASE_URL : '').replace(/\/$/, '');
+
+        if(url.charAt(0) === '/'){
+            return base + url;
+        }
+
+        return base + '/' + url.replace(/^\/+/, '');
     }
 
     function encodeDetalhesDisparo(dados)
@@ -1589,6 +1648,9 @@ $(document).ready(function(){
                     <option
                         value="${template.TMP_ID}"
                         data-componentes="${btoa(template.TMP_Componentes)}"
+                        data-header-tipo="${escapeHtmlDisparo(template.TMP_HeaderTipo || '')}"
+                        data-header-midia-url-exemplo="${escapeHtmlDisparo(template.TMP_HeaderMidiaUrlExemplo || '')}"
+                        data-header-documento-nome="${escapeHtmlDisparo(template.TMP_HeaderDocumentoNome || '')}"
                     >
                         ${template.TMP_Nome}
                     </option>
@@ -2069,15 +2131,19 @@ $(document).ready(function(){
 
         $('#textoProgressoDisparo').html('Salvando destinos na fila...');
 
+        let formDataLote = new FormData();
+        formDataLote.append('csrf_token', (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''));
+        formDataLote.append('meta', $('#meta').val());
+        formDataLote.append('template', $('#template').val());
+        formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
+
+
         $.ajax({
             url: BASE_URL + '/index.php?url=disparo/criarLoteAjax',
             method: 'POST',
-            data: {
-                csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
-                meta: $('#meta').val(),
-                template: $('#template').val(),
-                destinos_json: JSON.stringify(parse.destinos.map(montarDestinoFila))
-            },
+            data: formDataLote,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(retorno){
                 if(!retorno.sucesso){
