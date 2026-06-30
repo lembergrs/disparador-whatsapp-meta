@@ -540,10 +540,10 @@ Inglês
 
 <div id="areaHeaderMidia" class="form-group" style="display:none">
     <label>Arquivo do header</label>
-    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media">
+    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media" role="button" tabindex="0" style="cursor:pointer;">
         <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
         <p class="mb-1">Clique ou arraste o arquivo aqui.</p>
-        <small class="text-muted meta-media-help">Imagem: JPG, PNG ou WEBP até 5 MB. Vídeo: MP4/3GPP até 16 MB. Documento: PDF até 10 MB.</small>
+        <small class="text-muted meta-media-help" id="headerMediaAjuda">Selecione um tipo de mídia.</small>
         <input type="file" name="header_media" id="header_media" class="d-none" accept=".jpg,.jpeg,.png,.webp,.mp4,.3gpp,.pdf">
     </div>
     <div class="mt-2" id="headerMediaNome"></div>
@@ -1204,12 +1204,58 @@ function formatarNomeTemplate(campo)
 }
 
 
+function ajudaMidiaHeaderMeta(tipo)
+{
+    tipo = String(tipo || '').toUpperCase();
+
+    const config = {
+        IMAGE: {
+            ajuda: 'Imagem: JPG, PNG ou WEBP até 5 MB.',
+            accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
+        },
+        VIDEO: {
+            ajuda: 'Vídeo: MP4 ou 3GPP até 16 MB.',
+            accept: '.mp4,.3gp,.3gpp,video/mp4,video/3gpp'
+        },
+        DOCUMENT: {
+            ajuda: 'Documento: PDF até 10 MB.',
+            accept: '.pdf,application/pdf'
+        }
+    };
+
+    return config[tipo] || {ajuda: 'Selecione um tipo de mídia.', accept: ''};
+}
+
+function limparUploadMidiaMeta(inputSelector, nomeSelector, previewSelector)
+{
+    $(inputSelector).val('');
+    $(nomeSelector).text('');
+    $(previewSelector).hide().attr('src', '');
+}
+
 function configurarUploadMidiaMeta(dropSelector, inputSelector, nomeSelector, previewSelector)
 {
     const drop = $(dropSelector);
     const input = $(inputSelector);
 
-    drop.on('click', function(){ input.trigger('click'); });
+    drop.on('click keydown', function(e){
+        if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' '){
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const inputFile = input.get(0);
+        if(inputFile && !inputFile.disabled){
+            inputFile.click();
+        }
+    });
+
+    input.on('click', function(e){
+        e.stopPropagation();
+    });
+
     drop.on('dragover', function(e){ e.preventDefault(); drop.addClass('border-primary'); });
     drop.on('dragleave drop', function(e){ e.preventDefault(); drop.removeClass('border-primary'); });
     drop.on('drop', function(e){
@@ -1236,12 +1282,19 @@ const alterarTipoHeaderOriginal = typeof alterarTipoHeader === 'function' ? alte
 alterarTipoHeader = function(tipo){
     if(alterarTipoHeaderOriginal){ alterarTipoHeaderOriginal(tipo); }
     if(['IMAGE','VIDEO','DOCUMENT'].indexOf(tipo) >= 0){
+        const config = ajudaMidiaHeaderMeta(tipo);
         $('#areaHeaderTexto').hide();
         $('#areaHeaderMidia').show();
-        $('#header_media').prop('required', true);
+        $('#headerMediaAjuda').text(config.ajuda);
+        $('#header_media')
+            .prop('required', true)
+            .prop('disabled', false)
+            .attr('accept', config.accept);
+        limparUploadMidiaMeta('#header_media', '#headerMediaNome', '#headerMediaPreview');
     }else{
         $('#areaHeaderMidia').hide();
-        $('#header_media').prop('required', false).val('').trigger('change');
+        $('#header_media').prop('required', false).prop('disabled', false).attr('accept', '');
+        limparUploadMidiaMeta('#header_media', '#headerMediaNome', '#headerMediaPreview');
     }
 };
 
