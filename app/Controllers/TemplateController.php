@@ -8,6 +8,7 @@ use Core\Session;
 use Models\TemplateMeta;
 use Models\MetaConta;
 use Services\MetaService;
+use Services\TemplateMediaPreviewService;
 use Exception;
 
 class TemplateController extends Controller
@@ -90,10 +91,24 @@ class TemplateController extends Controller
 
 
 
+        $previewLocal = null;
+        $headerTipo = strtoupper((string) ($_POST['header_tipo'] ?? ''));
+
         try{
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !empty($_FILES['header_media'])){
+                $previewService = new TemplateMediaPreviewService();
+                $previewLocal = $previewService->salvarCopiaPreview(
+                    $_FILES['header_media'],
+                    $headerTipo
+                );
+            }
+
             $response =
                 $meta->criarTemplate($_POST);
         }catch(Exception $e){
+            if($previewLocal){
+                (new TemplateMediaPreviewService())->removerCopia($previewLocal);
+            }
             Session::flash('error', $e->getMessage());
             $this->redirect('template');
         }
@@ -109,6 +124,12 @@ class TemplateController extends Controller
                 $templateLocal['id'] = $response['id'];
                 $templateLocal['status'] = $response['status'] ?? ($templateLocal['status'] ?? 'PENDING');
 
+                if($previewLocal){
+                    $templateLocal['header_media_url_exemplo'] = $previewLocal['url'];
+                    $templateLocal['header_media_nome'] = $previewLocal['nome_original'];
+                    $templateLocal['header_media_tipo'] = $previewLocal['tipo'];
+                }
+
                 $this->templateModel->salvarOuAtualizar(
                     $metaId,
                     $templateLocal
@@ -121,6 +142,10 @@ class TemplateController extends Controller
             );
 
         }else{
+
+            if($previewLocal){
+                (new TemplateMediaPreviewService())->removerCopia($previewLocal);
+            }
 
             $erro =
                 $this->extrairErroTemplateMeta($response);

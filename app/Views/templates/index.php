@@ -182,6 +182,8 @@ data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
     ENT_QUOTES
 ); ?>"
+data-header-midia-url="<?= htmlspecialchars($template['TMP_HeaderMidiaUrlExemplo'] ?? '', ENT_QUOTES); ?>"
+data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
 >
 
 <i class="fas fa-eye"></i>
@@ -1110,6 +1112,11 @@ $(document).on('input change', '[name=body], [name=header], .valorBotao, .tipoBo
 });
 
 
+function escapeHtmlTemplatePreview(valor)
+{
+    return $('<div>').text(valor || '').html();
+}
+
 function abrirPreviewTemplate(botao)
 {
     botao = $(botao);
@@ -1140,9 +1147,18 @@ function abrirPreviewTemplate(botao)
         }
 
         if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(comp.format) >= 0){
-            let nomeMidia = comp.media_name || 'Mídia enviada para aprovação';
-            let iconeMidia = comp.format == 'IMAGE' ? 'fa-image' : (comp.format == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
-            html += '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> Header ' + comp.format + ': ' + nomeMidia + '</div>';
+            let formato = comp.format;
+            let nomeMidia = botao.attr('data-header-documento-nome') || comp.media_name || 'Mídia enviada para aprovação';
+            let urlMidia = botao.attr('data-header-midia-url') || comp.media_url || '';
+            let iconeMidia = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+
+            if(formato == 'IMAGE' && urlMidia){
+                html += '<div class="mb-2"><img src="' + escapeHtmlTemplatePreview(urlMidia) + '" alt="Imagem no cabeçalho" class="img-fluid rounded border" style="max-height:220px;"></div>';
+            }else if(formato == 'VIDEO' && urlMidia){
+                html += '<div class="mb-2"><video controls class="w-100 rounded border" style="max-height:260px;"><source src="' + escapeHtmlTemplatePreview(urlMidia) + '"></video><small class="text-muted">' + escapeHtmlTemplatePreview(nomeMidia) + '</small></div>';
+            }else{
+                html += '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> ' + escapeHtmlTemplatePreview(formato == 'IMAGE' ? 'Imagem no cabeçalho' : (formato == 'VIDEO' ? 'Vídeo no cabeçalho' : nomeMidia)) + '</div>';
+            }
         }
 
         if(comp.type == 'BODY' && comp.text){
