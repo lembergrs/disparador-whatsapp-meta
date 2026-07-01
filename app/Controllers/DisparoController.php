@@ -61,7 +61,7 @@ class DisparoController extends Controller
 
         $templates =
             $this->templateModel
-            ->listarPorCliente(
+            ->listarAprovadosParaEnvioPorCliente(
                 $usuario['CLI_ID']
             );
 
@@ -455,7 +455,7 @@ class DisparoController extends Controller
 
         $template =
             $this->templateModel
-            ->buscarPorCliente(
+            ->buscarAprovadoParaEnvioPorCliente(
                 (int) ($_POST['template'] ?? 0),
                 $usuario['CLI_ID']
             );
@@ -1025,7 +1025,7 @@ class DisparoController extends Controller
 
             $template =
                 $this->templateModel
-                ->buscarPorCliente(
+                ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
                     $usuario['CLI_ID']
                 );
@@ -1230,7 +1230,7 @@ class DisparoController extends Controller
 
             $template =
                 $this->templateModel
-                ->buscarPorCliente(
+                ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
                     $usuario['CLI_ID']
                 );
@@ -1345,7 +1345,7 @@ class DisparoController extends Controller
             $metaId = (int) ($_POST['meta'] ?? 0);
             $templateId = (int) ($_POST['template'] ?? 0);
 
-            $template = $this->templateModel->buscarPorCliente(
+            $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente(
                 $templateId,
                 $usuario['CLI_ID']
             );
