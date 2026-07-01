@@ -105,7 +105,6 @@ style="display:none;"
                 <td>
 
                 <?php
-
                 $status = $campanha['CAM_Status'];
 
                 $badges = [
@@ -249,7 +248,7 @@ Selecione
 value="<?= $template['TMP_ID']; ?>"
 data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes']), ENT_QUOTES); ?>"
 data-header-tipo="<?= htmlspecialchars($template['TMP_HeaderTipo'] ?? '', ENT_QUOTES); ?>"
-data-header-midia-url-exemplo="<?= htmlspecialchars($template['TMP_HeaderMidiaUrlExemplo'] ?? '', ENT_QUOTES); ?>"
+data-header-midia-url-exemplo="<?= htmlspecialchars(\Helpers\UrlHelper::publicUrl($template['TMP_HeaderMidiaUrlExemplo'] ?? ''), ENT_QUOTES); ?>"
 data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
 >
     <?= $template['TMP_Nome']; ?>

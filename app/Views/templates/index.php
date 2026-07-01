@@ -1,6 +1,7 @@
 <?php
 
 use Core\Session;
+use Helpers\UrlHelper;
 
 $templateMetaErrorModal = Session::get('template_meta_error_modal');
 Session::remove('template_meta_error_modal');
@@ -47,7 +48,7 @@ if(!function_exists('templateHeaderMidiaUrlExemplo')){
     function templateHeaderMidiaUrlExemplo($template)
     {
         if(!empty($template['TMP_HeaderMidiaUrlExemplo'])){
-            return $template['TMP_HeaderMidiaUrlExemplo'];
+            return UrlHelper::publicUrl($template['TMP_HeaderMidiaUrlExemplo']);
         }
 
         $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
@@ -58,7 +59,7 @@ if(!function_exists('templateHeaderMidiaUrlExemplo')){
 
         foreach($componentes as $componente){
             if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_url'])){
-                return $componente['media_url'];
+                return UrlHelper::publicUrl($componente['media_url']);
             }
         }
 
@@ -1239,8 +1240,6 @@ function normalizarUrlPreviewTemplate(url)
     if(url === ''){
         return '';
     }
-
-    //url = url.replace('/public/uploads/templates/', '/uploads/templates/');
 
     if(/^https?:\/\//i.test(url) || url.indexOf('//') === 0 || url.indexOf('data:image/') === 0){
         return url;
