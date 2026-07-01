@@ -23,7 +23,7 @@
             <?= \Core\Csrf::input(); ?>
 
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Conta Meta</label>
 
@@ -51,7 +51,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="form-group">
                         <label>Template</label>
 
@@ -63,6 +63,29 @@
                             disabled
                         >
                             <option value="">Selecione primeiro a Conta Meta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Lista de Contatos</label>
+
+                        <select
+                            name="lista_id"
+                            id="listaContatosDisparo"
+                            class="form-control"
+                        >
+                            <option value="" data-total="0">Nenhuma lista - informar números manualmente</option>
+
+                            <?php foreach(($listasContatos ?? []) as $lista){ ?>
+                                <option
+                                    value="<?= (int) $lista['LST_ID']; ?>"
+                                    data-total="<?= (int) ($lista['total_contatos'] ?? 0); ?>"
+                                >
+                                    <?= htmlspecialchars($lista['LST_Nome']); ?> (<?= (int) ($lista['total_contatos'] ?? 0); ?> contatos)
+                                </option>
+                            <?php } ?>
                         </select>
                     </div>
                 </div>
@@ -123,14 +146,13 @@
                                 class="form-control disparo-numeros-box flex-fill"
                                 rows="7"
                                 placeholder="(41) 99999-9999&#10;(41) 98888-8888"
-                                required
                             ></textarea>
 
                             <small
                                 id="dicaFormatosNumerosDestino"
                                 class="text-muted d-block mt-1"
                             >
-                                Você pode colar números em vários formatos. Ex.: 41999990000, (41) 99999-0000 ou +55 41 99999-0000.
+                                Você pode selecionar uma lista, informar números manualmente ou combinar as duas opções. Ex.: 41999990000, (41) 99999-0000 ou +55 41 99999-0000.
                             </small>
 
                             <small
