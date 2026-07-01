@@ -1654,9 +1654,13 @@ $(document).ready(function(){
             </option>
         `);
 
+        let totalTemplatesAprovados = 0;
+
         window.TEMPLATES_DISPARO.forEach(function(template){
 
             if(String(template.MTA_ID) == String(metaId)){
+
+                totalTemplatesAprovados++;
 
                 templateSelect.append(`
                     <option
@@ -1673,6 +1677,16 @@ $(document).ready(function(){
             }
 
         });
+
+        if(totalTemplatesAprovados === 0){
+            templateSelect.html(`
+                <option value="">
+                    Nenhum template aprovado disponível para envio nesta conta.
+                </option>
+            `);
+            templateSelect.prop('disabled', true);
+            return;
+        }
 
         templateSelect.prop('disabled', false);
 
