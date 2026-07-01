@@ -1231,10 +1231,22 @@ $(document).ready(function(){
         return total;
     }
 
+    function obterTotalListaContatosDisparo()
+    {
+        let option = $('#listaContatosDisparo').find(':selected');
+        return parseInt(option.attr('data-total') || '0', 10) || 0;
+    }
+
     function atualizarContadorNumerosDestinoDisparo()
     {
+        let manuais = contarNumerosDestinoDisparo();
+        let lista = obterTotalListaContatosDisparo();
+        let estimado = manuais + lista;
+
         $('#contadorNumerosDestino').text(
-            'Números identificados: ' + contarNumerosDestinoDisparo()
+            'Números digitados: ' + manuais +
+            ' | Contatos da lista: ' + lista +
+            ' | Total final estimado: ' + estimado
         );
     }
 
@@ -1583,6 +1595,10 @@ $(document).ready(function(){
         agendarAtualizacaoContadorNumerosDestinoDisparo();
     });
 
+    $(document).on('change', '#listaContatosDisparo', function(){
+        atualizarContadorNumerosDestinoDisparo();
+    });
+
     $(document).on('blur', '#numerosDestino', function(){
 
         let linhas = $(this).val().split(/\r?\n/);
@@ -1724,8 +1740,21 @@ $(document).ready(function(){
             return;
         }
 
-        if(parse.destinos.length == 0){
-            alert('Informe pelo menos um número válido.');
+        let listaSelecionadaId = $('#listaContatosDisparo').val() || '';
+        let totalListaSelecionada = obterTotalListaContatosDisparo();
+
+        if(listaSelecionadaId === '' && parse.destinos.length == 0){
+            alert('Informe pelo menos um número válido ou selecione uma lista de contatos.');
+            return;
+        }
+
+        if(listaSelecionadaId !== '' && parse.variaveis.length > 0){
+            alert('Este template possui variáveis. Nesta etapa, use listas apenas com templates sem variáveis ou informe os números manualmente com as variáveis necessárias.');
+            return;
+        }
+
+        if(listaSelecionadaId !== '' && totalListaSelecionada == 0 && parse.destinos.length == 0){
+            alert('A lista selecionada não possui contatos ativos. Informe números manualmente ou escolha outra lista.');
             return;
         }
 
@@ -1740,8 +1769,8 @@ $(document).ready(function(){
         }
 
         if(!confirm(
-            'Confira a prévia dos destinos e confirme o envio de ' +
-            parse.destinos.length + ' mensagem(ns). Deseja iniciar agora?'
+            'Confira a prévia dos destinos e confirme o envio estimado de ' +
+            (parse.destinos.length + totalListaSelecionada) + ' mensagem(ns). Deseja iniciar agora?'
         )){
             return;
         }
@@ -1771,7 +1800,19 @@ $(document).ready(function(){
             .prop('disabled', false)
             .html('<i class="fas fa-stop"></i> Parar envio');
 
+        for(let i = 0; i < totalListaSelecionada; i++){
+            $('#listaStatusNumeros').append(`
+                <tr id="linha_numero_${i}">
+                    <td>Contato da lista selecionada</td>
+                    <td><span class="badge badge-secondary">Na fila</span></td>
+                    <td class="small text-muted">-</td>
+                    <td>-</td>
+                </tr>
+            `);
+        }
+
         parse.destinos.forEach(function(destino, index){
+            index = index + totalListaSelecionada;
 
             let variaveisHtml = '';
 
@@ -1805,7 +1846,7 @@ $(document).ready(function(){
 
         });
 
-        let total = parse.destinos.length;
+        let total = parse.destinos.length + totalListaSelecionada;
         let loteId = null;
         let pollingLote = null;
         let timeoutProximoBloco = null;
@@ -2135,6 +2176,7 @@ $(document).ready(function(){
         formDataLote.append('csrf_token', (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''));
         formDataLote.append('meta', $('#meta').val());
         formDataLote.append('template', $('#template').val());
+        formDataLote.append('lista_id', listaSelecionadaId);
         formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
 
 
