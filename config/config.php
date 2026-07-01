@@ -42,7 +42,14 @@ defined('META_VERIFY_TOKEN') || define('META_VERIFY_TOKEN', env_valor('META_VERI
 defined('META_EMBEDDED_SIGNUP_REDIRECT_URI') || define('META_EMBEDDED_SIGNUP_REDIRECT_URI', env_valor('META_EMBEDDED_SIGNUP_REDIRECT_URI', ''));
 defined('META_GRAPH_VERSION') || define('META_GRAPH_VERSION', env_valor('META_GRAPH_VERSION', ''));
 
-define('UPLOADS_PUBLIC_BASE_URL', rtrim(env_valor('UPLOADS_PUBLIC_BASE_URL', BASE_URL . '/uploads'), '/'));
+$uploadsPublicPath = rtrim(env_valor('UPLOADS_PUBLIC_PATH', '/uploads'), '/');
+if($uploadsPublicPath === ''){
+    $uploadsPublicPath = '/uploads';
+}
+if($uploadsPublicPath[0] !== '/'){
+    $uploadsPublicPath = '/' . $uploadsPublicPath;
+}
+defined('UPLOADS_PUBLIC_PATH') || define('UPLOADS_PUBLIC_PATH', $uploadsPublicPath);
 
 $asaasEnv = strtolower(trim((string) env_valor('ASAAS_ENV', 'sandbox')));
 $asaasBaseUrlSandbox = env_valor('ASAAS_API_BASE_URL_SANDBOX', 'https://sandbox.asaas.com/api/v3');

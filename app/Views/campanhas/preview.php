@@ -53,7 +53,6 @@
             <tbody>
 
             <?php
-
             $dados =
                 json_decode(
                     $contato['CON_DadosJson'],
@@ -116,12 +115,7 @@
         $headerUrl = trim((string) ($campanha['TMP_HeaderMidiaUrlExemplo'] ?? ''));
         $headerDocumentoNome = trim((string) ($campanha['TMP_HeaderDocumentoNome'] ?? ''));
 
-        if($headerUrl !== ''){
-
-            if(!preg_match('/^https?:\/\//i', $headerUrl)){
-                $headerUrl = rtrim(BASE_URL, '/') . '/' . ltrim($headerUrl, '/');
-            }
-        }
+        $headerUrl = \Helpers\UrlHelper::publicUrl($headerUrl);
         ?>
 
         <?php if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){ ?>
