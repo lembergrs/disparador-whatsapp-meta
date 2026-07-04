@@ -3,6 +3,7 @@
 namespace Services;
 
 use Exception;
+use Helpers\UrlHelper;
 
 class TemplateMediaPreviewService
 {
@@ -45,7 +46,7 @@ class TemplateMediaPreviewService
         chmod($destino, 0644);
 
         return [
-            'url' => rtrim(UPLOADS_PUBLIC_BASE_URL, '/') . '/templates/' . $nomeFisico,
+            'url' => UrlHelper::uploadPublicPath('templates', $nomeFisico),
             'path' => $destino,
             'nome_original' => $info['nome_original'],
             'mime' => $info['mime'],

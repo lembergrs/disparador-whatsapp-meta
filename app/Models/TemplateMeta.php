@@ -477,6 +477,52 @@ class TemplateMeta
         );
     }
 
+
+
+    public function listarAprovadosParaEnvioPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT
+                t.*,
+                m.MTA_Nome
+            FROM templates_meta t
+            INNER JOIN meta_contas m
+                ON m.MTA_ID = t.MTA_ID
+            INNER JOIN clientes c
+                ON c.CLI_ID = m.CLI_ID
+            WHERE c.CLI_ID = ?
+                AND t.TMP_Ativo = 'S'
+                AND t.TMP_Status = 'APPROVED'
+                AND m.MTA_Ativo = 'S'
+            ORDER BY t.TMP_ID DESC
+        ");
+
+        $sql->execute([$clienteId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarAprovadoParaEnvioPorCliente($id, $clienteId)
+    {
+        $sql = $this->db->prepare("
+            SELECT t.*
+            FROM templates_meta t
+            INNER JOIN meta_contas m
+                ON m.MTA_ID = t.MTA_ID
+            WHERE t.TMP_ID = ?
+                AND m.CLI_ID = ?
+                AND t.TMP_Ativo = 'S'
+                AND t.TMP_Status = 'APPROVED'
+                AND m.MTA_Ativo = 'S'
+            LIMIT 1
+        ");
+
+        $sql->execute([$id, $clienteId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+
     public function extrairVariaveis($componentes)
     {
         $componentes =
