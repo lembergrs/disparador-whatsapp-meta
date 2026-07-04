@@ -1718,6 +1718,42 @@ $(document).ready(function(){
     let intervaloStatusDisparo = null;
     let statusDisparoPorMessageId = {};
 
+    function restaurarBotaoEnviarDisparo()
+    {
+        $('#btnEnviarDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-paper-plane"></i> Enviar Template');
+    }
+
+    function resetarEstadoVisualDisparo()
+    {
+        $('#painelExecucaoDisparo').hide();
+        $('#painelEdicaoDisparo').show();
+        $('#areaProgressoDisparo').hide();
+        $('#resumoFinalDisparo').html('');
+        $('#listaStatusNumeros').html('');
+
+        $('#barraProgressoDisparo')
+            .removeClass('progress-bar-animated')
+            .css('width', '0%')
+            .html('0%');
+
+        $('#textoProgressoDisparo').html('Preparando envio...');
+        $('#btnPararDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-stop"></i> Parar envio');
+
+        restaurarBotaoEnviarDisparo();
+    }
+
+    function restaurarTelaEdicaoDisparoAposErro()
+    {
+        $('#painelExecucaoDisparo').hide();
+        $('#painelEdicaoDisparo').show();
+        $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+        restaurarBotaoEnviarDisparo();
+    }
+
     $(document).on('click', '#btnPararDisparo', function(){
 
         cancelarDisparo = true;
@@ -1794,11 +1830,11 @@ $(document).ready(function(){
 
         $('#barraProgressoDisparo')
             .addClass('progress-bar-animated')
-            .css('width', '0%')
-            .html('0%');
+            .css('width', '3%')
+            .html('3%');
 
         $('#textoProgressoDisparo').html(
-            'Preparando lista de envio...'
+            'Preparando envio e salvando destinos na fila...'
         );
 
         $('#painelEdicaoDisparo').hide();
@@ -1858,10 +1894,15 @@ $(document).ready(function(){
 
         });
 
-        let total = parse.destinos.length + totalListaSelecionada;
+        $('#linha_numero_0 td:eq(1)').html('<span class="badge badge-info">Preparando envio</span>');
+        $('#linha_numero_0 td:eq(2)').html('<span class="text-muted">Preparando envio para a Meta.</span>');
+
+        let total = parse.destinos.length;
         let loteId = null;
-        let pollingLote = null;
+        let timeoutPollingLote = null;
         let timeoutProximoBloco = null;
+        let consultasStatusLote = 0;
+        let estadoItensLote = {};
         let processandoBlocoLote = false;
         let processamentoImediatoAtivo = false;
         let consultandoLote = false;
@@ -2025,6 +2066,20 @@ $(document).ready(function(){
         function atualizarItensFila(itens)
         {
             itens.forEach(function(item, index){
+                let chaveItem = String(item.DMI_ID || index);
+                let assinaturaItem = [
+                    item.DMI_Status || '',
+                    item.DMI_MessageId || '',
+                    item.DMI_Erro || '',
+                    item.DMI_Retorno || ''
+                ].join('|');
+
+                if(estadoItensLote[chaveItem] === assinaturaItem){
+                    return;
+                }
+
+                estadoItensLote[chaveItem] = assinaturaItem;
+
                 $('#linha_numero_' + index + ' td:eq(1)').html(
                     badgeStatusFila(item.DMI_Status)
                 );
@@ -2052,9 +2107,9 @@ $(document).ready(function(){
             processandoBlocoLote = false;
             consultandoLote = false;
 
-            if(pollingLote){
-                clearInterval(pollingLote);
-                pollingLote = null;
+            if(timeoutPollingLote){
+                clearTimeout(timeoutPollingLote);
+                timeoutPollingLote = null;
             }
 
             if(timeoutProximoBloco){
@@ -2067,11 +2122,22 @@ $(document).ready(function(){
 
         function consultarLote()
         {
-            if(!loteId || processandoBlocoLote || consultandoLote || document.hidden){
+            if(!loteId || consultandoLote){
+                return;
+            }
+
+            if(timeoutPollingLote){
+                clearTimeout(timeoutPollingLote);
+                timeoutPollingLote = null;
+            }
+
+            if(document.hidden){
+                agendarConsultaLote(5000);
                 return;
             }
 
             consultandoLote = true;
+            let proximaConsultaDelay = null;
 
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/statusLoteAjax',
@@ -2083,14 +2149,24 @@ $(document).ready(function(){
                 dataType: 'json',
                 success: function(retorno){
                     if(!retorno.sucesso){
+                        proximaConsultaDelay = calcularDelayPollingLote({}, []);
                         return;
                     }
 
+                    consultasStatusLote++;
                     atualizarItensFila(retorno.itens || []);
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
+                    proximaConsultaDelay = calcularDelayPollingLote(retorno.lote || {}, retorno.itens || []);
+                },
+                error: function(){
+                    proximaConsultaDelay = 5000;
                 },
                 complete: function(){
                     consultandoLote = false;
+
+                    if(proximaConsultaDelay !== null){
+                        agendarConsultaLote(proximaConsultaDelay);
+                    }
                 }
             });
         }
@@ -2112,6 +2188,40 @@ $(document).ready(function(){
             return (itens || []).some(function(item){
                 return ['aguardando_confirmacao','enviado','sent','entregue','delivered'].includes(item.DMI_Status);
             });
+        }
+
+        function calcularDelayPollingLote(lote, itens)
+        {
+            if(!loteId || cancelarDisparo){
+                return null;
+            }
+
+            if(lote && lote.DML_Status == 'concluido' && !loteAguardaAtualizacaoWebhook(itens)){
+                return null;
+            }
+
+            if(consultasStatusLote < 10){
+                return 1500;
+            }
+
+            if(consultasStatusLote < 30){
+                return 4000;
+            }
+
+            return 10000;
+        }
+
+        function agendarConsultaLote(delay)
+        {
+            if(!loteId || cancelarDisparo){
+                return;
+            }
+
+            if(timeoutPollingLote){
+                clearTimeout(timeoutPollingLote);
+            }
+
+            timeoutPollingLote = setTimeout(consultarLote, delay);
         }
 
         function finalizarProcessamentoImediatoLote()
@@ -2140,12 +2250,17 @@ $(document).ready(function(){
 
         function processarProximoBloco()
         {
-            if(!loteId || processandoBlocoLote || consultandoLote || cancelarDisparo){
+            if(!loteId || cancelarDisparo){
+                return;
+            }
+
+            if(processandoBlocoLote || consultandoLote){
+                agendarProximoBloco(500);
                 return;
             }
 
             if(document.hidden){
-                agendarProximoBloco(30000);
+                agendarProximoBloco(5000);
                 return;
             }
 
@@ -2242,15 +2357,18 @@ $(document).ready(function(){
                         escapeHtmlDisparo(retorno.erro || 'Erro ao criar lote.') +
                         '</div>'
                     );
-                    $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+                    restaurarTelaEdicaoDisparoAposErro();
                     return;
                 }
 
                 loteId = retorno.lote_id;
 
                 $('#textoProgressoDisparo').html(
-                    'Lote criado com sucesso. O envio foi colocado na fila e será iniciado automaticamente em instantes.'
+                    'Lote criado com sucesso. Iniciando envio agora...'
                 );
+
+                $('#linha_numero_0 td:eq(1)').html('<span class="badge badge-info">Enviando para Meta</span>');
+                $('#linha_numero_0 td:eq(2)').html('<span class="text-muted">Primeiro envio em preparação.</span>');
 
                 $('#resumoFinalDisparo').html(`
                     <div class="alert alert-info mt-3">
@@ -2259,7 +2377,11 @@ $(document).ready(function(){
                     </div>
                 `);
 
-                $('#listaStatusNumeros tr').each(function(){
+                $('#listaStatusNumeros tr').each(function(index){
+                    if(index === 0){
+                        return;
+                    }
+
                     $(this).find('td:eq(1)').html(
                         '<span class="badge badge-secondary">Na fila</span>'
                     );
@@ -2270,28 +2392,20 @@ $(document).ready(function(){
                 });
 
                 consultarLote();
-                pollingLote = setInterval(consultarLote, 7000);
                 processamentoImediatoAtivo = true;
-                agendarProximoBloco(8000);
+                agendarProximoBloco(500);
             },
             error: function(xhr){
                 $('#resumoFinalDisparo').html(
                     '<div class="alert alert-danger mt-3">Falha ao criar lote de disparo manual.</div>'
                 );
-                $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+                restaurarTelaEdicaoDisparoAposErro();
             }
         });
 
     });
 
     $(document).on('click', '#btnVoltarEdicaoDisparo', function(){
-
-        $('#painelExecucaoDisparo').hide();
-        $('#painelEdicaoDisparo').show();
-
-        $('#areaProgressoDisparo').hide();
-        $('#resumoFinalDisparo').html('');
-        $('#listaStatusNumeros').html('');
 
         cancelarDisparo = false;
         statusDisparoPorMessageId = {};
@@ -2304,6 +2418,9 @@ $(document).ready(function(){
             clearInterval(intervaloStatusDisparo);
             intervaloStatusDisparo = null;
         }
+
+        resetarEstadoVisualDisparo();
+        atualizarContadorNumerosDestinoDisparo();
 
     });
 
