@@ -1887,8 +1887,11 @@ $(document).ready(function(){
                 processando: 'Enviando',
                 aguardando_confirmacao: 'Aguardando confirmação',
                 enviado: 'Enviado',
+                sent: 'Enviado',
                 entregue: 'Entregue',
+                delivered: 'Entregue',
                 lido: 'Lido',
+                read: 'Lido',
                 erro: 'Erro',
                 failed: 'Erro'
             };
@@ -1898,8 +1901,11 @@ $(document).ready(function(){
                 processando: 'badge-info',
                 aguardando_confirmacao: 'badge-info',
                 enviado: 'badge-success',
+                sent: 'badge-success',
                 entregue: 'badge-primary',
+                delivered: 'badge-primary',
                 lido: 'badge-success',
+                read: 'badge-success',
                 erro: 'badge-danger',
                 failed: 'badge-danger'
             };
@@ -1918,15 +1924,15 @@ $(document).ready(function(){
             let iniciouProcessamento = false;
 
             itens.forEach(function(item){
-                if(['processando','aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                if(['processando','aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read','erro','failed'].includes(item.DMI_Status)){
                     iniciouProcessamento = true;
                 }
 
-                if(['aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                if(['aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read','erro','failed'].includes(item.DMI_Status)){
                     concluidos++;
                 }
 
-                if(['aguardando_confirmacao','enviado','entregue','lido'].includes(item.DMI_Status)){
+                if(['aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read'].includes(item.DMI_Status)){
                     enviados++;
                 }
 
@@ -1959,10 +1965,17 @@ $(document).ready(function(){
 
             if(lote && lote.DML_Status == 'concluido'){
                 $('#barraProgressoDisparo')
-                    .removeClass('progress-bar-animated')
                     .css('width', '100%')
                     .html('100%');
 
+                if(loteAguardaAtualizacaoWebhook(itens)){
+                    $('#textoProgressoDisparo').html(
+                        'Envio concluído. Aguardando confirmações da Meta para atualizar enviado, entregue ou lido.'
+                    );
+                    return;
+                }
+
+                $('#barraProgressoDisparo').removeClass('progress-bar-animated');
                 $('#textoProgressoDisparo').html('Processamento concluído.');
 
                 $('#resumoFinalDisparo').html(`
@@ -1995,8 +2008,11 @@ $(document).ready(function(){
                 processando: 'Enviando...',
                 aguardando_confirmacao: 'Enviado para a Meta. Aguardando confirmação.',
                 enviado: 'Mensagem enviada pela Meta.',
+                sent: 'Mensagem enviada pela Meta.',
                 entregue: 'Mensagem entregue ao destinatário.',
+                delivered: 'Mensagem entregue ao destinatário.',
                 lido: 'Mensagem lida pelo destinatário.',
+                read: 'Mensagem lida pelo destinatário.',
                 erro: 'Erro ao processar envio.',
                 failed: 'A Meta informou falha no envio.'
             };
@@ -2090,6 +2106,25 @@ $(document).ready(function(){
             });
         }
 
+
+        function loteAguardaAtualizacaoWebhook(itens)
+        {
+            return (itens || []).some(function(item){
+                return ['aguardando_confirmacao','enviado','sent','entregue','delivered'].includes(item.DMI_Status);
+            });
+        }
+
+        function finalizarProcessamentoImediatoLote()
+        {
+            processamentoImediatoAtivo = false;
+            processandoBlocoLote = false;
+
+            if(timeoutProximoBloco){
+                clearTimeout(timeoutProximoBloco);
+                timeoutProximoBloco = null;
+            }
+        }
+
         function agendarProximoBloco(delay)
         {
             if(!processamentoImediatoAtivo || cancelarDisparo){
@@ -2149,7 +2184,8 @@ $(document).ready(function(){
                     if(lotePossuiPendentes(retorno.lote || {}, retorno.itens || [])){
                         agendarProximoBloco(8000);
                     }else{
-                        finalizarMonitoramentoLote();
+                        finalizarProcessamentoImediatoLote();
+                        consultarLote();
                     }
                 },
                 error: function(){
@@ -2234,7 +2270,7 @@ $(document).ready(function(){
                 });
 
                 consultarLote();
-                pollingLote = setInterval(consultarLote, 30000);
+                pollingLote = setInterval(consultarLote, 7000);
                 processamentoImediatoAtivo = true;
                 agendarProximoBloco(8000);
             },
