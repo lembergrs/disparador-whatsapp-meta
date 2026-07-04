@@ -9,6 +9,8 @@ use Core\Session;
 use Models\ListaContato;
 use Models\ListaContatoItem;
 use Models\Contato;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ListaContatoController extends Controller
 {
@@ -48,6 +50,60 @@ class ListaContatoController extends Controller
                 'listas' => $listas
             ]
         );
+    }
+
+    public function baixarModelo()
+    {
+        $spreadsheet = new Spreadsheet();
+
+        $abaContatos = $spreadsheet->getActiveSheet();
+        $abaContatos->setTitle('Contatos');
+        $abaContatos->fromArray(
+            [
+                ['Nome', 'Telefone', 'Cidade', 'Empresa', 'Email', 'Observacao'],
+                ['João da Silva', '(41) 99999-9999', 'Curitiba', 'Empresa A', 'joao@email.com', 'Cliente interessado'],
+                ['Maria Oliveira', '41988888888', 'São José dos Pinhais', 'Empresa B', 'maria@email.com', 'Cliente recorrente'],
+                ['Pedro Santos', '5541977777777', 'Colombo', 'Empresa C', 'pedro@email.com', 'Enviar promoção']
+            ]
+        );
+
+        $abaInstrucoes = $spreadsheet->createSheet();
+        $abaInstrucoes->setTitle('Instruções');
+        $abaInstrucoes->fromArray(
+            [
+                ['Instruções'],
+                ['A primeira linha deve conter os nomes das colunas.'],
+                ['A coluna Telefone é obrigatória.'],
+                ['O sistema aceita telefone com máscara, sem máscara ou com código do país 55.'],
+                ['Não é necessário informar o código do país.'],
+                ['Uma linha por contato.'],
+                ['As demais colunas são opcionais.'],
+                ['Colunas extras poderão ser utilizadas como variáveis em templates e campanhas.'],
+                ['Salve sempre em formato XLSX antes de importar.']
+            ]
+        );
+
+        foreach([$abaContatos, $abaInstrucoes] as $aba){
+            foreach(range('A', 'F') as $coluna){
+                $aba->getColumnDimension($coluna)->setAutoSize(true);
+            }
+        }
+
+        $spreadsheet->setActiveSheetIndex(0);
+
+        if(ob_get_length()){
+            ob_clean();
+        }
+
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="modelo_lista_contatos.xlsx"');
+        header('Cache-Control: max-age=0, must-revalidate');
+        header('Pragma: public');
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        $spreadsheet->disconnectWorksheets();
+        exit;
     }
 
     public function visualizar()
