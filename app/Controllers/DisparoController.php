@@ -1484,6 +1484,13 @@ class DisparoController extends Controller
 
 
 
+    private function liberarSessaoParaPollingAjax()
+    {
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_write_close();
+        }
+    }
+
     public function processarLoteAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -1528,6 +1535,8 @@ class DisparoController extends Controller
                 ], JSON_UNESCAPED_UNICODE);
                 return;
             }
+
+            $this->liberarSessaoParaPollingAjax();
 
             $service = new DisparoManualQueueService(false);
             $resumo = $service->processarLote(

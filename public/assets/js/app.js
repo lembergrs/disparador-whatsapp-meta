@@ -2190,25 +2190,28 @@ $(document).ready(function(){
             });
         }
 
+        function lotePossuiStatusEmAberto(itens)
+        {
+            return (itens || []).some(function(item){
+                return ['pendente','processando','aguardando_confirmacao','enviado','sent','entregue','delivered'].includes(item.DMI_Status);
+            });
+        }
+
         function calcularDelayPollingLote(lote, itens)
         {
             if(!loteId || cancelarDisparo){
                 return null;
             }
 
-            if(lote && lote.DML_Status == 'concluido' && !loteAguardaAtualizacaoWebhook(itens)){
+            if(lote && lote.DML_Status == 'concluido' && !lotePossuiStatusEmAberto(itens)){
                 return null;
             }
 
-            if(consultasStatusLote < 10){
-                return 1500;
+            if(lotePossuiStatusEmAberto(itens)){
+                return consultasStatusLote < 30 ? 1000 : 3000;
             }
 
-            if(consultasStatusLote < 30){
-                return 4000;
-            }
-
-            return 10000;
+            return consultasStatusLote < 30 ? 1000 : 5000;
         }
 
         function agendarConsultaLote(delay)
@@ -2391,9 +2394,9 @@ $(document).ready(function(){
                     );
                 });
 
-                consultarLote();
                 processamentoImediatoAtivo = true;
-                agendarProximoBloco(500);
+                processarProximoBloco();
+                consultarLote();
             },
             error: function(xhr){
                 $('#resumoFinalDisparo').html(
