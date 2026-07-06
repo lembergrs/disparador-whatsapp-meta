@@ -47,6 +47,11 @@ class Campanha
                 CLI_ID,
                 TMP_ID,
                 LST_ID,
+                CAM_HeaderMidiaTipo,
+                CAM_HeaderMidiaId,
+                CAM_HeaderMidiaNome,
+                CAM_HeaderMidiaMime,
+                CAM_HeaderMidiaTamanho,
                 CAM_Nome,
                 CAM_Descricao,
                 CAM_Status,
@@ -58,7 +63,7 @@ class Campanha
 
             ) VALUES (
 
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 'agendada',
                 ?,
                 0,0,0,
@@ -73,6 +78,11 @@ class Campanha
         $dados['cliente_id'],
         $dados['template_id'],
         $dados['lista_id'],
+        $dados['midia_header']['tipo'] ?? null,
+        $dados['midia_header']['media_id'] ?? null,
+        $dados['midia_header']['nome_original'] ?? null,
+        $dados['midia_header']['mime'] ?? null,
+        $dados['midia_header']['tamanho'] ?? null,
         $dados['nome'],
         $dados['descricao'],
         $dados['data_agendamento']
@@ -114,7 +124,10 @@ class Campanha
                 t.TMP_Nome,
                 t.TMP_Componentes,
                 t.TMP_Idioma,
-                t.MTA_ID
+                t.MTA_ID,
+                t.TMP_HeaderTipo,
+                t.TMP_HeaderMidiaUrlExemplo,
+                t.TMP_HeaderDocumentoNome
 
             FROM campanhas c
 
@@ -138,7 +151,10 @@ class Campanha
                 t.TMP_Nome,
                 t.TMP_Componentes,
                 t.TMP_Idioma,
-                t.MTA_ID
+                t.MTA_ID,
+                t.TMP_HeaderTipo,
+                t.TMP_HeaderMidiaUrlExemplo,
+                t.TMP_HeaderDocumentoNome
             FROM campanhas c
             LEFT JOIN templates_meta t
                 ON t.TMP_ID = c.TMP_ID

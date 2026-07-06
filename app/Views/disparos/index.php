@@ -28,10 +28,12 @@ method="POST"
 id="formDisparo"
 action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="row">
 
-<div class="col-md-6">
+<div class="col-md-4">
 
 <div class="form-group">
 
@@ -71,7 +73,7 @@ required
 
 </div>
 
-<div class="col-md-6">
+<div class="col-md-4">
 
 <div class="form-group">
 
@@ -90,6 +92,41 @@ Selecione primeiro a Conta Meta
 </option>
 
 </select>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="form-group">
+
+<label>Lista de Contatos</label>
+
+<select
+name="lista_contatos"
+id="listaContatosDisparo"
+class="form-control"
+>
+
+<option value="">
+Não usar lista
+</option>
+
+<?php foreach(($listas ?? []) as $lista){ ?>
+
+<option value="<?= $lista['LST_ID']; ?>">
+    <?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES); ?>
+    (<?= (int) ($lista['total_contatos'] ?? 0); ?> contatos)
+</option>
+
+<?php } ?>
+
+</select>
+
+<small class="text-muted d-block mt-1">
+    Opcional: selecione uma lista para preencher os números manualmente.
+</small>
 
 </div>
 
@@ -266,6 +303,12 @@ class="mb-3"
 
 </div>
 
+</form>
+
+</div>
+
+</div>
+
 <div
 class="modal fade"
 id="modalDetalhesDisparo"
@@ -359,15 +402,7 @@ aria-hidden="true"
                     Fechar
                 </button>
 
-        <div class="alert alert-info">
-            <strong>Template com ${variaveis.length} variável(is).</strong><br>
-            Informe os valores no campo Números Destino, usando uma linha por destino.<br>
-            A orientação do campo será ajustada conforme a quantidade de variáveis.
-            <div class="mt-2 small">
-                Variáveis esperadas: {{${variaveis.join('}}, {{')}}}
             </div>
-        </div>
-        </div>
 
         </div>
 
@@ -377,5 +412,6 @@ aria-hidden="true"
 
 <script>
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
+window.LISTAS_CONTATOS_DISPARO = <?= json_encode($listas ?? [], JSON_UNESCAPED_UNICODE); ?>;
 window.TOTAL_CONTAS_META = <?= count($contas); ?>;
 </script>
