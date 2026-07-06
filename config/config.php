@@ -2,6 +2,10 @@
 
 require_once __DIR__ . '/env.php';
 
+defined('APP_TIMEZONE') || define('APP_TIMEZONE', env_valor('APP_TIMEZONE', 'America/Sao_Paulo'));
+
+date_default_timezone_set(APP_TIMEZONE);
+
 defined('APP_ENV') || define('APP_ENV', app_env());
 
 $host = $_SERVER['HTTP_HOST'] ?? '';

@@ -29,6 +29,8 @@ class Database
                     PDO::ERRMODE_EXCEPTION
                 );
 
+                self::$instance->exec("SET time_zone = '-03:00'");
+
                 self::registrarConexaoCriada();
 
             }catch(PDOException $e){
