@@ -115,7 +115,13 @@
         $headerUrl = trim((string) ($campanha['TMP_HeaderMidiaUrlExemplo'] ?? ''));
         $headerDocumentoNome = trim((string) ($campanha['TMP_HeaderDocumentoNome'] ?? ''));
 
-        $headerUrl = \Helpers\UrlHelper::publicUrl($headerUrl);
+        if($headerUrl !== ''){
+            $headerUrl = str_replace('/public/uploads/templates/', '/uploads/templates/', $headerUrl);
+
+            if(!preg_match('/^https?:\/\//i', $headerUrl)){
+                $headerUrl = rtrim(BASE_URL, '/') . '/' . ltrim($headerUrl, '/');
+            }
+        }
         ?>
 
         <?php if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){ ?>

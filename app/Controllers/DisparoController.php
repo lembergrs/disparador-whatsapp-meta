@@ -1536,7 +1536,9 @@ class DisparoController extends Controller
                 return;
             }
 
-            $this->liberarSessaoParaPollingAjax();
+            if(session_status() === PHP_SESSION_ACTIVE){
+                session_write_close();
+            }
 
             $service = new DisparoManualQueueService(false);
             $resumo = $service->processarLote(

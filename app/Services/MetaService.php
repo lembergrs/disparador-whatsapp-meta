@@ -1126,7 +1126,7 @@ class MetaService
         $midiaHeader = is_array($midiaHeader) ? $midiaHeader : [];
         $mediaId = (string) ($midiaHeader['media_id'] ?? '');
         $mediaLink = (string) ($midiaHeader['link'] ?? ($midiaHeader['url'] ?? $urlTemplate));
-        $mediaLink = UrlHelper::publicUrl($mediaLink);
+        $mediaLink = str_replace('/public/uploads/templates/', '/uploads/templates/', $mediaLink);
 
         if($mediaId === '' && $mediaLink === ''){
             return null;

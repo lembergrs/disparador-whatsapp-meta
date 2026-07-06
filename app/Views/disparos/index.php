@@ -10,8 +10,114 @@
 </div>
 
 <div class="card">
-    <div class="card-header">
-        <h3 class="card-title">Novo Disparo</h3>
+
+<div class="card-header">
+
+<h3 class="card-title">
+
+Novo Disparo
+
+</h3>
+
+</div>
+
+<div class="card-body">
+
+<form
+method="POST"
+id="formDisparo"
+action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
+>
+<?= \Core\Csrf::input(); ?>
+
+
+<div class="row">
+
+<div class="col-md-6">
+
+<div class="form-group">
+
+<label>Conta Meta</label>
+
+<select
+name="meta"
+id="meta"
+class="form-control"
+required
+>
+
+<?php $totalContas = count($contas); ?>
+
+<?php if($totalContas > 1){ ?>
+
+    <option value="">
+        Selecione
+    </option>
+
+<?php } ?>
+
+<?php foreach($contas as $conta){ ?>
+
+    <option
+    value="<?= $conta['MTA_ID']; ?>"
+    <?= $totalContas == 1 ? 'selected' : ''; ?>
+    >
+        <?= $conta['MTA_Nome']; ?>
+    </option>
+
+<?php } ?>
+
+</select>
+
+</div>
+
+</div>
+
+<div class="col-md-6">
+
+<div class="form-group">
+
+<label>Template</label>
+
+<select
+name="template"
+id="template"
+class="form-control"
+required
+disabled
+>
+
+<option value="">
+Selecione primeiro a Conta Meta
+</option>
+
+</select>
+
+</div>
+
+</div>
+
+
+<div
+id="areaProgressoDisparo"
+style="display:none;"
+class="mb-3"
+>
+
+    <strong id="textoProgressoDisparo">
+        Preparando envio...
+    </strong>
+
+    <div class="progress mt-2">
+
+        <div
+        id="barraProgressoDisparo"
+        class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+        style="width:0%"
+        >
+            0%
+        </div>
+
     </div>
 
     <div class="card-body">
