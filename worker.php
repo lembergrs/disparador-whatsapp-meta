@@ -267,7 +267,8 @@ foreach($campanhas as $campanha){
                     $meta->enviarTemplate(
                         $item['CON_Telefone'],
                         $template,
-                        $parametros
+                        $parametros,
+                        midiaHeaderCampanha($campanha)
                     );
 
             }
@@ -383,6 +384,22 @@ foreach($campanhas as $campanha){
 
 
 
+
+
+function midiaHeaderCampanha($campanha)
+{
+    if(empty($campanha['CAM_HeaderMidiaId'])){
+        return null;
+    }
+
+    return [
+        'tipo' => $campanha['CAM_HeaderMidiaTipo'] ?? null,
+        'media_id' => $campanha['CAM_HeaderMidiaId'],
+        'filename' => $campanha['CAM_HeaderMidiaNome'] ?? null,
+        'mime' => $campanha['CAM_HeaderMidiaMime'] ?? null,
+        'tamanho' => $campanha['CAM_HeaderMidiaTamanho'] ?? null
+    ];
+}
 
 function registrarErro($db, $campanhaId, $filaId, $erro, $retorno = null)
 {

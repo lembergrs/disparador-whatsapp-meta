@@ -8,6 +8,8 @@ use Core\Session;
 use Models\TemplateMeta;
 use Models\MetaConta;
 use Services\MetaService;
+use Services\TemplateMediaPreviewService;
+use Exception;
 
 class TemplateController extends Controller
 {
@@ -89,8 +91,27 @@ class TemplateController extends Controller
 
 
 
-        $response =
-            $meta->criarTemplate($_POST);
+        $previewLocal = null;
+        $headerTipo = strtoupper((string) ($_POST['header_tipo'] ?? ''));
+
+        try{
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !empty($_FILES['header_media'])){
+                $previewService = new TemplateMediaPreviewService();
+                $previewLocal = $previewService->salvarCopiaPreview(
+                    $_FILES['header_media'],
+                    $headerTipo
+                );
+            }
+
+            $response =
+                $meta->criarTemplate($_POST);
+        }catch(Exception $e){
+            if($previewLocal){
+                (new TemplateMediaPreviewService())->removerCopia($previewLocal);
+            }
+            Session::flash('error', $e->getMessage());
+            $this->redirect('template');
+        }
 
 
 
@@ -102,6 +123,12 @@ class TemplateController extends Controller
                 $templateLocal = $response['template_local'];
                 $templateLocal['id'] = $response['id'];
                 $templateLocal['status'] = $response['status'] ?? ($templateLocal['status'] ?? 'PENDING');
+
+                if($previewLocal){
+                    $templateLocal['header_media_url_exemplo'] = $previewLocal['url'];
+                    $templateLocal['header_media_nome'] = $previewLocal['nome_original'];
+                    $templateLocal['header_media_tipo'] = $previewLocal['tipo'];
+                }
 
                 $this->templateModel->salvarOuAtualizar(
                     $metaId,
@@ -116,16 +143,13 @@ class TemplateController extends Controller
 
         }else{
 
-            $erro =
-                $this->extrairErroTemplateMeta($response);
+            if($previewLocal){
+                (new TemplateMediaPreviewService())->removerCopia($previewLocal);
+            }
 
-
-
-
-
-            Session::flash(
-                'error',
-                $erro
+            Session::set(
+                'template_meta_error_modal',
+                $this->extrairErroTemplateMeta($response)
             );
         }
 
@@ -137,6 +161,30 @@ class TemplateController extends Controller
         $this->redirect(
             'template'
         );
+    }
+
+
+
+    public function editar()
+    {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+        $id = (int) ($_POST['id'] ?? 0);
+
+        $template = $this->templateModel->buscarPorCliente($id, $usuario['CLI_ID']);
+
+        if(!$template){
+            Session::flash('error', 'Template inválido.');
+            $this->redirect('template');
+        }
+
+        Session::flash(
+            'error',
+            'Templates aprovados pela Meta podem exigir criação de um novo template para alteração.'
+        );
+
+        $this->redirect('template');
     }
 
 
@@ -253,19 +301,55 @@ class TemplateController extends Controller
 
     private function extrairErroTemplateMeta($response)
     {
+        $modal = [
+            'titulo' => 'Não foi possível criar o template',
+            'destaque' => '',
+            'mensagem' => 'Não foi possível criar o template na Meta. Verifique os dados informados e tente novamente.'
+        ];
+
         if(!is_array($response)){
-            return 'Erro ao criar template';
+            return $modal;
         }
 
-        if(!empty($response['error']['error_data']['details'])){
-            return $response['error']['error_data']['details'];
+        $erro = $response['error'] ?? [];
+
+        if(!is_array($erro)){
+            return $modal;
         }
 
-        if(!empty($response['error']['message'])){
-            return $response['error']['message'];
+        $tituloUsuario = trim((string) ($erro['error_user_title'] ?? ''));
+        $mensagemUsuario = trim((string) ($erro['error_user_msg'] ?? ''));
+
+        if($mensagemUsuario !== ''){
+            $modal['destaque'] = $tituloUsuario;
+            $modal['mensagem'] = $this->erroCategoriaTemplateEmProcessamento($tituloUsuario, $mensagemUsuario)
+                ? 'Já existe um template com este nome e idioma em processamento/exclusão na Meta. Aguarde o prazo informado pela Meta ou utilize outro nome para o template.'
+                : $mensagemUsuario;
+
+            return $modal;
         }
 
-        return 'Erro ao criar template';
+        if(!empty($erro['message'])){
+            $modal['destaque'] = $tituloUsuario;
+            $modal['mensagem'] = (string) $erro['message'];
+
+            return $modal;
+        }
+
+        return $modal;
     }
+
+    private function erroCategoriaTemplateEmProcessamento($titulo, $mensagem)
+    {
+        $texto = mb_strtolower((string) $titulo . ' ' . (string) $mensagem, 'UTF-8');
+
+        return strpos($texto, 'categoria') !== false
+            && (
+                strpos($texto, 'exclu') !== false
+                || strpos($texto, 'process') !== false
+                || strpos($texto, 'alterar a categoria') !== false
+            );
+    }
+
 
 }
