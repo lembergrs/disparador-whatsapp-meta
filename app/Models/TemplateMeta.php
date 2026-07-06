@@ -9,6 +9,8 @@ class TemplateMeta
 {
     private $db;
 
+    private $colunasHeaderExistem;
+
 
 
 
@@ -20,6 +22,153 @@ class TemplateMeta
     }
 
 
+
+
+
+    private function extrairHeaderMetadados(array $componentes, array $template = [])
+    {
+        $dados = [
+            'tipo' => null,
+            'modo' => 'nenhuma',
+            'url_exemplo' => $template['header_media_url_exemplo'] ?? null,
+            'handle' => $template['header_media_handle'] ?? null,
+            'documento_nome' => $template['header_media_nome'] ?? null
+        ];
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') != 'HEADER'){
+                continue;
+            }
+
+            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+            $dados['tipo'] = $template['header_media_tipo'] ?? ($tipo ?: null);
+
+            if(in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                $dados['modo'] = 'estatica';
+                $handles = $componente['example']['header_handle'] ?? [];
+                if(is_array($handles) && !empty($handles[0])){
+                    $dados['handle'] = $template['header_media_handle'] ?? $handles[0];
+                }
+                $dados['documento_nome'] = $template['header_media_nome'] ?? ($componente['media_name'] ?? null);
+            }
+
+            break;
+        }
+
+        return $dados;
+    }
+
+
+
+    private function colunasHeaderExistem()
+    {
+        if($this->colunasHeaderExistem !== null){
+            return $this->colunasHeaderExistem;
+        }
+
+        $sql = $this->db->prepare(""
+            . "SELECT COUNT(*) "
+            . "FROM INFORMATION_SCHEMA.COLUMNS "
+            . "WHERE TABLE_SCHEMA = DATABASE() "
+            . "AND TABLE_NAME = 'templates_meta' "
+            . "AND COLUMN_NAME IN ("
+            . "'TMP_HeaderTipo',"
+            . "'TMP_HeaderMidiaModo',"
+            . "'TMP_HeaderMidiaUrlExemplo',"
+            . "'TMP_HeaderMidiaHandle',"
+            . "'TMP_HeaderDocumentoNome'"
+            . ")"
+        );
+
+        $sql->execute();
+
+        $this->colunasHeaderExistem = ((int) $sql->fetchColumn()) === 5;
+
+        return $this->colunasHeaderExistem;
+    }
+
+
+    private function preservarHeaderMetadadosLocais(array $novos, $existente)
+    {
+        if(!$existente || !$this->colunasHeaderExistem()){
+            return $novos;
+        }
+
+        $sql = $this->db->prepare("
+            SELECT
+                TMP_HeaderTipo,
+                TMP_HeaderMidiaModo,
+                TMP_HeaderMidiaUrlExemplo,
+                TMP_HeaderMidiaHandle,
+                TMP_HeaderDocumentoNome
+            FROM templates_meta
+            WHERE TMP_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $existente['TMP_ID']
+        ]);
+
+        $atuais = $sql->fetch(PDO::FETCH_ASSOC);
+
+        if(!$atuais){
+            return $novos;
+        }
+
+        if(empty($novos['url_exemplo']) && !empty($atuais['TMP_HeaderMidiaUrlExemplo'])){
+            $novos['url_exemplo'] = $atuais['TMP_HeaderMidiaUrlExemplo'];
+        }
+
+        if(empty($novos['handle']) && !empty($atuais['TMP_HeaderMidiaHandle'])){
+            $novos['handle'] = $atuais['TMP_HeaderMidiaHandle'];
+        }
+
+        if(empty($novos['documento_nome']) && !empty($atuais['TMP_HeaderDocumentoNome'])){
+            $novos['documento_nome'] = $atuais['TMP_HeaderDocumentoNome'];
+        }
+
+        if(empty($novos['tipo']) && !empty($atuais['TMP_HeaderTipo'])){
+            $novos['tipo'] = $atuais['TMP_HeaderTipo'];
+        }
+
+        if(($novos['modo'] ?? 'nenhuma') == 'nenhuma' && !empty($atuais['TMP_HeaderMidiaModo'])){
+            $novos['modo'] = $atuais['TMP_HeaderMidiaModo'];
+        }
+
+        return $novos;
+    }
+
+
+
+    private function aplicarHeaderMetadadosComponentes(array $componentes, array $metadados)
+    {
+        foreach($componentes as &$componente){
+            if(($componente['type'] ?? '') != 'HEADER'){
+                continue;
+            }
+
+            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+
+            if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                break;
+            }
+
+            if(!empty($metadados['url_exemplo'])){
+                $componente['media_url'] = $metadados['url_exemplo'];
+            }
+
+            if(!empty($metadados['documento_nome'])){
+                $componente['media_name'] = $metadados['documento_nome'];
+            }
+
+            break;
+        }
+
+        unset($componente);
+
+        return $componentes;
+    }
 
 
 
@@ -55,11 +204,66 @@ class TemplateMeta
                 $template['components'] ?? []
             );
 
+        $headerMetadados = $this->extrairHeaderMetadados($componentes, $template);
+
+        $headerMetadados = $this->preservarHeaderMetadadosLocais(
+            $headerMetadados,
+            $existe
+        );
+
+        $componentes = $this->aplicarHeaderMetadadosComponentes(
+            $componentes,
+            $headerMetadados
+        );
 
 
 
+        $jsonComponentes = json_encode(
+            $componentes
+        );
+
+        $usarColunasHeader = $this->colunasHeaderExistem();
 
         if($existe){
+
+            if($usarColunasHeader){
+
+                $update = $this->db->prepare("
+
+                    UPDATE templates_meta SET
+
+                        TMP_Nome = ?,
+                        TMP_Categoria = ?,
+                        TMP_Idioma = ?,
+                        TMP_Status = ?,
+                        TMP_HeaderTipo = ?,
+                        TMP_HeaderMidiaModo = ?,
+                        TMP_HeaderMidiaUrlExemplo = ?,
+                        TMP_HeaderMidiaHandle = ?,
+                        TMP_HeaderDocumentoNome = ?,
+                        TMP_Componentes = ?,
+                        TMP_DataSync = NOW()
+
+                    WHERE TMP_ID = ?
+
+                ");
+
+                return $update->execute([
+
+                    $template['name'],
+                    $template['category'],
+                    $template['language'],
+                    $template['status'],
+                    $headerMetadados['tipo'],
+                    $headerMetadados['modo'],
+                    $headerMetadados['url_exemplo'],
+                    $headerMetadados['handle'],
+                    $headerMetadados['documento_nome'],
+                    $jsonComponentes,
+                    $existe['TMP_ID']
+
+                ]);
+            }
 
             $update = $this->db->prepare("
 
@@ -76,24 +280,13 @@ class TemplateMeta
 
             ");
 
-
-
-
-
             return $update->execute([
 
                 $template['name'],
-
                 $template['category'],
-
                 $template['language'],
-
                 $template['status'],
-
-                json_encode(
-                    $componentes
-                ),
-
+                $jsonComponentes,
                 $existe['TMP_ID']
 
             ]);
@@ -104,6 +297,55 @@ class TemplateMeta
 
 
 
+        if($usarColunasHeader){
+
+            $insert = $this->db->prepare("
+
+                INSERT INTO templates_meta
+                (
+
+                    MTA_ID,
+                    TMP_MetaId,
+                    TMP_Nome,
+                    TMP_Categoria,
+                    TMP_Idioma,
+                    TMP_Status,
+                    TMP_HeaderTipo,
+                    TMP_HeaderMidiaModo,
+                    TMP_HeaderMidiaUrlExemplo,
+                    TMP_HeaderMidiaHandle,
+                    TMP_HeaderDocumentoNome,
+                    TMP_Componentes,
+                    TMP_DataSync
+
+                )
+
+                VALUES
+                (
+
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW()
+
+                )
+
+            ");
+
+            return $insert->execute([
+
+                $metaId,
+                $template['id'],
+                $template['name'],
+                $template['category'],
+                $template['language'],
+                $template['status'],
+                $headerMetadados['tipo'],
+                $headerMetadados['modo'],
+                $headerMetadados['url_exemplo'],
+                $headerMetadados['handle'],
+                $headerMetadados['documento_nome'],
+                $jsonComponentes
+
+            ]);
+        }
 
         $insert = $this->db->prepare("
 
@@ -130,30 +372,19 @@ class TemplateMeta
 
         ");
 
-
-
-
-
         return $insert->execute([
 
             $metaId,
-
             $template['id'],
-
             $template['name'],
-
             $template['category'],
-
             $template['language'],
-
             $template['status'],
-
-            json_encode(
-                $componentes
-            )
+            $jsonComponentes
 
         ]);
     }
+
 
 
 

@@ -14,15 +14,29 @@ class DisparoManual
         $this->db = Database::getInstance();
     }
 
-    public function criarLote($clienteId, $metaId, $templateId, $total)
+    public function criarLote($clienteId, $metaId, $templateId, $total, array $midiaHeader = [])
     {
         $sql = $this->db->prepare("
             INSERT INTO disparo_manual_lotes
-            (CLI_ID, MTA_ID, TMP_ID, DML_Total, DML_Status, DML_DataCadastro, DML_DataAtualizacao)
-            VALUES (?, ?, ?, ?, 'pendente', NOW(), NOW())
+            (
+                CLI_ID, MTA_ID, TMP_ID,
+                DML_HeaderMidiaTipo, DML_HeaderMidiaId, DML_HeaderMidiaNome, DML_HeaderMidiaMime, DML_HeaderMidiaTamanho,
+                DML_Total, DML_Status, DML_DataCadastro, DML_DataAtualizacao
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', NOW(), NOW())
         ");
 
-        $sql->execute([$clienteId, $metaId, $templateId, $total]);
+        $sql->execute([
+            $clienteId,
+            $metaId,
+            $templateId,
+            $midiaHeader['tipo'] ?? null,
+            $midiaHeader['media_id'] ?? null,
+            $midiaHeader['nome_original'] ?? null,
+            $midiaHeader['mime'] ?? null,
+            $midiaHeader['tamanho'] ?? null,
+            $total
+        ]);
 
         return (int) $this->db->lastInsertId();
     }
