@@ -543,6 +543,12 @@ window.TOTAL_CONTAS_META = <?= count($contas); ?>;
     </div>
 </div>
 
+</form>
+
+</div>
+
+</div>
+
 <div
     class="modal fade"
     id="modalDetalhesDisparo"
@@ -619,8 +625,11 @@ window.TOTAL_CONTAS_META = <?= count($contas); ?>;
                 >
                     Fechar
                 </button>
+
             </div>
+
         </div>
+
     </div>
 </div>
 
