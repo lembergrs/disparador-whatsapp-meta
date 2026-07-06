@@ -110,6 +110,70 @@
 
         <hr>
 
+
+        <?php
+        $headerTipo = strtoupper((string) ($campanha['TMP_HeaderTipo'] ?? ''));
+        $headerUrl = trim((string) ($campanha['TMP_HeaderMidiaUrlExemplo'] ?? ''));
+        $headerDocumentoNome = trim((string) ($campanha['TMP_HeaderDocumentoNome'] ?? ''));
+
+        if($headerUrl !== ''){
+            $headerUrl = str_replace('/public/uploads/templates/', '/uploads/templates/', $headerUrl);
+
+            if(!preg_match('/^https?:\/\//i', $headerUrl)){
+                $headerUrl = rtrim(BASE_URL, '/') . '/' . ltrim($headerUrl, '/');
+            }
+        }
+        ?>
+
+        <?php if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){ ?>
+
+        <h5>
+            Mídia do template
+        </h5>
+
+        <div class="mb-3">
+
+            <?php if($headerTipo === 'IMAGE' && $headerUrl !== ''){ ?>
+
+                <img
+                src="<?= htmlspecialchars($headerUrl, ENT_QUOTES); ?>"
+                alt="Imagem do template"
+                class="img-fluid rounded"
+                style="max-width:100%;"
+                >
+
+            <?php }elseif($headerTipo === 'VIDEO' && $headerUrl !== ''){ ?>
+
+                <video
+                src="<?= htmlspecialchars($headerUrl, ENT_QUOTES); ?>"
+                class="img-fluid rounded"
+                style="max-width:100%;"
+                controls
+                ></video>
+
+            <?php }else{ ?>
+
+                <div class="alert alert-info py-2">
+                    <?php if($headerTipo === 'IMAGE'){ ?>
+                        <i class="fas fa-image"></i>
+                        Imagem do template
+                    <?php }elseif($headerTipo === 'VIDEO'){ ?>
+                        <i class="fas fa-video"></i>
+                        Vídeo do template
+                    <?php }else{ ?>
+                        <i class="fas fa-file-pdf"></i>
+                        <?= htmlspecialchars($headerDocumentoNome !== '' ? $headerDocumentoNome : 'Documento do template', ENT_QUOTES); ?>
+                    <?php } ?>
+                </div>
+
+            <?php } ?>
+
+        </div>
+
+        <hr>
+
+        <?php } ?>
+
         <h5>
 
             Mensagem resultante

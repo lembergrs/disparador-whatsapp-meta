@@ -1,5 +1,10 @@
 <?php
 
+use Core\Session;
+
+$templateMetaErrorModal = Session::get('template_meta_error_modal');
+Session::remove('template_meta_error_modal');
+
 if(!function_exists('categoriaTemplatePtBr')){
 
     function categoriaTemplatePtBr($categoria)
@@ -13,6 +18,75 @@ if(!function_exists('categoriaTemplatePtBr')){
         return $categorias[$categoria] ?? $categoria;
     }
 
+}
+
+if(!function_exists('templateHeaderTipo')){
+    function templateHeaderTipo($template)
+    {
+        if(!empty($template['TMP_HeaderTipo'])){
+            return $template['TMP_HeaderTipo'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER'){
+                return $componente['format'] ?? '';
+            }
+        }
+
+        return '';
+    }
+}
+
+if(!function_exists('templateHeaderMidiaUrlExemplo')){
+    function templateHeaderMidiaUrlExemplo($template)
+    {
+        if(!empty($template['TMP_HeaderMidiaUrlExemplo'])){
+            return $template['TMP_HeaderMidiaUrlExemplo'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_url'])){
+                return $componente['media_url'];
+            }
+        }
+
+        return '';
+    }
+}
+
+if(!function_exists('templateHeaderDocumentoNome')){
+    function templateHeaderDocumentoNome($template)
+    {
+        if(!empty($template['TMP_HeaderDocumentoNome'])){
+            return $template['TMP_HeaderDocumentoNome'];
+        }
+
+        $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
+        if(!is_array($componentes)){
+            return '';
+        }
+
+        foreach($componentes as $componente){
+            if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_name'])){
+                return $componente['media_name'];
+            }
+        }
+
+        return '';
+    }
 }
 
 ?>
@@ -182,10 +256,24 @@ data-componentes="<?= htmlspecialchars(
     base64_encode($template['TMP_Componentes']),
     ENT_QUOTES
 ); ?>"
+data-header-tipo="<?= htmlspecialchars(templateHeaderTipo($template), ENT_QUOTES); ?>"
+data-header-midia-url="<?= htmlspecialchars(templateHeaderMidiaUrlExemplo($template), ENT_QUOTES); ?>"
+data-header-documento-nome="<?= htmlspecialchars(templateHeaderDocumentoNome($template), ENT_QUOTES); ?>"
 >
 
 <i class="fas fa-eye"></i>
 
+</button>
+
+<button
+ type="button"
+ class="btn btn-warning btn-sm btnEditarTemplate"
+ data-id="<?= (int) $template['TMP_ID']; ?>"
+ data-nome="<?= htmlspecialchars($template['TMP_Nome'], ENT_QUOTES); ?>"
+ data-header-tipo="<?= htmlspecialchars($template['TMP_HeaderTipo'] ?? '', ENT_QUOTES); ?>"
+ data-documento="<?= htmlspecialchars($template['TMP_HeaderDocumentoNome'] ?? '', ENT_QUOTES); ?>"
+>
+    <i class="fas fa-edit"></i>
 </button>
 
 <a
@@ -286,6 +374,54 @@ aria-label="Close"
 
 </div>
 
+
+<?php if(!empty($templateMetaErrorModal) && is_array($templateMetaErrorModal)){ ?>
+<div class="modal fade" id="modalErroTemplateMeta" tabindex="-1" role="dialog" aria-labelledby="modalErroTemplateMetaTitulo" aria-hidden="true">
+<div class="modal-dialog modal-lg" role="document">
+<div class="modal-content">
+    <div class="modal-header bg-danger">
+        <h4 class="modal-title" id="modalErroTemplateMetaTitulo"><?= htmlspecialchars($templateMetaErrorModal['titulo'] ?? 'Não foi possível criar o template', ENT_QUOTES, 'UTF-8'); ?></h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="modal-body">
+        <?php if(!empty($templateMetaErrorModal['destaque'])){ ?>
+            <p><strong><?= htmlspecialchars($templateMetaErrorModal['destaque'], ENT_QUOTES, 'UTF-8'); ?></strong></p>
+        <?php } ?>
+        <p class="mb-0"><?= nl2br(htmlspecialchars($templateMetaErrorModal['mensagem'] ?? 'Não foi possível criar o template na Meta. Tente novamente.', ENT_QUOTES, 'UTF-8')); ?></p>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+    </div>
+</div>
+</div>
+</div>
+<?php } ?>
+
+<div class="modal fade" id="modalEditarTemplate">
+<div class="modal-dialog">
+<div class="modal-content">
+<form method="POST" action="<?= BASE_URL; ?>/index.php?url=template/editar" enctype="multipart/form-data">
+    <?= \Core\Csrf::input(); ?>
+    <input type="hidden" name="id" id="editarTemplateId">
+    <div class="modal-header">
+        <h4 class="modal-title">Editar Template</h4>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+    </div>
+    <div class="modal-body">
+        <p><strong id="editarTemplateNome"></strong></p>
+        <p>Tipo atual do header: <span id="editarTemplateHeader" class="badge badge-info"></span></p>
+        <p id="editarTemplateMidiaAtual" class="text-muted"></p>
+        <div class="alert alert-warning mb-0">Templates aprovados pela Meta podem exigir criação de um novo template para alteração. Para substituir mídia com segurança, crie um novo template.</div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+        <button type="submit" class="btn btn-warning">Entendi</button>
+    </div>
+</form>
+</div>
+</div>
+</div>
+
 <div
 class="modal fade"
 id="modalNovoTemplate"
@@ -299,7 +435,10 @@ id="modalNovoTemplate"
 method="POST"
 action="<?= BASE_URL; ?>/index.php?url=template/criar"
 id="formNovoTemplate"
+enctype="multipart/form-data"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="modal-header">
 
@@ -465,9 +604,9 @@ Inglês
             >
                 <option value="">Sem Header</option>
                 <option value="TEXT">Texto</option>
-                <option value="IMAGE" disabled>Imagem em breve</option>
-                <option value="VIDEO" disabled>Vídeo em breve</option>
-                <option value="DOCUMENT" disabled>Documento em breve</option>   
+                <option value="IMAGE">Imagem</option>
+                <option value="VIDEO">Vídeo</option>
+                <option value="DOCUMENT">Documento/PDF</option>   
 
             </select>
 
@@ -498,9 +637,17 @@ Inglês
 
 </div>
 
-
-
-
+<div id="areaHeaderMidia" class="form-group" style="display:none">
+    <label>Arquivo do header</label>
+    <div class="meta-media-drop border rounded p-3 text-center" data-input="header_media" role="button" tabindex="0" style="cursor:pointer;">
+        <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
+        <p class="mb-1">Clique ou arraste o arquivo aqui.</p>
+        <small class="text-muted meta-media-help" id="headerMediaAjuda">Selecione um tipo de mídia.</small>
+        <input type="file" name="header_media" id="header_media" class="d-none" accept=".jpg,.jpeg,.png,.webp,.mp4,.3gpp,.pdf">
+    </div>
+    <div class="mt-2" id="headerMediaNome"></div>
+    <img src="" alt="Preview da imagem" id="headerMediaPreview" class="img-fluid rounded mt-2" style="display:none;max-height:180px;">
+</div>
 
 <div class="form-group">
 
@@ -1062,12 +1209,76 @@ $(document).on('input change', '[name=body], [name=header], .valorBotao, .tipoBo
 });
 
 
+function escapeHtmlTemplatePreview(valor)
+{
+    return $('<div>').text(valor || '').html();
+}
+
+function traduzirStatusTemplateMeta(status)
+{
+    const mapa = {
+        APPROVED: 'Aprovado',
+        PENDING: 'Em análise',
+        REJECTED: 'Rejeitado',
+        PAUSED: 'Pausado',
+        DISABLED: 'Desativado',
+        IN_APPEAL: 'Em recurso',
+        PENDING_DELETION: 'Exclusão pendente',
+        DELETED: 'Excluído'
+    };
+
+    status = String(status || '');
+
+    return mapa[status.toUpperCase()] || status;
+}
+
+function normalizarUrlPreviewTemplate(url)
+{
+    url = (url || '').trim();
+
+    if(url === ''){
+        return '';
+    }
+
+    url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+
+    if(/^https?:\/\//i.test(url) || url.indexOf('//') === 0 || url.indexOf('data:image/') === 0){
+        return url;
+    }
+
+    if(url.charAt(0) !== '/'){
+        url = '/' + url;
+    }
+
+    return (typeof BASE_URL !== 'undefined' ? BASE_URL : '') + url;
+}
+
+function renderizarHeaderMidiaTemplate(formato, urlMidia, nomeMidia)
+{
+    formato = String(formato || '').toUpperCase();
+    urlMidia = normalizarUrlPreviewTemplate(urlMidia);
+    nomeMidia = nomeMidia || 'Mídia enviada para aprovação';
+
+    if(formato == 'IMAGE' && urlMidia){
+        return '<div class="mb-2"><img src="' + escapeHtmlTemplatePreview(urlMidia) + '" alt="Imagem do cabeçalho" class="img-fluid rounded border" style="max-width:100%;max-height:220px;"></div>';
+    }
+
+    if(formato == 'VIDEO' && urlMidia){
+        return '<div class="mb-2"><video controls class="w-100 rounded border" style="max-height:260px;"><source src="' + escapeHtmlTemplatePreview(urlMidia) + '"></video><small class="text-muted">' + escapeHtmlTemplatePreview(nomeMidia) + '</small></div>';
+    }
+
+    let iconeMidia = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+    let texto = formato == 'IMAGE' ? 'Imagem no cabeçalho' : (formato == 'VIDEO' ? 'Vídeo no cabeçalho' : nomeMidia);
+
+    return '<div class="alert alert-info"><i class="fas ' + iconeMidia + '"></i> ' + escapeHtmlTemplatePreview(texto) + '</div>';
+}
+
 function abrirPreviewTemplate(botao)
 {
     botao = $(botao);
 
     $('#tmpNome').html(botao.data('nome'));
-    $('#tmpStatus').html(botao.data('status'));
+    $('#tmpStatus').html(escapeHtmlTemplatePreview(traduzirStatusTemplateMeta(botao.data('status'))));
     $('#tmpIdioma').html(botao.data('idioma'));
     $('#tmpCategoria').html(botao.data('categoria'));
 
@@ -1084,11 +1295,23 @@ function abrirPreviewTemplate(botao)
     }
 
     let html = '';
+    let headerMidiaRenderizado = false;
+    let headerTipoNormalizado = String(botao.attr('data-header-tipo') || '').toUpperCase();
+    let headerMidiaUrlNormalizada = botao.attr('data-header-midia-url') || '';
+    let headerDocumentoNomeNormalizado = botao.attr('data-header-documento-nome') || '';
 
     componentes.forEach(function(comp){
 
         if(comp.type == 'HEADER' && comp.format == 'TEXT'){
             html += '<div class="alert alert-secondary"><strong>' + comp.text + '</strong></div>';
+        }
+
+        if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+            let formato = String(comp.format || '').toUpperCase();
+            let nomeMidia = headerDocumentoNomeNormalizado || comp.media_name || 'Mídia enviada para aprovação';
+            let urlMidia = headerMidiaUrlNormalizada || comp.media_url || '';
+            html += renderizarHeaderMidiaTemplate(formato, urlMidia, nomeMidia);
+            headerMidiaRenderizado = true;
         }
 
         if(comp.type == 'BODY' && comp.text){
@@ -1111,6 +1334,14 @@ function abrirPreviewTemplate(botao)
         }
 
     });
+
+    if(!headerMidiaRenderizado && ['IMAGE','VIDEO','DOCUMENT'].indexOf(headerTipoNormalizado) >= 0){
+        html = renderizarHeaderMidiaTemplate(
+            headerTipoNormalizado,
+            headerMidiaUrlNormalizada,
+            headerDocumentoNomeNormalizado || 'Mídia enviada para aprovação'
+        ) + html;
+    }
 
     $('#templatePreview').html(html);
 
@@ -1148,5 +1379,119 @@ function formatarNomeTemplate(campo)
 
     campo.value = valor;
 }
+
+
+function ajudaMidiaHeaderMeta(tipo)
+{
+    tipo = String(tipo || '').toUpperCase();
+
+    const config = {
+        IMAGE: {
+            ajuda: 'Imagem: JPG, PNG ou WEBP até 5 MB.',
+            accept: '.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp'
+        },
+        VIDEO: {
+            ajuda: 'Vídeo: MP4 ou 3GPP até 16 MB.',
+            accept: '.mp4,.3gp,.3gpp,video/mp4,video/3gpp'
+        },
+        DOCUMENT: {
+            ajuda: 'Documento: PDF até 10 MB.',
+            accept: '.pdf,application/pdf'
+        }
+    };
+
+    return config[tipo] || {ajuda: 'Selecione um tipo de mídia.', accept: ''};
+}
+
+function limparUploadMidiaMeta(inputSelector, nomeSelector, previewSelector)
+{
+    $(inputSelector).val('');
+    $(nomeSelector).text('');
+    $(previewSelector).hide().attr('src', '');
+}
+
+function configurarUploadMidiaMeta(dropSelector, inputSelector, nomeSelector, previewSelector)
+{
+    const drop = $(dropSelector);
+    const input = $(inputSelector);
+
+    drop.on('click keydown', function(e){
+        if(e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' '){
+            return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const inputFile = input.get(0);
+        if(inputFile && !inputFile.disabled){
+            inputFile.click();
+        }
+    });
+
+    input.on('click', function(e){
+        e.stopPropagation();
+    });
+
+    drop.on('dragover', function(e){ e.preventDefault(); drop.addClass('border-primary'); });
+    drop.on('dragleave drop', function(e){ e.preventDefault(); drop.removeClass('border-primary'); });
+    drop.on('drop', function(e){
+        const files = e.originalEvent.dataTransfer.files;
+        if(files && files.length){
+            input[0].files = files;
+            input.trigger('change');
+        }
+    });
+
+    input.on('change', function(){
+        const file = this.files && this.files[0] ? this.files[0] : null;
+        $(nomeSelector).text(file ? file.name : '');
+        $(previewSelector).hide().attr('src', '');
+        if(file && file.type && file.type.indexOf('image/') === 0){
+            const reader = new FileReader();
+            reader.onload = function(e){ $(previewSelector).attr('src', e.target.result).show(); };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+const alterarTipoHeaderOriginal = typeof alterarTipoHeader === 'function' ? alterarTipoHeader : null;
+alterarTipoHeader = function(tipo){
+    if(alterarTipoHeaderOriginal){ alterarTipoHeaderOriginal(tipo); }
+    if(['IMAGE','VIDEO','DOCUMENT'].indexOf(tipo) >= 0){
+        const config = ajudaMidiaHeaderMeta(tipo);
+        $('#areaHeaderTexto').hide();
+        $('#areaHeaderMidia').show();
+        $('#headerMediaAjuda').text(config.ajuda);
+        $('#header_media')
+            .prop('required', true)
+            .prop('disabled', false)
+            .attr('accept', config.accept);
+        limparUploadMidiaMeta('#header_media', '#headerMediaNome', '#headerMediaPreview');
+    }else{
+        $('#areaHeaderMidia').hide();
+        $('#header_media').prop('required', false).prop('disabled', false).attr('accept', '');
+        limparUploadMidiaMeta('#header_media', '#headerMediaNome', '#headerMediaPreview');
+    }
+};
+
+configurarUploadMidiaMeta('.meta-media-drop[data-input="header_media"]', '#header_media', '#headerMediaNome', '#headerMediaPreview');
+
+
+$(document).on('click', '.btnEditarTemplate', function(){
+    $('#editarTemplateId').val($(this).data('id'));
+    $('#editarTemplateNome').text($(this).data('nome'));
+    $('#editarTemplateHeader').text($(this).data('header-tipo') || 'Sem header');
+    let documento = $(this).data('documento') || '';
+    $('#editarTemplateMidiaAtual').text(documento ? ('Mídia atual: ' + documento) : 'Sem arquivo de mídia local exibível.');
+    $('#modalEditarTemplate').modal('show');
+});
+
+
+<?php if(!empty($templateMetaErrorModal) && is_array($templateMetaErrorModal)){ ?>
+$(function(){
+    $('#modalErroTemplateMeta').modal('show');
+});
+<?php } ?>
 
 </script>

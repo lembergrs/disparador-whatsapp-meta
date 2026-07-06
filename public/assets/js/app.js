@@ -579,6 +579,10 @@ $(document).ready(function(){
         '.btnVisualizarTemplate',
         function(){
 
+            if(typeof abrirPreviewTemplate === 'function'){
+                return;
+            }
+
             $('#tmpNome').html(
                 $(this).data('nome')
             );
@@ -825,6 +829,8 @@ $(document).ready(function(){
         let option = $(this).find(':selected');
 
         let componentesBase64 = option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#camposVariaveis').html('');
         $('#areaMapeamentoVariaveis').hide();
@@ -856,6 +862,20 @@ $(document).ready(function(){
                         </div>
                     `;
 
+                }
+
+                if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                    let formato = String(comp.format || '').toUpperCase();
+
+                    if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                    }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                        previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                    }else{
+                        let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                        let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                        previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                    }
                 }
 
                 if(comp.type == 'BODY' && comp.text){
@@ -1006,6 +1026,8 @@ $(document).ready(function(){
 
         let componentesBase64 =
             option.attr('data-componentes');
+        let headerMidiaUrlExemplo = normalizarUrlMidiaTemplateDisparo(option.attr('data-header-midia-url-exemplo'));
+        let headerDocumentoNome = option.attr('data-header-documento-nome') || '';
 
         $('#conteudoPreviewTemplateDisparo').html('');
         $('#previewTemplateDisparo').hide();
@@ -1042,6 +1064,20 @@ $(document).ready(function(){
                     </div>
                 `;
 
+            }
+
+            if(comp.type == 'HEADER' && ['IMAGE','VIDEO','DOCUMENT'].indexOf(String(comp.format || '').toUpperCase()) >= 0){
+                let formato = String(comp.format || '').toUpperCase();
+
+                if(formato == 'IMAGE' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><img src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" alt="Imagem do template" class="img-fluid rounded" style="max-width:100%;"></div>`;
+                }else if(formato == 'VIDEO' && headerMidiaUrlExemplo){
+                    previewHtml += `<div class="mb-2"><video src="${escapeHtmlDisparo(headerMidiaUrlExemplo)}" class="img-fluid rounded" controls style="max-width:100%;"></video></div>`;
+                }else{
+                    let icone = formato == 'IMAGE' ? 'fa-image' : (formato == 'VIDEO' ? 'fa-video' : 'fa-file-pdf');
+                    let nome = formato == 'IMAGE' ? 'Imagem do template' : (formato == 'VIDEO' ? 'Vídeo do template' : (headerDocumentoNome || comp.media_name || 'Documento do template'));
+                    previewHtml += `<div class="alert alert-info py-2"><i class="fas ${icone}"></i> ${escapeHtmlDisparo(nome)}</div>`;
+                }
             }
 
             if(comp.type == 'BODY' && comp.text){
@@ -1223,6 +1259,29 @@ $(document).ready(function(){
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+    }
+
+    function normalizarUrlMidiaTemplateDisparo(url)
+    {
+        url = String(url || '').trim();
+
+        if(url === ''){
+            return '';
+        }
+
+        url = url.replace('/public/uploads/templates/', '/uploads/templates/');
+
+        if(/^https?:\/\//i.test(url)){
+            return url;
+        }
+
+        let base = String(typeof BASE_URL !== 'undefined' ? BASE_URL : '').replace(/\/$/, '');
+
+        if(url.charAt(0) === '/'){
+            return base + url;
+        }
+
+        return base + '/' + url.replace(/^\/+/, '');
     }
 
     function encodeDetalhesDisparo(dados)
@@ -1524,6 +1583,33 @@ $(document).ready(function(){
         agendarAtualizacaoContadorNumerosDestinoDisparo();
     });
 
+    $(document).on('change', '#listaContatosDisparo', function(){
+        let listaId = String($(this).val() || '');
+
+        if(listaId === ''){
+            return;
+        }
+
+        let lista = (window.LISTAS_CONTATOS_DISPARO || []).find(function(item){
+            return String(item.LST_ID) === listaId;
+        });
+
+        if(!lista || !Array.isArray(lista.contatos)){
+            return;
+        }
+
+        let telefones = lista.contatos
+            .map(function(contato){
+                return String(contato.telefone || '').trim();
+            })
+            .filter(function(telefone){
+                return telefone !== '';
+            });
+
+        $('#numerosDestino').val(telefones.join("\n"));
+        atualizarContadorNumerosDestinoDisparo();
+    });
+
     $(document).on('blur', '#numerosDestino', function(){
 
         let linhas = $(this).val().split(/\r?\n/);
@@ -1589,6 +1675,9 @@ $(document).ready(function(){
                     <option
                         value="${template.TMP_ID}"
                         data-componentes="${btoa(template.TMP_Componentes)}"
+                        data-header-tipo="${escapeHtmlDisparo(template.TMP_HeaderTipo || '')}"
+                        data-header-midia-url-exemplo="${escapeHtmlDisparo(template.TMP_HeaderMidiaUrlExemplo || '')}"
+                        data-header-documento-nome="${escapeHtmlDisparo(template.TMP_HeaderDocumentoNome || '')}"
                     >
                         ${template.TMP_Nome}
                     </option>
@@ -1745,11 +1834,13 @@ $(document).ready(function(){
 
         let total = parse.destinos.length;
         let loteId = null;
-        let pollingLote = null;
+        let timeoutConsultaLote = null;
         let timeoutProximoBloco = null;
         let processandoBlocoLote = false;
         let processamentoImediatoAtivo = false;
         let consultandoLote = false;
+        let consultasSemItensAbertos = 0;
+        let blocosProcessados = 0;
 
         function montarDestinoFila(destino)
         {
@@ -1920,10 +2011,12 @@ $(document).ready(function(){
             processamentoImediatoAtivo = false;
             processandoBlocoLote = false;
             consultandoLote = false;
+            consultasSemItensAbertos = 0;
+            blocosProcessados = 0;
 
-            if(pollingLote){
-                clearInterval(pollingLote);
-                pollingLote = null;
+            if(timeoutConsultaLote){
+                clearTimeout(timeoutConsultaLote);
+                timeoutConsultaLote = null;
             }
 
             if(timeoutProximoBloco){
@@ -1934,10 +2027,48 @@ $(document).ready(function(){
 
         window.finalizarMonitoramentoLoteDisparo = finalizarMonitoramentoLote;
 
+        function agendarConsultaLote(delay)
+        {
+            if(!processamentoImediatoAtivo || cancelarDisparo){
+                return;
+            }
+
+            if(timeoutConsultaLote){
+                clearTimeout(timeoutConsultaLote);
+            }
+
+            timeoutConsultaLote = setTimeout(consultarLote, delay);
+        }
+
+        function calcularDelayConsulta(lote, itens)
+        {
+            if(lotePossuiPendentes(lote, itens)){
+                consultasSemItensAbertos = 0;
+                return 1000;
+            }
+
+            if(lote && lote.DML_Status == 'concluido'){
+                return null;
+            }
+
+            consultasSemItensAbertos++;
+            return Math.min(15000, 2000 + (consultasSemItensAbertos * 1000));
+        }
+
         function consultarLote()
         {
-            if(!loteId || processandoBlocoLote || consultandoLote || document.hidden){
+            if(!loteId || consultandoLote || cancelarDisparo){
                 return;
+            }
+
+            if(document.hidden){
+                agendarConsultaLote(5000);
+                return;
+            }
+
+            if(timeoutConsultaLote){
+                clearTimeout(timeoutConsultaLote);
+                timeoutConsultaLote = null;
             }
 
             consultandoLote = true;
@@ -1952,11 +2083,23 @@ $(document).ready(function(){
                 dataType: 'json',
                 success: function(retorno){
                     if(!retorno.sucesso){
+                        agendarConsultaLote(5000);
                         return;
                     }
 
                     atualizarItensFila(retorno.itens || []);
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
+
+                    if(processamentoImediatoAtivo){
+                        let proximoDelay = calcularDelayConsulta(retorno.lote || {}, retorno.itens || []);
+
+                        if(proximoDelay !== null){
+                            agendarConsultaLote(proximoDelay);
+                        }
+                    }
+                },
+                error: function(){
+                    agendarConsultaLote(5000);
                 },
                 complete: function(){
                     consultandoLote = false;
@@ -1990,12 +2133,12 @@ $(document).ready(function(){
 
         function processarProximoBloco()
         {
-            if(!loteId || processandoBlocoLote || consultandoLote || cancelarDisparo){
+            if(!loteId || processandoBlocoLote || cancelarDisparo){
                 return;
             }
 
             if(document.hidden){
-                agendarProximoBloco(30000);
+                agendarProximoBloco(5000);
                 return;
             }
 
@@ -2032,7 +2175,8 @@ $(document).ready(function(){
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
 
                     if(lotePossuiPendentes(retorno.lote || {}, retorno.itens || [])){
-                        agendarProximoBloco(8000);
+                        blocosProcessados++;
+                        agendarProximoBloco(Math.min(8000, 1000 + (blocosProcessados * 1000)));
                     }else{
                         finalizarMonitoramentoLote();
                     }
@@ -2069,15 +2213,19 @@ $(document).ready(function(){
 
         $('#textoProgressoDisparo').html('Salvando destinos na fila...');
 
+        let formDataLote = new FormData();
+        formDataLote.append('csrf_token', (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''));
+        formDataLote.append('meta', $('#meta').val());
+        formDataLote.append('template', $('#template').val());
+        formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
+
+
         $.ajax({
             url: BASE_URL + '/index.php?url=disparo/criarLoteAjax',
             method: 'POST',
-            data: {
-                csrf_token: (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : ''),
-                meta: $('#meta').val(),
-                template: $('#template').val(),
-                destinos_json: JSON.stringify(parse.destinos.map(montarDestinoFila))
-            },
+            data: formDataLote,
+            processData: false,
+            contentType: false,
             dataType: 'json',
             success: function(retorno){
                 if(!retorno.sucesso){
@@ -2113,10 +2261,9 @@ $(document).ready(function(){
                     );
                 });
 
-                consultarLote();
-                pollingLote = setInterval(consultarLote, 30000);
                 processamentoImediatoAtivo = true;
-                agendarProximoBloco(8000);
+                consultarLote();
+                processarProximoBloco();
             },
             error: function(xhr){
                 $('#resumoFinalDisparo').html(
@@ -2136,6 +2283,19 @@ $(document).ready(function(){
         $('#areaProgressoDisparo').hide();
         $('#resumoFinalDisparo').html('');
         $('#listaStatusNumeros').html('');
+        $('#textoProgressoDisparo').html('Preparando envio...');
+        $('#barraProgressoDisparo')
+            .addClass('progress-bar-animated')
+            .css('width', '0%')
+            .html('0%');
+
+        $('#btnEnviarDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-paper-plane"></i> Enviar');
+
+        $('#btnPararDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-stop"></i> Parar envio');
 
         cancelarDisparo = false;
         statusDisparoPorMessageId = {};

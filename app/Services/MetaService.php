@@ -402,7 +402,9 @@ class MetaService
 
         if(!empty($dados['header_tipo'])){
 
-            if($dados['header_tipo'] == 'TEXT'
+            $headerTipo = strtoupper((string) $dados['header_tipo']);
+
+            if($headerTipo == 'TEXT'
                 && !empty($dados['header'])){
 
                 $headerOriginal = $dados['header'];
@@ -439,18 +441,62 @@ class MetaService
                     'text' => $headerOriginal
                 ];
 
+            }elseif(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+
+                $handle = $dados['header_media_handle'] ?? null;
+
+                if(!$handle && !empty($_FILES['header_media'])){
+                    $mediaService = new MetaMediaService(
+                        $this->conta['MTA_ID'],
+                        $this->conta['CLI_ID'] ?? null
+                    );
+
+                    $upload = $mediaService->uploadTemplateHandle(
+                        $_FILES['header_media'],
+                        $headerTipo
+                    );
+
+                    $handle = $upload['handle'] ?? null;
+                    $dados['header_media_nome'] = $upload['nome_original'] ?? null;
+                }
+
+                if(!$handle){
+                    return [
+                        'error' => [
+                            'message' => 'Envie um arquivo de exemplo para o cabeçalho de mídia.'
+                        ]
+                    ];
+                }
+
+                $components[] = [
+                    'type' => 'HEADER',
+                    'format' => $headerTipo,
+                    'example' => [
+                        'header_handle' => [$handle]
+                    ]
+                ];
+
+                $componentesOriginais[] = [
+                    'type' => 'HEADER',
+                    'format' => $headerTipo,
+                    'example' => [
+                        'header_handle' => [$handle]
+                    ],
+                    'media_name' => $dados['header_media_nome'] ?? ($_FILES['header_media']['name'] ?? null)
+                ];
+
             }else{
 
                 $components[] = [
 
                     'type'   => 'HEADER',
-                    'format' => $dados['header_tipo']
+                    'format' => $headerTipo
 
                 ];
 
                 $componentesOriginais[] = [
                     'type'   => 'HEADER',
-                    'format' => $dados['header_tipo']
+                    'format' => $headerTipo
                 ];
 
             }
@@ -850,6 +896,10 @@ class MetaService
             'error' => $this->extrairErroLogTemplateMeta($retorno)
         ]);
 
+        if($httpCode >= 400 || !empty($retorno['error'])){
+            $this->registrarErroCriacaoTemplateMeta($url, $httpCode, $payload, $retorno);
+        }
+
         return $retorno;
     }
 
@@ -857,7 +907,8 @@ class MetaService
     public function enviarTemplate(
         $numero,
         $template,
-        $variaveis = []
+        $variaveis = [],
+        $midiaHeader = null
     )
     {
         $url =
@@ -918,6 +969,24 @@ class MetaService
 
 
 
+        $components = [];
+
+        $headerMidiaComponent = $this->montarHeaderMidiaEnvio(
+            $template,
+            $midiaHeader
+        );
+
+        if($headerMidiaComponent){
+            $components[] = $headerMidiaComponent;
+        }
+
+        if(!empty($parameters)){
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $parameters
+            ];
+        }
+
         $payload = [
 
             'messaging_product' => 'whatsapp',
@@ -939,25 +1008,15 @@ class MetaService
                     'code' =>
                     $template['TMP_Idioma']
 
-                ],
-
-                'components' => [
-
-                    [
-
-                        'type' => 'body',
-
-                        'parameters' => $parameters
-
-                    ]
-
                 ]
 
             ]
 
         ];
 
-
+        if(!empty($components)){
+            $payload['template']['components'] = $components;
+        }
 
 
 
@@ -1024,6 +1083,75 @@ class MetaService
         $retorno['payload'] = $payload;
 
         return $retorno;
+    }
+
+
+
+
+    private function montarHeaderMidiaEnvio($template, $midiaHeader)
+    {
+        $tipo = strtoupper((string) ($template['TMP_HeaderTipo'] ?? ''));
+        $urlTemplate = (string) ($template['TMP_HeaderMidiaUrlExemplo'] ?? '');
+        $documentoNomeTemplate = (string) ($template['TMP_HeaderDocumentoNome'] ?? '');
+
+        if($tipo === '' || $urlTemplate === '' || $documentoNomeTemplate === ''){
+            $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+            if(is_array($componentes)){
+                foreach($componentes as $componente){
+                    if(($componente['type'] ?? '') == 'HEADER'){
+                        if($tipo === ''){
+                            $tipo = strtoupper((string) ($componente['format'] ?? ''));
+                        }
+
+                        if($urlTemplate === ''){
+                            $urlTemplate = (string) ($componente['media_url'] ?? '');
+                        }
+
+                        if($documentoNomeTemplate === ''){
+                            $documentoNomeTemplate = (string) ($componente['media_name'] ?? '');
+                        }
+
+                        break;
+                    }
+                }
+            }
+        }
+
+        if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+            return null;
+        }
+
+        $midiaHeader = is_array($midiaHeader) ? $midiaHeader : [];
+        $mediaId = (string) ($midiaHeader['media_id'] ?? '');
+        $mediaLink = (string) ($midiaHeader['link'] ?? ($midiaHeader['url'] ?? $urlTemplate));
+        $mediaLink = str_replace('/public/uploads/templates/', '/uploads/templates/', $mediaLink);
+
+        if($mediaId === '' && $mediaLink === ''){
+            return null;
+        }
+
+        $chave = strtolower($tipo);
+        $media = $mediaId !== ''
+            ? ['id' => $mediaId]
+            : ['link' => $mediaLink];
+
+        if($tipo == 'DOCUMENT'){
+            $filename = (string) ($midiaHeader['filename'] ?? $documentoNomeTemplate);
+
+            if($filename !== ''){
+                $media['filename'] = $filename;
+            }
+        }
+
+        return [
+            'type' => 'header',
+            'parameters' => [
+                [
+                    'type' => $chave,
+                    $chave => $media
+                ]
+            ]
+        ];
     }
 
 
@@ -1128,17 +1256,17 @@ class MetaService
 
     private function montarExemploUrlMeta($url, $exemplosRecebidos)
     {
-        return preg_replace_callback(
-            '/{{\s*([A-Za-z0-9_]+)\s*}}/',
-            function($match) use ($exemplosRecebidos){
-                $variavel = $match[1];
+        $variaveis = $this->extrairVariaveisTextoMeta($url);
 
-                return $exemplosRecebidos[$variavel]
-                    ?? $exemplosRecebidos[(string) $variavel]
-                    ?? 'exemplo';
-            },
-            $url
-        );
+        if(empty($variaveis)){
+            return 'exemplo';
+        }
+
+        $primeiraVariavel = $variaveis[0];
+
+        return $exemplosRecebidos[$primeiraVariavel]
+            ?? $exemplosRecebidos[(string) $primeiraVariavel]
+            ?? 'exemplo';
     }
 
 
@@ -1205,6 +1333,40 @@ class MetaService
             $diretorio . '/meta_templates.log',
             json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
             . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+
+
+
+    private function registrarErroCriacaoTemplateMeta($endpoint, $httpCode, $payload, $retorno)
+    {
+        $diretorio = dirname(__DIR__, 2) . '/storage/logs';
+
+        if(!is_dir($diretorio)){
+            mkdir($diretorio, 0755, true);
+        }
+
+        $erro = $this->extrairErroLogTemplateMeta($retorno);
+
+        $registro = [
+            'data_hora' => date('Y-m-d H:i:s'),
+            'cli_id' => $this->conta['CLI_ID'] ?? null,
+            'mta_id' => $this->conta['MTA_ID'] ?? null,
+            'waba_id' => $this->conta['MTA_WabaId'] ?? null,
+            'endpoint' => $endpoint,
+            'http_code' => $httpCode,
+            'payload' => $this->mascararDadosSensiveisTemplateMeta($payload),
+            'response' => $this->mascararDadosSensiveisTemplateMeta($retorno),
+            'message' => $erro['message'] ?? ($retorno['error']['message'] ?? null),
+            'code' => $erro['code'] ?? ($retorno['error']['code'] ?? null),
+            'error_subcode' => $erro['error_subcode'] ?? ($retorno['error']['error_subcode'] ?? null),
+            'error_data' => $erro['error_data'] ?? ($retorno['error']['error_data'] ?? null)
+        ];
+
+        file_put_contents(
+            $diretorio . '/meta-template-create.log',
+            json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL,
             FILE_APPEND
         );
     }

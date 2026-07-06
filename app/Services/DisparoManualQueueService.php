@@ -198,8 +198,25 @@ class DisparoManualQueueService
         return $this->metaCache[$metaKey]->enviarTemplate(
             $item['DMI_Numero'],
             $item,
-            $variaveis
+            $variaveis,
+            $this->midiaHeaderItem($item)
         );
+    }
+
+
+    private function midiaHeaderItem(array $item)
+    {
+        if(empty($item['DML_HeaderMidiaId'])){
+            return null;
+        }
+
+        return [
+            'tipo' => $item['DML_HeaderMidiaTipo'] ?? null,
+            'media_id' => $item['DML_HeaderMidiaId'],
+            'filename' => $item['DML_HeaderMidiaNome'] ?? null,
+            'mime' => $item['DML_HeaderMidiaMime'] ?? null,
+            'tamanho' => $item['DML_HeaderMidiaTamanho'] ?? null
+        ];
     }
 
     private function registrarSucesso(array $item, array $variaveis, array $retorno)

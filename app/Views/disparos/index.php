@@ -28,10 +28,12 @@ method="POST"
 id="formDisparo"
 action="<?= BASE_URL; ?>/index.php?url=disparo/enviar"
 >
+<?= \Core\Csrf::input(); ?>
+
 
 <div class="row">
 
-<div class="col-md-6">
+<div class="col-md-4">
 
 <div class="form-group">
 
@@ -71,7 +73,7 @@ required
 
 </div>
 
-<div class="col-md-6">
+<div class="col-md-4">
 
 <div class="form-group">
 
@@ -90,6 +92,41 @@ Selecione primeiro a Conta Meta
 </option>
 
 </select>
+
+</div>
+
+</div>
+
+<div class="col-md-4">
+
+<div class="form-group">
+
+<label>Lista de Contatos</label>
+
+<select
+name="lista_contatos"
+id="listaContatosDisparo"
+class="form-control"
+>
+
+<option value="">
+Não usar lista
+</option>
+
+<?php foreach(($listas ?? []) as $lista){ ?>
+
+<option value="<?= $lista['LST_ID']; ?>">
+    <?= htmlspecialchars($lista['LST_Nome'], ENT_QUOTES); ?>
+    (<?= (int) ($lista['total_contatos'] ?? 0); ?> contatos)
+</option>
+
+<?php } ?>
+
+</select>
+
+<small class="text-muted d-block mt-1">
+    Opcional: selecione uma lista para preencher os números manualmente.
+</small>
 
 </div>
 
@@ -377,5 +414,6 @@ aria-hidden="true"
 
 <script>
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
+window.LISTAS_CONTATOS_DISPARO = <?= json_encode($listas ?? [], JSON_UNESCAPED_UNICODE); ?>;
 window.TOTAL_CONTAS_META = <?= count($contas); ?>;
 </script>
