@@ -105,7 +105,6 @@ style="display:none;"
                 <td>
 
                 <?php
-
                 $status = $campanha['CAM_Status'];
 
                 $badges = [
@@ -240,7 +239,7 @@ required
 >
 
 <option value="">
-Selecione
+<?= empty($templates) ? 'Nenhum template aprovado disponível para envio nesta conta.' : 'Selecione'; ?>
 </option>
 
 <?php foreach($templates as $template){ ?>

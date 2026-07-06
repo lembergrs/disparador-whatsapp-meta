@@ -63,7 +63,7 @@ class DisparoController extends Controller
 
         $templates =
             $this->templateModel
-            ->listarPorCliente(
+            ->listarAprovadosParaEnvioPorCliente(
                 $usuario['CLI_ID']
             );
 
@@ -484,7 +484,7 @@ class DisparoController extends Controller
 
         $template =
             $this->templateModel
-            ->buscarPorCliente(
+            ->buscarAprovadoParaEnvioPorCliente(
                 (int) ($_POST['template'] ?? 0),
                 $usuario['CLI_ID']
             );
@@ -1054,7 +1054,7 @@ class DisparoController extends Controller
 
             $template =
                 $this->templateModel
-                ->buscarPorCliente(
+                ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
                     $usuario['CLI_ID']
                 );
@@ -1259,7 +1259,7 @@ class DisparoController extends Controller
 
             $template =
                 $this->templateModel
-                ->buscarPorCliente(
+                ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
                     $usuario['CLI_ID']
                 );
@@ -1358,6 +1358,22 @@ class DisparoController extends Controller
         }
     }
 
+    private function normalizarTelefoneDisparoManual($telefone)
+    {
+        $numero = preg_replace('/\D/', '', (string) $telefone);
+
+        if($numero === ''){
+            return '';
+        }
+
+        if(substr($numero, 0, 2) !== '55'){
+            $numero = '55' . $numero;
+        }
+
+        return preg_match('/^55\d{10,11}$/', $numero) ? $numero : '';
+    }
+
+
     public function criarLoteAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -1374,7 +1390,7 @@ class DisparoController extends Controller
             $metaId = (int) ($_POST['meta'] ?? 0);
             $templateId = (int) ($_POST['template'] ?? 0);
 
-            $template = $this->templateModel->buscarPorCliente(
+            $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente(
                 $templateId,
                 $usuario['CLI_ID']
             );
@@ -1385,24 +1401,50 @@ class DisparoController extends Controller
 
             $destinos = json_decode($_POST['destinos_json'] ?? '[]', true);
 
-            if(!is_array($destinos) || empty($destinos)){
-                throw new \Exception('Informe pelo menos um destino válido.');
+            if(!is_array($destinos)){
+                throw new \Exception('Destinos manuais inválidos.');
             }
 
+            $listaId = (int) ($_POST['lista_id'] ?? 0);
             $variaveisTemplate = $this->extrairVariaveisTemplate($template);
             $model = new DisparoManual();
             $itens = [];
             $numerosUnicos = [];
 
-            foreach($destinos as $destino){
-                $numero = preg_replace('/\D/', '', $destino['numero'] ?? '');
+            if($listaId > 0){
+                $listaModel = new ListaContato();
+                $lista = $listaModel->buscar($listaId, $usuario['CLI_ID']);
 
-                if($numero == ''){
-                    throw new \Exception('Número de destino não informado.');
+                if(!$lista || ($lista['LST_Ativo'] ?? 'S') !== 'S'){
+                    throw new \Exception('Lista de contatos não encontrada para este cliente.');
                 }
 
-                if(substr($numero, 0, 2) != '55'){
-                    $numero = '55' . $numero;
+                if(!empty($variaveisTemplate)){
+                    throw new \Exception('Este template possui variáveis. Nesta etapa, selecione uma lista apenas com templates sem variáveis ou informe os números manualmente com as variáveis necessárias.');
+                }
+
+                $contatosLista = (new ListaContatoItem())->listarContatos($listaId);
+
+                foreach($contatosLista as $contato){
+                    $numero = $this->normalizarTelefoneDisparoManual($contato['CON_Telefone'] ?? '');
+
+                    if($numero === '' || isset($numerosUnicos[$numero])){
+                        continue;
+                    }
+
+                    $numerosUnicos[$numero] = true;
+                    $itens[] = [
+                        'numero' => $numero,
+                        'variaveis' => []
+                    ];
+                }
+            }
+
+            foreach($destinos as $destino){
+                $numero = $this->normalizarTelefoneDisparoManual($destino['numero'] ?? '');
+
+                if($numero === ''){
+                    throw new \Exception('Número de destino manual inválido.');
                 }
 
                 if(isset($numerosUnicos[$numero])){
@@ -1428,7 +1470,11 @@ class DisparoController extends Controller
             }
 
             if(empty($itens)){
-                throw new \Exception('Nenhum destino válido para enfileirar.');
+                if($listaId > 0){
+                    throw new \Exception('A lista selecionada não possui contatos com telefone válido. Informe números manualmente ou escolha outra lista.');
+                }
+
+                throw new \Exception('Informe pelo menos um destino válido.');
             }
 
             $loteId = $model->criarLote(
@@ -1462,6 +1508,13 @@ class DisparoController extends Controller
     }
 
 
+
+    private function liberarSessaoParaPollingAjax()
+    {
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_write_close();
+        }
+    }
 
     public function processarLoteAjax()
     {

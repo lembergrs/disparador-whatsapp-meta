@@ -2,6 +2,8 @@
 
 namespace Services;
 
+use Helpers\UrlHelper;
+
 use Core\Database;
 use Exception;
 use PDO;
