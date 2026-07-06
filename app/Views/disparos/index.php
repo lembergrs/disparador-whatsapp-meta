@@ -97,6 +97,7 @@ Selecione primeiro a Conta Meta
 
 </div>
 
+</div>
 
 <div
 id="areaProgressoDisparo"
