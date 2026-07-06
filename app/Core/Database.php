@@ -16,9 +16,10 @@ class Database
             try{
 
                 self::$instance = new PDO(
-                    "mysql:host=".DB_HOST.";
-                    dbname=".DB_NAME.";
-                    charset=utf8mb4",
+                    "mysql:host=" . DB_HOST .
+                    ";port=" . DB_PORT .
+                    ";dbname=" . DB_NAME .
+                    ";charset=utf8mb4",
                     DB_USER,
                     DB_PASS
                 );
@@ -27,6 +28,8 @@ class Database
                     PDO::ATTR_ERRMODE,
                     PDO::ERRMODE_EXCEPTION
                 );
+
+                self::$instance->exec("SET time_zone = '-03:00'");
 
                 self::registrarConexaoCriada();
 

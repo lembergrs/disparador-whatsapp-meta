@@ -68,6 +68,51 @@ if(!function_exists('formatarTelefone')){
 
 <?php } ?>
 
+<div class="card card-outline card-info">
+
+<div class="card-header">
+<h3 class="card-title">
+<i class="fas fa-file-excel"></i>
+Modelo de planilha
+</h3>
+</div>
+
+<div class="card-body">
+
+<div class="row align-items-center">
+
+<div class="col-md-8">
+
+<div class="alert alert-info mb-0">
+<strong>Formato esperado da planilha:</strong>
+<ul class="mb-0 pl-3">
+<li>Arquivo XLSX</li>
+<li>Primeira linha com os nomes das colunas</li>
+<li>Telefone obrigatório</li>
+<li>Demais colunas opcionais</li>
+<li>Colunas extras podem ser usadas como variáveis</li>
+</ul>
+</div>
+
+</div>
+
+<div class="col-md-4 text-md-right mt-3 mt-md-0">
+<a
+href="<?= BASE_URL; ?>/index.php?url=listaContato/baixarModelo"
+class="btn btn-primary"
+download
+>
+<i class="fas fa-download"></i>
+Baixar Planilha Modelo
+</a>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 <div class="card">
 
 <div class="card-header">

@@ -44,7 +44,7 @@ class CampanhaController extends Controller
 
         $templates =
             $this->templateModel
-            ->listarPorCliente(
+            ->listarAprovadosParaEnvioPorCliente(
                 $usuario['cliente_id']
             );
 
@@ -85,7 +85,7 @@ class CampanhaController extends Controller
         $listaModel = new ListaContato();
         $lista = $listaModel->buscar($_POST['lista'] ?? 0, $usuario['CLI_ID']);
 
-        $template = $this->templateModel->buscarPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
+        $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
 
         if(!$lista || !$template){
             Session::flash('error', 'Lista ou template inválido.');

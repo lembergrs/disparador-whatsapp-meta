@@ -1231,10 +1231,22 @@ $(document).ready(function(){
         return total;
     }
 
+    function obterTotalListaContatosDisparo()
+    {
+        let option = $('#listaContatosDisparo').find(':selected');
+        return parseInt(option.attr('data-total') || '0', 10) || 0;
+    }
+
     function atualizarContadorNumerosDestinoDisparo()
     {
+        let manuais = contarNumerosDestinoDisparo();
+        let lista = obterTotalListaContatosDisparo();
+        let estimado = manuais + lista;
+
         $('#contadorNumerosDestino').text(
-            'Números identificados: ' + contarNumerosDestinoDisparo()
+            'Números digitados: ' + manuais +
+            ' | Contatos da lista: ' + lista +
+            ' | Total final estimado: ' + estimado
         );
     }
 
@@ -1583,6 +1595,10 @@ $(document).ready(function(){
         agendarAtualizacaoContadorNumerosDestinoDisparo();
     });
 
+    $(document).on('change', '#listaContatosDisparo', function(){
+        atualizarContadorNumerosDestinoDisparo();
+    });
+
     $(document).on('blur', '#numerosDestino', function(){
 
         let linhas = $(this).val().split(/\r?\n/);
@@ -1640,9 +1656,13 @@ $(document).ready(function(){
             </option>
         `);
 
+        let totalTemplatesAprovados = 0;
+
         window.TEMPLATES_DISPARO.forEach(function(template){
 
             if(String(template.MTA_ID) == String(metaId)){
+
+                totalTemplatesAprovados++;
 
                 templateSelect.append(`
                     <option
@@ -1659,6 +1679,16 @@ $(document).ready(function(){
             }
 
         });
+
+        if(totalTemplatesAprovados === 0){
+            templateSelect.html(`
+                <option value="">
+                    Nenhum template aprovado disponível para envio nesta conta.
+                </option>
+            `);
+            templateSelect.prop('disabled', true);
+            return;
+        }
 
         templateSelect.prop('disabled', false);
 
@@ -1689,6 +1719,42 @@ $(document).ready(function(){
     let cancelarDisparo = false;
     let intervaloStatusDisparo = null;
     let statusDisparoPorMessageId = {};
+
+    function restaurarBotaoEnviarDisparo()
+    {
+        $('#btnEnviarDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-paper-plane"></i> Enviar Template');
+    }
+
+    function resetarEstadoVisualDisparo()
+    {
+        $('#painelExecucaoDisparo').hide();
+        $('#painelEdicaoDisparo').show();
+        $('#areaProgressoDisparo').hide();
+        $('#resumoFinalDisparo').html('');
+        $('#listaStatusNumeros').html('');
+
+        $('#barraProgressoDisparo')
+            .removeClass('progress-bar-animated')
+            .css('width', '0%')
+            .html('0%');
+
+        $('#textoProgressoDisparo').html('Preparando envio...');
+        $('#btnPararDisparo')
+            .prop('disabled', false)
+            .html('<i class="fas fa-stop"></i> Parar envio');
+
+        restaurarBotaoEnviarDisparo();
+    }
+
+    function restaurarTelaEdicaoDisparoAposErro()
+    {
+        $('#painelExecucaoDisparo').hide();
+        $('#painelEdicaoDisparo').show();
+        $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+        restaurarBotaoEnviarDisparo();
+    }
 
     $(document).on('click', '#btnPararDisparo', function(){
 
@@ -1724,8 +1790,21 @@ $(document).ready(function(){
             return;
         }
 
-        if(parse.destinos.length == 0){
-            alert('Informe pelo menos um número válido.');
+        let listaSelecionadaId = $('#listaContatosDisparo').val() || '';
+        let totalListaSelecionada = obterTotalListaContatosDisparo();
+
+        if(listaSelecionadaId === '' && parse.destinos.length == 0){
+            alert('Informe pelo menos um número válido ou selecione uma lista de contatos.');
+            return;
+        }
+
+        if(listaSelecionadaId !== '' && parse.variaveis.length > 0){
+            alert('Este template possui variáveis. Nesta etapa, use listas apenas com templates sem variáveis ou informe os números manualmente com as variáveis necessárias.');
+            return;
+        }
+
+        if(listaSelecionadaId !== '' && totalListaSelecionada == 0 && parse.destinos.length == 0){
+            alert('A lista selecionada não possui contatos ativos. Informe números manualmente ou escolha outra lista.');
             return;
         }
 
@@ -1740,8 +1819,8 @@ $(document).ready(function(){
         }
 
         if(!confirm(
-            'Confira a prévia dos destinos e confirme o envio de ' +
-            parse.destinos.length + ' mensagem(ns). Deseja iniciar agora?'
+            'Confira a prévia dos destinos e confirme o envio estimado de ' +
+            (parse.destinos.length + totalListaSelecionada) + ' mensagem(ns). Deseja iniciar agora?'
         )){
             return;
         }
@@ -1753,11 +1832,11 @@ $(document).ready(function(){
 
         $('#barraProgressoDisparo')
             .addClass('progress-bar-animated')
-            .css('width', '0%')
-            .html('0%');
+            .css('width', '3%')
+            .html('3%');
 
         $('#textoProgressoDisparo').html(
-            'Preparando lista de envio...'
+            'Preparando envio e salvando destinos na fila...'
         );
 
         $('#painelEdicaoDisparo').hide();
@@ -1771,7 +1850,19 @@ $(document).ready(function(){
             .prop('disabled', false)
             .html('<i class="fas fa-stop"></i> Parar envio');
 
+        for(let i = 0; i < totalListaSelecionada; i++){
+            $('#listaStatusNumeros').append(`
+                <tr id="linha_numero_${i}">
+                    <td>Contato da lista selecionada</td>
+                    <td><span class="badge badge-secondary">Na fila</span></td>
+                    <td class="small text-muted">-</td>
+                    <td>-</td>
+                </tr>
+            `);
+        }
+
         parse.destinos.forEach(function(destino, index){
+            index = index + totalListaSelecionada;
 
             let variaveisHtml = '';
 
@@ -1805,10 +1896,15 @@ $(document).ready(function(){
 
         });
 
+        $('#linha_numero_0 td:eq(1)').html('<span class="badge badge-info">Preparando envio</span>');
+        $('#linha_numero_0 td:eq(2)').html('<span class="text-muted">Preparando envio para a Meta.</span>');
+
         let total = parse.destinos.length;
         let loteId = null;
         let timeoutConsultaLote = null;
         let timeoutProximoBloco = null;
+        let consultasStatusLote = 0;
+        let estadoItensLote = {};
         let processandoBlocoLote = false;
         let processamentoImediatoAtivo = false;
         let consultandoLote = false;
@@ -1836,8 +1932,11 @@ $(document).ready(function(){
                 processando: 'Enviando',
                 aguardando_confirmacao: 'Aguardando confirmação',
                 enviado: 'Enviado',
+                sent: 'Enviado',
                 entregue: 'Entregue',
+                delivered: 'Entregue',
                 lido: 'Lido',
+                read: 'Lido',
                 erro: 'Erro',
                 failed: 'Erro'
             };
@@ -1847,8 +1946,11 @@ $(document).ready(function(){
                 processando: 'badge-info',
                 aguardando_confirmacao: 'badge-info',
                 enviado: 'badge-success',
+                sent: 'badge-success',
                 entregue: 'badge-primary',
+                delivered: 'badge-primary',
                 lido: 'badge-success',
+                read: 'badge-success',
                 erro: 'badge-danger',
                 failed: 'badge-danger'
             };
@@ -1867,15 +1969,15 @@ $(document).ready(function(){
             let iniciouProcessamento = false;
 
             itens.forEach(function(item){
-                if(['processando','aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                if(['processando','aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read','erro','failed'].includes(item.DMI_Status)){
                     iniciouProcessamento = true;
                 }
 
-                if(['aguardando_confirmacao','enviado','entregue','lido','erro','failed'].includes(item.DMI_Status)){
+                if(['aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read','erro','failed'].includes(item.DMI_Status)){
                     concluidos++;
                 }
 
-                if(['aguardando_confirmacao','enviado','entregue','lido'].includes(item.DMI_Status)){
+                if(['aguardando_confirmacao','enviado','sent','entregue','delivered','lido','read'].includes(item.DMI_Status)){
                     enviados++;
                 }
 
@@ -1908,10 +2010,17 @@ $(document).ready(function(){
 
             if(lote && lote.DML_Status == 'concluido'){
                 $('#barraProgressoDisparo')
-                    .removeClass('progress-bar-animated')
                     .css('width', '100%')
                     .html('100%');
 
+                if(loteAguardaAtualizacaoWebhook(itens)){
+                    $('#textoProgressoDisparo').html(
+                        'Envio concluído. Aguardando confirmações da Meta para atualizar enviado, entregue ou lido.'
+                    );
+                    return;
+                }
+
+                $('#barraProgressoDisparo').removeClass('progress-bar-animated');
                 $('#textoProgressoDisparo').html('Processamento concluído.');
 
                 $('#resumoFinalDisparo').html(`
@@ -1944,8 +2053,11 @@ $(document).ready(function(){
                 processando: 'Enviando...',
                 aguardando_confirmacao: 'Enviado para a Meta. Aguardando confirmação.',
                 enviado: 'Mensagem enviada pela Meta.',
+                sent: 'Mensagem enviada pela Meta.',
                 entregue: 'Mensagem entregue ao destinatário.',
+                delivered: 'Mensagem entregue ao destinatário.',
                 lido: 'Mensagem lida pelo destinatário.',
+                read: 'Mensagem lida pelo destinatário.',
                 erro: 'Erro ao processar envio.',
                 failed: 'A Meta informou falha no envio.'
             };
@@ -1958,6 +2070,20 @@ $(document).ready(function(){
         function atualizarItensFila(itens)
         {
             itens.forEach(function(item, index){
+                let chaveItem = String(item.DMI_ID || index);
+                let assinaturaItem = [
+                    item.DMI_Status || '',
+                    item.DMI_MessageId || '',
+                    item.DMI_Erro || '',
+                    item.DMI_Retorno || ''
+                ].join('|');
+
+                if(estadoItensLote[chaveItem] === assinaturaItem){
+                    return;
+                }
+
+                estadoItensLote[chaveItem] = assinaturaItem;
+
                 $('#linha_numero_' + index + ' td:eq(1)').html(
                     badgeStatusFila(item.DMI_Status)
                 );
@@ -2045,6 +2171,7 @@ $(document).ready(function(){
             }
 
             consultandoLote = true;
+            let proximaConsultaDelay = null;
 
             $.ajax({
                 url: BASE_URL + '/index.php?url=disparo/statusLoteAjax',
@@ -2060,6 +2187,7 @@ $(document).ready(function(){
                         return;
                     }
 
+                    consultasStatusLote++;
                     atualizarItensFila(retorno.itens || []);
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
 
@@ -2076,6 +2204,10 @@ $(document).ready(function(){
                 },
                 complete: function(){
                     consultandoLote = false;
+
+                    if(proximaConsultaDelay !== null){
+                        agendarConsultaLote(proximaConsultaDelay);
+                    }
                 }
             });
         }
@@ -2089,6 +2221,62 @@ $(document).ready(function(){
             return (itens || []).some(function(item){
                 return ['pendente','processando'].includes(item.DMI_Status);
             });
+        }
+
+
+        function loteAguardaAtualizacaoWebhook(itens)
+        {
+            return (itens || []).some(function(item){
+                return ['aguardando_confirmacao','enviado','sent','entregue','delivered'].includes(item.DMI_Status);
+            });
+        }
+
+        function lotePossuiStatusEmAberto(itens)
+        {
+            return (itens || []).some(function(item){
+                return ['pendente','processando','aguardando_confirmacao','enviado','sent','entregue','delivered'].includes(item.DMI_Status);
+            });
+        }
+
+        function calcularDelayPollingLote(lote, itens)
+        {
+            if(!loteId || cancelarDisparo){
+                return null;
+            }
+
+            if(lote && lote.DML_Status == 'concluido' && !lotePossuiStatusEmAberto(itens)){
+                return null;
+            }
+
+            if(lotePossuiStatusEmAberto(itens)){
+                return consultasStatusLote < 30 ? 1000 : 3000;
+            }
+
+            return consultasStatusLote < 30 ? 1000 : 5000;
+        }
+
+        function agendarConsultaLote(delay)
+        {
+            if(!loteId || cancelarDisparo){
+                return;
+            }
+
+            if(timeoutPollingLote){
+                clearTimeout(timeoutPollingLote);
+            }
+
+            timeoutPollingLote = setTimeout(consultarLote, delay);
+        }
+
+        function finalizarProcessamentoImediatoLote()
+        {
+            processamentoImediatoAtivo = false;
+            processandoBlocoLote = false;
+
+            if(timeoutProximoBloco){
+                clearTimeout(timeoutProximoBloco);
+                timeoutProximoBloco = null;
+            }
         }
 
         function agendarProximoBloco(delay)
@@ -2151,7 +2339,8 @@ $(document).ready(function(){
                         blocosProcessados++;
                         agendarProximoBloco(Math.min(8000, 1000 + (blocosProcessados * 1000)));
                     }else{
-                        finalizarMonitoramentoLote();
+                        finalizarProcessamentoImediatoLote();
+                        consultarLote();
                     }
                 },
                 error: function(){
@@ -2207,15 +2396,18 @@ $(document).ready(function(){
                         escapeHtmlDisparo(retorno.erro || 'Erro ao criar lote.') +
                         '</div>'
                     );
-                    $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+                    restaurarTelaEdicaoDisparoAposErro();
                     return;
                 }
 
                 loteId = retorno.lote_id;
 
                 $('#textoProgressoDisparo').html(
-                    'Lote criado com sucesso. O envio foi colocado na fila e será iniciado automaticamente em instantes.'
+                    'Lote criado com sucesso. Iniciando envio agora...'
                 );
+
+                $('#linha_numero_0 td:eq(1)').html('<span class="badge badge-info">Enviando para Meta</span>');
+                $('#linha_numero_0 td:eq(2)').html('<span class="text-muted">Primeiro envio em preparação.</span>');
 
                 $('#resumoFinalDisparo').html(`
                     <div class="alert alert-info mt-3">
@@ -2224,7 +2416,11 @@ $(document).ready(function(){
                     </div>
                 `);
 
-                $('#listaStatusNumeros tr').each(function(){
+                $('#listaStatusNumeros tr').each(function(index){
+                    if(index === 0){
+                        return;
+                    }
+
                     $(this).find('td:eq(1)').html(
                         '<span class="badge badge-secondary">Na fila</span>'
                     );
@@ -2242,7 +2438,7 @@ $(document).ready(function(){
                 $('#resumoFinalDisparo').html(
                     '<div class="alert alert-danger mt-3">Falha ao criar lote de disparo manual.</div>'
                 );
-                $('#barraProgressoDisparo').removeClass('progress-bar-animated');
+                restaurarTelaEdicaoDisparoAposErro();
             }
         });
 
@@ -2281,6 +2477,9 @@ $(document).ready(function(){
             clearInterval(intervaloStatusDisparo);
             intervaloStatusDisparo = null;
         }
+
+        resetarEstadoVisualDisparo();
+        atualizarContadorNumerosDestinoDisparo();
 
     });
 

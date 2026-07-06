@@ -4,6 +4,10 @@ require_once __DIR__ . '/env.php';
 
 defined('APP_ENV') || define('APP_ENV', app_env());
 
+defined('APP_TIMEZONE') || define('APP_TIMEZONE', env_valor('APP_TIMEZONE', 'America/Sao_Paulo'));
+
+date_default_timezone_set(APP_TIMEZONE);
+
 $host = $_SERVER['HTTP_HOST'] ?? '';
 
 if ($host === 'disparador.test') {
@@ -42,7 +46,14 @@ defined('META_VERIFY_TOKEN') || define('META_VERIFY_TOKEN', env_valor('META_VERI
 defined('META_EMBEDDED_SIGNUP_REDIRECT_URI') || define('META_EMBEDDED_SIGNUP_REDIRECT_URI', env_valor('META_EMBEDDED_SIGNUP_REDIRECT_URI', ''));
 defined('META_GRAPH_VERSION') || define('META_GRAPH_VERSION', env_valor('META_GRAPH_VERSION', ''));
 
-
+$uploadsPublicPath = rtrim(env_valor('UPLOADS_PUBLIC_PATH', '/uploads'), '/');
+if($uploadsPublicPath === ''){
+    $uploadsPublicPath = '/uploads';
+}
+if($uploadsPublicPath[0] !== '/'){
+    $uploadsPublicPath = '/' . $uploadsPublicPath;
+}
+defined('UPLOADS_PUBLIC_PATH') || define('UPLOADS_PUBLIC_PATH', $uploadsPublicPath);
 
 $asaasEnv = strtolower(trim((string) env_valor('ASAAS_ENV', 'sandbox')));
 $asaasBaseUrlSandbox = env_valor('ASAAS_API_BASE_URL_SANDBOX', 'https://sandbox.asaas.com/api/v3');
