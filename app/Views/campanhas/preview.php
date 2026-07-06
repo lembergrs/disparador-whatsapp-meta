@@ -53,7 +53,6 @@
             <tbody>
 
             <?php
-
             $dados =
                 json_decode(
                     $contato['CON_DadosJson'],

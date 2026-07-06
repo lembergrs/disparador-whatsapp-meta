@@ -1,5 +1,13 @@
 <?php
 
+$input = file_get_contents('php://input');
+
+file_put_contents(
+    __DIR__ . '/webhook_debug.log',
+    date('Y-m-d H:i:s') . PHP_EOL . $input . PHP_EOL . str_repeat('-', 80) . PHP_EOL,
+    FILE_APPEND
+);
+
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -86,10 +94,6 @@ if($_SERVER['REQUEST_METHOD'] == 'GET'){
 | Recebimento dos eventos
 |--------------------------------------------------------------------------
 */
-$input =
-    file_get_contents(
-        'php://input'
-    );
 
 if(!validarAssinaturaMeta($input)){
     http_response_code(403);
