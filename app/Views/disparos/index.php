@@ -370,6 +370,12 @@ class="mb-3"
     </div>
 </div>
 
+</form>
+
+</div>
+
+</div>
+
 <div
     class="modal fade"
     id="modalDetalhesDisparo"
@@ -446,8 +452,11 @@ class="mb-3"
                 >
                     Fechar
                 </button>
+
             </div>
+
         </div>
+
     </div>
 </div>
 
