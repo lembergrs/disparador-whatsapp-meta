@@ -1596,6 +1596,29 @@ $(document).ready(function(){
     });
 
     $(document).on('change', '#listaContatosDisparo', function(){
+        let listaId = String($(this).val() || '');
+
+        if(listaId === ''){
+            return;
+        }
+
+        let lista = (window.LISTAS_CONTATOS_DISPARO || []).find(function(item){
+            return String(item.LST_ID) === listaId;
+        });
+
+        if(!lista || !Array.isArray(lista.contatos)){
+            return;
+        }
+
+        let telefones = lista.contatos
+            .map(function(contato){
+                return String(contato.telefone || '').trim();
+            })
+            .filter(function(telefone){
+                return telefone !== '';
+            });
+
+        $('#numerosDestino').val(telefones.join("\n"));
         atualizarContadorNumerosDestinoDisparo();
     });
 

@@ -71,6 +71,31 @@ class DisparoController extends Controller
 
 
 
+        $listaModel = new ListaContato();
+        $listaItemModel = new ListaContatoItem();
+
+        $listas = $listaModel->listarPorCliente(
+            $usuario['CLI_ID']
+        );
+
+        foreach($listas as &$lista){
+            $contatosLista = $listaItemModel->listarContatos(
+                $lista['LST_ID']
+            );
+
+            $lista['contatos'] = array_map(function($contato){
+                return [
+                    'nome' => $contato['CON_Nome'] ?? '',
+                    'telefone' => $contato['CON_Telefone'] ?? ''
+                ];
+            }, $contatosLista);
+        }
+        unset($lista);
+
+
+
+
+
         $this->view(
             'disparos/index',
             [
@@ -81,7 +106,7 @@ class DisparoController extends Controller
 
                 'templates' => $templates,
 
-                'listasContatos' => (new ListaContato())->listarPorCliente($usuario['CLI_ID'])
+                'listas' => $listas
 
             ]
         );
