@@ -116,7 +116,7 @@
         $headerDocumentoNome = trim((string) ($campanha['TMP_HeaderDocumentoNome'] ?? ''));
 
         if($headerUrl !== ''){
-            $headerUrl = str_replace('/public/uploads/templates/', '/uploads/templates/', $headerUrl);
+            //$headerUrl = str_replace('/public/uploads/templates/', '/uploads/templates/', $headerUrl);
 
             if(!preg_match('/^https?:\/\//i', $headerUrl)){
                 $headerUrl = rtrim(BASE_URL, '/') . '/' . ltrim($headerUrl, '/');
