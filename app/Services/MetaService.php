@@ -1109,6 +1109,10 @@ class MetaService
                             $urlTemplate = (string) ($componente['media_url'] ?? '');
                         }
 
+                        if($urlTemplate !== '' && strpos($urlTemplate, 'http') !== 0){
+                            $urlTemplate = rtrim(BASE_URL, '/') . '/' . ltrim($urlTemplate, '/');
+                        }
+
                         if($documentoNomeTemplate === ''){
                             $documentoNomeTemplate = (string) ($componente['media_name'] ?? '');
                         }
