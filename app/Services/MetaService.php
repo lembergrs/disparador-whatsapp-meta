@@ -1132,6 +1132,12 @@ class MetaService
             return null;
         }
 
+        $mediaLink = trim((string) $mediaLink);
+
+        if($mediaLink !== '' && !preg_match('/^https?:\/\//i', $mediaLink)){
+            $mediaLink = rtrim(BASE_URL, '/') . '/' . ltrim($mediaLink, '/');
+        }
+
         $chave = strtolower($tipo);
         $media = $mediaId !== ''
             ? ['id' => $mediaId]
