@@ -1098,6 +1098,7 @@ class MetaService
 
         if($tipo === '' || $urlTemplate === '' || $documentoNomeTemplate === ''){
             $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+
             if(is_array($componentes)){
                 foreach($componentes as $componente){
                     if(($componente['type'] ?? '') == 'HEADER'){
@@ -1109,10 +1110,6 @@ class MetaService
                             $urlTemplate = (string) ($componente['media_url'] ?? '');
                         }
 
-                        if($urlTemplate !== '' && strpos($urlTemplate, 'http') !== 0){
-                            $urlTemplate = rtrim(BASE_URL, '/') . '/' . ltrim($urlTemplate, '/');
-                        }
-
                         if($documentoNomeTemplate === ''){
                             $documentoNomeTemplate = (string) ($componente['media_name'] ?? '');
                         }
@@ -1122,6 +1119,58 @@ class MetaService
                 }
             }
         }
+
+        $tipo = strtolower($tipo);
+
+        if(!in_array($tipo, ['image', 'video', 'document'], true)){
+            return null;
+        }
+
+        $mediaId = trim((string) ($midiaHeader['media_id'] ?? ''));
+        $mediaLink = trim((string) (
+            $midiaHeader['link']
+            ?? $midiaHeader['url']
+            ?? $urlTemplate
+        ));
+
+        if($mediaLink !== '' && strpos($mediaLink, 'http') !== 0){
+            $mediaLink = rtrim(BASE_URL, '/') . '/' . ltrim($mediaLink, '/');
+        }
+
+        if($mediaId !== ''){
+            $media = [
+                'id' => $mediaId
+            ];
+        }elseif($mediaLink !== ''){
+            $media = [
+                'link' => $mediaLink
+            ];
+        }else{
+            return null;
+        }
+
+        if($tipo === 'document'){
+            $filename = trim((string) (
+                $midiaHeader['filename']
+                ?? $midiaHeader['nome']
+                ?? $documentoNomeTemplate
+            ));
+
+            if($filename !== ''){
+                $media['filename'] = $filename;
+            }
+        }
+
+        return [
+            'type' => 'header',
+            'parameters' => [
+                [
+                    'type' => $tipo,
+                    $tipo => $media
+                ]
+            ]
+        ];
+    }
 
         if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
             return null;
