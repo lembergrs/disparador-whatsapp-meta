@@ -331,7 +331,7 @@ $usuario = Auth::usuario();
     href="<?= $clienteLiberado
     ? BASE_URL . '/index.php?url=listaContato'
     : BASE_URL . '/index.php?url=financeiro'; ?>"
-    class="nav-link <?= str_contains($url, 'listaContato') ? 'active' : ''; ?>""
+    class="nav-link <?= (str_contains($url, 'listaContato') || str_contains($url, 'importacao')) ? 'active' : ''; ?>"
     >
 
         <i class="nav-icon fas fa-list"></i>
