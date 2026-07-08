@@ -529,6 +529,10 @@ aria-hidden="true"
 
         url.searchParams.set('app_id', window.META_APP_ID || '');
         url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
+        url.searchParams.set('redirect_uri', window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '');
+        url.searchParams.set('response_type', 'code');
+        url.searchParams.set('state', CSRF_TOKEN || '');
+        url.searchParams.set('scope', 'whatsapp_business_management,whatsapp_business_messaging');
         url.searchParams.set('extras', JSON.stringify(extras));
 
         ultimaUrlEmbeddedSignupMeta = url.toString();
