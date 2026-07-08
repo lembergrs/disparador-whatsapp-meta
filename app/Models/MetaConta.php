@@ -440,6 +440,159 @@ class MetaConta
         return $sql->rowCount() > 0;
     }
 
+    public function buscarPorClienteWabaPhone($clienteId, $wabaId, $phoneNumberId)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM meta_contas
+            WHERE CLI_ID = ?
+            AND MTA_WabaId = ?
+            AND MTA_PhoneNumberId = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $clienteId,
+            $wabaId,
+            $phoneNumberId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function salvarOuAtualizarEmbeddedSignup(array $dados)
+    {
+        $existente = $this->buscarPorClienteWabaPhone(
+            $dados['cliente'],
+            $dados['waba_id'],
+            $dados['phone_number_id']
+        );
+
+        if($existente){
+            return $this->atualizarEmbeddedSignup((int) $existente['MTA_ID'], $dados)
+                ? (int) $existente['MTA_ID']
+                : false;
+        }
+
+        return $this->salvarEmbeddedSignup($dados);
+    }
+
+    private function salvarEmbeddedSignup(array $dados)
+    {
+        $colunas = [
+            'CLI_ID',
+            'MTA_Nome',
+            'MTA_PhoneNumberId',
+            'MTA_WabaId',
+            'MTA_Token',
+            'MTA_UrlBase',
+            'MTA_NumeroTelefone',
+            'MTA_Status',
+            'MTA_Ativo'
+        ];
+
+        $valores = [
+            $dados['cliente'],
+            $dados['nome'],
+            $dados['phone_number_id'],
+            $dados['waba_id'],
+            $dados['token'],
+            $dados['url_base'],
+            $dados['numero'],
+            'conectado',
+            'S'
+        ];
+
+        if($this->colunaWebhookVerifyTokenExiste()){
+            $colunas[] = 'MTA_WebhookVerifyToken';
+            $valores[] = $dados['webhook_verify_token'] ?? '';
+        }
+
+        if($this->colunasAutoRespostaExistem()){
+            $colunas[] = 'MTA_AutoRespostaAtiva';
+            $colunas[] = 'MTA_AutoRespostaTexto';
+            $colunas[] = 'MTA_AutoRespostaIntervaloMinutos';
+            $valores[] = 'N';
+            $valores[] = '';
+            $valores[] = 1440;
+        }
+
+        if($this->colunaExiste('MTA_BusinessId')){
+            $colunas[] = 'MTA_BusinessId';
+            $valores[] = $dados['business_id'] ?? null;
+        }
+
+        if($this->colunaExiste('MTA_DisplayName')){
+            $colunas[] = 'MTA_DisplayName';
+            $valores[] = $dados['display_name'] ?? null;
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($colunas), '?'));
+
+        $sql = $this->db->prepare("
+            INSERT INTO meta_contas
+            (" . implode(', ', $colunas) . ")
+            VALUES ({$placeholders})
+        ");
+
+        $sql->execute($valores);
+
+        return (int) $this->db->lastInsertId();
+    }
+
+    private function atualizarEmbeddedSignup($id, array $dados)
+    {
+        $sets = [
+            'CLI_ID = ?',
+            'MTA_Nome = ?',
+            'MTA_PhoneNumberId = ?',
+            'MTA_WabaId = ?',
+            'MTA_Token = ?',
+            'MTA_UrlBase = ?',
+            'MTA_NumeroTelefone = ?',
+            'MTA_Status = ?',
+            'MTA_Ativo = ?'
+        ];
+
+        $valores = [
+            $dados['cliente'],
+            $dados['nome'],
+            $dados['phone_number_id'],
+            $dados['waba_id'],
+            $dados['token'],
+            $dados['url_base'],
+            $dados['numero'],
+            'conectado',
+            'S'
+        ];
+
+        if($this->colunaWebhookVerifyTokenExiste()){
+            $sets[] = 'MTA_WebhookVerifyToken = ?';
+            $valores[] = $dados['webhook_verify_token'] ?? '';
+        }
+
+        if($this->colunaExiste('MTA_BusinessId')){
+            $sets[] = 'MTA_BusinessId = ?';
+            $valores[] = $dados['business_id'] ?? null;
+        }
+
+        if($this->colunaExiste('MTA_DisplayName')){
+            $sets[] = 'MTA_DisplayName = ?';
+            $valores[] = $dados['display_name'] ?? null;
+        }
+
+        $valores[] = $id;
+
+        $sql = $this->db->prepare("
+            UPDATE meta_contas
+            SET " . implode(', ', $sets) . "
+            WHERE MTA_ID = ?
+        ");
+
+        return $sql->execute($valores);
+    }
+
+
     public function listarPorCliente($clienteId)
     {
         $sql = $this->db->prepare("

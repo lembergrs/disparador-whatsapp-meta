@@ -337,6 +337,21 @@ class Cliente
 
 
 
+    public function iniciarTrialSePendente($id)
+    {
+        $sql = $this->db->prepare("
+            UPDATE clientes
+            SET CLI_DataLiberacao = NOW()
+            WHERE CLI_ID = ?
+            AND (CLI_DataLiberacao IS NULL OR CLI_DataLiberacao = '')
+        ");
+
+        return $sql->execute([$id]);
+    }
+
+
+
+
     public function inativar($id)
     {
         $sql = $this->db->prepare("
