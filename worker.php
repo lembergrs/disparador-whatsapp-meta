@@ -1,7 +1,14 @@
 <?php
 
+if(PHP_SAPI !== 'cli'){
+    http_response_code(403);
+    exit('Worker disponível apenas via CLI.');
+}
+
 require __DIR__ . '/config/config.php';
 require __DIR__ . '/vendor/autoload.php';
+
+configurarLogsWorkerCli();
 
 
 spl_autoload_register(function($class){
@@ -25,6 +32,37 @@ use Models\ConsumoMensal;
 use Models\Disparo;
 
 
+function caminhoLogWorker()
+{
+    $diretorio = __DIR__ . '/storage/logs';
+
+    if(!is_dir($diretorio)){
+        mkdir($diretorio, 0770, true);
+    }
+
+    return $diretorio . '/worker.log';
+}
+
+function configurarLogsWorkerCli()
+{
+    $diretorio = __DIR__ . '/storage/logs';
+
+    if(!is_dir($diretorio)){
+        mkdir($diretorio, 0770, true);
+    }
+
+    ini_set('log_errors', '1');
+    ini_set('error_log', $diretorio . '/worker-error.log');
+}
+
+function registrarLogWorker($mensagem)
+{
+    $linha = '[' . date('Y-m-d H:i:s') . '] ' . rtrim((string) $mensagem) . PHP_EOL;
+
+    echo $linha;
+    error_log($linha, 3, caminhoLogWorker());
+}
+
 function adquirirWorkerLock($ttlSegundos = 600)
 {
     $diretorio = __DIR__ . '/storage';
@@ -37,7 +75,7 @@ function adquirirWorkerLock($ttlSegundos = 600)
     $handle = fopen($arquivo, 'c+');
 
     if(!$handle){
-        echo "Não foi possível criar lock do worker.\n";
+        registrarLogWorker('Não foi possível criar lock do worker.');
         return false;
     }
 
@@ -49,7 +87,7 @@ function adquirirWorkerLock($ttlSegundos = 600)
             ? "Worker lock ativo há mais de {$ttlSegundos}s. Encerrando para evitar concorrência.\n"
             : "Worker já em execução. Encerrando.\n";
 
-        echo $mensagem;
+        registrarLogWorker($mensagem);
         fclose($handle);
         return false;
     }
@@ -107,7 +145,7 @@ $campanhas = $db->query("
 
 foreach($campanhas as $campanha){
 
-    echo "Campanha {$campanha['CAM_ID']} iniciada.\n";
+    registrarLogWorker("Campanha {$campanha['CAM_ID']} iniciada.");
 
     $db->prepare("
         UPDATE campanhas
@@ -131,7 +169,7 @@ $campanhas = $db->query("
 
 foreach($campanhas as $campanha){
 
-    echo "Processando campanha {$campanha['CAM_ID']}...\n";
+    registrarLogWorker("Processando campanha {$campanha['CAM_ID']}...");
 
     $stmt = $db->prepare("
         SELECT *
@@ -242,16 +280,16 @@ foreach($campanhas as $campanha){
 
             if($modoTeste){
 
-                echo "SIMULAÇÃO\n";
-                echo "Campanha: {$campanha['CAM_ID']}\n";
-                echo "Contato: {$item['CON_Nome']}\n";
-                echo "Telefone: {$item['CON_Telefone']}\n";
-                echo "Template: {$template['TMP_Nome']}\n";
-                echo "Parâmetros:\n";
+                registrarLogWorker('SIMULAÇÃO');
+                registrarLogWorker("Campanha: {$campanha['CAM_ID']}");
+                registrarLogWorker("Contato: {$item['CON_Nome']}");
+                registrarLogWorker("Telefone: {$item['CON_Telefone']}");
+                registrarLogWorker("Template: {$template['TMP_Nome']}");
+                registrarLogWorker('Parâmetros:');
                 foreach($parametros as $chave => $valor){
-                    echo $chave . ': ' . $valor . "\n";
+                    registrarLogWorker($chave . ': ' . $valor);
                 }
-                echo "-------------------------\n";
+                registrarLogWorker('-------------------------');
 
                 $retorno = [
                     'messages' => [
@@ -455,11 +493,11 @@ function finalizarSeConcluida($db, $campanhaId)
             $campanhaId
         ]);
 
-        echo "Campanha {$campanhaId} finalizada.\n";
+        registrarLogWorker("Campanha {$campanhaId} finalizada.");
 
     }else{
 
-        echo "Campanha {$campanhaId} ainda possui {$total} pendentes.\n";
+        registrarLogWorker("Campanha {$campanhaId} ainda possui {$total} pendentes.");
 
     }
 }
@@ -469,7 +507,7 @@ function finalizarSeConcluida($db, $campanhaId)
 function aplicarLimiteEnvio($retorno = null)
 {
     if(ehRateLimitMeta($retorno)){
-        echo "Limite de envio da Meta atingido. Pausando lote temporariamente.\n";
+        registrarLogWorker('Limite de envio da Meta atingido. Pausando lote temporariamente.');
         sleep(WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
         return;
     }
