@@ -1,0 +1,31 @@
+# Exemplo de serviço systemd para manter o worker do Disparador em execução.
+# Copie para /etc/systemd/system/disparador-worker.service e ajuste User, Group,
+# WorkingDirectory e caminhos conforme a VPS.
+
+[Unit]
+Description=Disparador WhatsApp Meta - Worker de filas
+After=network-online.target mysql.service mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=disparador
+Group=www-data
+WorkingDirectory=/var/www/disparador-whatsapp-meta
+ExecStart=/usr/bin/php /var/www/disparador-whatsapp-meta/worker.php
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# O worker carrega variáveis do arquivo .env na raiz do projeto.
+# Se preferir injetar pelo systemd, descomente e ajuste o caminho abaixo.
+# EnvironmentFile=/var/www/disparador-whatsapp-meta/.env
+
+# Logs de stdout/stderr ficam disponíveis com journalctl.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=disparador-worker
+
+[Install]
+WantedBy=multi-user.target
