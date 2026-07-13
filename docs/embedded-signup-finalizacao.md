@@ -5,8 +5,8 @@
 1. A tela `configuracao/meta` chama `configuracao/iniciarEmbeddedSignup` por POST com CSRF.
 2. O backend valida cliente autenticado, variáveis Meta, HTTPS do redirect URI e limite do plano. Em seguida cria `state` aleatório de uso único, `requestId` e uma tentativa temporária em sessão PHP com expiração de 30 minutos.
 3. O frontend abre `https://business.facebook.com/messaging/whatsapp/onboard/` usando `app_id`, `config_id`, `redirect_uri`, `scope` e o `state` retornado pelo backend.
-4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, o navegador envia o `sessionInfo` para `configuracao/registrarEmbeddedSignupFinish`. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária.
-5. O callback OAuth recebe `code` e `state`, consome a tentativa uma única vez, troca o `code` por token no backend, valida `debug_token`, permissões, app_id e expiração.
+4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, o navegador envia o `sessionInfo` para `configuracao/registrarEmbeddedSignupFinish`. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
+5. O callback OAuth recebe `code` e `state`, reconsulta a tentativa por uma janela curta para coordenar a chegada assíncrona do `FINISH`, só então marca o `state` como usado de forma definitiva e troca o `code` por token no backend.
 6. Quando o `FINISH` trouxe IDs, o backend consulta exatamente a WABA e o Phone Number selecionados e confirma que o telefone pertence à WABA e que a WABA está nos `target_ids` do token. Sem IDs, o fallback só é aceito quando há exatamente uma WABA e um telefone possível.
 7. O backend chama `/{waba_id}/subscribed_apps` via POST, de forma idempotente, e exige resposta `success=true` para confirmar a assinatura do app na WABA.
 8. A conta é salva de forma idempotente por cliente + WABA + Phone Number, reativando a conta se já existir. O status final gravado segue a regra operacional documentada abaixo.
@@ -41,6 +41,11 @@ Aplicar, nesta ordem, na hospedagem compartilhada:
 
 A migration de 20260713 adiciona metadados operacionais do número. Ela também cria índice auxiliar não único para compatibilidade com bases que possam ter duplicidades históricas. Após auditoria/deduplicação, recomenda-se promover `CLI_ID + MTA_WabaId + MTA_PhoneNumberId` para índice único.
 
+
+
+## Coordenação FINISH x callback OAuth
+
+O `FINISH` chega ao backend por `fetch` assíncrono, enquanto o callback OAuth pode chegar quase ao mesmo tempo. Para evitar corrida, o callback reconsulta a tentativa por uma janela curta e limitada antes de consumir o `state`. Se o `FINISH` chegar dentro dessa janela, seus IDs são usados como fonte principal; se não chegar, o fluxo continua somente com o fallback seguro já existente, que exige exatamente uma WABA e exatamente um Phone Number possível. O endpoint `registrarEmbeddedSignupFinish` aceita a gravação enquanto o callback ainda está coordenando, mas rejeita tentativas já consumidas definitivamente.
 
 ## Estados de conexão
 
