@@ -238,8 +238,8 @@ $podeConectarNumero =
                 </p>
 
                 <p>
-                    No próximo passo, este botão será ligado ao
-                    <strong>Embedded Signup da Meta</strong>.
+                    A conexão usa o Cadastro Incorporado da Meta, valida as permissões no backend
+                    e só libera o número quando a WABA, o telefone e o webhook estiverem confirmados.
                 </p>
 
                 <ul class="mb-0">
@@ -247,6 +247,7 @@ $podeConectarNumero =
                     <li>Cada número pode enviar campanhas e receber mensagens.</li>
                     <li>A auto resposta não substitui o atendimento humano.</li>
                     <li>Os limites poderão variar conforme o plano contratado.</li>
+                    <li>Após conectar, use a tela de templates para sincronizar modelos imediatamente.</li>
                 </ul>
 
             </div>
@@ -407,31 +408,33 @@ aria-hidden="true"
 
 (function(){
 
-    let ultimoSessionInfoMeta = null;
+    let tentativaAtiva = false;
     let ultimaUrlEmbeddedSignupMeta = null;
+    let ultimoStateEmbeddedSignupMeta = null;
 
     function exibirFeedbackEmbeddedSignup(tipo, mensagem)
     {
         const feedback = document.getElementById('embeddedSignupFeedback');
-
-        if(!feedback){
-            return;
-        }
-
+        if(!feedback){ return; }
         feedback.className = 'alert alert-' + tipo;
         feedback.textContent = mensagem;
     }
 
-    function limparFeedbackEmbeddedSignup()
+    function setBotoesConexao(disabled)
     {
-        const feedback = document.getElementById('embeddedSignupFeedback');
+        document.querySelectorAll('#btnConectarWhatsApp,#btnConectarWhatsAppVazio').forEach(function(botao){
+            botao.disabled = disabled;
+        });
+    }
 
-        if(!feedback){
-            return;
+    function abrirEmbeddedSignupMeta()
+    {
+        if(!ultimaUrlEmbeddedSignupMeta){ return null; }
+        const popup = window.open(ultimaUrlEmbeddedSignupMeta, '_blank');
+        if(!popup){
+            exibirFeedbackEmbeddedSignup('warning', 'O navegador bloqueou a nova aba. Clique em "Abrir novamente" e permita popups para continuar.');
         }
-
-        feedback.className = 'alert d-none';
-        feedback.textContent = '';
+        return popup;
     }
 
     function exibirModalEmbeddedSignupMeta()
@@ -441,17 +444,33 @@ aria-hidden="true"
         }
     }
 
-    function abrirEmbeddedSignupMeta()
+    function postForm(url, data)
     {
-        if(!ultimaUrlEmbeddedSignupMeta){
-            return null;
-        }
+        const form = new FormData();
+        Object.keys(data).forEach(function(key){ form.append(key, data[key]); });
+        form.append('csrf_token', CSRF_TOKEN || '');
+        return fetch(url, { method: 'POST', credentials: 'same-origin', body: form }).then(function(response){
+            return response.json().then(function(json){
+                if(!response.ok || !json.ok){ throw json; }
+                return json;
+            });
+        });
+    }
 
-        return window.open(
-            ultimaUrlEmbeddedSignupMeta,
-            '_blank',
-            'noopener,noreferrer'
-        );
+    function registrarFinishMeta(data)
+    {
+        if(!ultimoStateEmbeddedSignupMeta){ return; }
+        exibirFeedbackEmbeddedSignup('info', 'Autorização recebida. Estamos finalizando a conexão com segurança.');
+        postForm(BASE_URL + '/index.php?url=configuracao/registrarEmbeddedSignupFinish', {
+            state: ultimoStateEmbeddedSignupMeta,
+            session_info: JSON.stringify(data)
+        }).then(function(){
+            exibirFeedbackEmbeddedSignup('success', 'Cadastro concluído na Meta. Aguarde a aba de retorno finalizar a conexão.');
+        }).catch(function(error){
+            exibirFeedbackEmbeddedSignup('danger', (error && error.message) || 'Não foi possível registrar a seleção feita na Meta. Refaça a conexão.');
+            tentativaAtiva = false;
+            setBotoesConexao(false);
+        });
     }
 
     function sessionInfoListener(event)
@@ -461,97 +480,72 @@ aria-hidden="true"
         }
 
         let data = null;
-
-        try{
-            data = JSON.parse(event.data);
-        }catch(e){
-            return;
-        }
-
-        if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){
-            return;
-        }
-
-        ultimoSessionInfoMeta = data;
+        try{ data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; }catch(e){ return; }
+        if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){ return; }
 
         if(data.event === 'FINISH'){
-            exibirFeedbackEmbeddedSignup(
-                'success',
-                'Cadastro incorporado concluído na Meta. Finalize a conexão após o retorno do código de autorização.'
-            );
+            registrarFinishMeta(data);
             return;
         }
-
         if(data.event === 'CANCEL'){
-            exibirFeedbackEmbeddedSignup(
-                'warning',
-                'Cadastro incorporado cancelado antes da conclusão.'
-            );
+            exibirFeedbackEmbeddedSignup('warning', 'Cadastro cancelado antes da conclusão. Você pode iniciar novamente quando quiser.');
+            tentativaAtiva = false;
+            setBotoesConexao(false);
             return;
         }
-
         if(data.event === 'ERROR'){
-            exibirFeedbackEmbeddedSignup(
-                'danger',
-                'A Meta retornou erro no cadastro incorporado. Verifique a configuração do Facebook Login for Business.'
-            );
+            exibirFeedbackEmbeddedSignup('danger', 'A Meta informou erro no cadastro. Revise os dados informados e tente novamente.');
+            tentativaAtiva = false;
+            setBotoesConexao(false);
         }
     }
+
+    window.addEventListener('message', function(event){
+        if(event.origin !== window.location.origin){ return; }
+        const data = event.data || {};
+        if(data.type !== 'DISPARADOR_META_EMBEDDED_SIGNUP_CALLBACK'){ return; }
+        exibirFeedbackEmbeddedSignup(data.ok ? 'success' : 'danger', data.ok ? 'Conexão concluída. Atualizando a página...' : 'A conexão não foi concluída. Informe o código de diagnóstico ao suporte.');
+        tentativaAtiva = false;
+        setBotoesConexao(false);
+        if(data.ok){ setTimeout(function(){ window.location.reload(); }, 1200); }
+    });
 
     window.addEventListener('message', sessionInfoListener);
 
     document.addEventListener('click', function(e){
-
-        if(
-            !e.target.closest('#btnConectarWhatsApp')
-            &&
-            !e.target.closest('#btnConectarWhatsAppVazio')
-        ){
-            return;
-        }
-
+        if(!e.target.closest('#btnConectarWhatsApp') && !e.target.closest('#btnConectarWhatsAppVazio')){ return; }
         e.preventDefault();
-        limparFeedbackEmbeddedSignup();
+        if(tentativaAtiva){ return; }
 
-        const extras = {
-            sessionInfoVersion: '3',
-            version: 'v4'
-        };
-        const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
+        tentativaAtiva = true;
+        setBotoesConexao(true);
+        exibirFeedbackEmbeddedSignup('info', 'Abrindo a Meta para iniciar o cadastro do WhatsApp...');
 
-        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID){
-            exibirFeedbackEmbeddedSignup(
-                'danger',
-                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID e META_CONFIGURATION_ID no .env.'
-            );
-            return;
-        }
-
-        url.searchParams.set('app_id', window.META_APP_ID || '');
-        url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
-        url.searchParams.set('redirect_uri', window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '');
-        url.searchParams.set('response_type', 'code');
-        url.searchParams.set('state', CSRF_TOKEN || '');
-        url.searchParams.set('scope', 'whatsapp_business_management,whatsapp_business_messaging');
-        url.searchParams.set('extras', JSON.stringify(extras));
-
-        ultimaUrlEmbeddedSignupMeta = url.toString();
-
-        abrirEmbeddedSignupMeta();
-        exibirModalEmbeddedSignupMeta();
-
-        exibirFeedbackEmbeddedSignup(
-            'info',
-            'Abrimos a conexão da Meta em uma nova aba. Conclua as etapas por lá e volte para esta tela.'
-        );
-
+        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {})
+            .then(function(resp){
+                ultimoStateEmbeddedSignupMeta = resp.state;
+                const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
+                url.searchParams.set('app_id', resp.appId);
+                url.searchParams.set('config_id', resp.configurationId);
+                url.searchParams.set('redirect_uri', resp.redirectUri);
+                url.searchParams.set('response_type', 'code');
+                url.searchParams.set('state', resp.state);
+                url.searchParams.set('scope', 'whatsapp_business_management,whatsapp_business_messaging');
+                url.searchParams.set('extras', JSON.stringify({ sessionInfoVersion: '3', version: 'v4' }));
+                ultimaUrlEmbeddedSignupMeta = url.toString();
+                abrirEmbeddedSignupMeta();
+                exibirModalEmbeddedSignupMeta();
+                exibirFeedbackEmbeddedSignup('info', 'Cadastro em andamento na Meta. Não feche esta página até aparecer a confirmação.');
+            })
+            .catch(function(error){
+                tentativaAtiva = false;
+                setBotoesConexao(false);
+                exibirFeedbackEmbeddedSignup('danger', (error && error.message) || 'Não foi possível iniciar o Cadastro Incorporado.');
+            });
     });
 
     document.addEventListener('click', function(e){
-        if(!e.target.closest('#btnReabrirEmbeddedSignupMeta')){
-            return;
-        }
-
+        if(!e.target.closest('#btnReabrirEmbeddedSignupMeta')){ return; }
         e.preventDefault();
         abrirEmbeddedSignupMeta();
     });
