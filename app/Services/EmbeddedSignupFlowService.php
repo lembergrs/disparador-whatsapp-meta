@@ -79,6 +79,32 @@ class EmbeddedSignupFlowService
         return [array_values(array_unique($ids)), $businessId];
     }
 
+
+    public function registrarPhoneNumber($phoneNumberId, $pin, $accessToken)
+    {
+        $resposta = call_user_func(
+            $this->graphRequest,
+            $phoneNumberId . '/register',
+            [
+                'messaging_product' => 'whatsapp',
+                'pin' => $pin
+            ],
+            $accessToken,
+            'POST'
+        );
+
+        return $this->validarRespostaRegistroPhoneNumber($resposta);
+    }
+
+    public function validarRespostaRegistroPhoneNumber(array $resposta)
+    {
+        if(($resposta['success'] ?? null) !== true){
+            throw new Exception('A Meta não confirmou o registro operacional do número.');
+        }
+
+        return true;
+    }
+
     public function assinarAppNaWaba($wabaId, $accessToken)
     {
         $resposta = call_user_func(

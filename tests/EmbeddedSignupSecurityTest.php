@@ -28,7 +28,13 @@ $assert(strpos($view, 'finalizarEmbeddedSignup') !== false, 'frontend envia code
 $assert(strpos($view, 'tentativaAtiva') !== false, 'frontend evita múltiplos cliques');
 $assert(strpos($view, 'No próximo passo, este botão será ligado') === false, 'texto desatualizado removido');
 $assert(strpos($doc, '`MTA_Token` continua armazenado como texto') !== false, 'risco de token documentado');
-$assert(strpos($controller, 'iniciarTrialSePendente') > strpos($controller, 'salvarOuAtualizarEmbeddedSignup'), 'trial só após persistência');
+preg_match('/private function processarEmbeddedSignupCode\(.*?\n    }/s', $controller, $processarMatch);
+$processarEmbedded = $processarMatch[0] ?? '';
+$assert(
+    $processarEmbedded !== ''
+    && strpos($processarEmbedded, 'iniciarTrialSePendente') > strpos($processarEmbedded, 'salvarOuAtualizarEmbeddedSignup'),
+    'trial só após persistência no fluxo inicial'
+);
 $assert(strpos($controller, 'access_token') !== false, 'código usa token internamente');
 $assert(strpos($controller, 'unset($dados[\'access_token\']') !== false, 'logs removem access_token');
 
