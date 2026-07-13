@@ -473,7 +473,7 @@ class ConfiguracaoController extends Controller
 
         $wabaId = (string) $wabaIds[0];
         $waba = $this->graphRequest($wabaId, [
-            'fields' => 'id,name,phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status}'
+            'fields' => 'id,name,business{id},phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status}'
         ], $accessToken);
 
         $telefones = $waba['phone_numbers']['data'] ?? [];
@@ -490,7 +490,7 @@ class ConfiguracaoController extends Controller
 
         $telefone = $telefones[0];
         return [
-            'business_id' => $finishIds['business_id'] ?? $businessIdFallback,
+            'business_id' => $finishIds['business_id'] ?? ($waba['business']['id'] ?? $businessIdFallback),
             'waba_id' => $waba['id'] ?? $wabaId,
             'waba_name' => $waba['name'] ?? null,
             'phone_number_id' => $telefone['id'],
@@ -578,7 +578,7 @@ class ConfiguracaoController extends Controller
                 $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $resultado['request_id'] ?? null);
             }
 
-            if($statusConexao === 'conectado'){
+            if($statusConexao === 'conectada'){
                 $this->clienteModel->iniciarTrialSePendente($clienteId);
 
             }
@@ -593,7 +593,7 @@ class ConfiguracaoController extends Controller
                 'status' => $statusConexao
             ]);
 
-            if($statusConexao === 'conectado'){
+            if($statusConexao === 'conectada'){
                 $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $tentativa['request_id'] ?? null);
             }
 

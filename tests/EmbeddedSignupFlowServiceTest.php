@@ -61,7 +61,7 @@ $assert($service->definirStatusConexao([
     'operational_status' => 'CONNECTED',
     'code_verification_status' => 'VERIFIED',
     'name_status' => 'APPROVED'
-]) === 'conectado', 'status saudável fica conectado');
+]) === 'conectada', 'status saudável fica conectada');
 
 $assert($service->definirStatusConexao([
     'operational_status' => 'CONNECTED',
@@ -73,6 +73,6 @@ $assert($service->definirStatusConexao([
     'operational_status' => 'FLAGGED'
 ]) === 'requer_acao', 'bloqueio/flag operacional requer ação');
 
-$assert($service->definirStatusConexao([]) === 'conectado', 'campos opcionais ausentes não bloqueiam');
+$assert($service->definirStatusConexao([]) === 'conectada', 'campos opcionais ausentes não bloqueiam');
 
 echo "Embedded signup flow service tests passed\n";

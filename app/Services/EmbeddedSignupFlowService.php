@@ -116,6 +116,6 @@ class EmbeddedSignupFlowService
             }
         }
 
-        return 'conectado';
+        return 'conectada';
     }
 }
