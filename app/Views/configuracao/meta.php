@@ -238,8 +238,8 @@ $podeConectarNumero =
                 </p>
 
                 <p>
-                    No próximo passo, este botão será ligado ao
-                    <strong>Embedded Signup da Meta</strong>.
+                    A conexão usa o Cadastro Incorporado da Meta, valida as permissões no backend
+                    e só libera o número quando a WABA, o telefone e o webhook estiverem confirmados.
                 </p>
 
                 <ul class="mb-0">
@@ -247,6 +247,7 @@ $podeConectarNumero =
                     <li>Cada número pode enviar campanhas e receber mensagens.</li>
                     <li>A auto resposta não substitui o atendimento humano.</li>
                     <li>Os limites poderão variar conforme o plano contratado.</li>
+                    <li>Após conectar, use a tela de templates para sincronizar modelos imediatamente.</li>
                 </ul>
 
             </div>
@@ -358,100 +359,100 @@ role="alert"
 ></div>
 
 
-<div
-class="modal fade"
-id="modalEmbeddedSignupMeta"
-tabindex="-1"
-role="dialog"
-aria-labelledby="modalEmbeddedSignupMetaTitulo"
-aria-hidden="true"
->
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEmbeddedSignupMetaTitulo">
-                    Conexão com a Meta
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <p>
-                    A configuração do WhatsApp será aberta em uma nova aba da Meta.
-                </p>
-
-                <p>
-                    Conclua todas as etapas nessa nova aba. Ao finalizar, você será redirecionado de volta para o Disparador.net.
-                </p>
-
-                <p class="mb-0">
-                    <strong>Não feche esta página até concluir o processo.</strong>
-                </p>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    Entendi
-                </button>
-                <button type="button" class="btn btn-primary" id="btnReabrirEmbeddedSignupMeta">
-                    Abrir novamente, caso a nova aba não tenha aberto
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 
 (function(){
 
-    let ultimoSessionInfoMeta = null;
-    let ultimaUrlEmbeddedSignupMeta = null;
+    let tentativaAtiva = false;
+    let signupState = null;
+    let signupRequestId = null;
+    let finishPayload = null;
+    let oauthCode = null;
+    let envioFinalizacaoEmAndamento = false;
+    let coordenacaoTimer = null;
+    const COORDENACAO_TIMEOUT_MS = 5000;
 
     function exibirFeedbackEmbeddedSignup(tipo, mensagem)
     {
         const feedback = document.getElementById('embeddedSignupFeedback');
-
-        if(!feedback){
-            return;
-        }
-
+        if(!feedback){ return; }
         feedback.className = 'alert alert-' + tipo;
         feedback.textContent = mensagem;
     }
 
-    function limparFeedbackEmbeddedSignup()
+    function setBotoesConexao(disabled)
     {
-        const feedback = document.getElementById('embeddedSignupFeedback');
+        document.querySelectorAll('#btnConectarWhatsApp,#btnConectarWhatsAppVazio').forEach(function(botao){
+            botao.disabled = disabled;
+        });
+    }
 
-        if(!feedback){
+    function resetarTentativa()
+    {
+        tentativaAtiva = false;
+        signupState = null;
+        signupRequestId = null;
+        finishPayload = null;
+        oauthCode = null;
+        envioFinalizacaoEmAndamento = false;
+        if(coordenacaoTimer){ clearTimeout(coordenacaoTimer); }
+        coordenacaoTimer = null;
+        setBotoesConexao(false);
+    }
+
+    function postForm(url, data)
+    {
+        const form = new FormData();
+        Object.keys(data).forEach(function(key){ form.append(key, data[key]); });
+        form.append('csrf_token', CSRF_TOKEN || '');
+        return fetch(url, { method: 'POST', credentials: 'same-origin', body: form }).then(function(response){
+            return response.json().then(function(json){
+                if(!response.ok || !json.ok){ throw json; }
+                return json;
+            });
+        });
+    }
+
+    function facebookSdkPronto()
+    {
+        return typeof FB !== 'undefined' && FB && typeof FB.login === 'function';
+    }
+
+    function finalizarQuandoPossivel(forcarPorTimeout)
+    {
+        if(envioFinalizacaoEmAndamento || !signupState || !oauthCode){
             return;
         }
 
-        feedback.className = 'alert d-none';
-        feedback.textContent = '';
-    }
-
-    function exibirModalEmbeddedSignupMeta()
-    {
-        if(typeof $ !== 'undefined' && $('#modalEmbeddedSignupMeta').modal){
-            $('#modalEmbeddedSignupMeta').modal('show');
-        }
-    }
-
-    function abrirEmbeddedSignupMeta()
-    {
-        if(!ultimaUrlEmbeddedSignupMeta){
-            return null;
+        if(!finishPayload && !forcarPorTimeout){
+            return;
         }
 
-        return window.open(
-            ultimaUrlEmbeddedSignupMeta,
-            '_blank',
-            'noopener,noreferrer'
-        );
+        envioFinalizacaoEmAndamento = true;
+        if(coordenacaoTimer){ clearTimeout(coordenacaoTimer); coordenacaoTimer = null; }
+        exibirFeedbackEmbeddedSignup('info', 'Finalizando a conexão com segurança...');
+
+        postForm(BASE_URL + '/index.php?url=configuracao/finalizarEmbeddedSignup', {
+            state: signupState,
+            code: oauthCode,
+            session_info: finishPayload ? JSON.stringify(finishPayload) : ''
+        }).then(function(resp){
+            exibirFeedbackEmbeddedSignup(
+                resp.connected ? 'success' : 'warning',
+                resp.message || (resp.connected ? 'WhatsApp conectado com sucesso.' : 'Autorização recebida, mas há ação adicional necessária.')
+            );
+            setTimeout(function(){ window.location.reload(); }, resp.connected ? 1200 : 2500);
+        }).catch(function(error){
+            exibirFeedbackEmbeddedSignup('danger', (error && (error.message || error.detail)) || 'Não foi possível concluir a conexão com a Meta.');
+            resetarTentativa();
+        });
+    }
+
+    function registrarFinishMeta(data)
+    {
+        finishPayload = data;
+        exibirFeedbackEmbeddedSignup('info', 'Cadastro concluído na Meta. Aguardando o código de autorização para finalizar.');
+        finalizarQuandoPossivel(false);
     }
 
     function sessionInfoListener(event)
@@ -461,99 +462,83 @@ aria-hidden="true"
         }
 
         let data = null;
-
-        try{
-            data = JSON.parse(event.data);
-        }catch(e){
-            return;
-        }
-
-        if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){
-            return;
-        }
-
-        ultimoSessionInfoMeta = data;
+        try{ data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; }catch(e){ return; }
+        if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){ return; }
 
         if(data.event === 'FINISH'){
-            exibirFeedbackEmbeddedSignup(
-                'success',
-                'Cadastro incorporado concluído na Meta. Finalize a conexão após o retorno do código de autorização.'
-            );
+            registrarFinishMeta(data);
             return;
         }
-
         if(data.event === 'CANCEL'){
-            exibirFeedbackEmbeddedSignup(
-                'warning',
-                'Cadastro incorporado cancelado antes da conclusão.'
-            );
+            exibirFeedbackEmbeddedSignup('warning', 'Cadastro cancelado antes da conclusão. Você pode iniciar novamente quando quiser.');
+            resetarTentativa();
             return;
         }
-
         if(data.event === 'ERROR'){
-            exibirFeedbackEmbeddedSignup(
-                'danger',
-                'A Meta retornou erro no cadastro incorporado. Verifique a configuração do Facebook Login for Business.'
-            );
+            exibirFeedbackEmbeddedSignup('danger', 'A Meta informou erro no cadastro. Revise os dados informados e tente novamente.');
+            resetarTentativa();
         }
     }
 
     window.addEventListener('message', sessionInfoListener);
 
-    document.addEventListener('click', function(e){
+    function iniciarFacebookLogin(resp)
+    {
+        signupState = resp.state;
+        signupRequestId = resp.requestId;
+        finishPayload = null;
+        oauthCode = null;
+        envioFinalizacaoEmAndamento = false;
 
-        if(
-            !e.target.closest('#btnConectarWhatsApp')
-            &&
-            !e.target.closest('#btnConectarWhatsAppVazio')
-        ){
-            return;
-        }
+        exibirFeedbackEmbeddedSignup('info', 'Cadastro em andamento na Meta. Siga as etapas na janela exibida.');
 
-        e.preventDefault();
-        limparFeedbackEmbeddedSignup();
+        FB.login(function(loginResponse){
+            if(!loginResponse || !loginResponse.authResponse || !loginResponse.authResponse.code){
+                exibirFeedbackEmbeddedSignup('danger', 'A autorização da Meta não retornou o código necessário. Tente novamente.');
+                resetarTentativa();
+                return;
+            }
 
-        const extras = {
-            sessionInfoVersion: '3',
-            version: 'v4'
-        };
-        const url = new URL('https://business.facebook.com/messaging/whatsapp/onboard/');
+            oauthCode = loginResponse.authResponse.code;
+            exibirFeedbackEmbeddedSignup('info', 'Autorização recebida. Aguardando os dados finais do cadastro.');
 
-        if(!window.META_APP_ID || !window.META_CONFIGURATION_ID){
-            exibirFeedbackEmbeddedSignup(
-                'danger',
-                'Configuração da Meta incompleta. Verifique as variáveis META_APP_ID e META_CONFIGURATION_ID no .env.'
-            );
-            return;
-        }
+            coordenacaoTimer = setTimeout(function(){
+                finalizarQuandoPossivel(true);
+            }, COORDENACAO_TIMEOUT_MS);
 
-        url.searchParams.set('app_id', window.META_APP_ID || '');
-        url.searchParams.set('config_id', window.META_CONFIGURATION_ID || '');
-        url.searchParams.set('redirect_uri', window.META_EMBEDDED_SIGNUP_REDIRECT_URI || '');
-        url.searchParams.set('response_type', 'code');
-        url.searchParams.set('state', CSRF_TOKEN || '');
-        url.searchParams.set('scope', 'whatsapp_business_management,whatsapp_business_messaging');
-        url.searchParams.set('extras', JSON.stringify(extras));
-
-        ultimaUrlEmbeddedSignupMeta = url.toString();
-
-        abrirEmbeddedSignupMeta();
-        exibirModalEmbeddedSignupMeta();
-
-        exibirFeedbackEmbeddedSignup(
-            'info',
-            'Abrimos a conexão da Meta em uma nova aba. Conclua as etapas por lá e volte para esta tela.'
-        );
-
-    });
+            finalizarQuandoPossivel(false);
+        }, {
+            config_id: resp.configurationId,
+            response_type: 'code',
+            override_default_response_type: true,
+            extras: {
+                sessionInfoVersion: '3',
+                version: 'v4',
+                state: resp.state
+            }
+        });
+    }
 
     document.addEventListener('click', function(e){
-        if(!e.target.closest('#btnReabrirEmbeddedSignupMeta')){
+        if(!e.target.closest('#btnConectarWhatsApp') && !e.target.closest('#btnConectarWhatsAppVazio')){ return; }
+        e.preventDefault();
+        if(tentativaAtiva){ return; }
+
+        if(!facebookSdkPronto()){
+            exibirFeedbackEmbeddedSignup('danger', 'O SDK do Facebook ainda não carregou. Atualize a página e tente novamente.');
             return;
         }
 
-        e.preventDefault();
-        abrirEmbeddedSignupMeta();
+        tentativaAtiva = true;
+        setBotoesConexao(true);
+        exibirFeedbackEmbeddedSignup('info', 'Abrindo a Meta para iniciar o cadastro do WhatsApp...');
+
+        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {})
+            .then(iniciarFacebookLogin)
+            .catch(function(error){
+                resetarTentativa();
+                exibirFeedbackEmbeddedSignup('danger', (error && error.message) || 'Não foi possível iniciar o Cadastro Incorporado.');
+            });
     });
 
 })();
