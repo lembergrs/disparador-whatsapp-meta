@@ -409,18 +409,26 @@ class ConfiguracaoController extends Controller
         return $json;
     }
 
-    private function trocarCodePorToken($code)
+    private function trocarCodePorToken($code, $usarRedirectUri = true)
     {
-        if(META_APP_ID === '' || META_APP_SECRET === '' || META_EMBEDDED_SIGNUP_REDIRECT_URI === ''){
-            throw new Exception('Configuração META_APP_ID, META_APP_SECRET ou META_EMBEDDED_SIGNUP_REDIRECT_URI ausente.');
+        if(META_APP_ID === '' || META_APP_SECRET === ''){
+            throw new Exception('Configuração META_APP_ID ou META_APP_SECRET ausente.');
         }
 
-        $resposta = $this->graphRequest('oauth/access_token', [
+        $parametros = [
             'client_id' => META_APP_ID,
             'client_secret' => META_APP_SECRET,
-            'redirect_uri' => META_EMBEDDED_SIGNUP_REDIRECT_URI,
             'code' => $code
-        ]);
+        ];
+
+        if($usarRedirectUri){
+            if(META_EMBEDDED_SIGNUP_REDIRECT_URI === ''){
+                throw new Exception('Configuração META_EMBEDDED_SIGNUP_REDIRECT_URI ausente.');
+            }
+            $parametros['redirect_uri'] = META_EMBEDDED_SIGNUP_REDIRECT_URI;
+        }
+
+        $resposta = $this->graphRequest('oauth/access_token', $parametros);
 
         if(empty($resposta['access_token'])){
             throw new Exception('A Meta não retornou access_token na troca do code.');
@@ -566,8 +574,8 @@ class ConfiguracaoController extends Controller
                 'operational_status' => $dadosWhatsApp['operational_status'] ?? null
             ]);
 
-            if(!$contaId){
-                throw new Exception('Falha ao salvar conta Meta no banco.');
+            if($resultado['status'] === 'conectada'){
+                $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $resultado['request_id'] ?? null);
             }
 
             if($statusConexao === 'conectado'){
