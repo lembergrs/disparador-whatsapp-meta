@@ -198,6 +198,30 @@ $podeConectarNumero =
                                                 <i class="fas fa-reply"></i>
                                                 Configurar auto resposta
                                             </button>
+
+
+                                            <?php if(($conta['MTA_Status'] ?? '') === 'requer_acao' && ($conta['MTA_OperationalStatus'] ?? '') === 'PENDING' && !empty($conta['MTA_PhoneNumberId']) && !empty($conta['MTA_Token'])){ ?>
+                                                <button
+                                                type="button"
+                                                class="btn btn-warning btn-sm btnConcluirRegistroWhatsApp"
+                                                data-id="<?= (int) $conta['MTA_ID']; ?>"
+                                                data-numero="<?= htmlspecialchars(formatarTelefoneConfiguracao($conta['MTA_NumeroTelefone']), ENT_QUOTES, 'UTF-8'); ?>"
+                                                >
+                                                    <i class="fas fa-key"></i>
+                                                    Concluir registro
+                                                </button>
+                                            <?php } ?>
+
+                                            <?php if(($conta['MTA_Status'] ?? '') === 'requer_acao'){ ?>
+                                                <form method="POST" action="<?= BASE_URL; ?>/index.php?url=configuracao/atualizarStatusNumeroWhatsApp" class="d-inline">
+                                                    <input type="hidden" name="conta_id" value="<?= (int) $conta['MTA_ID']; ?>">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button type="submit" class="btn btn-info btn-sm">
+                                                        <i class="fas fa-sync"></i>
+                                                        Atualizar status
+                                                    </button>
+                                                </form>
+                                            <?php } ?>
                                         </td>
 
                                     </tr>
@@ -277,6 +301,7 @@ $podeConectarNumero =
                 <div class="modal-body">
 
                     <input type="hidden" name="conta_id">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="auto_resposta_intervalo_minutos" value="1440">
 
                     <div class="alert alert-info">
@@ -351,6 +376,66 @@ $podeConectarNumero =
 
 </div>
 
+
+
+<div class="modal fade" id="modalRegistroNumeroWhatsApp">
+
+    <div class="modal-dialog">
+
+        <div class="modal-content">
+
+            <form method="POST" id="formRegistroNumeroWhatsApp" action="<?= BASE_URL; ?>/index.php?url=configuracao/registrarNumeroWhatsApp" autocomplete="off">
+
+                <div class="modal-header">
+                    <h4 class="modal-title">Concluir registro do WhatsApp</h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" name="conta_id">
+                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
+
+                    <div class="alert alert-warning">
+                        Informe o PIN de verificação em duas etapas do número WhatsApp. Esse PIN tem 6 dígitos, é definido pelo cliente/parceiro na Meta e não é o código OAuth nem o OTP recebido por SMS/voz.
+                    </div>
+
+                    <p class="text-muted">
+                        Número: <strong id="registroNumeroWhatsAppNumero"></strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label>PIN de verificação em duas etapas</label>
+                        <input
+                        type="password"
+                        name="pin"
+                        class="form-control"
+                        inputmode="numeric"
+                        pattern="[0-9]{6}"
+                        maxlength="6"
+                        minlength="6"
+                        autocomplete="off"
+                        required
+                        >
+                        <small class="form-text text-muted">
+                            O PIN será enviado somente para a Meta nesta tentativa e não será salvo pelo Disparador.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Registrar número</button>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
 
 <div
 id="embeddedSignupFeedback"
@@ -480,15 +565,7 @@ role="alert"
         }
     }
 
-    window.addEventListener('message', function(event){
-        if(event.origin !== window.location.origin){ return; }
-        const data = event.data || {};
-        if(data.type !== 'DISPARADOR_META_EMBEDDED_SIGNUP_CALLBACK'){ return; }
-        exibirFeedbackEmbeddedSignup(data.ok ? 'success' : 'danger', data.ok ? 'Conexão concluída. Atualizando a página...' : 'A conexão não foi concluída. Informe o código de diagnóstico ao suporte.');
-        tentativaAtiva = false;
-        setBotoesConexao(false);
-        if(data.ok){ setTimeout(function(){ window.location.reload(); }, 1200); }
-    });
+    window.addEventListener('message', sessionInfoListener);
 
     function iniciarFacebookLogin(resp)
     {
@@ -526,6 +603,23 @@ role="alert"
             }
         });
     }
+
+
+    document.addEventListener('click', function(e){
+        const botao = e.target.closest('.btnConcluirRegistroWhatsApp');
+        if(!botao){ return; }
+        e.preventDefault();
+        const modal = document.getElementById('modalRegistroNumeroWhatsApp');
+        const form = document.getElementById('formRegistroNumeroWhatsApp');
+        if(!modal || !form){ return; }
+        form.querySelector('[name="conta_id"]').value = botao.dataset.id || '';
+        form.querySelector('[name="pin"]').value = '';
+        const numero = document.getElementById('registroNumeroWhatsAppNumero');
+        if(numero){ numero.textContent = botao.dataset.numero || ''; }
+        if(typeof $ !== 'undefined' && $('#modalRegistroNumeroWhatsApp').modal){
+            $('#modalRegistroNumeroWhatsApp').modal('show');
+        }
+    });
 
     document.addEventListener('click', function(e){
         if(!e.target.closest('#btnConectarWhatsApp') && !e.target.closest('#btnConectarWhatsAppVazio')){ return; }
