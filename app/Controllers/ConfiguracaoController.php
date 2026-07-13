@@ -473,7 +473,7 @@ class ConfiguracaoController extends Controller
 
         $wabaId = (string) $wabaIds[0];
         $waba = $this->graphRequest($wabaId, [
-            'fields' => 'id,name,business{id},phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status}'
+            'fields' => 'id,name,phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status}'
         ], $accessToken);
 
         $telefones = $waba['phone_numbers']['data'] ?? [];
@@ -490,7 +490,7 @@ class ConfiguracaoController extends Controller
 
         $telefone = $telefones[0];
         return [
-            'business_id' => $finishIds['business_id'] ?? ($waba['business']['id'] ?? $businessIdFallback),
+            'business_id' => $finishIds['business_id'] ?? $businessIdFallback,
             'waba_id' => $waba['id'] ?? $wabaId,
             'waba_name' => $waba['name'] ?? null,
             'phone_number_id' => $telefone['id'],
@@ -506,6 +506,101 @@ class ConfiguracaoController extends Controller
     private function assinarAppNaWaba($wabaId, $accessToken)
     {
         return $this->embeddedSignupFlowService()->assinarAppNaWaba($wabaId, $accessToken);
+    }
+
+    private function processarEmbeddedSignupCode($clienteId, $state, $code, $usarRedirectUri = false)
+    {
+        $tentativa = $this->aguardarTentativaEmbeddedParaCallback($state, $clienteId);
+        $tentativa = $this->marcarTentativaEmbeddedUsada($state, $tentativa, $clienteId);
+        $accessToken = $this->trocarCodePorToken((string) $code, $usarRedirectUri);
+        $dadosWhatsApp = $this->buscarDadosWhatsApp($accessToken, $tentativa);
+        $this->assinarAppNaWaba($dadosWhatsApp['waba_id'], $accessToken);
+        $statusConexao = $this->embeddedSignupFlowService()->definirStatusConexao($dadosWhatsApp);
+
+        $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignup([
+            'cliente' => $clienteId,
+            'nome' => $dadosWhatsApp['display_name'] ?: ($dadosWhatsApp['waba_name'] ?: 'WhatsApp Cloud API'),
+            'phone_number_id' => $dadosWhatsApp['phone_number_id'],
+            'waba_id' => $dadosWhatsApp['waba_id'],
+            'token' => $accessToken,
+            'url_base' => 'https://graph.facebook.com/' . ltrim((string) META_GRAPH_VERSION, '/') . '/',
+            'numero' => $dadosWhatsApp['numero'],
+            'webhook_verify_token' => defined('META_VERIFY_TOKEN') ? META_VERIFY_TOKEN : '',
+            'business_id' => $dadosWhatsApp['business_id'],
+            'display_name' => $dadosWhatsApp['display_name'],
+            'status' => $statusConexao,
+            'quality_rating' => $dadosWhatsApp['quality_rating'] ?? null,
+            'code_verification_status' => $dadosWhatsApp['code_verification_status'] ?? null,
+            'name_status' => $dadosWhatsApp['name_status'] ?? null,
+            'operational_status' => $dadosWhatsApp['operational_status'] ?? null
+        ]);
+
+        if(!$contaId){
+            throw new Exception('Falha ao salvar conta Meta no banco.');
+        }
+
+        if($statusConexao === 'conectado'){
+            $this->clienteModel->iniciarTrialSePendente($clienteId);
+        }
+
+        $this->logMetaEmbeddedSignup([
+            'data' => date('Y-m-d H:i:s'),
+            'cliente_id' => $clienteId,
+            'conta_id' => $contaId,
+            'waba_id' => $dadosWhatsApp['waba_id'],
+            'phone_number_id' => $dadosWhatsApp['phone_number_id'],
+            'request_id' => $tentativa['request_id'] ?? null,
+            'status' => $statusConexao
+        ]);
+
+        return [
+            'conta_id' => $contaId,
+            'status' => $statusConexao,
+            'request_id' => $tentativa['request_id'] ?? null
+        ];
+    }
+
+    public function finalizarEmbeddedSignup()
+    {
+        \Core\Csrf::exigirPost();
+        $usuario = Auth::usuario();
+        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        $state = (string) ($_POST['state'] ?? '');
+        $code = (string) ($_POST['code'] ?? '');
+        $payload = json_decode((string) ($_POST['session_info'] ?? ''), true);
+
+        if($state === '' || $code === ''){
+            $this->jsonResponse(['ok'=>false,'message'=>'State ou code ausente no retorno da Meta.'], 422);
+        }
+
+        if(is_array($payload) && ($payload['event'] ?? '') === 'FINISH'){
+            $ids = $this->extrairSessionInfoIds($payload);
+            $finish = ['received_at' => time(), 'ids' => $ids];
+            if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish)){
+                $this->jsonResponse(['ok'=>false,'message'=>'Tentativa já consumida pelo callback.'], 409);
+            }
+        }
+
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_write_close();
+        }
+
+        try{
+            $resultado = $this->processarEmbeddedSignupCode($clienteId, $state, $code);
+            $ok = $resultado['status'] === 'conectado';
+            $this->jsonResponse([
+                'ok' => true,
+                'connected' => $ok,
+                'status' => $resultado['status'],
+                'requestId' => $resultado['request_id'],
+                'message' => $ok
+                    ? 'WhatsApp conectado com sucesso.'
+                    : 'Autorização salva, mas o número requer ação adicional antes de ficar operacional.'
+            ]);
+        }catch(Exception $e){
+            $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'erro'=>$this->sanitizeMetaMessage($e->getMessage())]);
+            $this->jsonResponse(['ok'=>false,'message'=>'Não foi possível concluir a conexão com a Meta agora.','detail'=>$this->sanitizeMetaMessage($e->getMessage())], 400);
+        }
     }
 
     public function metaCallback()
@@ -549,55 +644,13 @@ class ConfiguracaoController extends Controller
 
         try{
             $stateCallback = (string) ($_GET['state'] ?? '');
-            $tentativa = $this->aguardarTentativaEmbeddedParaCallback($stateCallback, $clienteId);
-            $tentativa = $this->marcarTentativaEmbeddedUsada($stateCallback, $tentativa, $clienteId);
-            $accessToken = $this->trocarCodePorToken((string) $_GET['code']);
-            $dadosWhatsApp = $this->buscarDadosWhatsApp($accessToken, $tentativa);
-            $this->assinarAppNaWaba($dadosWhatsApp['waba_id'], $accessToken);
-            $statusConexao = $this->embeddedSignupFlowService()->definirStatusConexao($dadosWhatsApp);
+            $resultado = $this->processarEmbeddedSignupCode($clienteId, $stateCallback, (string) $_GET['code'], true);
 
-            $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignup([
-                'cliente' => $clienteId,
-                'nome' => $dadosWhatsApp['display_name'] ?: ($dadosWhatsApp['waba_name'] ?: 'WhatsApp Cloud API'),
-                'phone_number_id' => $dadosWhatsApp['phone_number_id'],
-                'waba_id' => $dadosWhatsApp['waba_id'],
-                'token' => $accessToken,
-                'url_base' => 'https://graph.facebook.com/' . ltrim((string) META_GRAPH_VERSION, '/') . '/',
-                'numero' => $dadosWhatsApp['numero'],
-                'webhook_verify_token' => defined('META_VERIFY_TOKEN') ? META_VERIFY_TOKEN : '',
-                'business_id' => $dadosWhatsApp['business_id'],
-                'display_name' => $dadosWhatsApp['display_name'],
-                'status' => $statusConexao,
-                'quality_rating' => $dadosWhatsApp['quality_rating'] ?? null,
-                'code_verification_status' => $dadosWhatsApp['code_verification_status'] ?? null,
-                'name_status' => $dadosWhatsApp['name_status'] ?? null,
-                'operational_status' => $dadosWhatsApp['operational_status'] ?? null
-            ]);
-
-            if($resultado['status'] === 'conectada'){
+            if($resultado['status'] === 'conectado'){
                 $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $resultado['request_id'] ?? null);
             }
 
-            if($statusConexao === 'conectada'){
-                $this->clienteModel->iniciarTrialSePendente($clienteId);
-
-            }
-
-            $this->logMetaEmbeddedSignup([
-                'data' => date('Y-m-d H:i:s'),
-                'cliente_id' => $clienteId,
-                'conta_id' => $contaId,
-                'waba_id' => $dadosWhatsApp['waba_id'],
-                'phone_number_id' => $dadosWhatsApp['phone_number_id'],
-                'request_id' => $tentativa['request_id'] ?? null,
-                'status' => $statusConexao
-            ]);
-
-            if($statusConexao === 'conectada'){
-                $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $tentativa['request_id'] ?? null);
-            }
-
-            $this->renderMetaCallbackPage(false, 'A autorização foi salva, mas o número requer ação adicional antes de ficar operacional. Informe o código de diagnóstico ao suporte.', $tentativa['request_id'] ?? null);
+            $this->renderMetaCallbackPage(false, 'A autorização foi salva, mas o número requer ação adicional antes de ficar operacional. Informe o código de diagnóstico ao suporte.', $resultado['request_id'] ?? null);
         }catch(Exception $e){
             $this->logMetaEmbeddedSignup([
                 'data' => date('Y-m-d H:i:s'),
