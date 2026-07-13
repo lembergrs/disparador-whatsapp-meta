@@ -480,6 +480,16 @@ role="alert"
         }
     }
 
+    window.addEventListener('message', function(event){
+        if(event.origin !== window.location.origin){ return; }
+        const data = event.data || {};
+        if(data.type !== 'DISPARADOR_META_EMBEDDED_SIGNUP_CALLBACK'){ return; }
+        exibirFeedbackEmbeddedSignup(data.ok ? 'success' : 'danger', data.ok ? 'Conexão concluída. Atualizando a página...' : 'A conexão não foi concluída. Informe o código de diagnóstico ao suporte.');
+        tentativaAtiva = false;
+        setBotoesConexao(false);
+        if(data.ok){ setTimeout(function(){ window.location.reload(); }, 1200); }
+    });
+
     window.addEventListener('message', sessionInfoListener);
 
     function iniciarFacebookLogin(resp)
