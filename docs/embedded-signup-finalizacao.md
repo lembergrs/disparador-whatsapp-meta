@@ -10,7 +10,7 @@
 6. Quando o `FINISH` trouxe IDs, o backend consulta exatamente a WABA e o Phone Number selecionados e confirma que o telefone pertence à WABA e que a WABA está nos `target_ids` do token. Sem IDs, o fallback só é aceito quando há exatamente uma WABA e um telefone possível.
 7. O backend chama `/{waba_id}/subscribed_apps` via POST, de forma idempotente, e exige resposta `success=true` para confirmar a assinatura do app na WABA.
 8. A conta é salva de forma idempotente por cliente + WABA + Phone Number, reativando a conta se já existir. O status final gravado segue a regra operacional documentada abaixo.
-9. O trial é iniciado somente quando o status final é `conectada`. Falhas de templates devem ser tratadas separadamente; a tela de templates pode ser usada imediatamente para sincronização.
+9. O trial é iniciado somente quando o status final é `conectado`. Falhas de templates devem ser tratadas separadamente; a tela de templates pode ser usada imediatamente para sincronização.
 
 ## Variáveis obrigatórias
 
@@ -39,6 +39,7 @@ Aplicar, nesta ordem, na hospedagem compartilhada:
 1. `database/migrations/20260708_add_embedded_signup_meta_fields.sql`
 2. `database/migrations/20260713_create_meta_embedded_signup_attempts.sql`
 3. `database/migrations/20260713_finalize_embedded_signup_meta_fields.sql`
+4. `database/migrations/20260713_expand_meta_contas_status_enum.sql`
 
 A migration de 20260713 adiciona metadados operacionais do número. Ela também cria índice auxiliar não único para compatibilidade com bases que possam ter duplicidades históricas. Após auditoria/deduplicação, recomenda-se promover `CLI_ID + MTA_WabaId + MTA_PhoneNumberId` para índice único.
 
@@ -50,7 +51,7 @@ No fluxo principal, `code` e `FINISH` são coordenados na página original do Di
 
 ## Estados de conexão
 
-- `conectada`: validações obrigatórias concluídas, assinatura da WABA confirmada com `success=true` e os campos operacionais retornados pela Meta não indicam pendência, bloqueio ou rejeição.
+- `conectado`: validações obrigatórias concluídas, assinatura da WABA confirmada com `success=true` e os campos operacionais retornados pela Meta não indicam pendência, bloqueio ou rejeição.
 - `requer_acao`: validações obrigatórias e assinatura foram concluídas, mas algum campo retornado pela Meta indica ação pendente ou bloqueio, por exemplo `PENDING`, `PENDING_REVIEW`, `FLAGGED`, `REJECTED`, `DISCONNECTED`, `UNVERIFIED`, `NOT_VERIFIED` ou `EXPIRED` em `status`, `code_verification_status` ou `name_status`.
 - `erro`: falha impeditiva antes da persistência final, como token inválido, WABA fora dos `target_ids`, telefone não pertencente à WABA, falha na assinatura do app ou resposta inesperada da Graph API.
 
@@ -72,7 +73,7 @@ O log fica em `storage/logs/meta-embedded-signup-callback.log` com `request_id`,
 - Clicar em **Conectar novo número** e confirmar que só uma tentativa fica ativa.
 - Concluir o Embedded Signup escolhendo WABA e Phone Number conhecidos.
 - Confirmar no log que as etapas `inicio`, `finish`, callback, validação e persistência têm o mesmo `request_id`.
-- Confirmar que `meta_contas` contém WABA, Phone Number, Business ID, display phone, nome e status `conectada`.
+- Confirmar que `meta_contas` contém WABA, Phone Number, Business ID, display phone, nome e status `conectado`.
 - Repetir o callback/fluxo com a mesma WABA e telefone e confirmar que não duplica conta.
 - Confirmar que o trial foi iniciado apenas uma vez.
 - Abrir templates e executar a sincronização imediata.

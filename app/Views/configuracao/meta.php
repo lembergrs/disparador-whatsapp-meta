@@ -490,8 +490,6 @@ role="alert"
         if(data.ok){ setTimeout(function(){ window.location.reload(); }, 1200); }
     });
 
-    window.addEventListener('message', sessionInfoListener);
-
     function iniciarFacebookLogin(resp)
     {
         signupState = resp.state;
