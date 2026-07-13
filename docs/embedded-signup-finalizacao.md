@@ -4,9 +4,9 @@
 
 1. A tela `configuracao/meta` chama `configuracao/iniciarEmbeddedSignup` por POST com CSRF.
 2. O backend valida cliente autenticado, variáveis Meta, HTTPS do redirect URI e limite do plano. Em seguida cria `state` aleatório de uso único, `requestId` e uma tentativa temporária na tabela `meta_embedded_signup_attempts` com expiração de 30 minutos.
-3. O frontend usa o Facebook JavaScript SDK já inicializado com `META_APP_ID`/`META_GRAPH_VERSION` e chama `FB.login()` com `config_id`, `response_type: code`, `override_default_response_type: true` e `extras.sessionInfoVersion`.
-4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, a própria página original do Disparador recebe o `window.message` e mantém os IDs em memória para finalizar o fluxo no backend. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
-5. O callback de `FB.login()` recebe `authResponse.code`; o frontend coordena `code` e `FINISH` em qualquer ordem e chama `configuracao/finalizarEmbeddedSignup` com `state`, `code`, CSRF e `sessionInfo`.
+3. O frontend abre `https://business.facebook.com/messaging/whatsapp/onboard/` usando `app_id`, `config_id`, `redirect_uri`, `scope` e o `state` retornado pelo backend.
+4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, o navegador envia o `sessionInfo` para `configuracao/registrarEmbeddedSignupFinish`. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
+5. O callback OAuth recebe `code` e `state`, reconsulta a tentativa por uma janela curta para coordenar a chegada assíncrona do `FINISH`, só então marca o `state` como usado de forma definitiva e troca o `code` por token no backend.
 6. Quando o `FINISH` trouxe IDs, o backend consulta exatamente a WABA e o Phone Number selecionados e confirma que o telefone pertence à WABA e que a WABA está nos `target_ids` do token. Sem IDs, o fallback só é aceito quando há exatamente uma WABA e um telefone possível.
 7. O backend chama `/{waba_id}/subscribed_apps` via POST, de forma idempotente, e exige resposta `success=true` para confirmar a assinatura do app na WABA.
 8. A conta é salva de forma idempotente por cliente + WABA + Phone Number, reativando a conta se já existir. O status final gravado segue a regra operacional documentada abaixo.
@@ -22,7 +22,7 @@
 - `META_VERIFY_TOKEN`
 - `BASE_URL` calculado pela aplicação
 
-O `META_EMBEDDED_SIGNUP_REDIRECT_URI` deve permanecer HTTPS e cadastrado na Meta como fallback/compatibilidade, mas o caminho principal usa o `code` retornado por `FB.login()` na página original.
+O `META_EMBEDDED_SIGNUP_REDIRECT_URI` deve ser HTTPS, público, exatamente igual ao cadastrado no painel da Meta e apontar para a hospedagem compartilhada atual enquanto ela for a aplicação pública.
 
 ## Configuração no painel Meta
 
@@ -46,7 +46,7 @@ A migration de 20260713 adiciona metadados operacionais do número. Ela também 
 
 ## Coordenação FINISH x callback OAuth
 
-No fluxo principal, `code` e `FINISH` são coordenados na página original do Disparador: `FINISH` pode chegar antes ou depois de `authResponse.code`, e o frontend só chama `configuracao/finalizarEmbeddedSignup` quando há dados suficientes ou quando a janela curta de espera expira. O endpoint recebe `state`, `code`, CSRF e `sessionInfo`, grava os IDs recebidos na tabela compartilhada e consome o `state` de forma atômica. O redirect OAuth em nova aba permanece apenas como fallback documentado, não como caminho principal.
+O `FINISH` chega ao backend por `fetch` assíncrono, enquanto o callback OAuth pode chegar quase ao mesmo tempo. Para evitar corrida e lock de `$_SESSION`, a tentativa temporária fica em tabela compartilhada e o callback fecha a sessão PHP antes de aguardar/reconsultar por uma janela curta e limitada antes de consumir o `state`. Se o `FINISH` chegar dentro dessa janela, seus IDs são usados como fonte principal; se não chegar, o fluxo continua somente com o fallback seguro já existente, que exige exatamente uma WABA e exatamente um Phone Number possível. O endpoint `registrarEmbeddedSignupFinish` aceita a gravação enquanto o callback ainda está coordenando, mas rejeita tentativas já consumidas definitivamente.
 
 ## Estados de conexão
 
