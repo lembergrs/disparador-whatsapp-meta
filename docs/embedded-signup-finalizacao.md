@@ -3,7 +3,7 @@
 ## Arquitetura do fluxo
 
 1. A tela `configuracao/meta` chama `configuracao/iniciarEmbeddedSignup` por POST com CSRF.
-2. O backend valida cliente autenticado, variáveis Meta, HTTPS do redirect URI e limite do plano. Em seguida cria `state` aleatório de uso único, `requestId` e uma tentativa temporária em sessão PHP com expiração de 30 minutos.
+2. O backend valida cliente autenticado, variáveis Meta, HTTPS do redirect URI e limite do plano. Em seguida cria `state` aleatório de uso único, `requestId` e uma tentativa temporária na tabela `meta_embedded_signup_attempts` com expiração de 30 minutos.
 3. O frontend abre `https://business.facebook.com/messaging/whatsapp/onboard/` usando `app_id`, `config_id`, `redirect_uri`, `scope` e o `state` retornado pelo backend.
 4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, o navegador envia o `sessionInfo` para `configuracao/registrarEmbeddedSignupFinish`. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
 5. O callback OAuth recebe `code` e `state`, reconsulta a tentativa por uma janela curta para coordenar a chegada assíncrona do `FINISH`, só então marca o `state` como usado de forma definitiva e troca o `code` por token no backend.
@@ -37,7 +37,8 @@ O `META_EMBEDDED_SIGNUP_REDIRECT_URI` deve ser HTTPS, público, exatamente igual
 Aplicar, nesta ordem, na hospedagem compartilhada:
 
 1. `database/migrations/20260708_add_embedded_signup_meta_fields.sql`
-2. `database/migrations/20260713_finalize_embedded_signup_meta_fields.sql`
+2. `database/migrations/20260713_create_meta_embedded_signup_attempts.sql`
+3. `database/migrations/20260713_finalize_embedded_signup_meta_fields.sql`
 
 A migration de 20260713 adiciona metadados operacionais do número. Ela também cria índice auxiliar não único para compatibilidade com bases que possam ter duplicidades históricas. Após auditoria/deduplicação, recomenda-se promover `CLI_ID + MTA_WabaId + MTA_PhoneNumberId` para índice único.
 
@@ -45,7 +46,7 @@ A migration de 20260713 adiciona metadados operacionais do número. Ela também 
 
 ## Coordenação FINISH x callback OAuth
 
-O `FINISH` chega ao backend por `fetch` assíncrono, enquanto o callback OAuth pode chegar quase ao mesmo tempo. Para evitar corrida, o callback reconsulta a tentativa por uma janela curta e limitada antes de consumir o `state`. Se o `FINISH` chegar dentro dessa janela, seus IDs são usados como fonte principal; se não chegar, o fluxo continua somente com o fallback seguro já existente, que exige exatamente uma WABA e exatamente um Phone Number possível. O endpoint `registrarEmbeddedSignupFinish` aceita a gravação enquanto o callback ainda está coordenando, mas rejeita tentativas já consumidas definitivamente.
+O `FINISH` chega ao backend por `fetch` assíncrono, enquanto o callback OAuth pode chegar quase ao mesmo tempo. Para evitar corrida e lock de `$_SESSION`, a tentativa temporária fica em tabela compartilhada e o callback fecha a sessão PHP antes de aguardar/reconsultar por uma janela curta e limitada antes de consumir o `state`. Se o `FINISH` chegar dentro dessa janela, seus IDs são usados como fonte principal; se não chegar, o fluxo continua somente com o fallback seguro já existente, que exige exatamente uma WABA e exatamente um Phone Number possível. O endpoint `registrarEmbeddedSignupFinish` aceita a gravação enquanto o callback ainda está coordenando, mas rejeita tentativas já consumidas definitivamente.
 
 ## Estados de conexão
 

@@ -7,6 +7,7 @@ use Core\Auth;
 use Core\Session;
 use Models\MetaConta;
 use Models\Cliente;
+use Models\MetaEmbeddedSignupAttempt;
 use Services\EmbeddedSignupFlowService;
 use Services\EmbeddedSignupAttemptCoordinator;
 use Exception;
@@ -15,6 +16,7 @@ class ConfiguracaoController extends Controller
 {
     private $metaContaModel;
     private $clienteModel;
+    private $embeddedAttemptModel;
 
     public function __construct()
     {
@@ -25,6 +27,9 @@ class ConfiguracaoController extends Controller
 
         $this->clienteModel =
             new Cliente();
+
+        $this->embeddedAttemptModel =
+            new MetaEmbeddedSignupAttempt();
     }
 
 
@@ -174,35 +179,26 @@ class ConfiguracaoController extends Controller
         }
     }
 
-    private function embeddedSessionKey($state)
+    private function getTentativaEmbedded($state, $clienteId)
     {
-        return 'meta_embedded_signup_' . hash('sha256', (string) $state);
-    }
-
-    private function getTentativaEmbedded($state)
-    {
-        $key = $this->embeddedSessionKey($state);
-        $tentativa = $_SESSION[$key] ?? null;
-        if(!is_array($tentativa)){
-            return null;
-        }
-        if(($tentativa['expires_at'] ?? 0) < time()){
-            unset($_SESSION[$key]);
-            return null;
-        }
-        return $tentativa;
+        return $this->embeddedAttemptModel->buscarValida($state, $clienteId);
     }
 
     private function salvarTentativaEmbedded($state, array $tentativa)
     {
-        $_SESSION[$this->embeddedSessionKey($state)] = $tentativa;
+        return $this->embeddedAttemptModel->criar(
+            $state,
+            $tentativa['cliente_id'],
+            $tentativa['request_id'],
+            max(1, (int) (($tentativa['expires_at'] ?? time()) - time()))
+        );
     }
 
     private function validarTentativaEmbeddedCallback($state, $clienteId)
     {
-        $tentativa = $this->getTentativaEmbedded($state);
-        if(!$tentativa || (int) ($tentativa['cliente_id'] ?? 0) !== (int) $clienteId){
-            throw new Exception('Tentativa expirada ou não pertence ao cliente autenticado.');
+        $tentativa = $this->getTentativaEmbedded($state, $clienteId);
+        if(!$tentativa){
+            throw new Exception('Tentativa expirada, já utilizada ou não pertence ao cliente autenticado.');
         }
         if(!empty($tentativa['used_at'])){
             throw new Exception('Este retorno da Meta já foi utilizado.');
@@ -224,17 +220,14 @@ class ConfiguracaoController extends Controller
         return $tentativa;
     }
 
-    private function marcarTentativaEmbeddedUsada($state, array $tentativa)
+    private function marcarTentativaEmbeddedUsada($state, array $tentativa, $clienteId)
     {
-        $key = $this->embeddedSessionKey($state);
-        $tentativaAtual = $this->getTentativaEmbedded($state);
-        if(!$tentativaAtual || !empty($tentativaAtual['used_at'])){
+        $tentativaConsumida = $this->embeddedAttemptModel->consumir($state, $clienteId);
+        if(!$tentativaConsumida){
             throw new Exception('Este retorno da Meta já foi utilizado.');
         }
 
-        $tentativaAtual['used_at'] = time();
-        $_SESSION[$key] = $tentativaAtual;
-        return $tentativaAtual;
+        return $tentativaConsumida;
     }
 
     private function extrairSessionInfoIds(array $payload)
@@ -304,7 +297,7 @@ class ConfiguracaoController extends Controller
             $this->jsonResponse(['ok'=>false,'message'=>'Evento FINISH inválido.'], 422);
         }
 
-        $tentativa = $this->getTentativaEmbedded($state);
+        $tentativa = $this->getTentativaEmbedded($state, $clienteId);
         if(!$tentativa || (int) ($tentativa['cliente_id'] ?? 0) !== $clienteId){
             $this->jsonResponse(['ok'=>false,'message'=>'Tentativa expirada ou inválida.'], 403);
         }
@@ -314,11 +307,14 @@ class ConfiguracaoController extends Controller
         }
 
         $ids = $this->extrairSessionInfoIds($payload);
-        $tentativa['finish'] = [
+        $finish = [
             'received_at' => time(),
             'ids' => $ids
         ];
-        $this->salvarTentativaEmbedded($state, $tentativa);
+
+        if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish)){
+            $this->jsonResponse(['ok'=>false,'message'=>'Tentativa já consumida pelo callback.'], 409);
+        }
 
         $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'etapa'=>'finish','request_id'=>$tentativa['request_id'],'waba_id'=>$ids['waba_id'] ?? null,'phone_number_id'=>$ids['phone_number_id'] ?? null,'resultado'=>'ok']);
         $this->jsonResponse(['ok'=>true,'requestId'=>$tentativa['request_id']]);
@@ -539,10 +535,14 @@ class ConfiguracaoController extends Controller
 
         $tentativa = null;
 
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_write_close();
+        }
+
         try{
             $stateCallback = (string) ($_GET['state'] ?? '');
             $tentativa = $this->aguardarTentativaEmbeddedParaCallback($stateCallback, $clienteId);
-            $tentativa = $this->marcarTentativaEmbeddedUsada($stateCallback, $tentativa);
+            $tentativa = $this->marcarTentativaEmbeddedUsada($stateCallback, $tentativa, $clienteId);
             $accessToken = $this->trocarCodePorToken((string) $_GET['code']);
             $dadosWhatsApp = $this->buscarDadosWhatsApp($accessToken, $tentativa);
             $this->assinarAppNaWaba($dadosWhatsApp['waba_id'], $accessToken);
@@ -573,9 +573,6 @@ class ConfiguracaoController extends Controller
             if($statusConexao === 'conectada'){
                 $this->clienteModel->iniciarTrialSePendente($clienteId);
 
-                if(isset($_SESSION['usuario'])){
-                    $_SESSION['usuario']['CLI_DataLiberacao'] = $_SESSION['usuario']['CLI_DataLiberacao'] ?? date('Y-m-d H:i:s');
-                }
             }
 
             $this->logMetaEmbeddedSignup([
