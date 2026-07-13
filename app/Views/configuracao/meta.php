@@ -359,51 +359,6 @@ role="alert"
 ></div>
 
 
-<div
-class="modal fade"
-id="modalEmbeddedSignupMeta"
-tabindex="-1"
-role="dialog"
-aria-labelledby="modalEmbeddedSignupMetaTitulo"
-aria-hidden="true"
->
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEmbeddedSignupMetaTitulo">
-                    Conexão com a Meta
-                </h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <p>
-                    A configuração do WhatsApp será aberta em uma nova aba da Meta.
-                </p>
-
-                <p>
-                    Conclua todas as etapas nessa nova aba. Ao finalizar, você será redirecionado de volta para o Disparador.net.
-                </p>
-
-                <p class="mb-0">
-                    <strong>Não feche esta página até concluir o processo.</strong>
-                </p>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">
-                    Entendi
-                </button>
-                <button type="button" class="btn btn-primary" id="btnReabrirEmbeddedSignupMeta">
-                    Abrir novamente, caso a nova aba não tenha aberto
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 
 (function(){
@@ -437,11 +392,17 @@ aria-hidden="true"
         return popup;
     }
 
-    function exibirModalEmbeddedSignupMeta()
+    function resetarTentativa()
     {
-        if(typeof $ !== 'undefined' && $('#modalEmbeddedSignupMeta').modal){
-            $('#modalEmbeddedSignupMeta').modal('show');
-        }
+        tentativaAtiva = false;
+        signupState = null;
+        signupRequestId = null;
+        finishPayload = null;
+        oauthCode = null;
+        envioFinalizacaoEmAndamento = false;
+        if(coordenacaoTimer){ clearTimeout(coordenacaoTimer); }
+        coordenacaoTimer = null;
+        setBotoesConexao(false);
     }
 
     function postForm(url, data)
@@ -473,9 +434,9 @@ aria-hidden="true"
         });
     }
 
-    function sessionInfoListener(event)
+    function finalizarQuandoPossivel(forcarPorTimeout)
     {
-        if(event.origin !== 'https://www.facebook.com' && event.origin !== 'https://web.facebook.com'){
+        if(envioFinalizacaoEmAndamento || !signupState || !oauthCode){
             return;
         }
 
