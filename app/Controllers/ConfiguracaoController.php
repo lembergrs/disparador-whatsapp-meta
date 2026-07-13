@@ -7,6 +7,7 @@ use Core\Auth;
 use Core\Session;
 use Models\MetaConta;
 use Models\Cliente;
+use Services\EmbeddedSignupFlowService;
 use Exception;
 
 class ConfiguracaoController extends Controller
@@ -319,7 +320,14 @@ class ConfiguracaoController extends Controller
         );
     }
 
-    private function graphRequest($endpoint, array $params = [], $accessToken = null)
+    private function embeddedSignupFlowService()
+    {
+        return new EmbeddedSignupFlowService(function($endpoint, array $params = [], $accessToken = null, $method = 'GET'){
+            return $this->graphRequest($endpoint, $params, $accessToken, $method);
+        }, META_APP_ID);
+    }
+
+    private function graphRequest($endpoint, array $params = [], $accessToken = null, $method = 'GET')
     {
         $version = trim((string) META_GRAPH_VERSION);
         $version = $version !== '' ? ltrim($version, '/') : 'v20.0';
@@ -329,18 +337,30 @@ class ConfiguracaoController extends Controller
             $params['access_token'] = $accessToken;
         }
 
-        if(!empty($params)){
+        $method = strtoupper((string) $method);
+        if(!in_array($method, ['GET', 'POST'], true)){
+            throw new Exception('Método HTTP não suportado para Graph API.');
+        }
+
+        if($method === 'GET' && !empty($params)){
             $url .= '?' . http_build_query($params);
         }
 
         $curl = curl_init($url);
-        curl_setopt_array($curl, [
+        $curlOptions = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2
-        ]);
+        ];
+
+        if($method === 'POST'){
+            $curlOptions[CURLOPT_POST] = true;
+            $curlOptions[CURLOPT_POSTFIELDS] = http_build_query($params);
+        }
+
+        curl_setopt_array($curl, $curlOptions);
 
         $body = curl_exec($curl);
         $httpCode = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
@@ -391,49 +411,14 @@ class ConfiguracaoController extends Controller
             'input_token' => $accessToken
         ], $appToken);
 
-        $data = $debug['data'] ?? [];
-        if(empty($data['is_valid'])){
-            throw new Exception('Token retornado pela Meta inválido.');
-        }
-        if((string) ($data['app_id'] ?? '') !== (string) META_APP_ID){
-            throw new Exception('Token retornado não pertence ao app configurado.');
-        }
-        if(!empty($data['expires_at']) && (int) $data['expires_at'] < time()){
-            throw new Exception('Token retornado pela Meta expirado.');
-        }
-
-        $scopes = [];
-        foreach(($data['granular_scopes'] ?? []) as $scope){
-            if(!empty($scope['scope'])){
-                $scopes[$scope['scope']] = $scope['target_ids'] ?? [];
-            }
-        }
-        foreach(['whatsapp_business_management','whatsapp_business_messaging'] as $required){
-            if(!array_key_exists($required, $scopes)){
-                throw new Exception('Permissão obrigatória ausente: ' . $required);
-            }
-        }
-        return $debug;
+        return $this->embeddedSignupFlowService()->validarDebugToken($debug);
     }
 
     private function extrairWabaIdsDoDebugToken($accessToken, array $debug = null)
     {
         $debug = $debug ?: $this->validarDebugToken($accessToken);
 
-        $ids = [];
-        $businessId = $debug['data']['profile_id'] ?? null;
-
-        foreach(($debug['data']['granular_scopes'] ?? []) as $scope){
-            if(($scope['scope'] ?? '') !== 'whatsapp_business_management'){
-                continue;
-            }
-
-            foreach(($scope['target_ids'] ?? []) as $targetId){
-                $ids[] = (string) $targetId;
-            }
-        }
-
-        return [array_values(array_unique($ids)), $businessId];
+        return $this->embeddedSignupFlowService()->extrairWabaIdsDoDebugToken($debug);
     }
 
     private function buscarDadosWhatsApp($accessToken, array $tentativa)
@@ -487,7 +472,7 @@ class ConfiguracaoController extends Controller
 
     private function assinarAppNaWaba($wabaId, $accessToken)
     {
-        return $this->graphRequest($wabaId . '/subscribed_apps', [], $accessToken);
+        return $this->embeddedSignupFlowService()->assinarAppNaWaba($wabaId, $accessToken);
     }
 
     public function metaCallback()
@@ -530,6 +515,7 @@ class ConfiguracaoController extends Controller
             $accessToken = $this->trocarCodePorToken((string) $_GET['code']);
             $dadosWhatsApp = $this->buscarDadosWhatsApp($accessToken, $tentativa);
             $this->assinarAppNaWaba($dadosWhatsApp['waba_id'], $accessToken);
+            $statusConexao = $this->embeddedSignupFlowService()->definirStatusConexao($dadosWhatsApp);
 
             $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignup([
                 'cliente' => $clienteId,
@@ -542,7 +528,7 @@ class ConfiguracaoController extends Controller
                 'webhook_verify_token' => defined('META_VERIFY_TOKEN') ? META_VERIFY_TOKEN : '',
                 'business_id' => $dadosWhatsApp['business_id'],
                 'display_name' => $dadosWhatsApp['display_name'],
-                'status' => 'conectada',
+                'status' => $statusConexao,
                 'quality_rating' => $dadosWhatsApp['quality_rating'] ?? null,
                 'code_verification_status' => $dadosWhatsApp['code_verification_status'] ?? null,
                 'name_status' => $dadosWhatsApp['name_status'] ?? null,
@@ -553,10 +539,12 @@ class ConfiguracaoController extends Controller
                 throw new Exception('Falha ao salvar conta Meta no banco.');
             }
 
-            $this->clienteModel->iniciarTrialSePendente($clienteId);
+            if($statusConexao === 'conectada'){
+                $this->clienteModel->iniciarTrialSePendente($clienteId);
 
-            if(isset($_SESSION['usuario'])){
-                $_SESSION['usuario']['CLI_DataLiberacao'] = $_SESSION['usuario']['CLI_DataLiberacao'] ?? date('Y-m-d H:i:s');
+                if(isset($_SESSION['usuario'])){
+                    $_SESSION['usuario']['CLI_DataLiberacao'] = $_SESSION['usuario']['CLI_DataLiberacao'] ?? date('Y-m-d H:i:s');
+                }
             }
 
             $this->logMetaEmbeddedSignup([
@@ -566,10 +554,14 @@ class ConfiguracaoController extends Controller
                 'waba_id' => $dadosWhatsApp['waba_id'],
                 'phone_number_id' => $dadosWhatsApp['phone_number_id'],
                 'request_id' => $tentativa['request_id'] ?? null,
-                'status' => 'conectada'
+                'status' => $statusConexao
             ]);
 
-            $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $tentativa['request_id'] ?? null);
+            if($statusConexao === 'conectada'){
+                $this->renderMetaCallbackPage(true, 'WhatsApp conectado com sucesso. A conta já está disponível para sincronizar templates e enviar mensagens.', $tentativa['request_id'] ?? null);
+            }
+
+            $this->renderMetaCallbackPage(false, 'A autorização foi salva, mas o número requer ação adicional antes de ficar operacional. Informe o código de diagnóstico ao suporte.', $tentativa['request_id'] ?? null);
         }catch(Exception $e){
             $this->logMetaEmbeddedSignup([
                 'data' => date('Y-m-d H:i:s'),
