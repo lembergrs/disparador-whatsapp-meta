@@ -499,7 +499,7 @@ class MetaConta
             $dados['token'],
             $dados['url_base'],
             $dados['numero'],
-            'conectado',
+            $dados['status'] ?? 'autorizada',
             'S'
         ];
 
@@ -525,6 +525,18 @@ class MetaConta
         if($this->colunaExiste('MTA_DisplayName')){
             $colunas[] = 'MTA_DisplayName';
             $valores[] = $dados['display_name'] ?? null;
+        }
+
+        foreach([
+            'MTA_QualityRating' => 'quality_rating',
+            'MTA_CodeVerificationStatus' => 'code_verification_status',
+            'MTA_NameStatus' => 'name_status',
+            'MTA_OperationalStatus' => 'operational_status'
+        ] as $coluna => $chave){
+            if($this->colunaExiste($coluna)){
+                $colunas[] = $coluna;
+                $valores[] = $dados[$chave] ?? null;
+            }
         }
 
         $placeholders = implode(', ', array_fill(0, count($colunas), '?'));
@@ -562,7 +574,7 @@ class MetaConta
             $dados['token'],
             $dados['url_base'],
             $dados['numero'],
-            'conectado',
+            $dados['status'] ?? 'autorizada',
             'S'
         ];
 
@@ -581,6 +593,18 @@ class MetaConta
             $valores[] = $dados['display_name'] ?? null;
         }
 
+        foreach([
+            'MTA_QualityRating' => 'quality_rating',
+            'MTA_CodeVerificationStatus' => 'code_verification_status',
+            'MTA_NameStatus' => 'name_status',
+            'MTA_OperationalStatus' => 'operational_status'
+        ] as $coluna => $chave){
+            if($this->colunaExiste($coluna)){
+                $sets[] = $coluna . ' = ?';
+                $valores[] = $dados[$chave] ?? null;
+            }
+        }
+
         $valores[] = $id;
 
         $sql = $this->db->prepare("
@@ -592,6 +616,42 @@ class MetaConta
         return $sql->execute($valores);
     }
 
+
+
+    public function atualizarStatusOperacionalEmbeddedSignup($id, $clienteId, array $dados)
+    {
+        $sets = ['MTA_Status = ?'];
+        $valores = [$dados['status'] ?? 'requer_acao'];
+
+        foreach([
+            'MTA_QualityRating' => 'quality_rating',
+            'MTA_CodeVerificationStatus' => 'code_verification_status',
+            'MTA_NameStatus' => 'name_status',
+            'MTA_OperationalStatus' => 'operational_status',
+            'MTA_NumeroTelefone' => 'numero',
+            'MTA_DisplayName' => 'display_name'
+        ] as $coluna => $chave){
+            if($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true)){
+                if(array_key_exists($chave, $dados)){
+                    $sets[] = $coluna . ' = ?';
+                    $valores[] = $dados[$chave];
+                }
+            }
+        }
+
+        $valores[] = $id;
+        $valores[] = $clienteId;
+
+        $sql = $this->db->prepare("
+            UPDATE meta_contas
+            SET " . implode(', ', $sets) . "
+            WHERE MTA_ID = ?
+            AND CLI_ID = ?
+            AND MTA_Ativo = 'S'
+        ");
+
+        return $sql->execute($valores);
+    }
 
     public function listarPorCliente($clienteId)
     {
