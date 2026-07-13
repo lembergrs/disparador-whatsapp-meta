@@ -1034,8 +1034,8 @@ class MetaService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($payload),
-            //CURLOPT_SSL_VERIFYPEER => false,    //Para teste local, descomentar essa linha
-            //CURLOPT_SSL_VERIFYHOST => false,    //Para teste local, descomentar essa linha
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
             CURLOPT_HTTPHEADER => [
                 'Authorization: Bearer '
                 . $this->conta['MTA_Token'],
