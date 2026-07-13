@@ -24,7 +24,7 @@ $assert(strpos($flowService, 'subscribed_apps') !== false, 'assinatura da WABA i
 $assert(strpos($controller, 'count($wabaIds) !== 1') !== false, 'não escolhe primeira WABA silenciosamente');
 $assert(strpos($controller, 'count($telefones) !== 1') !== false, 'não escolhe primeiro telefone silenciosamente');
 $assert(substr_count($model, 'salvarOuAtualizarEmbeddedSignup') >= 1, 'persistência idempotente existe');
-$assert(strpos($view, 'registrarEmbeddedSignupFinish') !== false, 'frontend persiste FINISH');
+$assert(strpos($view, 'finalizarEmbeddedSignup') !== false, 'frontend envia code e FINISH para finalização');
 $assert(strpos($view, 'tentativaAtiva') !== false, 'frontend evita múltiplos cliques');
 $assert(strpos($view, 'No próximo passo, este botão será ligado') === false, 'texto desatualizado removido');
 $assert(strpos($doc, '`MTA_Token` continua armazenado como texto') !== false, 'risco de token documentado');
