@@ -18,7 +18,10 @@ if ($host === 'disparador.test') {
 } else {
 
     $protocolo =
-        (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        (
+            (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+        )
             ? 'https'
             : 'http';
 
