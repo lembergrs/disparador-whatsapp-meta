@@ -18,6 +18,8 @@ class DisparoManualQueueService
     private $conversaModel;
     private $consumo;
     private $controlePlano;
+    private $validator;
+    private $retryPolicy;
 
     public function __construct($modoTeste = false)
     {
@@ -27,6 +29,8 @@ class DisparoManualQueueService
         $this->conversaModel = new Conversa();
         $this->consumo = new ConsumoMensal();
         $this->controlePlano = new ControlePlanoService();
+        $this->validator = new WorkerOperationalValidatorService();
+        $this->retryPolicy = new WorkerRetryPolicyService();
     }
 
     public function processarLote(int $clienteId, int $loteId, int $limite = 5, string $origem = 'ajax')
@@ -56,7 +60,7 @@ class DisparoManualQueueService
         return $this->montarResumo($loteId, $resultado);
     }
 
-    public function processarPendentes(int $limite = 20, string $origem = 'cron')
+    public function processarPendentes(int $limite = 20, string $origem = 'cron', string $workerId = '')
     {
         $limite = $this->normalizarLimite($limite, 20);
 
@@ -66,15 +70,15 @@ class DisparoManualQueueService
             WHERE DML_Status = 'pendente'
         ");
 
-        $resultado = $this->processarItens($limite, null, null, $origem);
+        $resultado = $this->processarItens($limite, null, null, $origem, $workerId);
         $this->finalizarLotesConcluidos();
 
         return $resultado;
     }
 
-    private function processarItens(int $limite, ?int $clienteId, ?int $loteId, string $origem)
+    private function processarItens(int $limite, ?int $clienteId, ?int $loteId, string $origem, string $workerId = '')
     {
-        $itens = $this->buscarItensPendentes($limite, $clienteId, $loteId);
+        $itens = $this->buscarItensPendentes($limite, $clienteId, $loteId, $origem);
 
         $resultado = [
             'processados' => 0,
@@ -82,10 +86,15 @@ class DisparoManualQueueService
             'pulados' => 0,
             'aceitos' => 0,
             'erros' => 0,
-            'origem' => $origem
+            'bloqueados' => 0,
+            'origem' => $origem,
+            'worker_id' => $workerId
         ];
 
         foreach($itens as $item){
+            $item['worker_id'] = $workerId;
+            $item['origem'] = $origem;
+
             if(!$this->reservarItem($item)){
                 $resultado['pulados']++;
                 continue;
@@ -97,6 +106,21 @@ class DisparoManualQueueService
             $retorno = null;
 
             try{
+                if($origem !== 'ajax'){
+                    $validacao = $this->validator->validarEnvio(
+                        (int) $item['CLI_ID'],
+                        (int) $item['MTA_ID'],
+                        (string) $item['DMI_Numero']
+                    );
+
+                    if(!$validacao['permitido']){
+                        $this->registrarBloqueioOperacional($item['DMI_ID'], $validacao);
+                        $resultado['bloqueados']++;
+                        $this->recalcularLote((int) $item['DML_ID']);
+                        continue;
+                    }
+                }
+
                 $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);
 
                 if(!is_array($variaveis)){
@@ -105,11 +129,19 @@ class DisparoManualQueueService
 
                 $retorno = $this->enviarItem($item, $variaveis);
 
-                if(isset($retorno['messages'][0]['id'])){
-                    $this->registrarSucesso($item, $variaveis, $retorno);
-                    $resultado['aceitos']++;
+                $resultadoEnvio = $this->normalizarResultadoEnvio($retorno);
+
+                if($resultadoEnvio['sucesso']){
+                    try{
+                        $this->registrarSucesso($item, $variaveis, $retorno);
+                        $resultado['aceitos']++;
+                    }catch(Exception $e){
+                        $this->registrarPersistenciaPosEnvio($item, $resultadoEnvio['message_id'], $e->getMessage());
+                        $resultado['erros']++;
+                    }
                 }else{
-                    $this->registrarErro($item['DMI_ID'], $this->extrairErroMeta($retorno), $retorno);
+                    $tentativas = ((int) ($item['DMI_Tentativas'] ?? 0)) + 1;
+                    $this->registrarFalhaEnvio($item, $resultadoEnvio, $retorno, $tentativas);
                     $resultado['erros']++;
                 }
             }catch(Exception $e){
@@ -124,12 +156,42 @@ class DisparoManualQueueService
         return $resultado;
     }
 
-    private function buscarItensPendentes(int $limite, ?int $clienteId, ?int $loteId)
+
+    public function recuperarTravados(int $timeoutMinutos = 15): int
+    {
+        $timeoutMinutos = max(5, $timeoutMinutos);
+
+        $stmt = $this->db->prepare("
+            UPDATE disparo_manual_itens
+            SET
+                DMI_Status = 'pendente',
+                DMI_WorkerId = NULL,
+                DMI_DataReserva = NULL,
+                DMI_ProximaTentativa = NOW(),
+                DMI_UltimoErroTipo = 'recuperado_timeout',
+                DMI_UltimoErroCodigo = 'processing_timeout',
+                DMI_DataAtualizacao = NOW()
+            WHERE DMI_Status = 'processando'
+            AND DMI_MessageId IS NULL
+            AND DMI_DataReserva IS NOT NULL
+            AND DMI_DataReserva < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        ");
+
+        $stmt->execute([$timeoutMinutos]);
+
+        return (int) $stmt->rowCount();
+    }
+
+    private function buscarItensPendentes(int $limite, ?int $clienteId, ?int $loteId, string $origem = 'cron')
     {
         $where = [
             "i.DMI_Status = 'pendente'",
             "l.DML_Status IN ('pendente','processando')"
         ];
+
+        if($origem !== 'ajax'){
+            $where[] = "(i.DMI_ProximaTentativa IS NULL OR i.DMI_ProximaTentativa <= NOW())";
+        }
         $params = [];
 
         if($clienteId !== null){
@@ -163,15 +225,46 @@ class DisparoManualQueueService
 
     private function reservarItem(array $item)
     {
+        if(($item['origem'] ?? '') === 'ajax'){
+            $stmt = $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_Status = 'processando',
+                    DMI_WorkerId = ?,
+                    DMI_DataReserva = NOW(),
+                    DMI_ProximaTentativa = NULL,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+                AND CLI_ID = ?
+                AND DMI_Status = 'pendente'
+            ");
+
+            $stmt->execute([
+                $item['worker_id'] ?? '',
+                $item['DMI_ID'],
+                $item['CLI_ID']
+            ]);
+
+            return $stmt->rowCount() === 1;
+        }
+
         $stmt = $this->db->prepare("
             UPDATE disparo_manual_itens
-            SET DMI_Status = 'processando', DMI_DataAtualizacao = NOW()
+            SET
+                DMI_Status = 'processando',
+                DMI_WorkerId = ?,
+                DMI_DataReserva = NOW(),
+                DMI_ProximaTentativa = NULL,
+                DMI_Tentativas = DMI_Tentativas + 1,
+                DMI_DataAtualizacao = NOW()
             WHERE DMI_ID = ?
             AND CLI_ID = ?
             AND DMI_Status = 'pendente'
+            AND (DMI_ProximaTentativa IS NULL OR DMI_ProximaTentativa <= NOW())
         ");
 
         $stmt->execute([
+            $item['worker_id'] ?? '',
             $item['DMI_ID'],
             $item['CLI_ID']
         ]);
@@ -230,6 +323,11 @@ class DisparoManualQueueService
                 DMI_MessageId = ?,
                 DMI_Retorno = ?,
                 DMI_Erro = NULL,
+                DMI_WorkerId = NULL,
+                DMI_DataReserva = NULL,
+                DMI_ProximaTentativa = NULL,
+                DMI_UltimoErroTipo = NULL,
+                DMI_UltimoErroCodigo = NULL,
                 DMI_DataEnvio = NOW(),
                 DMI_DataAtualizacao = NOW()
             WHERE DMI_ID = ?
@@ -273,17 +371,59 @@ class DisparoManualQueueService
         ]);
     }
 
-    private function registrarErro($itemId, $erro, $retorno = null)
+
+    private function registrarBloqueioOperacional($itemId, array $validacao)
+    {
+        $erro = $this->mensagemBloqueioOperacional($validacao);
+        $retorno = ['tipo' => 'bloqueio_operacional', 'status' => $validacao['status'] ?? null, 'codigo' => $validacao['codigo'] ?? null];
+
+        if(($validacao['status'] ?? '') === WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO){
+            $proximaTentativaSql = $this->retryPolicy->proximaTentativaSql(1);
+            $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_Status = 'pendente',
+                    DMI_WorkerId = NULL,
+                    DMI_DataReserva = NULL,
+                    DMI_ProximaTentativa = {$proximaTentativaSql},
+                    DMI_Tentativas = GREATEST(DMI_Tentativas - 1, 0),
+                    DMI_UltimoErroTipo = ?,
+                    DMI_UltimoErroCodigo = ?,
+                    DMI_Erro = ?,
+                    DMI_Retorno = ?,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+            ")->execute([
+                WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO,
+                $validacao['codigo'] ?? null,
+                $erro,
+                json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                $itemId
+            ]);
+            return;
+        }
+
+        $this->registrarErro($itemId, $erro, $retorno, WorkerRetryPolicyService::BLOQUEIO_DEFINITIVO, $validacao['codigo'] ?? null);
+    }
+
+    private function registrarErro($itemId, $erro, $retorno = null, string $tipoErro = null, ?string $codigoErro = null)
     {
         $this->db->prepare("
             UPDATE disparo_manual_itens
             SET
                 DMI_Status = 'erro',
+                DMI_WorkerId = NULL,
+                DMI_DataReserva = NULL,
+                DMI_ProximaTentativa = NULL,
+                DMI_UltimoErroTipo = ?,
+                DMI_UltimoErroCodigo = ?,
                 DMI_Erro = ?,
                 DMI_Retorno = ?,
                 DMI_DataAtualizacao = NOW()
             WHERE DMI_ID = ?
         ")->execute([
+            $tipoErro ?: WorkerRetryPolicyService::ERRO_DEFINITIVO,
+            $codigoErro,
             $erro,
             json_encode($retorno, JSON_UNESCAPED_UNICODE),
             $itemId
@@ -447,6 +587,80 @@ class DisparoManualQueueService
             || in_array($codigoErro, [4, 17, 32, 613], true)
             || strpos($mensagem, 'rate limit') !== false
             || strpos($mensagem, 'too many') !== false;
+    }
+
+
+    private function normalizarResultadoEnvio($retorno): array
+    {
+        return $this->retryPolicy->classificarRetorno($retorno);
+    }
+
+    private function registrarFalhaEnvio(array $item, array $resultado, $retorno, int $tentativas): void
+    {
+        if($resultado['retry'] && !$this->retryPolicy->atingiuMaximo($tentativas)){
+            $proximaTentativaSql = $this->retryPolicy->proximaTentativaSql($tentativas);
+            $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_Status = 'pendente',
+                    DMI_WorkerId = NULL,
+                    DMI_DataReserva = NULL,
+                    DMI_ProximaTentativa = {$proximaTentativaSql},
+                    DMI_UltimoErroTipo = ?,
+                    DMI_UltimoErroCodigo = ?,
+                    DMI_Erro = ?,
+                    DMI_Retorno = ?,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+            ")->execute([
+                WorkerRetryPolicyService::ERRO_TEMPORARIO,
+                $resultado['erro_codigo'],
+                $resultado['erro_mensagem'],
+                json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                $item['DMI_ID']
+            ]);
+            return;
+        }
+
+        $codigo = $resultado['retry'] ? 'max_attempts' : ($resultado['erro_codigo'] ?? null);
+        $mensagem = $resultado['retry']
+            ? 'Tentativa máxima atingida. ' . ($resultado['erro_mensagem'] ?? '')
+            : ($resultado['erro_mensagem'] ?? 'Erro definitivo ao enviar mensagem.');
+
+        $this->registrarErro($item['DMI_ID'], $mensagem, $retorno, WorkerRetryPolicyService::ERRO_DEFINITIVO, $codigo);
+    }
+
+    private function registrarPersistenciaPosEnvio(array $item, string $messageId, string $erro): void
+    {
+        try{
+            $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_MessageId = COALESCE(DMI_MessageId, ?),
+                    DMI_Status = 'processando',
+                    DMI_UltimoErroTipo = ?,
+                    DMI_UltimoErroCodigo = ?,
+                    DMI_Erro = ?,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+            ")->execute([
+                $messageId,
+                WorkerRetryPolicyService::ERRO_PERSISTENCIA_POS_ENVIO,
+                'persistencia_pos_envio',
+                $erro,
+                $item['DMI_ID']
+            ]);
+        }catch(Exception $e){
+            error_log('worker persistencia_pos_envio disparo_manual DMI_ID=' . ($item['DMI_ID'] ?? '') . ' message_id=' . $messageId . ' erro=' . $e->getMessage());
+        }
+    }
+
+    private function mensagemBloqueioOperacional(array $validacao): string
+    {
+        $codigo = $validacao['codigo'] ?? 'bloqueio_operacional';
+        $mensagem = $validacao['mensagem'] ?? 'Envio bloqueado por validação operacional.';
+
+        return '[' . $codigo . '] ' . $mensagem;
     }
 
     private function extrairErroMeta($retorno)
