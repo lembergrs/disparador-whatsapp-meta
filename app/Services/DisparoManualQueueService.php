@@ -18,6 +18,7 @@ class DisparoManualQueueService
     private $conversaModel;
     private $consumo;
     private $controlePlano;
+    private $validator;
 
     public function __construct($modoTeste = false)
     {
@@ -27,6 +28,7 @@ class DisparoManualQueueService
         $this->conversaModel = new Conversa();
         $this->consumo = new ConsumoMensal();
         $this->controlePlano = new ControlePlanoService();
+        $this->validator = new WorkerOperationalValidatorService();
     }
 
     public function processarLote(int $clienteId, int $loteId, int $limite = 5, string $origem = 'ajax')
@@ -56,7 +58,7 @@ class DisparoManualQueueService
         return $this->montarResumo($loteId, $resultado);
     }
 
-    public function processarPendentes(int $limite = 20, string $origem = 'cron')
+    public function processarPendentes(int $limite = 20, string $origem = 'cron', string $workerId = '')
     {
         $limite = $this->normalizarLimite($limite, 20);
 
@@ -66,13 +68,13 @@ class DisparoManualQueueService
             WHERE DML_Status = 'pendente'
         ");
 
-        $resultado = $this->processarItens($limite, null, null, $origem);
+        $resultado = $this->processarItens($limite, null, null, $origem, $workerId);
         $this->finalizarLotesConcluidos();
 
         return $resultado;
     }
 
-    private function processarItens(int $limite, ?int $clienteId, ?int $loteId, string $origem)
+    private function processarItens(int $limite, ?int $clienteId, ?int $loteId, string $origem, string $workerId = '')
     {
         $itens = $this->buscarItensPendentes($limite, $clienteId, $loteId);
 
@@ -82,7 +84,9 @@ class DisparoManualQueueService
             'pulados' => 0,
             'aceitos' => 0,
             'erros' => 0,
-            'origem' => $origem
+            'bloqueados' => 0,
+            'origem' => $origem,
+            'worker_id' => $workerId
         ];
 
         foreach($itens as $item){
@@ -97,6 +101,22 @@ class DisparoManualQueueService
             $retorno = null;
 
             try{
+                $validacao = $this->validator->validarEnvio(
+                    (int) $item['CLI_ID'],
+                    (int) $item['MTA_ID'],
+                    (string) $item['DMI_Numero']
+                );
+
+                if(!$validacao['permitido']){
+                    $this->registrarErro(
+                        $item['DMI_ID'],
+                        $this->mensagemBloqueioOperacional($validacao),
+                        ['tipo' => 'bloqueio_operacional', 'codigo' => $validacao['codigo'] ?? null]
+                    );
+                    $resultado['bloqueados']++;
+                    continue;
+                }
+
                 $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);
 
                 if(!is_array($variaveis)){
@@ -105,11 +125,13 @@ class DisparoManualQueueService
 
                 $retorno = $this->enviarItem($item, $variaveis);
 
-                if(isset($retorno['messages'][0]['id'])){
+                $resultadoEnvio = $this->normalizarResultadoEnvio($retorno);
+
+                if($resultadoEnvio['sucesso']){
                     $this->registrarSucesso($item, $variaveis, $retorno);
                     $resultado['aceitos']++;
                 }else{
-                    $this->registrarErro($item['DMI_ID'], $this->extrairErroMeta($retorno), $retorno);
+                    $this->registrarErro($item['DMI_ID'], $resultadoEnvio['erro_mensagem'], $retorno);
                     $resultado['erros']++;
                 }
             }catch(Exception $e){
@@ -122,6 +144,26 @@ class DisparoManualQueueService
         }
 
         return $resultado;
+    }
+
+
+    public function recuperarTravados(int $timeoutMinutos = 15): int
+    {
+        $timeoutMinutos = max(5, $timeoutMinutos);
+
+        $stmt = $this->db->prepare("
+            UPDATE disparo_manual_itens
+            SET
+                DMI_Status = 'pendente',
+                DMI_DataAtualizacao = NOW()
+            WHERE DMI_Status = 'processando'
+            AND DMI_MessageId IS NULL
+            AND DMI_DataAtualizacao < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+        ");
+
+        $stmt->execute([$timeoutMinutos]);
+
+        return (int) $stmt->rowCount();
     }
 
     private function buscarItensPendentes(int $limite, ?int $clienteId, ?int $loteId)
@@ -447,6 +489,38 @@ class DisparoManualQueueService
             || in_array($codigoErro, [4, 17, 32, 613], true)
             || strpos($mensagem, 'rate limit') !== false
             || strpos($mensagem, 'too many') !== false;
+    }
+
+
+    private function normalizarResultadoEnvio($retorno): array
+    {
+        if(isset($retorno['messages'][0]['id'])){
+            return [
+                'sucesso' => true,
+                'message_id' => $retorno['messages'][0]['id'],
+                'tipo_resultado' => 'aceito_meta',
+                'retry' => false,
+                'erro_codigo' => null,
+                'erro_mensagem' => null
+            ];
+        }
+
+        return [
+            'sucesso' => false,
+            'message_id' => null,
+            'tipo_resultado' => $this->ehRateLimitMeta($retorno) ? 'erro_temporario' : 'erro_definitivo',
+            'retry' => $this->ehRateLimitMeta($retorno),
+            'erro_codigo' => is_array($retorno) ? (string) ($retorno['error']['code'] ?? $retorno['http_code'] ?? '') : null,
+            'erro_mensagem' => $this->extrairErroMeta($retorno)
+        ];
+    }
+
+    private function mensagemBloqueioOperacional(array $validacao): string
+    {
+        $codigo = $validacao['codigo'] ?? 'bloqueio_operacional';
+        $mensagem = $validacao['mensagem'] ?? 'Envio bloqueado por validação operacional.';
+
+        return '[' . $codigo . '] ' . $mensagem;
     }
 
     private function extrairErroMeta($retorno)

@@ -359,3 +359,142 @@ Criar uma arquitetura de Worker contínuo por serviços, preservando o comportam
 10. Será criada tabela única de jobs/envios ou manteremos `fila_envio` e `disparo_manual_itens` separadas?
 11. Qual estratégia de deduplicação será adotada para webhooks reenviados pela Meta?
 12. Qual retenção/sanitização será aplicada para `*_Retorno` e logs contendo payloads externos?
+
+## Implementação — Etapa 1
+
+Esta etapa iniciou a fundação técnica para execuções repetidas do Worker sem transformar o processo em daemon/loop infinito. A execução compatível continua sendo `php worker.php`, com um único ciclo e encerramento.
+
+### Services criados
+
+- `app/Services/WorkerService.php`
+  - Gera `worker_id` no formato `hostname-pid-token`.
+  - Executa um ciclo único do Worker.
+  - Coordena recuperação de itens travados, lotes manuais e campanhas.
+  - Retorna resumo estruturado com início, fim, duração, lotes manuais, campanhas, recuperados e exceções.
+  - Registra logs estruturados em `storage/logs/worker.log` sem payload completo sensível.
+
+- `app/Services/CampanhaQueueService.php`
+  - Ativa campanhas `agendada` elegíveis para `processando`.
+  - Busca campanhas em processamento.
+  - Carrega template, variáveis e itens pendentes.
+  - Reserva atomicamente cada item de `fila_envio` antes do envio.
+  - Envia via `MetaService::enviarTemplate()` preservando a interface pública do serviço.
+  - Padroniza internamente o resultado do envio em `aceito_meta`, `erro_temporario` ou `erro_definitivo`.
+  - Registra sucesso, erro, bloqueio operacional e finaliza campanhas sem pendentes/processando.
+
+- `app/Services/WorkerOperationalValidatorService.php`
+  - Valida o cliente em contexto CLI, sem sessão HTTP e sem redirecionamentos.
+  - Verifica cliente existente, `CLI_Ativo`, `CLI_StatusCadastro`, situação financeira/trial, limite mensal, conta Meta ativa/configurada e formato mínimo do número.
+  - Retorna classificação `permitido`, `bloqueio_temporario` ou `bloqueio_definitivo`, com código e mensagem.
+
+### Lógica extraída de `worker.php`
+
+O `worker.php` ficou restrito a bootstrap, autoload, configuração de log de erro, lock local, criação do `WorkerService`, execução de um ciclo, impressão do resumo JSON e código de saída. A lógica de campanhas que antes estava procedural foi movida para `CampanhaQueueService`; a orquestração do ciclo foi movida para `WorkerService`.
+
+### Proteção de concorrência implementada
+
+A reserva de itens de campanha passou a usar transição condicional em `fila_envio`:
+
+```sql
+UPDATE fila_envio
+SET
+    FIL_Status = 'processando',
+    FIL_Tentativas = FIL_Tentativas + 1
+WHERE FIL_ID = ?
+AND FIL_Status = 'pendente'
+```
+
+O item só é enviado quando `rowCount() === 1`, evitando o padrão inseguro de selecionar pendentes e enviar sem confirmar posse. O lote manual já possuía proteção equivalente em `disparo_manual_itens` e foi mantido.
+
+O lock local `storage/worker.lock` foi preservado para compatibilidade com a execução atual em uma única cópia do projeto. Ele ainda não substitui um lock compartilhado entre múltiplas VPS, containers ou diretórios de release.
+
+### Recuperação de itens travados
+
+Foi adicionada a constante `WORKER_PROCESSING_TIMEOUT_MINUTES`, com valor inicial de 15 minutos.
+
+Para disparos manuais, a recuperação é compatível com o banco atual porque `disparo_manual_itens` possui `DMI_DataAtualizacao`. O Worker retorna itens `processando` para `pendente` apenas quando:
+
+- `DMI_Status = 'processando'`;
+- `DMI_MessageId IS NULL`;
+- `DMI_DataAtualizacao` é anterior ao timeout configurado.
+
+Para campanhas, a recuperação ficou conservadora por limitação do schema atual. A tabela `fila_envio` não possui coluna de data de reserva/atualização do estado `processando`; portanto a rotina só recupera linhas `processando` sem `FIL_MessageId` se houver uma data confiável em `FIL_DataEnvio` mais antiga que o timeout. Como a reserva atual não grava `FIL_DataEnvio`, a recuperação efetiva de campanhas depende da migration recomendada abaixo.
+
+### Validação operacional no Worker
+
+Antes de enviar mensagens em lote manual e campanha, o Worker valida explicitamente:
+
+- cliente encontrado;
+- `CLI_Ativo = 'S'`;
+- `CLI_StatusCadastro = 'ativo'`;
+- financeiro pago ou trial/tolerância válido;
+- limite mensal do plano;
+- conta Meta pertencente ao cliente e ativa;
+- token, `MTA_PhoneNumberId` e `MTA_UrlBase` preenchidos;
+- `MTA_Status` não claramente bloqueado (`erro`, `desconectado`, `requer_acao`);
+- número com tamanho mínimo operacional após normalização.
+
+Quando a classificação não é totalmente clara, a etapa preserva comportamento permissivo. Por exemplo, status Meta vazio ou legado não é bloqueado automaticamente; somente estados explicitamente problemáticos são tratados como bloqueio temporário.
+
+### Padronização do resultado de envio
+
+`CampanhaQueueService` e `DisparoManualQueueService` adaptam a resposta atual de `MetaService::enviarTemplate()` para um resultado interno com:
+
+- `sucesso`;
+- `message_id`;
+- `tipo_resultado`;
+- `retry`;
+- `erro_codigo`;
+- `erro_mensagem`.
+
+A interface pública de `MetaService` não foi alterada.
+
+### Logs e resumo do ciclo
+
+Os logs de ciclo registram `worker_id`, início, fim, duração, itens reservados, enviados, erros, bloqueios, recuperações e exceções. A saída CLI agora imprime um JSON do resumo do ciclo, que poderá ser reutilizado por loop contínuo ou monitoramento futuro.
+
+### Limitações impostas pelo banco atual
+
+- `fila_envio` não tem coluna para `worker_id`, data de reserva, data de atualização, próxima tentativa ou classificação do último erro.
+- `disparo_manual_itens` não tem contador de tentativas nem próxima tentativa.
+- Não há lock compartilhado no banco.
+- Não há chave de idempotência por origem/item/tentativa.
+- Erros temporários ainda são persistidos como `erro`, preservando a estrutura atual; retry/backoff persistente depende de novas colunas.
+- A recuperação de campanhas é intencionalmente limitada porque não existe timestamp confiável de reserva no schema atual.
+
+### Migrations recomendadas para a próxima etapa
+
+- Adicionar em `fila_envio`:
+  - `FIL_WorkerId` VARCHAR;
+  - `FIL_DataReserva` DATETIME;
+  - `FIL_DataAtualizacao` DATETIME;
+  - `FIL_ProximaTentativa` DATETIME;
+  - `FIL_UltimoErroTipo` VARCHAR;
+  - índice por `FIL_Status`, `FIL_ProximaTentativa`, `FIL_DataReserva`.
+
+- Adicionar em `disparo_manual_itens`:
+  - `DMI_Tentativas` INT;
+  - `DMI_WorkerId` VARCHAR;
+  - `DMI_DataReserva` DATETIME;
+  - `DMI_ProximaTentativa` DATETIME;
+  - `DMI_UltimoErroTipo` VARCHAR.
+
+- Criar mecanismo de lock compartilhado:
+  - tabela própria de locks do Worker; ou
+  - uso controlado de `GET_LOCK()`/`RELEASE_LOCK()` no MySQL.
+
+- Avaliar chave lógica de idempotência para envios:
+  - origem (`campanha`/`manual`);
+  - id do item;
+  - tentativa;
+  - `message_id` Meta quando existir.
+
+### Decisões que ainda precisam de validação
+
+1. Quais estados Meta além de `erro`, `desconectado` e `requer_acao` devem bloquear envio.
+2. Se limite mensal atingido deve pausar filas ou marcar itens como erro operacional.
+3. Se bloqueios financeiros/trial devem congelar campanha/lote em vez de marcar item individual como erro.
+4. Quantas tentativas usar para erros temporários e qual backoff.
+5. Como reconciliar campanhas parcialmente enviadas antes de reagendamento.
+6. Se campanhas devem registrar também na tabela `disparos` para unificar histórico.
+7. Qual estratégia final de lock distribuído será adotada em produção.
