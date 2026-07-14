@@ -943,8 +943,12 @@
                     Política de Privacidade
                 </a>
 
-                <a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/termosUso">
+                <a class="text-white mr-3" href="<?= BASE_URL; ?>/index.php?url=site/termosUso">
                     Termos de Uso
+                </a>
+
+                <a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/politicaCancelamento">
+                    Política de Cancelamento e Reembolso
                 </a>
 
             </div>

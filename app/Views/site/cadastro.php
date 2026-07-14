@@ -386,14 +386,20 @@ Session::remove('cadastro_dados');
                             for="aceiteTermos"
                             >
                                 Li e concordo com os
-                                <a href="#" data-toggle="modal" data-target="#modalTermos">
+                                <a href="<?= BASE_URL; ?>/index.php?url=site/termosUso" target="_blank" rel="noopener noreferrer">
                                     Termos de Uso
+                                </a>,
+
+                                a
+
+                                <a href="<?= BASE_URL; ?>/index.php?url=site/politicaPrivacidade" target="_blank" rel="noopener noreferrer">
+                                    Política de Privacidade
                                 </a>
 
                                 e a
 
-                                <a href="#" data-toggle="modal" data-target="#modalPrivacidade">
-                                    Política de Privacidade
+                                <a href="<?= BASE_URL; ?>/index.php?url=site/politicaCancelamento" target="_blank" rel="noopener noreferrer">
+                                    Política de Cancelamento e Reembolso
                                 </a>.
                             </label>
 
@@ -418,69 +424,6 @@ Session::remove('cadastro_dados');
 
     </div>
 
-</div>
-
-<div class="modal fade" id="modalTermos" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Termos de Uso</h5>
-
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <?php require __DIR__ . '/termos_uso.php'; ?>
-            </div>
-
-            <div class="modal-footer">
-
-                <button
-                type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal"
-                >
-                    Fechar
-                </button>
-
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalPrivacidade" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-
-            <div class="modal-header">
-                <h5 class="modal-title">Política de Privacidade</h5>
-
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <?php require __DIR__ . '/politica_privacidade.php'; ?>
-            </div>
-
-            <div class="modal-footer">
-
-                <button
-                type="button"
-                class="btn btn-secondary"
-                data-dismiss="modal"
-                >
-                    Fechar
-                </button>
-
-            </div>
-
-        </div>
-    </div>
 </div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
