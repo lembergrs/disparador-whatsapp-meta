@@ -323,7 +323,25 @@ class CampanhaQueueService
     {
         $codigo = $validacao['codigo'] ?? 'bloqueio_operacional';
         $mensagem = '[' . $codigo . '] ' . ($validacao['mensagem'] ?? 'Envio bloqueado por validação operacional.');
-        $this->registrarErro($campanha, $item, $mensagem, ['tipo' => 'bloqueio_operacional', 'codigo' => $codigo]);
+        $retorno = ['tipo' => 'bloqueio_operacional', 'status' => $validacao['status'] ?? null, 'codigo' => $codigo];
+
+        if(($validacao['status'] ?? '') === 'bloqueio_temporario'){
+            $this->db->prepare("
+                UPDATE fila_envio
+                SET
+                    FIL_Status = 'pendente',
+                    FIL_Erro = ?,
+                    FIL_Retorno = ?
+                WHERE FIL_ID = ?
+            ")->execute([
+                $this->sanitizarMensagem($mensagem),
+                json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                $item['FIL_ID']
+            ]);
+            return;
+        }
+
+        $this->registrarErro($campanha, $item, $mensagem, $retorno);
     }
 
     private function registrarErro(array $campanha, array $item, string $erro, $retorno = null): void

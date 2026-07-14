@@ -101,20 +101,19 @@ class DisparoManualQueueService
             $retorno = null;
 
             try{
-                $validacao = $this->validator->validarEnvio(
-                    (int) $item['CLI_ID'],
-                    (int) $item['MTA_ID'],
-                    (string) $item['DMI_Numero']
-                );
-
-                if(!$validacao['permitido']){
-                    $this->registrarErro(
-                        $item['DMI_ID'],
-                        $this->mensagemBloqueioOperacional($validacao),
-                        ['tipo' => 'bloqueio_operacional', 'codigo' => $validacao['codigo'] ?? null]
+                if($origem !== 'ajax'){
+                    $validacao = $this->validator->validarEnvio(
+                        (int) $item['CLI_ID'],
+                        (int) $item['MTA_ID'],
+                        (string) $item['DMI_Numero']
                     );
-                    $resultado['bloqueados']++;
-                    continue;
+
+                    if(!$validacao['permitido']){
+                        $this->registrarBloqueioOperacional($item['DMI_ID'], $validacao);
+                        $resultado['bloqueados']++;
+                        $this->recalcularLote((int) $item['DML_ID']);
+                        continue;
+                    }
                 }
 
                 $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);
@@ -313,6 +312,32 @@ class DisparoManualQueueService
             'retorno' => $retorno,
             'data_mensagem' => date('Y-m-d H:i:s')
         ]);
+    }
+
+
+    private function registrarBloqueioOperacional($itemId, array $validacao)
+    {
+        $erro = $this->mensagemBloqueioOperacional($validacao);
+        $retorno = ['tipo' => 'bloqueio_operacional', 'status' => $validacao['status'] ?? null, 'codigo' => $validacao['codigo'] ?? null];
+
+        if(($validacao['status'] ?? '') === 'bloqueio_temporario'){
+            $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_Status = 'pendente',
+                    DMI_Erro = ?,
+                    DMI_Retorno = ?,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+            ")->execute([
+                $erro,
+                json_encode($retorno, JSON_UNESCAPED_UNICODE),
+                $itemId
+            ]);
+            return;
+        }
+
+        $this->registrarErro($itemId, $erro, $retorno);
     }
 
     private function registrarErro($itemId, $erro, $retorno = null)
