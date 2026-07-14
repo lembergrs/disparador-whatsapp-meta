@@ -107,6 +107,13 @@ class SiteController extends Controller
             );
         }
 
+        if (empty($_POST['aceiteTermos'])) {
+            $this->voltarCadastroComDados(
+                $dadosCadastro,
+                'Você precisa aceitar os Termos de Uso, a Política de Privacidade e a Política de Cancelamento e Reembolso.'
+            );
+        }
+
 
         if (defined('RECAPTCHA_SECRET_KEY') && RECAPTCHA_SECRET_KEY != '') {
             $captcha = $_POST['g-recaptcha-response'] ?? '';
@@ -287,6 +294,17 @@ class SiteController extends Controller
             'site/termos_uso',
             [
                 'titulo' => 'Termos de Uso'
+            ],
+            false
+        );
+    }
+
+    public function politicaCancelamento()
+    {
+        $this->view(
+            'site/politica_cancelamento',
+            [
+                'titulo' => 'Política de Cancelamento e Reembolso'
             ],
             false
         );

@@ -18,7 +18,7 @@
 
             <h1>Termos de Uso</h1>
 
-            <p class="text-muted">Última atualização: Junho de 2026</p>
+            <p class="text-muted">Última atualização: Julho de 2026</p>
 
             <p>
                 Os presentes Termos de Uso regulam a utilização da plataforma Disparador.net,
@@ -74,17 +74,42 @@
                 relacionadas às contas WhatsApp dos usuários.
             </p>
 
-            <h4>7. Contato</h4>
+
+            <h4>7. Cancelamento, Reembolso e Período de Avaliação</h4>
+
+            <p>
+                O usuário poderá solicitar cancelamento a qualquer momento pelos canais oficiais de
+                atendimento da RL2 Net. Pedidos realizados em até 7 dias corridos da confirmação do
+                primeiro pagamento poderão receber reembolso integral quando não houver conexão bem-sucedida
+                de número WhatsApp, envio de mensagens ou utilização efetiva da plataforma.
+            </p>
+
+            <p>
+                Quando houver utilização efetiva, o cancelamento interromperá cobranças futuras e o acesso
+                poderá permanecer até o final do período já pago, sem reembolso proporcional do período
+                utilizado, ressalvadas obrigações legais aplicáveis ou decisão administrativa da RL2 Net.
+            </p>
+
+            <p>
+                O período de avaliação inicia somente após a conexão operacional do primeiro número WhatsApp.
+                As regras detalhadas estão disponíveis na
+                <a href="<?= BASE_URL; ?>/index.php?url=site/politicaCancelamento">
+                    Política de Cancelamento e Reembolso
+                </a>.
+            </p>
+
+            <h4>8. Contato</h4>
 
             <p>
                 <strong>RL2 Net</strong><br>
                 E-mail: contato@disparador.net
             </p>
 
-            <h4>8. Aceitação</h4>
+            <h4>9. Aceitação</h4>
 
             <p>
-                Ao utilizar a plataforma, o usuário declara estar de acordo com estes Termos de Uso.
+                Ao utilizar a plataforma, o usuário declara estar de acordo com estes Termos de Uso,
+                com a Política de Privacidade e com a Política de Cancelamento e Reembolso.
             </p>
 
             <hr>
