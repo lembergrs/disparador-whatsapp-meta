@@ -498,27 +498,3 @@ Os logs de ciclo registram `worker_id`, início, fim, duração, itens reservado
 5. Como reconciliar campanhas parcialmente enviadas antes de reagendamento.
 6. Se campanhas devem registrar também na tabela `disparos` para unificar histórico.
 7. Qual estratégia final de lock distribuído será adotada em produção.
-
-## Implementação — Etapa 2
-
-A Etapa 2 adicionou persistência de reserva e retry/backoff para o Worker, sem alterar o modelo de execução de `php worker.php` como ciclo único.
-
-Principais entregas:
-
-- migration `database/migrations/20260714_add_worker_retry_fields.sql` para campos de Worker, reserva, próxima tentativa, último erro e tentativas em `fila_envio`/`disparo_manual_itens`;
-- `Services\WorkerRetryPolicyService` para cálculo centralizado de backoff, jitter, limite de tentativas e classificação de erros;
-- reserva persistente de campanhas com `FIL_WorkerId`, `FIL_DataReserva`, `FIL_DataAtualizacao`, `FIL_ProximaTentativa` e incremento controlado de `FIL_Tentativas`;
-- reserva persistente de disparos manuais em background com campos equivalentes `DMI_*`;
-- recuperação de itens travados baseada em `DataReserva` e ausência de `MessageId`;
-- falhas temporárias retornam para `pendente` com próxima tentativa;
-- falhas definitivas limpam reserva e gravam tipo/código do erro;
-- bloqueios temporários antes da chamada Meta compensam a tentativa incrementada na reserva;
-- sucesso limpa Worker/reserva/próxima tentativa/último erro antes de seguir com consumo e conversa;
-- cenário de persistência pós-envio tenta gravar `MessageId` de emergência e não devolve o item diretamente para reenvio.
-
-Limitações restantes:
-
-- a migration precisa ser aplicada manualmente em produção antes de executar o novo Worker;
-- a idempotência completa ainda depende de chave lógica/tabela própria de envios;
-- o estado `parcial` de campanha não foi introduzido para manter compatibilidade com os estados atuais;
-- o lock compartilhado foi implementado com `GET_LOCK()` via conexão PDO singleton, mantendo `flock` local como camada adicional.

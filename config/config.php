@@ -37,10 +37,6 @@ defined('RECAPTCHA_SECRET_KEY') || define('RECAPTCHA_SECRET_KEY', env_valor('REC
 // Ajuste conforme qualidade, limites e aprovação da conta na Meta.
 defined('WHATSAPP_ENVIOS_POR_SEGUNDO') || define('WHATSAPP_ENVIOS_POR_SEGUNDO', 5);
 defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS', 5);
-defined('WORKER_MAX_ATTEMPTS') || define('WORKER_MAX_ATTEMPTS', 5);
-defined('WORKER_RETRY_DELAY_SECONDS') || define('WORKER_RETRY_DELAY_SECONDS', 30);
-defined('WORKER_RETRY_MAX_DELAY_SECONDS') || define('WORKER_RETRY_MAX_DELAY_SECONDS', 1800);
-defined('WORKER_RETRY_JITTER_SECONDS') || define('WORKER_RETRY_JITTER_SECONDS', 15);
 defined('WORKER_PROCESSING_TIMEOUT_MINUTES') || define('WORKER_PROCESSING_TIMEOUT_MINUTES', 15);
 
 // Dias de tolerância financeira após vencimento antes do bloqueio operacional.

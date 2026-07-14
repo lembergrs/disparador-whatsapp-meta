@@ -2,8 +2,6 @@
 
 namespace Services;
 
-use Core\Database;
-
 class WorkerService
 {
     private $modoTeste;
@@ -11,8 +9,6 @@ class WorkerService
     private $limiteDisparoManual;
     private $timeoutProcessandoMinutos;
     private $workerId;
-    private $db;
-    private $lockCompartilhado = false;
     private $campanhaQueue;
     private $disparoManualQueue;
 
@@ -23,16 +19,10 @@ class WorkerService
         $this->limiteDisparoManual = (int) ($opcoes['limite_disparo_manual'] ?? 20);
         $this->timeoutProcessandoMinutos = (int) ($opcoes['timeout_processando_minutos'] ?? (defined('WORKER_PROCESSING_TIMEOUT_MINUTES') ? WORKER_PROCESSING_TIMEOUT_MINUTES : 15));
         $this->workerId = $opcoes['worker_id'] ?? self::gerarWorkerId();
-        $this->db = Database::getInstance();
 
         $validator = new WorkerOperationalValidatorService();
         $this->campanhaQueue = new CampanhaQueueService($this->modoTeste, $validator);
         $this->disparoManualQueue = new DisparoManualQueueService($this->modoTeste);
-    }
-
-    public function __destruct()
-    {
-        $this->liberarLockCompartilhado();
     }
 
     public static function gerarWorkerId(): string
@@ -77,20 +67,10 @@ class WorkerService
                 'campanhas' => 0,
                 'total' => 0
             ],
-            'excecoes' => [],
-            'lock_compartilhado' => 'nao_adquirido'
+            'excecoes' => []
         ];
 
         $this->registrarLog('inicio_ciclo', ['worker_id' => $this->workerId]);
-
-        if(!$this->adquirirLockCompartilhado()){
-            $resumo['fim'] = date('Y-m-d H:i:s');
-            $resumo['duracao_segundos'] = round(microtime(true) - $inicioTimestamp, 3);
-            $this->registrarLog('lock_compartilhado_ocupado', $resumo);
-            return $resumo;
-        }
-
-        $resumo['lock_compartilhado'] = 'adquirido';
 
         try{
             $resumo['recuperados']['manual'] = $this->disparoManualQueue->recuperarTravados($this->timeoutProcessandoMinutos);
@@ -135,45 +115,12 @@ class WorkerService
             $this->registrarExcecao($resumo, 'campanhas', $e);
         }
 
-        $this->liberarLockCompartilhado();
-
         $resumo['fim'] = date('Y-m-d H:i:s');
         $resumo['duracao_segundos'] = round(microtime(true) - $inicioTimestamp, 3);
 
         $this->registrarLog('fim_ciclo', $resumo);
 
         return $resumo;
-    }
-
-
-    private function adquirirLockCompartilhado(): bool
-    {
-        $nome = $this->nomeLockCompartilhado();
-        $stmt = $this->db->prepare('SELECT GET_LOCK(?, 0)');
-        $stmt->execute([$nome]);
-        $adquirido = (int) $stmt->fetchColumn() === 1;
-        $this->lockCompartilhado = $adquirido;
-
-        return $adquirido;
-    }
-
-    private function liberarLockCompartilhado(): void
-    {
-        if(!$this->lockCompartilhado){
-            return;
-        }
-
-        $stmt = $this->db->prepare('SELECT RELEASE_LOCK(?)');
-        $stmt->execute([$this->nomeLockCompartilhado()]);
-        $this->lockCompartilhado = false;
-    }
-
-    private function nomeLockCompartilhado(): string
-    {
-        $dbName = defined('DB_NAME') ? DB_NAME : 'disparador';
-        $ambiente = defined('APP_ENV') ? APP_ENV : 'production';
-
-        return 'disparador_worker_' . md5($ambiente . '_' . $dbName);
     }
 
     public function getWorkerId(): string
