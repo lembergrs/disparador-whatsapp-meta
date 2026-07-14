@@ -39,7 +39,7 @@ Não foi criada auditoria de aceite nesta sprint porque não há campos prontos 
 A política implementada define que:
 
 1. o cliente pode solicitar cancelamento a qualquer momento;
-2. sem prejuízo dos direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível, a RL2 Net adota política comercial de reembolso integral do primeiro pagamento quando não houver conexão bem-sucedida de número WhatsApp, envio de mensagens ou utilização efetiva;
+2. sem prejuízo dos direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível, o cliente poderá solicitar o cancelamento no prazo legal aplicável e a RL2 Net também assegura política comercial de reembolso integral do primeiro pagamento quando a solicitação ocorrer em até 7 dias corridos da confirmação do pagamento e não houver conexão bem-sucedida de número WhatsApp, envio de mensagens ou utilização efetiva;
 3. após utilização efetiva, o cancelamento interrompe cobranças futuras e o acesso pode permanecer até o fim do período pago;
 4. os pedidos são analisados conforme a legislação aplicável e as circunstâncias da contratação, sem prejuízo dos direitos legalmente assegurados ao consumidor;
 5. o período de avaliação inicia somente após a conexão operacional do primeiro número WhatsApp;

@@ -12,7 +12,7 @@ Esta política define as regras iniciais de cancelamento e reembolso aplicáveis
 
 O cliente pode solicitar cancelamento a qualquer momento.
 
-Sem prejuízo dos direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível, a RL2 Net adota, como política comercial, o reembolso integral do primeiro pagamento quando todos os critérios abaixo forem atendidos cumulativamente:
+Sem prejuízo dos direitos assegurados pela legislação aplicável, inclusive o direito de arrependimento quando cabível, o cliente poderá solicitar o cancelamento no prazo legal aplicável. A RL2 Net também assegura, como política comercial, o reembolso integral do primeiro pagamento quando a solicitação ocorrer em até 7 dias corridos da confirmação do pagamento e todos os critérios abaixo forem atendidos cumulativamente:
 
 1. nenhum número WhatsApp tiver sido conectado com sucesso;
 2. nenhuma mensagem tiver sido enviada pelo Disparador.net;
