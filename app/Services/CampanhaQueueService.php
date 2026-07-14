@@ -16,6 +16,7 @@ class CampanhaQueueService
     private $consumo;
     private $controlePlano;
     private $conversaModel;
+    private $retryPolicy;
     private $metaCache = [];
 
     public function __construct($modoTeste = false, ?WorkerOperationalValidatorService $validator = null)
@@ -26,6 +27,7 @@ class CampanhaQueueService
         $this->consumo = new ConsumoMensal();
         $this->controlePlano = new ControlePlanoService();
         $this->conversaModel = new Conversa();
+        $this->retryPolicy = new WorkerRetryPolicyService();
     }
 
     public function processar(int $limitePorExecucao = 50, string $workerId = ''): array
@@ -58,11 +60,18 @@ class CampanhaQueueService
 
         $stmt = $this->db->prepare("
             UPDATE fila_envio
-            SET FIL_Status = 'pendente'
+            SET
+                FIL_Status = 'pendente',
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_DataAtualizacao = NOW(),
+                FIL_ProximaTentativa = NOW(),
+                FIL_UltimoErroTipo = 'recuperado_timeout',
+                FIL_UltimoErroCodigo = 'processing_timeout'
             WHERE FIL_Status = 'processando'
             AND FIL_MessageId IS NULL
-            AND FIL_DataEnvio IS NOT NULL
-            AND FIL_DataEnvio < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+            AND FIL_DataReserva IS NOT NULL
+            AND FIL_DataReserva < DATE_SUB(NOW(), INTERVAL ? MINUTE)
         ");
 
         $stmt->execute([$timeoutMinutos]);
@@ -140,12 +149,18 @@ class CampanhaQueueService
                 $resultado = $this->normalizarResultadoEnvio($retorno);
 
                 if($resultado['sucesso']){
-                    $this->registrarSucesso($campanha, $template, $item, $parametros, $retorno, $resultado['message_id']);
-                    $resumo['enviados']++;
+                    try{
+                        $this->registrarSucesso($campanha, $template, $item, $parametros, $retorno, $resultado['message_id']);
+                        $resumo['enviados']++;
+                    }catch(Exception $e){
+                        $this->registrarPersistenciaPosEnvio($item, $resultado['message_id'], $e->getMessage());
+                        $resumo['erros_definitivos']++;
+                    }
                 }else{
-                    $this->registrarErro($campanha, $item, $resultado['erro_mensagem'], $retorno);
+                    $tentativas = ((int) ($item['FIL_Tentativas'] ?? 0)) + 1;
+                    $this->registrarFalhaEnvio($campanha, $item, $resultado, $retorno, $tentativas);
 
-                    if($resultado['retry']){
+                    if($resultado['retry'] && !$this->retryPolicy->atingiuMaximo($tentativas)){
                         $resumo['erros_temporarios']++;
                     }else{
                         $resumo['erros_definitivos']++;
@@ -205,6 +220,7 @@ class CampanhaQueueService
                 ON c.CON_ID = f.CON_ID
             WHERE f.CAM_ID = ?
             AND f.FIL_Status = 'pendente'
+            AND (f.FIL_ProximaTentativa IS NULL OR f.FIL_ProximaTentativa <= NOW())
             ORDER BY f.FIL_ID ASC
             LIMIT {$limite}
         ");
@@ -220,12 +236,17 @@ class CampanhaQueueService
             UPDATE fila_envio
             SET
                 FIL_Status = 'processando',
+                FIL_WorkerId = ?,
+                FIL_DataReserva = NOW(),
+                FIL_DataAtualizacao = NOW(),
+                FIL_ProximaTentativa = NULL,
                 FIL_Tentativas = FIL_Tentativas + 1
             WHERE FIL_ID = ?
             AND FIL_Status = 'pendente'
+            AND (FIL_ProximaTentativa IS NULL OR FIL_ProximaTentativa <= NOW())
         ");
 
-        $stmt->execute([$item['FIL_ID']]);
+        $stmt->execute([$workerId, $item['FIL_ID']]);
 
         return $stmt->rowCount() === 1;
     }
@@ -281,6 +302,12 @@ class CampanhaQueueService
             SET
                 FIL_Status = 'aguardando_confirmacao',
                 FIL_DataEnvio = NOW(),
+                FIL_DataAtualizacao = NOW(),
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_ProximaTentativa = NULL,
+                FIL_UltimoErroTipo = NULL,
+                FIL_UltimoErroCodigo = NULL,
                 FIL_Erro = NULL,
                 FIL_MessageId = ?,
                 FIL_Retorno = ?
@@ -325,15 +352,26 @@ class CampanhaQueueService
         $mensagem = '[' . $codigo . '] ' . ($validacao['mensagem'] ?? 'Envio bloqueado por validação operacional.');
         $retorno = ['tipo' => 'bloqueio_operacional', 'status' => $validacao['status'] ?? null, 'codigo' => $codigo];
 
-        if(($validacao['status'] ?? '') === 'bloqueio_temporario'){
+        if(($validacao['status'] ?? '') === WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO){
+            $tentativasAtuais = (int) ($item['FIL_Tentativas'] ?? 0);
+            $proximaTentativaSql = $this->retryPolicy->proximaTentativaSql(max(1, $tentativasAtuais));
             $this->db->prepare("
                 UPDATE fila_envio
                 SET
                     FIL_Status = 'pendente',
+                    FIL_WorkerId = NULL,
+                    FIL_DataReserva = NULL,
+                    FIL_DataAtualizacao = NOW(),
+                    FIL_ProximaTentativa = {$proximaTentativaSql},
+                    FIL_Tentativas = GREATEST(FIL_Tentativas - 1, 0),
+                    FIL_UltimoErroTipo = ?,
+                    FIL_UltimoErroCodigo = ?,
                     FIL_Erro = ?,
                     FIL_Retorno = ?
                 WHERE FIL_ID = ?
             ")->execute([
+                WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO,
+                $codigo,
                 $this->sanitizarMensagem($mensagem),
                 json_encode($retorno, JSON_UNESCAPED_UNICODE),
                 $item['FIL_ID']
@@ -341,19 +379,27 @@ class CampanhaQueueService
             return;
         }
 
-        $this->registrarErro($campanha, $item, $mensagem, $retorno);
+        $this->registrarErro($campanha, $item, $mensagem, $retorno, WorkerRetryPolicyService::BLOQUEIO_DEFINITIVO, $codigo);
     }
 
-    private function registrarErro(array $campanha, array $item, string $erro, $retorno = null): void
+    private function registrarErro(array $campanha, array $item, string $erro, $retorno = null, string $tipoErro = null, ?string $codigoErro = null): void
     {
         $this->db->prepare("
             UPDATE fila_envio
             SET
                 FIL_Status = 'erro',
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_DataAtualizacao = NOW(),
+                FIL_ProximaTentativa = NULL,
+                FIL_UltimoErroTipo = ?,
+                FIL_UltimoErroCodigo = ?,
                 FIL_Erro = ?,
                 FIL_Retorno = ?
             WHERE FIL_ID = ?
         ")->execute([
+            $tipoErro ?: WorkerRetryPolicyService::ERRO_DEFINITIVO,
+            $codigoErro,
             $this->sanitizarMensagem($erro),
             json_encode($this->retornoSeguro($retorno), JSON_UNESCAPED_UNICODE),
             $item['FIL_ID']
@@ -372,7 +418,10 @@ class CampanhaQueueService
             SELECT COUNT(*) total
             FROM fila_envio
             WHERE CAM_ID = ?
-            AND FIL_Status IN ('pendente','processando')
+            AND (
+                FIL_Status IN ('pendente','processando')
+                OR (FIL_ProximaTentativa IS NOT NULL AND FIL_ProximaTentativa > NOW())
+            )
         ");
 
         $stmt->execute([$campanhaId]);
@@ -398,25 +447,74 @@ class CampanhaQueueService
 
     private function normalizarResultadoEnvio($retorno): array
     {
-        if(isset($retorno['messages'][0]['id'])){
-            return [
-                'sucesso' => true,
-                'message_id' => $retorno['messages'][0]['id'],
-                'tipo_resultado' => 'aceito_meta',
-                'retry' => false,
-                'erro_codigo' => null,
-                'erro_mensagem' => null
-            ];
+        return $this->retryPolicy->classificarRetorno($retorno);
+    }
+
+    private function registrarFalhaEnvio(array $campanha, array $item, array $resultado, $retorno, int $tentativas): void
+    {
+        if($resultado['retry'] && !$this->retryPolicy->atingiuMaximo($tentativas)){
+            $proximaTentativaSql = $this->retryPolicy->proximaTentativaSql($tentativas);
+            $this->db->prepare("
+                UPDATE fila_envio
+                SET
+                    FIL_Status = 'pendente',
+                    FIL_WorkerId = NULL,
+                    FIL_DataReserva = NULL,
+                    FIL_DataAtualizacao = NOW(),
+                    FIL_ProximaTentativa = {$proximaTentativaSql},
+                    FIL_UltimoErroTipo = ?,
+                    FIL_UltimoErroCodigo = ?,
+                    FIL_Erro = ?,
+                    FIL_Retorno = ?
+                WHERE FIL_ID = ?
+            ")->execute([
+                WorkerRetryPolicyService::ERRO_TEMPORARIO,
+                $resultado['erro_codigo'],
+                $this->sanitizarMensagem($resultado['erro_mensagem'] ?? 'Falha temporária ao enviar mensagem.'),
+                json_encode($this->retornoSeguro($retorno), JSON_UNESCAPED_UNICODE),
+                $item['FIL_ID']
+            ]);
+            return;
         }
 
-        return [
-            'sucesso' => false,
-            'message_id' => null,
-            'tipo_resultado' => $this->ehRateLimitMeta($retorno) ? 'erro_temporario' : 'erro_definitivo',
-            'retry' => $this->ehRateLimitMeta($retorno),
-            'erro_codigo' => is_array($retorno) ? (string) ($retorno['error']['code'] ?? $retorno['http_code'] ?? '') : null,
-            'erro_mensagem' => $this->extrairErroMeta($retorno)
-        ];
+        $codigo = $resultado['retry'] ? 'max_attempts' : ($resultado['erro_codigo'] ?? null);
+        $mensagem = $resultado['retry']
+            ? 'Tentativa máxima atingida. ' . ($resultado['erro_mensagem'] ?? '')
+            : ($resultado['erro_mensagem'] ?? 'Erro definitivo ao enviar mensagem.');
+
+        $this->registrarErro(
+            $campanha,
+            $item,
+            $mensagem,
+            $retorno,
+            WorkerRetryPolicyService::ERRO_DEFINITIVO,
+            $codigo
+        );
+    }
+
+    private function registrarPersistenciaPosEnvio(array $item, string $messageId, string $erro): void
+    {
+        try{
+            $this->db->prepare("
+                UPDATE fila_envio
+                SET
+                    FIL_MessageId = COALESCE(FIL_MessageId, ?),
+                    FIL_Status = 'processando',
+                    FIL_DataAtualizacao = NOW(),
+                    FIL_UltimoErroTipo = ?,
+                    FIL_UltimoErroCodigo = ?,
+                    FIL_Erro = ?
+                WHERE FIL_ID = ?
+            ")->execute([
+                $messageId,
+                WorkerRetryPolicyService::ERRO_PERSISTENCIA_POS_ENVIO,
+                'persistencia_pos_envio',
+                $this->sanitizarMensagem($erro),
+                $item['FIL_ID']
+            ]);
+        }catch(Exception $e){
+            error_log('worker persistencia_pos_envio fila_envio FIL_ID=' . ($item['FIL_ID'] ?? '') . ' message_id=' . $messageId . ' erro=' . $this->sanitizarMensagem($e->getMessage()));
+        }
     }
 
     private function midiaHeaderCampanha(array $campanha)
