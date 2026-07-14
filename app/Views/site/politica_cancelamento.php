@@ -32,11 +32,12 @@
                 atendimento da RL2 Net, preferencialmente pelo e-mail contato@disparador.net.
             </p>
 
-            <h4>2. Reembolso em até 7 dias</h4>
+            <h4>2. Direitos legais e política comercial de reembolso</h4>
 
             <p>
-                Pedidos realizados em até 7 dias corridos da confirmação do primeiro pagamento poderão
-                receber reembolso integral quando, cumulativamente:
+                Sem prejuízo dos direitos assegurados pela legislação aplicável, inclusive o direito de
+                arrependimento quando cabível, a RL2 Net adota, como política comercial, o reembolso
+                integral do primeiro pagamento quando, cumulativamente:
             </p>
 
             <ul>
@@ -53,8 +54,8 @@
             </p>
 
             <p>
-                Nessa hipótese, não haverá reembolso proporcional do período utilizado, ressalvadas
-                obrigações legais aplicáveis ou decisão administrativa da RL2 Net após análise do caso.
+                Os pedidos serão analisados conforme a legislação aplicável e as circunstâncias da
+                contratação, sem prejuízo dos direitos legalmente assegurados ao consumidor.
             </p>
 
             <h4>4. Período de avaliação</h4>

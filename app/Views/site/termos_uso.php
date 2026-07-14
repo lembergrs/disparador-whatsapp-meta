@@ -79,20 +79,23 @@
 
             <p>
                 O usuário poderá solicitar cancelamento a qualquer momento pelos canais oficiais de
-                atendimento da RL2 Net. Pedidos realizados em até 7 dias corridos da confirmação do
-                primeiro pagamento poderão receber reembolso integral quando não houver conexão bem-sucedida
+                atendimento da RL2 Net. Sem prejuízo dos direitos assegurados pela legislação aplicável,
+                inclusive o direito de arrependimento quando cabível, a RL2 Net adota, como política
+                comercial, o reembolso integral do primeiro pagamento quando não houver conexão bem-sucedida
                 de número WhatsApp, envio de mensagens ou utilização efetiva da plataforma.
             </p>
 
             <p>
                 Quando houver utilização efetiva, o cancelamento interromperá cobranças futuras e o acesso
-                poderá permanecer até o final do período já pago, sem reembolso proporcional do período
-                utilizado, ressalvadas obrigações legais aplicáveis ou decisão administrativa da RL2 Net.
+                poderá permanecer até o final do período já pago. Os pedidos serão analisados conforme a
+                legislação aplicável e as circunstâncias da contratação, sem prejuízo dos direitos legalmente
+                assegurados ao consumidor.
             </p>
 
             <p>
                 O período de avaliação inicia somente após a conexão operacional do primeiro número WhatsApp.
-                As regras detalhadas estão disponíveis na
+                O cancelamento e eventual reembolso observarão esta Política de Cancelamento e Reembolso
+                e a legislação aplicável. As regras detalhadas estão disponíveis na
                 <a href="<?= BASE_URL; ?>/index.php?url=site/politicaCancelamento">
                     Política de Cancelamento e Reembolso
                 </a>.
