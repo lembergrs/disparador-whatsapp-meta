@@ -11,12 +11,14 @@ class NfseConfigService
 
     public static function dpsSerie()
     {
-        return defined('NFSE_DPS_SERIE') ? (string) NFSE_DPS_SERIE : '900';
+        $serie = defined('NFSE_DPS_SERIE') ? preg_replace('/\D/', '', (string) NFSE_DPS_SERIE) : '900';
+        return $serie !== '' ? $serie : '900';
     }
 
     public static function ambiente()
     {
-        return defined('NFSE_AMBIENTE') ? (string) NFSE_AMBIENTE : 'production';
+        $ambiente = defined('NFSE_AMBIENTE') ? strtolower(trim((string) NFSE_AMBIENTE)) : 'production';
+        return in_array($ambiente, ['production', 'sandbox', 'homologation', 'local'], true) ? $ambiente : 'production';
     }
 
     public static function prestadorCnpj()
@@ -35,8 +37,8 @@ class NfseConfigService
             'serie' => self::dpsSerie(),
             'cert_path_configurado' => defined('NFSE_CERT_PATH') && trim((string) NFSE_CERT_PATH) !== '',
             'cert_password_configurado' => defined('NFSE_CERT_PASSWORD') && trim((string) NFSE_CERT_PASSWORD) !== '',
-            'connect_timeout' => defined('NFSE_CONNECT_TIMEOUT') ? (int) NFSE_CONNECT_TIMEOUT : 10,
-            'request_timeout' => defined('NFSE_REQUEST_TIMEOUT') ? (int) NFSE_REQUEST_TIMEOUT : 30
+            'connect_timeout' => max(1, defined('NFSE_CONNECT_TIMEOUT') ? (int) NFSE_CONNECT_TIMEOUT : 10),
+            'request_timeout' => max(1, defined('NFSE_REQUEST_TIMEOUT') ? (int) NFSE_REQUEST_TIMEOUT : 30)
         ];
     }
 }

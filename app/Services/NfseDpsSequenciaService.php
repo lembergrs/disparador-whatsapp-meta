@@ -4,15 +4,14 @@ namespace Services;
 
 use Core\Database;
 use Models\NfseEmissao;
-use PDO;
 
 class NfseDpsSequenciaService
 {
     private $db;
 
-    public function __construct()
+    public function __construct($db = null)
     {
-        $this->db = Database::getInstance();
+        $this->db = $db ?: Database::getInstance();
     }
 
     public function reservar($prestadorCnpj = null, $ambiente = null, $serie = null)
@@ -21,8 +20,12 @@ class NfseDpsSequenciaService
         $ambiente = trim((string) ($ambiente ?? NfseConfigService::ambiente()));
         $serie = trim((string) ($serie ?? NfseConfigService::dpsSerie()));
 
-        if($prestadorCnpj === '' || $ambiente === '' || $serie === ''){
+        if($prestadorCnpj === '' || strlen($prestadorCnpj) !== 14 || $ambiente === '' || $serie === ''){
             throw new \InvalidArgumentException('Contexto fiscal incompleto para reservar numDPS.');
+        }
+
+        if(!in_array($ambiente, ['production', 'sandbox', 'homologation', 'local'], true)){
+            throw new \InvalidArgumentException('Ambiente fiscal inválido para reservar numDPS.');
         }
 
         $this->db->beginTransaction();
@@ -40,6 +43,14 @@ class NfseDpsSequenciaService
             ");
             $select->execute([$prestadorCnpj, $ambiente, $serie]);
             $numero = (int) $select->fetchColumn();
+
+            if($numero <= 0){
+                throw new \RuntimeException('Sequência numDPS inválida.');
+            }
+
+            if($numero >= PHP_INT_MAX){
+                throw new \RuntimeException('Sequência numDPS atingiu o limite operacional.');
+            }
 
             $update = $this->db->prepare("
                 UPDATE nfse_dps_sequencias

@@ -29,6 +29,25 @@ $resultado = $service->validarCliente($pjCompleto);
 nfseAptidaoAssert($resultado['apto'] === true, 'PJ completo deve ser apto');
 nfseAptidaoAssert($resultado['campos_faltantes'] === [], 'PJ completo não deve ter faltantes');
 
+
+$pjMascarado = $pjCompleto;
+$pjMascarado['CLI_NFSe_CNPJ'] = '11.222.333/0001-81';
+$pjMascarado['CLI_NFSe_CEP'] = '90000-000';
+$resultado = $service->validarCliente($pjMascarado);
+nfseAptidaoAssert($resultado['apto'] === true, 'CNPJ e CEP com máscara válidos devem ser aceitos');
+
+$pjCnpjInvalido = $pjCompleto;
+$pjCnpjInvalido['CLI_NFSe_CNPJ'] = '11.111.111/1111-11';
+$resultado = $service->validarCliente($pjCnpjInvalido);
+nfseAptidaoAssert($resultado['apto'] === false, 'CNPJ inválido não deve ser apto');
+nfseAptidaoAssert(in_array('cnpj_valido', $resultado['campos_faltantes'], true), 'CNPJ inválido retorna campo inválido');
+
+$pjIbgeInvalido = $pjCompleto;
+$pjIbgeInvalido['CLI_NFSe_CodigoIBGE'] = '123';
+$resultado = $service->validarCliente($pjIbgeInvalido);
+nfseAptidaoAssert($resultado['apto'] === false, 'IBGE inválido não deve ser apto');
+nfseAptidaoAssert(in_array('codigo_ibge_valido', $resultado['campos_faltantes'], true), 'IBGE inválido retorna campo inválido');
+
 $pjIncompleto = $pjCompleto;
 $pjIncompleto['CLI_NFSe_CEP'] = '';
 $pjIncompleto['CLI_NFSe_CodigoIBGE'] = '';

@@ -878,10 +878,10 @@ A tabela `nfse_emissoes` separa os conceitos documentados:
 
 - `uk_nfse_cobranca (COB_ID)`: impede duas NFS-e independentes para a mesma cobrança quando `COB_ID` está preenchido.
 - `uk_nfse_idempotency (NFE_IdempotencyKey)`: chave local estável baseada na cobrança.
-- `uk_nfse_numdps (NFE_NumDps)`: impede repetição local de DPS.
+- `uk_nfse_numdps_contexto (NFE_PrestadorCnpj, NFE_Ambiente, NFE_Serie, NFE_NumDps)`: impede repetição local de DPS dentro do mesmo prestador, ambiente e série, sem bloquear contextos fiscais distintos.
 - `uk_nfse_dps_contexto (NDS_PrestadorCnpj, NDS_Ambiente, NDS_Serie)`: separa sequência por prestador, ambiente e série.
 
-Status escolhido: `VARCHAR(40)`, seguindo a flexibilidade já usada em status do projeto e evitando migration complexa para cada novo estado operacional. Estados previstos: `pendente_dados`, `pendente`, `processando`, `reconciliacao_pendente`, `emitida`, `erro_temporario`, `erro_definitivo`, `cancelamento_pendente` e `cancelada`.
+Status escolhido: `VARCHAR(40)`, seguindo a flexibilidade já usada em status do projeto e evitando migration complexa para cada novo estado operacional. Estados previstos: `pendente_dados`, `pendente`, `processando`, `reconciliacao_pendente`, `emitida`, `erro_temporario`, `erro_definitivo`, `cancelamento_pendente` e `cancelada`. A auditoria adicionou lista centralizada de transições permitidas no model para impedir retornos automáticos claramente inválidos, como `emitida` para `pendente` ou `cancelada` para reemissão.
 
 ### 28.3 Estratégia de idempotência local
 
@@ -890,7 +890,7 @@ A idempotência local foi preparada em `Models\NfseEmissao`:
 - chave estável: `nfse:cobranca:{COB_ID}`;
 - criação/localização por cobrança em `criarOuBuscarPorCobranca`;
 - restrições únicas em banco para `COB_ID` e `NFE_IdempotencyKey`;
-- tratamento de corrida: se dois processos tentarem inserir a mesma cobrança, a restrição única preserva uma emissão e o método volta a buscar o registro existente.
+- tratamento de corrida: se dois processos tentarem inserir a mesma cobrança, a restrição única preserva uma emissão e o método volta a buscar o registro existente somente quando o erro de banco for duplicidade (`23000`/`1062`), propagando falhas reais.
 
 Esta etapa não declara nem usa idempotência remota da API.
 
@@ -902,7 +902,7 @@ A reserva de `numDPS` foi preparada em `Services\NfseDpsSequenciaService` usando
 - transação local;
 - `SELECT ... FOR UPDATE` para bloquear a linha da sequência;
 - incremento persistente `NDS_ProximoNumero = NDS_ProximoNumero + 1`;
-- série lida de `NFSE_DPS_SERIE`, com padrão `900`, sem espalhar valor hardcoded pela aplicação.
+- série normalizada a partir de `NFSE_DPS_SERIE`, com padrão `900`, sem espalhar valor hardcoded pela aplicação; ambiente limitado a valores conhecidos e CNPJ do prestador sem máscara.
 
 `numDPS` continua sendo identificador local/sequencial e não é tratado como chave de reconciliação remota.
 
@@ -939,7 +939,7 @@ Clientes PF ou PJ incompletos permanecem aptos a usar o sistema, mas não aptos 
 - bairro;
 - código IBGE com 7 dígitos.
 
-O retorno é estruturado com `apto`, `tipo_bloqueio`, `campos_faltantes` e `mensagem`, sem expor segredos ou conteúdo fiscal sensível.
+O retorno é estruturado com `apto`, `tipo_bloqueio`, `campos_faltantes` e `mensagem`, sem expor segredos ou conteúdo fiscal sensível. PF permanece como não apto/não suportado nesta etapa, não como erro técnico de emissão.
 
 ### 28.7 Configuração segura
 
@@ -958,7 +958,7 @@ O retorno é estruturado com `apto`, `tipo_bloqueio`, `campos_faltantes` e `mens
 - `NFSE_CONNECT_TIMEOUT`;
 - `NFSE_REQUEST_TIMEOUT`.
 
-Nenhum valor secreto real foi incluído no código. O certificado deve permanecer em arquivo protegido fora do document root e poderá ser convertido para Base64 apenas em memória em etapa futura. `API_AUTH_TOKEN`, certificado PFX/Base64, senha do certificado e Authorization não são persistidos em banco.
+Nenhum valor secreto real foi incluído no código. O certificado deve permanecer em arquivo protegido fora do document root e poderá ser convertido para Base64 apenas em memória em etapa futura. `API_AUTH_TOKEN`, certificado PFX/Base64, senha do certificado e Authorization não são persistidos em banco. A auditoria reforçou a sanitização de mensagens para `Authorization`, `Bearer`, `senhaCert`, `CERT_PASSWORD`, `PFX`, `base64`, senhas e caminhos sensíveis.
 
 ### 28.8 Storage privado
 
