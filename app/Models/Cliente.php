@@ -189,7 +189,10 @@ class Cliente
 
 
 
-        return $this->db->lastInsertId();
+        $clienteId = $this->db->lastInsertId();
+        $this->atualizarCamposFiscaisNfse($clienteId, $dados);
+
+        return $clienteId;
     }
 
 
@@ -236,7 +239,7 @@ class Cliente
 
 
 
-        return $sql->execute([
+        $atualizado = $sql->execute([
 
             $dados['tipo_pessoa'],
 
@@ -272,6 +275,10 @@ class Cliente
             $id
 
         ]);
+
+        $this->atualizarCamposFiscaisNfse($id, $dados);
+
+        return $atualizado;
     }
 
 
@@ -336,6 +343,66 @@ class Cliente
 
 
 
+
+
+    private function camposFiscaisNfse(array $dados)
+    {
+        $mapa = [
+            'CLI_NFSe_CNPJ' => ['cnpj_fiscal', true],
+            'CLI_NFSe_RazaoSocial' => ['razao_social_fiscal', false],
+            'CLI_NFSe_CEP' => ['cep_fiscal', true],
+            'CLI_NFSe_Logradouro' => ['logradouro_fiscal', false],
+            'CLI_NFSe_Numero' => ['numero_fiscal', false],
+            'CLI_NFSe_Complemento' => ['complemento_fiscal', false],
+            'CLI_NFSe_Bairro' => ['bairro_fiscal', false],
+            'CLI_NFSe_Municipio' => ['municipio_fiscal', false],
+            'CLI_NFSe_UF' => ['uf_fiscal', false],
+            'CLI_NFSe_CodigoIBGE' => ['codigo_ibge_fiscal', true],
+            'CLI_NFSe_Telefone' => ['telefone_fiscal', true],
+            'CLI_NFSe_Email' => ['email_fiscal', false]
+        ];
+
+        $campos = [];
+
+        foreach($mapa as $coluna => [$chave, $numerico]){
+            if(!$this->colunaExiste('clientes', $coluna) || !array_key_exists($chave, $dados)){
+                continue;
+            }
+
+            $valor = (string) ($dados[$chave] ?? '');
+            $campos[$coluna] = $numerico
+                ? preg_replace('/\D/', '', $valor)
+                : trim($valor);
+        }
+
+        if(isset($campos['CLI_NFSe_UF'])){
+            $campos['CLI_NFSe_UF'] = strtoupper(substr($campos['CLI_NFSe_UF'], 0, 2));
+        }
+
+        return $campos;
+    }
+
+    private function atualizarCamposFiscaisNfse($id, array $dados)
+    {
+        $campos = $this->camposFiscaisNfse($dados);
+
+        if(empty($campos)){
+            return true;
+        }
+
+        $sets = [];
+        $params = [':id' => $id];
+
+        foreach($campos as $coluna => $valor){
+            $param = ':' . strtolower($coluna);
+            $sets[] = $coluna . ' = ' . $param;
+            $params[$param] = $valor !== '' ? $valor : null;
+        }
+
+        $sql = $this->db->prepare("\n            UPDATE clientes\n            SET " . implode(', ', $sets) . "\n            WHERE CLI_ID = :id\n        ");
+
+        return $sql->execute($params);
+    }
 
     public function iniciarTrialSePendente($id)
     {
