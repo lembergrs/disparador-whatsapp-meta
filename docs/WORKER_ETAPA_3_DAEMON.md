@@ -192,16 +192,19 @@ Configurações recomendadas para Etapa 3:
 
 ```php
 WORKER_DAEMON_ENABLED=true
-WORKER_DAEMON_IDLE_SECONDS=5
-WORKER_DAEMON_IDLE_MAX_SECONDS=60
-WORKER_DAEMON_BUSY_SLEEP_SECONDS=1
-WORKER_DAEMON_MAX_RUNTIME_SECONDS=3600
-WORKER_DAEMON_MAX_CYCLES=1000
-WORKER_DAEMON_MEMORY_LIMIT_MB=256
-WORKER_DAEMON_STOP_TIMEOUT_SECONDS=30
+WORKER_IDLE_SLEEP_SECONDS=5
+WORKER_IDLE_MAX_SLEEP_SECONDS=60
+WORKER_BUSY_SLEEP_SECONDS=1
+WORKER_LOCK_BUSY_SLEEP_SECONDS=10
+WORKER_ERROR_SLEEP_SECONDS=10
+WORKER_ERROR_MAX_SLEEP_SECONDS=60
+WORKER_MAX_RUNTIME_SECONDS=3600
+WORKER_MAX_CYCLES=1000
+WORKER_MAX_MEMORY_MB=256
+WORKER_SHUTDOWN_TIMEOUT_SECONDS=30
 ```
 
-A recomendação é adicionar essas constantes em etapa futura, mantendo valores padrão no runner para compatibilidade.
+Os números acima são valores iniciais sugeridos de configuração, não valores hardcoded. A implementação futura deve sempre ler constantes/env vars com defaults seguros e deve permitir ajuste operacional sem editar o algoritmo do loop.
 
 ### 2.5 Aquisição de lock
 
@@ -376,21 +379,22 @@ Usar sleep adaptativo por existência de trabalho:
 
 ```text
 se ciclo enviou/reservou/recuperou itens:
-    sleep = WORKER_DAEMON_BUSY_SLEEP_SECONDS (ex.: 1s)
+    sleep = WORKER_BUSY_SLEEP_SECONDS
 se ciclo não fez trabalho:
-    sleep = min(sleep_atual * 2, WORKER_DAEMON_IDLE_MAX_SECONDS)
+    sleep = min(sleep_atual * 2, WORKER_IDLE_MAX_SLEEP_SECONDS)
 se ciclo teve lock ocupado:
-    sleep = WORKER_DAEMON_IDLE_SECONDS ou 10s
+    sleep = WORKER_LOCK_BUSY_SLEEP_SECONDS
 se ciclo teve exceção:
     sleep = min(erro_count * base, max_erro_sleep)
 ```
 
-Valores iniciais recomendados:
+Valores iniciais devem vir de configuração, por exemplo:
 
-- ocupado/com trabalho: 1 segundo;
-- idle inicial: 5 segundos;
-- idle máximo: 60 segundos;
-- erro: 10 a 60 segundos conforme repetição.
+- ocupado/com trabalho: `WORKER_BUSY_SLEEP_SECONDS`;
+- idle inicial: `WORKER_IDLE_SLEEP_SECONDS`;
+- idle máximo: `WORKER_IDLE_MAX_SLEEP_SECONDS`;
+- lock ocupado: `WORKER_LOCK_BUSY_SLEEP_SECONDS`;
+- erro: `WORKER_ERROR_SLEEP_SECONDS` até `WORKER_ERROR_MAX_SLEEP_SECONDS`.
 
 ### 4.3 Idle interrompível
 
@@ -450,11 +454,52 @@ No systemd, configurar `TimeoutStopSec=45` inicialmente. O daemon deve tentar pa
 
 ---
 
-## 6. Reinicialização planejada
+## 6. Exceções fatais
+
+A política recomendada para exceções fatais é encerrar o processo e deixar o systemd reiniciar. O daemon não deve tentar continuar indefinidamente após falhas inesperadas fora do controle normal do ciclo, pois isso pode manter estado interno corrompido, conexão instável ou caches inconsistentes.
+
+Fluxo esperado:
+
+```text
+Exception fatal/inesperada
+        |
+        v
+Registrar log critical sanitizado
+        |
+        v
+Solicitar parada do loop
+        |
+        v
+Liberar recursos locais
+        |
+        v
+Garantir RELEASE_LOCK/fechamento da sessão
+        |
+        v
+Encerrar processo com exit code de falha
+        |
+        v
+systemd reinicia conforme Restart=always/on-failure
+```
+
+Diretrizes:
+
+- exceções internas de um item/campanha continuam sendo tratadas pelos services existentes quando forem recuperáveis;
+- exceções fatais no runner, bootstrap, conexão principal ou logger devem encerrar o daemon;
+- antes de encerrar, registrar `worker_id`, `cycle`, etapa, mensagem sanitizada e memória;
+- não iniciar novo ciclo depois de uma exceção fatal;
+- não manter `GET_LOCK()` após falha fatal;
+- preferir processo novo via systemd a tentar reconstruir manualmente todo o estado em memória.
+
+Essa decisão é mais simples e segura para PHP long-running: falhas recuperáveis permanecem dentro do ciclo; falhas inesperadas reiniciam o processo com ambiente limpo.
+
+---
+
+## 7. Reinicialização planejada
 
 Processos PHP long-running podem acumular memória por caches, bibliotecas ou leaks não óbvios. A Etapa 3 deve aceitar reinício periódico como mecanismo simples de higiene operacional.
 
-### 6.1 Critérios recomendados
+### 7.1 Critérios recomendados
 
 Encerrar voluntariamente com exit code 0 quando qualquer condição ocorrer:
 
@@ -464,7 +509,7 @@ Encerrar voluntariamente com exit code 0 quando qualquer condição ocorrer:
 - `SIGHUP` recebido;
 - configuração crítica inválida detectada no início.
 
-### 6.2 systemd como responsável pelo restart
+### 7.2 systemd como responsável pelo restart
 
 O daemon não deve reiniciar a si mesmo com `exec()` na primeira versão. Deve sair de forma limpa e deixar o systemd reiniciar com `Restart=always` ou `Restart=on-failure`, conforme decisão operacional.
 
@@ -472,9 +517,9 @@ Recomendação: `Restart=always`, porque saídas voluntárias por limite de cicl
 
 ---
 
-## 7. Logs
+## 8. Logs
 
-### 7.1 Estrutura recomendada
+### 8.1 Estrutura recomendada
 
 Usar JSON Lines, uma linha por evento:
 
@@ -495,7 +540,15 @@ Campos base:
 - `lock_status`;
 - `summary` sanitizado.
 
-### 7.2 Níveis
+Heartbeat periódico recomendado:
+
+```json
+{"ts":"2026-07-15T12:00:30-03:00","level":"info","event":"worker.heartbeat","worker_id":"srv-123-a1b2c3","cycle":42,"uptime_seconds":1800,"memory_mb":96,"last_cycle_duration_ms":381}
+```
+
+O heartbeat deve ser emitido por tempo configurável, por exemplo `WORKER_HEARTBEAT_SECONDS`, sem depender de valor hardcoded.
+
+### 8.2 Níveis
 
 - `debug`: decisões de sleep, contadores detalhados; desabilitado em produção por padrão.
 - `info`: start, stop, ciclo concluído, lock adquirido.
@@ -503,7 +556,7 @@ Campos base:
 - `error`: exceção recuperável, falha de banco, falha de Meta recorrente.
 - `critical`: falha pós-envio sem persistência, perda inesperada de lock, erro fatal.
 
-### 7.3 Sanitização
+### 8.3 Sanitização
 
 Nunca logar:
 
@@ -515,7 +568,7 @@ Nunca logar:
 
 Manter a sanitização textual atual e evoluir para sanitização por chaves quando possível.
 
-### 7.4 Rotação
+### 8.4 Rotação
 
 Duas opções compatíveis:
 
@@ -539,9 +592,9 @@ Exemplo de `logrotate`:
 
 ---
 
-## 8. systemd
+## 9. systemd
 
-### 8.1 Unidade recomendada
+### 9.1 Unidade recomendada
 
 ```ini
 [Unit]
@@ -568,7 +621,7 @@ StandardError=journal
 WantedBy=multi-user.target
 ```
 
-### 8.2 Justificativa das opções
+### 9.2 Justificativa das opções
 
 - `Type=simple`: PHP roda em foreground; não há fork.
 - `WorkingDirectory`: garante paths relativos corretos.
@@ -582,7 +635,7 @@ WantedBy=multi-user.target
 - `RestartPreventExitStatus=64`: reservado para erro de configuração permanente, se implementado.
 - `WantedBy=multi-user.target`: inicia no boot normal.
 
-### 8.3 Alternativas descartadas
+### 9.3 Alternativas descartadas
 
 - `cron * * * * php worker.php`: simples, mas perde estado contínuo e dificulta shutdown/observabilidade.
 - Supervisor: válido, mas systemd já está disponível na VPS e reduz dependências.
@@ -590,9 +643,9 @@ WantedBy=multi-user.target
 
 ---
 
-## 9. Observabilidade
+## 10. Observabilidade
 
-### 9.1 Métricas mínimas
+### 10.1 Métricas mínimas
 
 Por ciclo:
 
@@ -615,22 +668,24 @@ Por processo:
 - último motivo de shutdown;
 - maior memória observada.
 
-### 9.2 Formas simples de exposição
+### 10.2 Formas simples de exposição
 
 Etapa 3 inicial:
 
 - logs JSON;
 - `journalctl -u disparador-worker -f`;
 - comando de status via `systemctl status`;
-- arquivo opcional `storage/worker-state.json` com último ciclo, escrito atomicamente.
+- heartbeat periódico em logs estruturados.
+
+Não recomendar `worker-state.json` nesta etapa. A observabilidade inicial deve ficar em logs estruturados, `journalctl`, `systemctl status` e métricas futuras. Se persistência de estado for necessária, registrar como possibilidade de etapa posterior, sem implementação agora.
 
 Não recomendar Prometheus, Redis ou filas externas nesta etapa por simplicidade e restrições do projeto.
 
 ---
 
-## 10. Lock
+## 11. Lock
 
-### 10.1 GET_LOCK()
+### 11.1 GET_LOCK()
 
 Vantagens:
 
@@ -645,7 +700,7 @@ Desvantagens:
 - se a conexão cair, o lock é liberado;
 - exige cuidado para adquirir e liberar na mesma sessão.
 
-### 10.2 flock()
+### 11.2 flock()
 
 Vantagens:
 
@@ -659,7 +714,7 @@ Desvantagens:
 - lock stale precisa de cuidado;
 - não substitui lock compartilhado.
 
-### 10.3 Uso conjunto recomendado
+### 11.3 Uso conjunto recomendado
 
 Manter ambos:
 
@@ -671,17 +726,17 @@ GET_LOCK por ciclo no WorkerService
 
 O `flock` evita dois processos do mesmo diretório. O `GET_LOCK()` protege a seção crítica global. O daemon não deve segurar `GET_LOCK()` durante o idle.
 
-### 10.4 Perda do lock
+### 11.4 Perda do lock
 
 Se MariaDB cair durante o ciclo, a operação atual deve gerar exceção e o ciclo deve terminar com erro. Na próxima iteração, a recuperação de travados e retry/backoff devem tratar itens deixados em estado intermediário.
 
 ---
 
-## 11. Escalabilidade futura
+## 12. Escalabilidade futura
 
 A Etapa 3 deve operar com **um Worker daemon em produção**. Mesmo assim, o desenho deve não bloquear evoluções futuras.
 
-### 11.1 Múltiplos workers
+### 12.1 Múltiplos workers
 
 Não recomendado inicialmente. Para múltiplos workers seriam necessários:
 
@@ -691,7 +746,7 @@ Não recomendado inicialmente. Para múltiplos workers seriam necessários:
 - maior idempotência;
 - observabilidade por worker.
 
-### 11.2 Filas por cliente
+### 12.2 Filas por cliente
 
 Vantagens:
 
@@ -706,7 +761,7 @@ Desvantagens:
 
 Melhor para etapa futura, após daemon único estabilizado.
 
-### 11.3 Filas por conta Meta
+### 12.3 Filas por conta Meta
 
 Vantagens:
 
@@ -722,7 +777,7 @@ Também deve ficar para etapa posterior.
 
 ---
 
-## 12. Compatibilidade com services atuais
+## 13. Compatibilidade com services atuais
 
 A Etapa 3 deve manter as interfaces públicas:
 
@@ -737,7 +792,7 @@ O daemon deve depender apenas de `WorkerService::executarCiclo()` e do resumo re
 
 ---
 
-## 13. Plano de implementação da Etapa 3
+## 14. Plano de implementação da Etapa 3
 
 ### Entrega 1 — Documento e checklist operacional
 
@@ -767,11 +822,12 @@ Baixo risco, reversível, sem runtime.
 - Execução do runner.
 - Exit codes documentados.
 
-### Entrega 5 — Logs e state file
+### Entrega 5 — Logs estruturados e heartbeat
 
 - JSON Lines por ciclo.
-- `storage/worker-state.json` opcional com escrita atômica.
+- Heartbeat periódico em log, com `worker_id`, `cycle`, uptime e memória.
 - Sanitização igual ou superior à atual.
+- Não implementar `worker-state.json` nesta etapa; persistência de estado pode ser avaliada em etapa posterior.
 
 ### Entrega 6 — systemd em staging/VPS
 
@@ -796,35 +852,35 @@ Baixo risco, reversível, sem runtime.
 
 ---
 
-## 14. Recuperação automática
+## 15. Recuperação automática
 
-### 14.1 Queda do PHP/Worker
+### 15.1 Queda do PHP/Worker
 
 systemd reinicia. Itens em `processando` sem `MessageId` são recuperados pela Etapa 2 após timeout. Itens com `MessageId` ficam para reconciliação.
 
-### 14.2 Queda do MariaDB
+### 15.2 Queda do MariaDB
 
 O ciclo deve falhar, registrar erro e dormir com backoff de erro. systemd não precisa reiniciar imediatamente se a exceção for capturada; se o processo morrer, reinicia.
 
-### 14.3 Queda da Meta
+### 15.3 Queda da Meta
 
 `WorkerRetryPolicyService` classifica falhas temporárias; itens voltam a `pendente` com próxima tentativa. O daemon deve continuar vivo, aumentando idle de erro se muitos ciclos falharem.
 
-### 14.4 Reinício do servidor
+### 15.4 Reinício do servidor
 
 systemd inicia no boot. O primeiro ciclo recupera itens travados após timeout e processa pendentes elegíveis.
 
-### 14.5 Perda do GET_LOCK()
+### 15.5 Perda do GET_LOCK()
 
 Se a conexão cair, o lock é perdido. A falha deve aparecer como exceção de banco. A mitigação é não manter transação aberta durante HTTP e confiar nas reservas por item/recuperação de timeout.
 
-### 14.6 Exceções inesperadas
+### 15.6 Exceções inesperadas
 
 `WorkerService` já captura exceções por etapa. O daemon deve capturar exceções fora do ciclo, registrar `critical`, dormir curto ou sair para restart se repetirem muitas vezes.
 
 ---
 
-## 15. Riscos e mitigações
+## 16. Riscos e mitigações
 
 | Risco | Tipo | Impacto | Mitigação |
 |---|---|---|---|
@@ -843,9 +899,9 @@ Se a conexão cair, o lock é perdido. A falha deve aparecer como exceção de b
 
 ---
 
-## 16. Justificativa das decisões arquiteturais
+## 17. Justificativa das decisões arquiteturais
 
-### 16.1 Manter `WorkerService` como ciclo único
+### 17.1 Manter `WorkerService` como ciclo único
 
 Alternativas:
 
@@ -879,7 +935,7 @@ Impacto:
 
 Outra alternativa seria melhor se o projeto fosse descartável ou se não houvesse necessidade de manter execução one-shot.
 
-### 16.2 Usar systemd
+### 17.2 Usar systemd
 
 Alternativas:
 
@@ -908,7 +964,7 @@ Rejeição:
 - container é overengineering;
 - cron não é daemon real.
 
-### 16.3 Sleep adaptativo
+### 17.3 Sleep adaptativo
 
 Alternativas:
 
@@ -931,7 +987,7 @@ Desvantagens:
 
 Outra alternativa seria melhor se houvesse SLA de latência subsegundo, o que não é o caso.
 
-### 16.4 Um daemon único na Etapa 3
+### 17.4 Um daemon único na Etapa 3
 
 Alternativas:
 
@@ -954,7 +1010,7 @@ Desvantagens:
 
 Outra alternativa será melhor quando houver volume suficiente para particionar por `MTA_ID` ou cliente.
 
-### 16.5 Não introduzir Redis/RabbitMQ/Kafka
+### 17.5 Não introduzir Redis/RabbitMQ/Kafka
 
 Alternativas:
 
@@ -979,7 +1035,7 @@ Broker seria melhor em arquitetura com múltiplos serviços, alto volume e equip
 
 ---
 
-## 17. Compatibilidade com o projeto
+## 18. Compatibilidade com o projeto
 
 As recomendações respeitam:
 
@@ -1007,7 +1063,7 @@ Não é recomendado nesta etapa:
 
 ---
 
-## 18. Simplicidade operacional
+## 19. Simplicidade operacional
 
 A arquitetura recomendada prioriza:
 
@@ -1023,7 +1079,7 @@ Essa abordagem é superior para o contexto atual porque reduz a quantidade de co
 
 ---
 
-## 19. Checklist de implementação futura
+## 20. Checklist de implementação futura
 
 Antes de implementar:
 
@@ -1047,7 +1103,7 @@ Antes de produção:
 
 ---
 
-## 20. Conclusão
+## 21. Conclusão
 
 A Etapa 3 deve ser implementada como uma camada contínua simples ao redor do ciclo já existente, não como reescrita do Worker. A decisão central é preservar `WorkerService::executarCiclo()` como unidade de trabalho e adicionar um `WorkerDaemonRunner` responsável por loop, sinais, idle, limites e integração com systemd.
 
