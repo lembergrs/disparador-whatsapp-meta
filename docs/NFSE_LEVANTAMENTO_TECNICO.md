@@ -59,7 +59,7 @@ Contrato real incorporado ao levantamento:
 - Endpoints existentes: `GeraDps.php`, `CancelaNfse.php`, `ConsultaDanfse.php`, `ConsultaDpsChave.php`, `ConsultaNfseChave.php`, `ConsultaNfseEventos.php`.
 - `ConsultaDanfse.php` retorna PDF binário em sucesso e JSON padronizado em erro.
 - `ConsultaNfseChave.php` retorna XML em sucesso e JSON padronizado em erro.
-- Endpoints que usam certificado recebem `cert` e `senhaCert` no JSON; esses campos são confidenciais e não podem ser persistidos em logs, histórico de requisição ou registros de NFS-e.
+- Todos os endpoints fiscais confirmados recebem `cert` e `senhaCert` no corpo JSON; esses campos são confidenciais e não podem ser persistidos em logs, histórico de requisição, registros de emissão ou tentativas.
 - Timeouts configurados na API: conexão 10 segundos e requisição 30 segundos.
 
 Pontos ainda pendentes não são o contrato de endpoints, mas decisões fiscais/operacionais do Disparador e possíveis evoluções da API, especialmente suporte a CPF do tomador, política de certificado e forma oficial de consulta/reconciliação por DPS/chave.
@@ -239,7 +239,7 @@ Implementação de unicidade recomendada:
 - `nfse_emissoes.NFE_COB_ID` com índice único para a regra principal “uma nota por cobrança”.
 - `nfse_emissoes.NFE_IdempotencyKey` com índice único para auditoria local; não enviar como idempotência remota sem contrato futuro explícito.
 
-Não há confirmação de idempotência nativa da API RL2 NFS-e. Portanto, a garantia primária deve ser local, por unicidade em `COB_ID`, `NFE_IdempotencyKey` e `numDPS`. O `numDPS` deve ser tratado como referência fiscal de reconciliação quando a consulta por chave DPS estiver disponível, mas não como prova isolada de idempotência remota.
+Não há confirmação de idempotência nativa da API RL2 NFS-e. Portanto, a garantia primária deve ser local, por unicidade em `COB_ID`, `NFE_IdempotencyKey` e `numDPS`. O `numDPS` é apenas o identificador sequencial/local enviado na emissão; o contrato adicional confirma que `ConsultaDpsChave.php` exige `chaveDps`, não `numDPS`. Assim, `numDPS` sozinho não permite consulta nem reconciliação remota segura.
 
 Geração recomendada de `numDPS`:
 
@@ -248,7 +248,7 @@ numDPS = ano(4) + COB_ID zero-padded + dígito/ambiente se necessário
 exemplo lógico: 2026 + COB_ID com 10 dígitos = 20260000012345
 ```
 
-Requisitos: ser determinístico por cobrança, único no banco, gerado antes da primeira tentativa, persistido em `NFE_NumDps`, nunca regenerado em retry e usado em `GeraDps.php` e `ConsultaDpsChave.php`.
+Requisitos: ser determinístico por cobrança, único no banco, gerado antes da primeira tentativa, persistido em `NFE_NumDps`, nunca regenerado em retry e usado somente como `dadosNota.numDPS` em `GeraDps.php`. Não usar `numDPS` como chave de consulta remota sem evolução explícita da API.
 
 ### 6.3 Concorrência
 
@@ -279,7 +279,7 @@ Cenário crítico: API emite a nota, mas o Disparador cai antes de persistir. Mi
 - salvar `NFE_RequestIdLocal` antes da chamada;
 - enviar idempotency key/referência externa, se contrato permitir;
 - em timeout ou queda, marcar `erro_temporario` com `NFE_ReconciliationRequired=1`;
-- Worker de reconciliação consulta API por idempotency key/referência externa/identificador retornado parcial, sem emitir novamente.
+- Worker de reconciliação consulta a API somente quando houver identificador consultável confirmado (`chaveDps`, `chaveAcesso`/`chaveNfse`/`idNota` ou outro retorno persistido); se não houver identificador consultável após timeout/perda de resposta, não reenviar `GeraDps.php` automaticamente e encaminhar para revisão administrativa.
 
 ## 7. Modelo de dados proposto, sem migration nesta tarefa
 
@@ -304,10 +304,13 @@ Cenário crítico: API emite a nota, mas o Disparador cai antes de persistir. Mi
 | `NFE_CodigoVerificacao` | VARCHAR(191) NULL | Código de verificação. |
 | `NFE_NumDps` | VARCHAR(100) NOT NULL UNIQUE | Número DPS enviado para `GeraDps.php`. |
 | `NFE_SerieDps` | VARCHAR(20) NULL | Série DPS fixa na API: `900`, persistida apenas para rastreabilidade se desejado. |
-| `NFE_RequestId` | VARCHAR(191) NULL | Último `requestId` retornado no JSON/header `X-Request-Id`. |
+| `NFE_RequestIdEmissao` | VARCHAR(191) NULL | `requestId`/`X-Request-Id` retornado por `GeraDps.php`. |
+| `NFE_RequestIdConsulta` | VARCHAR(191) NULL | Último `requestId`/`X-Request-Id` retornado por consultas PDF/XML/DPS/eventos. |
+| `NFE_RequestIdCancelamento` | VARCHAR(191) NULL | `requestId`/`X-Request-Id` retornado por `CancelaNfse.php`. |
 | `NFE_Operation` | VARCHAR(100) NULL | Última `operation` retornada pela API. |
-| `NFE_IdDps` | VARCHAR(191) NULL | `data.idDps` retornado pela emissão. |
-| `NFE_ChaveAcesso` | VARCHAR(191) NULL | `data.chaveAcesso` da NFS-e. |
+| `NFE_IdDps` | VARCHAR(191) NULL | `data.idDps` retornado pela emissão; não presumir equivalência com `chaveDps`. |
+| `NFE_ChaveDps` | VARCHAR(191) NULL | Chave DPS exigida por `ConsultaDpsChave.php`, se retornada/obtida. |
+| `NFE_ChaveAcesso` | VARCHAR(191) NULL | `data.chaveAcesso`/`chaveNfse`/`idNota` usada para consultar PDF, XML, eventos e cancelar. |
 | `NFE_RemoteId` | VARCHAR(191) NULL | ID remoto da API RL2, se houver além de `idDps`. |
 | `NFE_RemoteStatus` | VARCHAR(80) NULL | Status remoto bruto. |
 | `NFE_Competencia` | DATE NOT NULL | Competência do serviço. |
@@ -324,6 +327,8 @@ Cenário crítico: API emite a nota, mas o Disparador cai antes de persistir. Mi
 | `NFE_XmlGZipB64` | LONGTEXT NULL | `nfseXmlGZipB64` retornado, se estratégia armazenar bruto compactado. |
 | `NFE_XmlStoragePath` | TEXT NULL | Caminho local privado do XML oficial/descompactado. |
 | `NFE_PdfStoragePath` | TEXT NULL | Caminho local privado do PDF/DANFSE. |
+| `NFE_PdfSha256` | CHAR(64) NULL | Hash SHA-256 recomendado do PDF armazenado. |
+| `NFE_XmlSha256` | CHAR(64) NULL | Hash SHA-256 recomendado do XML armazenado. |
 | `NFE_PdfUrlRemota` | TEXT NULL | Link remoto se existir e for seguro. |
 | `NFE_XmlUrlRemota` | TEXT NULL | Link remoto se existir e for seguro. |
 
@@ -368,6 +373,7 @@ assinaturas.ASS_ID 1--N cobrancas
 - Autenticação dos endpoints fiscais: header `Authorization: Bearer <API_AUTH_TOKEN>`.
 - O endpoint raiz `/` é público apenas para health check.
 - Todos os endpoints fiscais ficam em `/acoes/*.php` e exigem Bearer token.
+- Todos os endpoints fiscais confirmados recebem `cert` e `senhaCert` no corpo; esses segredos não podem ser registrados em logs nem persistidos em registros de emissão/tentativa.
 - Métodos aceitos nos endpoints fiscais: `POST` e `OPTIONS`.
 - `OPTIONS` aceito retorna HTTP `204`.
 
@@ -419,11 +425,11 @@ O `requestId` também é retornado no header `X-Request-Id` e deve ser persistid
 | Endpoint | Método | Sucesso | Erro | Uso na integração | Observações de segurança |
 |---|---|---|---|---|---|
 | `/acoes/GeraDps.php` | POST | JSON padrão com `data` podendo conter `tipoAmbiente`, `versaoAplicativo`, `dataHoraProcessamento`, `idDps`, `chaveAcesso`, `nfseXmlGZipB64` | JSON padrão | Emissão da NFS-e a partir de pagamento confirmado | Recebe `cert` e `senhaCert`; nunca persistir esses campos. |
-| `/acoes/CancelaNfse.php` | POST | JSON padrão | JSON padrão | Cancelamento fiscal quando nota já emitida e operação aprovar cancelamento | Confirmar payload real de cancelamento antes da implementação. |
-| `/acoes/ConsultaDanfse.php` | POST | PDF binário | JSON padrão | Obter DANFSE/PDF após emissão ou sob demanda | Tratar `Content-Type`; não logar binário. |
-| `/acoes/ConsultaDpsChave.php` | POST | JSON padrão | JSON padrão | Reconciliação por chave/DPS após timeout ou estado incerto | Payload exato de consulta ainda deve ser confirmado no repo/API. |
-| `/acoes/ConsultaNfseChave.php` | POST | XML em sucesso | JSON padrão | Obter XML oficial por chave da NFS-e | Tratar sucesso como binário/texto XML, erro como JSON. |
-| `/acoes/ConsultaNfseEventos.php` | POST | JSON padrão | JSON padrão | Auditoria/reconciliação de eventos da NFS-e | Payload exato ainda deve ser confirmado. |
+| `/acoes/CancelaNfse.php` | POST | JSON padrão com `operation: nfse.cancelar` | JSON padrão | Cancelamento fiscal quando nota já emitida e operação aprovar cancelamento | Envia `cert`, `senhaCert`, `idNota`, `cnpjEmitente`, `codigoMotivo`, `motivo`; ação admin explícita. |
+| `/acoes/ConsultaDanfse.php` | POST | HTTP 200, `Content-Type: application/pdf`, header `X-Request-Id`, PDF binário, `Content-Disposition: inline` | JSON padrão | Obter DANFSE/PDF após emissão ou sob demanda | Envia `cert`, `senhaCert`, `idNota`; validar `Content-Type` e nunca tratar JSON de erro como PDF. |
+| `/acoes/ConsultaDpsChave.php` | POST | JSON padrão com `operation: nfse.consultarDpsChave` | JSON padrão | Consulta de DPS por `chaveDps` | Envia `cert`, `senhaCert`, `chaveDps`; não consulta por `numDPS`. |
+| `/acoes/ConsultaNfseChave.php` | POST | HTTP 200, `Content-Type: application/xml`, header `X-Request-Id`, XML textual | JSON padrão | Obter XML oficial por chave da NFS-e | Envia `cert`, `senhaCert` e `idNota` ou `chaveNfse`; validar XML e não logar conteúdo fiscal completo. |
+| `/acoes/ConsultaNfseEventos.php` | POST | JSON padrão com `operation: nfse.consultarEventos` | JSON padrão | Auditoria/reconciliação de eventos da NFS-e | Envia `cert`, `senhaCert`, `idNota` ou `chaveNfse`, `tipoEvento` padrão `101101`, `numeroSequencial` padrão `1`; não assumir que os padrões cobrem eventos futuros. |
 
 ### 8.3 Contrato real de emissão — `POST /acoes/GeraDps.php`
 
@@ -470,12 +476,22 @@ Configurações fiscais fixadas pela API: série DPS `900`, código de tributaç
 
 | Operação | Endpoint | Método | Payload | Response | Erro | Auth | Campo/referência de idempotência | Origem do dado no Disparador | Persistência necessária | Retry | Reconciliação |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Emitir DPS/NFS-e | `/acoes/GeraDps.php` | POST | `cert`, `senhaCert`, `dadosNota` | JSON com `requestId`, `operation`, `data.idDps`, `data.chaveAcesso`, `data.nfseXmlGZipB64` quando disponíveis | JSON padrão | Bearer | Local: `COB_ID`, `NFE_IdempotencyKey`, `numDPS`; API sem idempotência nativa confirmada | Cobrança paga, cliente PJ com CNPJ/endereço, configurações fiscais do prestador em ambiente seguro | requestId, operation, numDPS, idDps, chaveAcesso, XML gzip/base64 ou XML extraído, status, tentativas, erro | Sim para 502/500 limitado; 400/401 não automático | Em timeout/502 incerto consultar `ConsultaDpsChave.php` antes de nova emissão |
-| Cancelar NFS-e | `/acoes/CancelaNfse.php` | POST | Payload real pendente; deve referenciar nota/chave e motivo | JSON padrão | JSON padrão | Bearer | Cancelamento local por `NFE_ID` e chave de acesso | Estorno/cancelamento admin com motivo | requestId, operation, protocolo/dados retornados, status cancelamento | Sim para 502/conexão; 400 definitivo | Consultar eventos/nota após timeout |
-| Consultar DANFSE PDF | `/acoes/ConsultaDanfse.php` | POST | Payload real pendente; deve referenciar chave/nota | PDF binário | JSON padrão | Bearer | Não cria nota | `NFE_ChaveAcesso`/idDps | PDF em storage privado ou cache, requestId em erros | Retry simples para 502/500 | Reconsultar após emissão confirmada |
-| Consultar DPS por chave | `/acoes/ConsultaDpsChave.php` | POST | Payload real pendente; usar `numDPS`/chave quando confirmado | JSON padrão | JSON padrão | Bearer | `numDPS` como referência local | `NFE_NumDps` | requestId, operation, response sanitizada, status remoto | Sim | Principal após timeout de emissão |
-| Consultar NFS-e por chave/XML | `/acoes/ConsultaNfseChave.php` | POST | Payload real pendente; usar chave da NFS-e quando disponível | XML em sucesso | JSON padrão | Bearer | Chave de acesso | `NFE_ChaveAcesso` | XML oficial, data de consulta, erros | Retry simples | Recuperar XML ausente ou confirmar emissão |
-| Consultar eventos | `/acoes/ConsultaNfseEventos.php` | POST | Payload real pendente | JSON padrão | JSON padrão | Bearer | Chave/nota | `NFE_ChaveAcesso` | Eventos remotos sanitizados | Retry limitado | Auditoria/cancelamento/reconciliação |
+| Emitir DPS/NFS-e | `/acoes/GeraDps.php` | POST | `cert`, `senhaCert`, `dadosNota` | JSON com `requestId`, `operation`, `data.idDps`, `data.chaveAcesso`, `data.nfseXmlGZipB64` quando disponíveis | JSON padrão | Bearer | Local: `COB_ID`, `NFE_IdempotencyKey`, `numDPS`; API sem idempotência nativa confirmada | Cobrança paga, cliente PJ com CNPJ/endereço, configurações fiscais do prestador em ambiente seguro | `NFE_RequestIdEmissao`, operation, numDPS, idDps, chaveAcesso, XML gzip/base64 ou XML extraído, status, tentativas, erro | Sim para 502/500 limitado; 400/401 não automático | Em timeout/perda de resposta sem chave consultável, marcar `reconciliacao_pendente` e revisão admin; não reenviar cegamente |
+| Cancelar NFS-e | `/acoes/CancelaNfse.php` | POST | `cert`, `senhaCert`, `idNota`, `cnpjEmitente`, `codigoMotivo`, `motivo` | JSON padrão com `operation: nfse.cancelar` | JSON padrão | Bearer | Cancelamento local por `NFE_ID` e `NFE_ChaveAcesso`/idNota | Ação admin explícita com motivo fiscal | `NFE_RequestIdCancelamento`, operation, retorno sanitizado, status cancelamento | Sim para 502/conexão; 400 definitivo | Consultar eventos depois quando necessário |
+| Consultar DANFSE PDF | `/acoes/ConsultaDanfse.php` | POST | `cert`, `senhaCert`, `idNota` | PDF binário com `Content-Type: application/pdf` | JSON padrão em erro | Bearer | Não cria nota | `NFE_ChaveAcesso`/idNota, não `numDPS` | PDF em storage privado, hash, `NFE_RequestIdConsulta` em sucesso/erro | Retry simples para 502/500 | Reconsultar após emissão confirmada |
+| Consultar DPS por chave | `/acoes/ConsultaDpsChave.php` | POST | `cert`, `senhaCert`, `chaveDps` | JSON padrão com `operation: nfse.consultarDpsChave` | JSON padrão | Bearer | `chaveDps`; não aceita `numDPS` | `NFE_ChaveDps`, se existir | `NFE_RequestIdConsulta`, operation, response sanitizada, status remoto | Sim | Útil apenas quando `chaveDps` estiver disponível; não resolve timeout sem chave |
+| Consultar NFS-e por chave/XML | `/acoes/ConsultaNfseChave.php` | POST | `cert`, `senhaCert`, `idNota` ou `chaveNfse` | XML textual com `Content-Type: application/xml` | JSON padrão em erro | Bearer | Chave da NFS-e (`chaveAcesso`/`chaveNfse`/`idNota`) | `NFE_ChaveAcesso` | XML em storage privado, hash, `NFE_RequestIdConsulta` | Retry simples | Recuperar XML ausente ou confirmar emissão com chave |
+| Consultar eventos | `/acoes/ConsultaNfseEventos.php` | POST | `cert`, `senhaCert`, `idNota` ou `chaveNfse`, `tipoEvento` opcional padrão `101101`, `numeroSequencial` opcional padrão `1` | JSON padrão com `operation: nfse.consultarEventos` | JSON padrão | Bearer | Chave da NFS-e | `NFE_ChaveAcesso` | Eventos remotos sanitizados, `NFE_RequestIdConsulta` | Retry limitado | Auditoria/cancelamento/reconciliação após cancelamento ou dúvida operacional |
+
+### 8.5 Separação obrigatória de identificadores
+
+| Conceito | Origem | Uso permitido | Não presumir |
+|---|---|---|---|
+| `numDPS` | Gerado localmente e enviado em `dadosNota.numDPS` | Sequencial/local por cobrança, auditoria e prevenção local de duplicidade | Não consulta a API sozinho e não prova emissão remota. |
+| `idDps` | Retornado em `data.idDps` pela emissão, quando houver resposta | Persistência e possível correlação com DPS | Não presumir equivalência com `chaveDps`. |
+| `chaveDps` | Chave exigida por `ConsultaDpsChave.php` | Consulta de DPS por chave | Não derivar de `numDPS` ou `idDps` sem confirmação do contrato/código. |
+| `chaveAcesso`/`chaveNfse`/`idNota` | Chave da NFS-e retornada/armazenada | Consultar PDF, XML, eventos e cancelar | Não substituir por `numDPS`. |
+| `requestId` | JSON/header `X-Request-Id` por operação | Rastreabilidade com logs da API | Não há endpoint confirmado de reconciliação por `requestId`. |
 
 ## 9. Mapeamento de campos de `GeraDps.php` para o Disparador
 
@@ -559,7 +575,7 @@ Conclusão: a primeira versão implementável com o contrato atual deve atender 
 | Autenticação | HTTP 401 | `erro_definitivo_config` após uma confirmação curta | Não automático | Corrigir Bearer token/API_AUTH_TOKEN. |
 | Cancelamento fora de prazo | 4xx fiscal | `cancelamento_erro_definitivo` | Não | Tratar manualmente. |
 
-Política sugerida: 8 tentativas máximas para temporários, atrasos aproximados de 1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h, com jitter. Erros definitivos exigem ação admin e não devem consumir retry automático. Timeout em emissão é caso especial: marcar `reconciliacao_pendente`, consultar primeiro por `numDPS`/chave via endpoints de consulta disponíveis e só chamar `GeraDps.php` novamente se a consulta demonstrar com segurança que não houve emissão.
+Política sugerida: 8 tentativas máximas para temporários, atrasos aproximados de 1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h, com jitter. Erros definitivos exigem ação admin e não devem consumir retry automático. Timeout em emissão é caso especial: marcar `reconciliacao_pendente`, não reenviar automaticamente `GeraDps.php`, consultar somente se houver `chaveDps` ou `chaveAcesso`/`chaveNfse`/`idNota` disponível e encaminhar para revisão administrativa quando não houver identificador consultável. A API atual não oferece consulta direta por `numDPS` nem idempotência nativa confirmada.
 
 ## 12. Fila de emissão
 
@@ -633,7 +649,7 @@ Autorização:
 - downloads devem passar por controller autenticado, não por URL pública direta para arquivo privado;
 - registrar evento de download com usuário, IP e tipo de arquivo.
 
-Estratégia PDF/XML recomendada: híbrida. Persistir o XML retornado na emissão (`nfseXmlGZipB64` e/ou XML descompactado em storage privado) porque ele compõe o retorno fiscal e apoia reconciliação. Obter o PDF via `ConsultaDanfse.php` após emissão e armazenar em storage privado para disponibilidade ao cliente; se o download falhar, manter status `emitida_pdf_pendente`/pendência operacional e permitir nova consulta. XML por `ConsultaNfseChave.php` deve ser usado para recuperar/validar XML quando o XML da emissão estiver ausente ou divergente.
+Estratégia PDF/XML recomendada: híbrida e privada. Persistir o XML retornado na emissão (`nfseXmlGZipB64` e/ou XML descompactado) em storage fora do document root; quando necessário, chamar `ConsultaNfseChave.php` com `idNota` ou `chaveNfse`, validar `Content-Type: application/xml` e conteúdo textual XML, armazenar em storage privado e registrar hash, sem logar o XML fiscal completo. Obter o PDF via `ConsultaDanfse.php` com `idNota`/chave da NFS-e, validar `Content-Type: application/pdf`, nunca aceitar JSON de erro como PDF, armazenar fora do document root, persistir caminho interno e hash recomendado. Downloads devem ser sempre autenticados pelo Disparador, sem links previsíveis/públicos, e cliente limitado às notas do próprio `CLI_ID`.
 
 ## 15. Painel administrativo
 
@@ -676,8 +692,12 @@ Se a NFS-e já estiver emitida, não apagar nem alterar a nota local. Criar flux
 
 - status `cancelamento_pendente`;
 - motivo obrigatório: estorno/reembolso/cancelamento comercial;
-- Worker chama endpoint real de cancelamento;
-- se cancelada, persistir protocolo/status/data;
+- cancelamento deve ser ação administrativa explícita, nunca automático apenas porque houve estorno;
+- payload deve enviar `idNota`, `cnpjEmitente`, `codigoMotivo` e `motivo`, além de `cert` e `senhaCert`;
+- códigos de motivo documentados: `1` desenquadramento do Simples, `2` enquadramento no Simples, `3` inclusão retroativa de imunidade/isenção, `4` exclusão retroativa de imunidade/isenção, `5` rejeição pelo tomador/intermediário responsável, `9` outros;
+- não automatizar a escolha do motivo sem regra fiscal definida;
+- persistir `NFE_RequestIdCancelamento`, retorno sanitizado, status/data;
+- consultar eventos depois quando necessário, usando `tipoEvento` padrão `101101` e `numeroSequencial` padrão `1`, sem assumir que esses padrões cobrem eventos futuros;
 - se prazo fiscal expirou ou API rejeitou, status `cancelamento_erro_definitivo` e tratamento manual/contábil.
 
 ### 17.3 Cobrança cancelada manualmente
@@ -700,11 +720,11 @@ Casos principais:
 
 | Cenário | Tratamento |
 |---|---|
-| Timeout na emissão | Não emitir novamente imediatamente; marcar reconciliação e consultar API usando chave/remote id/reference. |
+| Timeout ou perda de resposta em `GeraDps.php` antes de persistir `idDps`/`chaveAcesso` | Risco alto: marcar `reconciliacao_pendente`, não reenviar automaticamente e encaminhar para revisão administrativa se não houver `chaveDps` ou chave da NFS-e consultável. |
 | Sucesso remoto + falha local | Reconciliação consulta e persiste nota existente. |
-| Nota emitida sem persistência de PDF/XML | Consultar detalhes e baixar PDF/XML novamente. |
+| Nota emitida sem persistência de PDF/XML | Consultar XML com `ConsultaNfseChave.php` e PDF com `ConsultaDanfse.php`, desde que exista `chaveAcesso`/`idNota`. |
 | Worker caiu em `processando` | Lock expira; próximo ciclo muda para reconciliação/consulta antes de nova emissão. |
-| API retorna “já emitida” | Consultar nota existente e associar à cobrança, se a chave conferir. |
+| API retorna “já emitida” | Consultar nota existente e associar à cobrança somente se houver chave/identificador confiável retornado pela API. |
 | Divergência cobrança paga sem NFS-e | Job de varredura lista cobranças `pago` sem `nfse_emissoes` e cria reserva idempotente. |
 
 Rotina recomendada no Worker:
@@ -786,7 +806,7 @@ Regra principal: **nunca manter transação de banco aberta durante chamada HTTP
 
 ## 24. Riscos
 
-- Payloads exatos de cancelamento, consultas de PDF/XML/eventos e consulta por DPS/chave ainda precisam ser confirmados antes da implementação desses fluxos.
+- Timeout ou perda de resposta durante `GeraDps.php` antes da persistência de `idDps`/`chaveAcesso` é risco alto, pois a API atual não oferece consulta direta por `numDPS` nem idempotência nativa confirmada.
 - Cadastro atual parece insuficiente para endereço fiscal completo.
 - Diferença entre valor cobrado e valor fiscal se houver juros/desconto/taxa no provedor.
 - Estornos após emissão exigem decisão fiscal/contábil, não apenas técnica.
@@ -804,18 +824,20 @@ Regra principal: **nunca manter transação de banco aberta durante chamada HTTP
 4. Criar/validar cadastro fiscal do tomador PJ: CNPJ, razão social, CEP, código IBGE, logradouro, número, bairro e complemento opcional.
 5. Fechar regra de `dataNota`/competência: data do pagamento, data de processamento ou período da assinatura.
 6. Fechar formato final de `numDPS`, tamanho aceito e índice único local.
-7. Definir armazenamento híbrido de XML/PDF em storage privado e política de retenção.
-8. Definir política para clientes PF enquanto a API exigir CNPJ: bloquear emissão automática, tratar manualmente ou exigir PJ.
-9. Definir texto fiscal de `descServico` por plano/ciclo e tratamento de descontos/juros.
-10. Definir política fiscal de cancelamento após estorno, incluindo prazo e aprovação administrativa.
+7. Confirmar se existe equivalência ou derivação confiável entre `idDps` e `chaveDps`; até lá, não presumir equivalência.
+8. Definir armazenamento híbrido de XML/PDF em storage privado e política de retenção.
+9. Definir política para clientes PF enquanto a API exigir CNPJ: bloquear emissão automática, tratar manualmente ou exigir PJ.
+10. Definir texto fiscal de `descServico` por plano/ciclo e tratamento de descontos/juros.
+11. Definir política fiscal de cancelamento após estorno, incluindo prazo e aprovação administrativa.
 
 ### 25.2 Possíveis evoluções da API RL2 NFS-e
 
 1. Suporte explícito a CPF do tomador, com contrato versionado e validação fiscal.
-2. Idempotência nativa documentada, por header ou campo, se a API vier a suportar.
-3. Documentação dos payloads de `CancelaNfse.php`, `ConsultaDanfse.php`, `ConsultaDpsChave.php`, `ConsultaNfseChave.php` e `ConsultaNfseEventos.php`.
-4. Endpoint/consulta explícita por `numDPS` com semântica garantida para reconciliação pós-timeout.
-5. Parametrização futura de código de tributação, série, retenção de ISSQN ou percentual do Simples se a operação fiscal exigir.
+2. Chave de idempotência servidor-servidor documentada, por header ou campo, se a API vier a suportar.
+3. Consulta por referência externa/`numDPS`, com semântica garantida para reconciliação pós-timeout.
+4. Persistência interna de solicitações na API para impedir duplicidade em reenvios.
+5. Endpoint de reconciliação por `requestId` ou chave idempotente.
+6. Parametrização futura de código de tributação, série, retenção de ISSQN ou percentual do Simples se a operação fiscal exigir.
 
 ## 26. Melhorias futuras
 
