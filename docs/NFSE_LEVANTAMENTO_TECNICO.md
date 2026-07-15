@@ -848,6 +848,136 @@ Regra principal: **nunca manter transação de banco aberta durante chamada HTTP
 - Parametrização de descrição/código fiscal por plano.
 - Relatório LGPD de acessos a PDF/XML.
 
+## 28. Implementação — Etapa 1
+
+Esta seção registra a fundação local implementada para preparar a futura emissão de NFS-e sem chamar a API RL2 NFS-e, sem alterar webhook Asaas, sem integrar WorkerService e sem emitir/consultar/cancelar notas nesta etapa.
+
+### 28.1 Migration criada
+
+Migration versionada: `database/migrations/20260715_create_nfse_foundation.sql`.
+
+Estruturas criadas/preparadas:
+
+- `nfse_emissoes`: tabela local de controle de emissão fiscal, idempotência, identificadores fiscais, status, caminhos privados de PDF/XML, tentativas e erros sanitizados.
+- `nfse_dps_sequencias`: tabela de sequência fiscal por prestador, ambiente e série, para reservar `numDPS` sem `SELECT MAX(...) + 1`.
+- Campos fiscais em `clientes` com prefixo `CLI_NFSe_`, mantendo campos atuais compatíveis e sem obrigar clientes PF/PJ incompletos a preencherem dados fiscais para uso normal do sistema.
+
+Rollback manual documentado na própria migration: remover `nfse_emissoes`, `nfse_dps_sequencias` e os campos `CLI_NFSe_*` adicionados em `clientes`, sempre após backup.
+
+### 28.2 Modelo final e índices únicos
+
+A tabela `nfse_emissoes` separa os conceitos documentados:
+
+- `NFE_NumDps`: identificador sequencial/local enviado em `GeraDps.php`.
+- `NFE_IdDps`: identificador retornado pela emissão, sem presumir equivalência com `chaveDps`.
+- `NFE_ChaveDps`: chave exigida por `ConsultaDpsChave.php`, quando disponível.
+- `NFE_ChaveAcesso`: chave da NFS-e usada como `idNota`/`chaveNfse` para PDF, XML, eventos e cancelamento.
+- `NFE_RequestIdEmissao`, `NFE_RequestIdConsulta`, `NFE_RequestIdCancelamento`: rastreabilidade por tipo de operação.
+
+Índices/restrições relevantes:
+
+- `uk_nfse_cobranca (COB_ID)`: impede duas NFS-e independentes para a mesma cobrança quando `COB_ID` está preenchido.
+- `uk_nfse_idempotency (NFE_IdempotencyKey)`: chave local estável baseada na cobrança.
+- `uk_nfse_numdps (NFE_NumDps)`: impede repetição local de DPS.
+- `uk_nfse_dps_contexto (NDS_PrestadorCnpj, NDS_Ambiente, NDS_Serie)`: separa sequência por prestador, ambiente e série.
+
+Status escolhido: `VARCHAR(40)`, seguindo a flexibilidade já usada em status do projeto e evitando migration complexa para cada novo estado operacional. Estados previstos: `pendente_dados`, `pendente`, `processando`, `reconciliacao_pendente`, `emitida`, `erro_temporario`, `erro_definitivo`, `cancelamento_pendente` e `cancelada`.
+
+### 28.3 Estratégia de idempotência local
+
+A idempotência local foi preparada em `Models\NfseEmissao`:
+
+- chave estável: `nfse:cobranca:{COB_ID}`;
+- criação/localização por cobrança em `criarOuBuscarPorCobranca`;
+- restrições únicas em banco para `COB_ID` e `NFE_IdempotencyKey`;
+- tratamento de corrida: se dois processos tentarem inserir a mesma cobrança, a restrição única preserva uma emissão e o método volta a buscar o registro existente.
+
+Esta etapa não declara nem usa idempotência remota da API.
+
+### 28.4 Estratégia de numDPS
+
+A reserva de `numDPS` foi preparada em `Services\NfseDpsSequenciaService` usando tabela própria `nfse_dps_sequencias`:
+
+- contexto por CNPJ do prestador, ambiente e série;
+- transação local;
+- `SELECT ... FOR UPDATE` para bloquear a linha da sequência;
+- incremento persistente `NDS_ProximoNumero = NDS_ProximoNumero + 1`;
+- série lida de `NFSE_DPS_SERIE`, com padrão `900`, sem espalhar valor hardcoded pela aplicação.
+
+`numDPS` continua sendo identificador local/sequencial e não é tratado como chave de reconciliação remota.
+
+### 28.5 Campos fiscais do cliente
+
+Foram preparados campos `CLI_NFSe_*` para cliente PJ, reaproveitando dados existentes como fallback quando adequado:
+
+- `CLI_NFSe_CNPJ`;
+- `CLI_NFSe_RazaoSocial`;
+- `CLI_NFSe_CEP`;
+- `CLI_NFSe_Logradouro`;
+- `CLI_NFSe_Numero`;
+- `CLI_NFSe_Complemento`;
+- `CLI_NFSe_Bairro`;
+- `CLI_NFSe_Municipio`;
+- `CLI_NFSe_UF`;
+- `CLI_NFSe_CodigoIBGE`;
+- `CLI_NFSe_Telefone`;
+- `CLI_NFSe_Email`.
+
+Clientes PF ou PJ incompletos permanecem aptos a usar o sistema, mas não aptos para emissão fiscal automática na primeira versão.
+
+### 28.6 Validação de aptidão fiscal
+
+`Services\NfseAptidaoFiscalService` valida localmente, sem rede:
+
+- cliente existente;
+- tipo PJ/CNPJ;
+- CNPJ válido;
+- razão social fiscal;
+- CEP;
+- logradouro;
+- número;
+- bairro;
+- código IBGE com 7 dígitos.
+
+O retorno é estruturado com `apto`, `tipo_bloqueio`, `campos_faltantes` e `mensagem`, sem expor segredos ou conteúdo fiscal sensível.
+
+### 28.7 Configuração segura
+
+`config/config.php` passou a referenciar variáveis de ambiente para a futura integração:
+
+- `NFSE_API_BASE_URL`;
+- `NFSE_API_AUTH_TOKEN`;
+- `NFSE_PRESTADOR_CNPJ`;
+- `NFSE_PRESTADOR_IM`;
+- `NFSE_PRESTADOR_OP_SIMPLES`;
+- `NFSE_LOCAL_EMISSAO_IBGE`;
+- `NFSE_DPS_SERIE`;
+- `NFSE_AMBIENTE`;
+- `NFSE_CERT_PATH`;
+- `NFSE_CERT_PASSWORD`;
+- `NFSE_CONNECT_TIMEOUT`;
+- `NFSE_REQUEST_TIMEOUT`.
+
+Nenhum valor secreto real foi incluído no código. O certificado deve permanecer em arquivo protegido fora do document root e poderá ser convertido para Base64 apenas em memória em etapa futura. `API_AUTH_TOKEN`, certificado PFX/Base64, senha do certificado e Authorization não são persistidos em banco.
+
+### 28.8 Storage privado
+
+`.gitignore` ignora `/storage/nfse/` para futuros XML/PDF fiscais. A estratégia permanece: arquivos fiscais fora do document root, download autenticado pelo Disparador e sem links públicos/previsíveis. Esta etapa não cria XML/PDF falso e não grava documento fiscal.
+
+### 28.9 Limitações da primeira versão
+
+- Não chama a API RL2 NFS-e.
+- Não emite NFS-e.
+- Não consulta PDF/XML/eventos.
+- Não cancela NFS-e.
+- Não integra webhook Asaas nem confirmação manual.
+- Não adiciona ciclo no WorkerService.
+- Não implementa retry operacional real.
+- Não cria interface administrativa completa nem download do cliente.
+- Não envia e-mail fiscal.
+- Não oferece suporte a CPF para emissão automática.
+- Não armazena certificado, Base64, senha ou token no banco.
+
 ## 27. Confirmações deste levantamento
 
 - Nenhum código PHP foi alterado.
