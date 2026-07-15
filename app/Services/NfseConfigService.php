@@ -9,6 +9,46 @@ class NfseConfigService
         return defined('NFSE_API_BASE_URL') ? rtrim((string) NFSE_API_BASE_URL, '/') : '';
     }
 
+    public static function authToken()
+    {
+        return defined('NFSE_API_AUTH_TOKEN') ? (string) NFSE_API_AUTH_TOKEN : '';
+    }
+
+    public static function certPath()
+    {
+        return defined('NFSE_CERT_PATH') ? (string) NFSE_CERT_PATH : '';
+    }
+
+    public static function certPassword()
+    {
+        return defined('NFSE_CERT_PASSWORD') ? (string) NFSE_CERT_PASSWORD : '';
+    }
+
+    public static function prestadorIm()
+    {
+        return defined('NFSE_PRESTADOR_IM') ? trim((string) NFSE_PRESTADOR_IM) : '';
+    }
+
+    public static function optSimplesNacional()
+    {
+        return defined('NFSE_PRESTADOR_OP_SIMPLES') ? (int) NFSE_PRESTADOR_OP_SIMPLES : 0;
+    }
+
+    public static function localEmissaoIbge()
+    {
+        return preg_replace('/\D/', '', (string) (defined('NFSE_LOCAL_EMISSAO_IBGE') ? NFSE_LOCAL_EMISSAO_IBGE : ''));
+    }
+
+    public static function connectTimeout()
+    {
+        return max(1, defined('NFSE_CONNECT_TIMEOUT') ? (int) NFSE_CONNECT_TIMEOUT : 10);
+    }
+
+    public static function requestTimeout()
+    {
+        return max(1, defined('NFSE_REQUEST_TIMEOUT') ? (int) NFSE_REQUEST_TIMEOUT : 30);
+    }
+
     public static function dpsSerie()
     {
         $serie = defined('NFSE_DPS_SERIE') ? preg_replace('/\D/', '', (string) NFSE_DPS_SERIE) : '900';

@@ -986,3 +986,28 @@ Nenhum valor secreto real foi incluído no código. O certificado deve permanece
 - Nenhum webhook foi alterado.
 - Nenhuma chamada real à API RL2 NFS-e foi implementada.
 - Único arquivo criado neste trabalho: `docs/NFSE_LEVANTAMENTO_TECNICO.md`.
+
+## 29. Implementação — Etapa 2
+
+A Etapa 2 implementa a comunicação HTTP real com a API RL2 NFS-e para emissão manual controlada por administrador, sem integração automática com pagamento, webhook Asaas, Worker, retry automático, download do cliente, e-mail, cancelamento automático ou suporte a CPF.
+
+Componentes criados:
+
+- `Services\NfseApiClient`: client HTTP cURL para os endpoints reais `/acoes/GeraDps.php`, `/acoes/ConsultaDanfse.php`, `/acoes/ConsultaNfseChave.php`, `/acoes/ConsultaDpsChave.php`, `/acoes/ConsultaNfseEventos.php` e `/acoes/CancelaNfse.php`.
+- `Services\NfsePayloadBuilder`: montagem do payload de emissão com `cert`, `senhaCert` e `dadosNota`, usando somente dados reais e configuração fiscal local.
+- `Services\NfseApiResponseMapper`: normalização de respostas JSON/PDF/XML e classificação de erros definitivos, temporários e incertos.
+- `Services\NfseEmissionService`: orquestração da emissão manual, com validação fiscal, reserva de `numDPS` somente quando apto, chamada HTTP fora de transação longa e persistência local do resultado.
+- `Services\NfseSanitizer`: sanitização centralizada de mensagens, arrays e logs.
+- `Controllers\NfseController` e `Views\nfse\index`: tela administrativa simples para listar emissões, iniciar emissão manual e consultar PDF por ação explícita.
+
+Decisões preservadas:
+
+- não presumir idempotência remota;
+- não usar `numDPS` como chave de reconciliação remota;
+- não reenviar automaticamente emissão incerta;
+- não reservar `numDPS` para cliente fiscalmente inapto;
+- manter `cert` e `senhaCert` somente em memória;
+- salvar XML/PDF somente em storage privado fora de `public/`;
+- nunca persistir token, certificado, senha, payload completo, XML integral em logs ou PDF em logs.
+
+Não foi criada migration complementar nesta etapa: o schema da fundação já contém os campos necessários para requestIds, identificadores fiscais, status, retorno sanitizado e paths/hashes privados de XML/PDF.

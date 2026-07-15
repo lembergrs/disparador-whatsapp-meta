@@ -181,6 +181,181 @@ class NfseEmissao
         return $sql->execute($params);
     }
 
+
+    public function buscarPorId($nfseId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
+        $sql->execute([(int) $nfseId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function listarAdmin($status = null, $limit = 100)
+    {
+        $limit = max(1, min(200, (int) $limit));
+        $params = [];
+        $where = '';
+
+        if($status !== null && $status !== ''){
+            $where = 'WHERE n.NFE_Status = :status';
+            $params[':status'] = $status;
+        }
+
+        $sql = $this->db->prepare("
+            SELECT n.*, c.CLI_Nome, c.CLI_Email, cb.COB_Valor, cb.COB_Status, cb.COB_DataVencimento, cb.COB_DataPagamento
+            FROM nfse_emissoes n
+            LEFT JOIN clientes c ON c.CLI_ID = n.CLI_ID
+            LEFT JOIN cobrancas cb ON cb.COB_ID = n.COB_ID
+            {$where}
+            ORDER BY n.NFE_ID DESC
+            LIMIT {$limit}
+        ");
+        $sql->execute($params);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function prepararProcessamento($nfseId, $statusAtualEsperado)
+    {
+        return $this->atualizarStatus($nfseId, self::STATUS_PROCESSANDO, [], $statusAtualEsperado);
+    }
+
+    public function persistirSucessoEmissao($nfseId, array $resultado)
+    {
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_Status = :status,
+                NFE_RequestIdEmissao = :request_id,
+                NFE_IdDps = :id_dps,
+                NFE_ChaveDps = :chave_dps,
+                NFE_ChaveAcesso = :chave_acesso,
+                NFE_DataEmissao = NOW(),
+                NFE_Tentativas = NFE_Tentativas + 1,
+                NFE_UltimoErroTipo = NULL,
+                NFE_UltimoErroCodigo = NULL,
+                NFE_UltimoErroMensagem = NULL,
+                NFE_RetornoSanitizado = :retorno,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+            AND NFE_Status = :status_atual
+        ");
+
+        return $sql->execute([
+            ':status' => self::STATUS_EMITIDA,
+            ':request_id' => $resultado['request_id'] ?? null,
+            ':id_dps' => $resultado['id_dps'] ?? null,
+            ':chave_dps' => $resultado['chave_dps'] ?? null,
+            ':chave_acesso' => $resultado['chave_acesso'] ?? null,
+            ':retorno' => json_encode($this->sanitizarArray($resultado['retorno_sanitizado'] ?? $resultado), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':id' => (int) $nfseId,
+            ':status_atual' => self::STATUS_PROCESSANDO
+        ]);
+    }
+
+    public function persistirErroEmissao($nfseId, array $resultado, $statusAtualEsperado = self::STATUS_PROCESSANDO)
+    {
+        $status = !empty($resultado['incerto'])
+            ? self::STATUS_RECONCILIACAO_PENDENTE
+            : (!empty($resultado['temporario']) ? self::STATUS_ERRO_TEMPORARIO : self::STATUS_ERRO_DEFINITIVO);
+
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_Status = :status,
+                NFE_RequestIdEmissao = COALESCE(:request_id, NFE_RequestIdEmissao),
+                NFE_Tentativas = NFE_Tentativas + 1,
+                NFE_UltimoErroTipo = :erro_tipo,
+                NFE_UltimoErroCodigo = :erro_codigo,
+                NFE_UltimoErroMensagem = :erro_mensagem,
+                NFE_RetornoSanitizado = :retorno,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+            AND NFE_Status = :status_atual
+        ");
+
+        return $sql->execute([
+            ':status' => $status,
+            ':request_id' => $resultado['request_id'] ?? null,
+            ':erro_tipo' => $resultado['tipo_erro'] ?? null,
+            ':erro_codigo' => $resultado['error_code'] ?? null,
+            ':erro_mensagem' => $this->sanitizarMensagem($resultado['error_message'] ?? null),
+            ':retorno' => json_encode($this->sanitizarArray($resultado['retorno_sanitizado'] ?? $resultado), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':id' => (int) $nfseId,
+            ':status_atual' => $statusAtualEsperado
+        ]);
+    }
+
+
+    public function registrarFalhaDocumento($nfseId, $tipo, $codigo, $mensagem)
+    {
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_UltimoErroTipo = :erro_tipo,
+                NFE_UltimoErroCodigo = :erro_codigo,
+                NFE_UltimoErroMensagem = :erro_mensagem,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+        ");
+
+        return $sql->execute([
+            ':erro_tipo' => $tipo,
+            ':erro_codigo' => $codigo,
+            ':erro_mensagem' => $this->sanitizarMensagem($mensagem),
+            ':id' => (int) $nfseId
+        ]);
+    }
+
+    public function persistirArquivoXml($nfseId, $pathRelativo, $hash)
+    {
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_XmlStoragePath = :path,
+                NFE_XmlSha256 = :hash,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+        ");
+
+        return $sql->execute([
+            ':path' => $this->normalizarPathRelativo($pathRelativo),
+            ':hash' => $hash,
+            ':id' => (int) $nfseId
+        ]);
+    }
+
+    public function persistirArquivoPdf($nfseId, $pathRelativo, $hash)
+    {
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_PdfStoragePath = :path,
+                NFE_PdfSha256 = :hash,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+        ");
+
+        return $sql->execute([
+            ':path' => $this->normalizarPathRelativo($pathRelativo),
+            ':hash' => $hash,
+            ':id' => (int) $nfseId
+        ]);
+    }
+
+    private function normalizarPathRelativo($path)
+    {
+        $path = str_replace('\\', '/', (string) $path);
+        $path = ltrim($path, '/');
+        if(strpos($path, '..') !== false){
+            throw new \InvalidArgumentException('Caminho de arquivo fiscal inválido.');
+        }
+        return $path;
+    }
+
+    private function sanitizarArray(array $dados)
+    {
+        if(class_exists('Services\\NfseSanitizer')){
+            return \Services\NfseSanitizer::dados($dados);
+        }
+        return $dados;
+    }
+
     public function sanitizarMensagem($mensagem)
     {
         if($mensagem === null){
