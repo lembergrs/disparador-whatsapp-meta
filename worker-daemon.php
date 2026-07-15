@@ -2,7 +2,8 @@
 
 if(PHP_SAPI !== 'cli'){
     http_response_code(403);
-    exit('Worker daemon disponível apenas via CLI.');
+    fwrite(STDERR, 'Worker daemon disponível apenas via CLI.' . PHP_EOL);
+    exit(2);
 }
 
 require __DIR__ . '/config/config.php';
