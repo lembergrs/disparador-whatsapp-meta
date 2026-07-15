@@ -13,6 +13,15 @@ function assertContains($haystack, $needle, $message)
     }
 }
 
+
+function assertNotContains($haystack, $needle, $message)
+{
+    if(strpos($haystack, $needle) !== false){
+        fwrite(STDERR, "Assertion failed: {$message}\nUnexpected: {$needle}\n");
+        exit(1);
+    }
+}
+
 function assertMatches($pattern, $subject, $message)
 {
     if(!preg_match($pattern, $subject)){
@@ -40,6 +49,8 @@ assertContains($campanha, "FIL_UltimoErroTipo = 'recuperado_timeout'", 'campaign
 assertContains($campanha, 'WorkerRetryPolicyService::ERRO_PERSISTENCIA_POS_ENVIO', 'campaign handles post-send persistence failure');
 assertContains($campanha, "FIL_MessageId = COALESCE(FIL_MessageId, ?)", 'campaign emergency update persists message id');
 assertMatches("/FIL_Status IN \('pendente','processando'\).*FIL_ProximaTentativa IS NOT NULL AND FIL_ProximaTentativa > NOW\(\)/s", $campanha, 'campaign finalization waits for pending processing or future retry');
+assertContains($campanha, "FIL_Status = 'enviado'", 'campaign success persists valid fila_envio status');
+assertNotContains($campanha, "FIL_Status = 'aguardando_confirmacao'", 'campaign queue does not persist invalid aguardando_confirmacao enum');
 assertContains($campanha, '$this->consumo->registrarMensagem', 'campaign consumption increments on success path');
 
 assertMatches("/DMI_Status = 'pendente'.*DMI_ProximaTentativa IS NULL OR i\.DMI_ProximaTentativa <= NOW\(\)/s", $manual, 'manual worker query only loads eligible pending items');

@@ -300,7 +300,7 @@ class CampanhaQueueService
         $this->db->prepare("
             UPDATE fila_envio
             SET
-                FIL_Status = 'aguardando_confirmacao',
+                FIL_Status = 'enviado',
                 FIL_DataEnvio = NOW(),
                 FIL_DataAtualizacao = NOW(),
                 FIL_WorkerId = NULL,
@@ -340,7 +340,7 @@ class CampanhaQueueService
             'tipo' => 'template',
             'texto' => $template['TMP_Nome'],
             'message_id' => $messageId,
-            'status' => 'aguardando_confirmacao',
+            'status' => 'enviado',
             'retorno' => $this->retornoSeguro($retorno),
             'data_mensagem' => date('Y-m-d H:i:s')
         ]);
