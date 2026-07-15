@@ -214,6 +214,18 @@ data-vencimento="<?= escClienteAttr($cliente['CLI_Vencimento']); ?>"
 data-status="<?= escClienteAttr($cliente['CLI_StatusPagamento']); ?>"
 
 data-observacoes="<?= escClienteAttr($cliente['CLI_Observacoes']); ?>"
+data-cnpj-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CNPJ'] ?? ''); ?>"
+data-razao-social-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_RazaoSocial'] ?? ''); ?>"
+data-cep-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CEP'] ?? ''); ?>"
+data-logradouro-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Logradouro'] ?? ''); ?>"
+data-numero-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Numero'] ?? ''); ?>"
+data-complemento-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Complemento'] ?? ''); ?>"
+data-bairro-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Bairro'] ?? ''); ?>"
+data-municipio-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Municipio'] ?? ''); ?>"
+data-uf-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_UF'] ?? ''); ?>"
+data-codigo-ibge-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CodigoIBGE'] ?? ''); ?>"
+data-telefone-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Telefone'] ?? ''); ?>"
+data-email-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Email'] ?? ''); ?>"
 >
 
 <i class="fas fa-edit"></i>
@@ -526,6 +538,37 @@ Pendente
 
 
 
+
+<div class="card card-outline card-secondary mt-3">
+
+<div class="card-header">
+<strong>Dados fiscais para NFS-e (PJ)</strong>
+</div>
+
+<div class="card-body">
+
+<div class="row">
+
+<div class="col-md-4"><div class="form-group"><label>CNPJ fiscal</label><input type="text" name="cnpj_fiscal" class="form-control" maxlength="18"></div></div>
+<div class="col-md-8"><div class="form-group"><label>Razão social fiscal</label><input type="text" name="razao_social_fiscal" class="form-control" maxlength="150"></div></div>
+<div class="col-md-3"><div class="form-group"><label>CEP fiscal</label><input type="text" name="cep_fiscal" class="form-control" maxlength="9"></div></div>
+<div class="col-md-7"><div class="form-group"><label>Logradouro fiscal</label><input type="text" name="logradouro_fiscal" class="form-control" maxlength="150"></div></div>
+<div class="col-md-2"><div class="form-group"><label>Número</label><input type="text" name="numero_fiscal" class="form-control" maxlength="20"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Complemento</label><input type="text" name="complemento_fiscal" class="form-control" maxlength="100"></div></div>
+<div class="col-md-4"><div class="form-group"><label>Bairro</label><input type="text" name="bairro_fiscal" class="form-control" maxlength="100"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Município</label><input type="text" name="municipio_fiscal" class="form-control" maxlength="100"></div></div>
+<div class="col-md-1"><div class="form-group"><label>UF</label><input type="text" name="uf_fiscal" class="form-control" maxlength="2"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Código IBGE</label><input type="text" name="codigo_ibge_fiscal" class="form-control" maxlength="7"></div></div>
+<div class="col-md-3"><div class="form-group"><label>Telefone fiscal</label><input type="text" name="telefone_fiscal" class="form-control" maxlength="20"></div></div>
+<div class="col-md-6"><div class="form-group"><label>E-mail fiscal</label><input type="email" name="email_fiscal" class="form-control" maxlength="150"></div></div>
+
+</div>
+
+<small class="text-muted">Clientes PF ou PJ com dados fiscais incompletos continuam usando o sistema, mas não ficam aptos para emissão fiscal automática.</small>
+
+</div>
+
+</div>
 
 <div class="row">
 
