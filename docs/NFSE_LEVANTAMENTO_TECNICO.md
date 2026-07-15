@@ -47,15 +47,22 @@ Pesquisas locais executadas com `rg` incluíram os termos solicitados: `pagament
 
 ### 1.2 RL2 NFS-e
 
-Tentativa de obtenção do repositório obrigatório:
+A primeira tentativa de leitura direta do repositório `lembergrs/rl2-nfse` falhou no workspace por restrição de rede/autorização (`CONNECT tunnel failed, response 403`). Para esta complementação, o contrato real informado pelo solicitante passa a ser a fonte obrigatória e suficiente para desenhar a integração sem inventar endpoints ou campos.
 
-```bash
-git clone https://github.com/lembergrs/rl2-nfse.git /workspace/rl2-nfse
-```
+Contrato real incorporado ao levantamento:
 
-Resultado: falha por restrição de rede/autorização do ambiente (`CONNECT tunnel failed, response 403`). Também foi feita busca web por `lembergrs/rl2-nfse`, sem retorno público confiável do repositório. Portanto, **o contrato real da API RL2 NFS-e não pôde ser verificado neste ambiente**. Este documento não inventa endpoints. Todas as seções de contrato da API estão marcadas como “pendente de leitura do repositório RL2 NFS-e” quando dependerem de rotas/payloads reais.
+- URL de produção: `https://api.disparador.net`.
+- Autenticação: `Authorization: Bearer <API_AUTH_TOKEN>`.
+- Health check público: `GET /`.
+- Endpoints fiscais protegidos por Bearer token em `/acoes/*.php`.
+- Métodos aceitos nos endpoints fiscais: `POST` e `OPTIONS`.
+- Endpoints existentes: `GeraDps.php`, `CancelaNfse.php`, `ConsultaDanfse.php`, `ConsultaDpsChave.php`, `ConsultaNfseChave.php`, `ConsultaNfseEventos.php`.
+- `ConsultaDanfse.php` retorna PDF binário em sucesso e JSON padronizado em erro.
+- `ConsultaNfseChave.php` retorna XML em sucesso e JSON padronizado em erro.
+- Endpoints que usam certificado recebem `cert` e `senhaCert` no JSON; esses campos são confidenciais e não podem ser persistidos em logs, histórico de requisição ou registros de NFS-e.
+- Timeouts configurados na API: conexão 10 segundos e requisição 30 segundos.
 
-Decisão de segurança documental: projetar a integração no Disparador até a fronteira `NfseClient`, mas bloquear implementação de chamadas HTTP até que o contrato real seja preenchido a partir de README/rotas/controllers/services/models/middleware/auth/config/OpenAPI/Swagger/Postman/Insomnia/testes/payloads/responses/pdf/xml/cancelamento/consulta do repositório `lembergrs/rl2-nfse`.
+Pontos ainda pendentes não são o contrato de endpoints, mas decisões fiscais/operacionais do Disparador e possíveis evoluções da API, especialmente suporte a CPF do tomador, política de certificado e forma oficial de consulta/reconciliação por DPS/chave.
 
 ## 2. Fluxo atual de cobrança
 
@@ -230,9 +237,18 @@ nfse:cobranca:{COB_ID}:pagamento:{COB_DataPagamento normalizada ou COB_ProviderP
 Implementação de unicidade recomendada:
 
 - `nfse_emissoes.NFE_COB_ID` com índice único para a regra principal “uma nota por cobrança”.
-- `nfse_emissoes.NFE_IdempotencyKey` com índice único para auditoria e eventual envio à API, se a API suportar idempotência.
+- `nfse_emissoes.NFE_IdempotencyKey` com índice único para auditoria local; não enviar como idempotência remota sem contrato futuro explícito.
 
-Se a API RL2 NFS-e oferecer header/campo de idempotência, usar exatamente `NFE_IdempotencyKey`. Se não oferecer, manter idempotência local e reconciliação por referência externa no payload, se o contrato real permitir.
+Não há confirmação de idempotência nativa da API RL2 NFS-e. Portanto, a garantia primária deve ser local, por unicidade em `COB_ID`, `NFE_IdempotencyKey` e `numDPS`. O `numDPS` deve ser tratado como referência fiscal de reconciliação quando a consulta por chave DPS estiver disponível, mas não como prova isolada de idempotência remota.
+
+Geração recomendada de `numDPS`:
+
+```text
+numDPS = ano(4) + COB_ID zero-padded + dígito/ambiente se necessário
+exemplo lógico: 2026 + COB_ID com 10 dígitos = 20260000012345
+```
+
+Requisitos: ser determinístico por cobrança, único no banco, gerado antes da primeira tentativa, persistido em `NFE_NumDps`, nunca regenerado em retry e usado em `GeraDps.php` e `ConsultaDpsChave.php`.
 
 ### 6.3 Concorrência
 
@@ -286,9 +302,13 @@ Cenário crítico: API emite a nota, mas o Disparador cai antes de persistir. Mi
 | `NFE_LockUntil` | DATETIME NULL | TTL do lock lógico. |
 | `NFE_Numero` | VARCHAR(100) NULL | Número da NFS-e. |
 | `NFE_CodigoVerificacao` | VARCHAR(191) NULL | Código de verificação. |
-| `NFE_RpsNumero` | VARCHAR(100) NULL | Se API usar RPS. |
-| `NFE_RpsSerie` | VARCHAR(50) NULL | Se API usar RPS. |
-| `NFE_RemoteId` | VARCHAR(191) NULL | ID remoto da API RL2. |
+| `NFE_NumDps` | VARCHAR(100) NOT NULL UNIQUE | Número DPS enviado para `GeraDps.php`. |
+| `NFE_SerieDps` | VARCHAR(20) NULL | Série DPS fixa na API: `900`, persistida apenas para rastreabilidade se desejado. |
+| `NFE_RequestId` | VARCHAR(191) NULL | Último `requestId` retornado no JSON/header `X-Request-Id`. |
+| `NFE_Operation` | VARCHAR(100) NULL | Última `operation` retornada pela API. |
+| `NFE_IdDps` | VARCHAR(191) NULL | `data.idDps` retornado pela emissão. |
+| `NFE_ChaveAcesso` | VARCHAR(191) NULL | `data.chaveAcesso` da NFS-e. |
+| `NFE_RemoteId` | VARCHAR(191) NULL | ID remoto da API RL2, se houver além de `idDps`. |
 | `NFE_RemoteStatus` | VARCHAR(80) NULL | Status remoto bruto. |
 | `NFE_Competencia` | DATE NOT NULL | Competência do serviço. |
 | `NFE_ValorServico` | DECIMAL(10,2) NOT NULL | Valor da cobrança. |
@@ -301,10 +321,12 @@ Cenário crítico: API emite a nota, mas o Disparador cai antes de persistir. Mi
 | `NFE_LastErrorCode` | VARCHAR(100) NULL | Código local/remoto. |
 | `NFE_LastErrorMessage` | TEXT NULL | Mensagem truncada e sanitizada. |
 | `NFE_LastHttpStatus` | INT NULL | HTTP da API. |
+| `NFE_XmlGZipB64` | LONGTEXT NULL | `nfseXmlGZipB64` retornado, se estratégia armazenar bruto compactado. |
+| `NFE_XmlStoragePath` | TEXT NULL | Caminho local privado do XML oficial/descompactado. |
+| `NFE_PdfStoragePath` | TEXT NULL | Caminho local privado do PDF/DANFSE. |
 | `NFE_PdfUrlRemota` | TEXT NULL | Link remoto se existir e for seguro. |
 | `NFE_XmlUrlRemota` | TEXT NULL | Link remoto se existir e for seguro. |
-| `NFE_PdfStoragePath` | TEXT NULL | Caminho local privado, se baixar arquivo. |
-| `NFE_XmlStoragePath` | TEXT NULL | Caminho local privado, se baixar arquivo. |
+
 | `NFE_DataEmissao` | DATETIME NULL | Data efetiva de emissão. |
 | `NFE_DataCancelamento` | DATETIME NULL | Data de cancelamento. |
 | `NFE_CancelamentoMotivo` | TEXT NULL | Motivo sanitizado. |
@@ -340,68 +362,185 @@ assinaturas.ASS_ID 1--N cobrancas
 
 ## 8. Contrato real da API RL2 NFS-e
 
-**Status:** pendente de acesso ao repositório `lembergrs/rl2-nfse`. Não foram encontrados README/rotas/controllers/services/models/middleware/auth/config/OpenAPI/Swagger/Postman/Insomnia/testes/payloads/responses verificáveis neste ambiente.
+### 8.1 Base, autenticação, métodos e envelopes
 
-### 8.1 Itens que devem ser preenchidos sem inventar
+- URL base de produção: `https://api.disparador.net`.
+- Autenticação dos endpoints fiscais: header `Authorization: Bearer <API_AUTH_TOKEN>`.
+- O endpoint raiz `/` é público apenas para health check.
+- Todos os endpoints fiscais ficam em `/acoes/*.php` e exigem Bearer token.
+- Métodos aceitos nos endpoints fiscais: `POST` e `OPTIONS`.
+- `OPTIONS` aceito retorna HTTP `204`.
 
-| Item | Valor atual no levantamento |
-|---|---|
-| URL base | Pendente de leitura do repositório RL2 NFS-e ou variável de produção já publicada. |
-| Autenticação | Pendente: confirmar se usa Bearer token, API key, Basic, header customizado ou outro. |
-| Headers obrigatórios | Pendente. |
-| Endpoint emissão | Pendente. |
-| Endpoint consulta | Pendente. |
-| Endpoint cancelamento | Pendente. |
-| Endpoint PDF | Pendente. |
-| Endpoint XML | Pendente. |
-| Timeouts recomendados pela API | Pendente. Se ausente no contrato, usar política local conservadora: connect 5s, total 30s, sem travar webhook. |
-| Status HTTP esperados | Pendente. |
-| Payload emissão | Pendente. |
-| Response emissão | Pendente. |
-| Erros estruturados | Pendente. |
-| Idempotência remota | Pendente: confirmar header/campo. |
+Códigos HTTP documentados:
 
-### 8.2 Regra para implementação futura
+| HTTP | Significado | Classificação local | Retry |
+|---:|---|---|---|
+| 200 | Sucesso | sucesso | Não aplicável. |
+| 204 | `OPTIONS` aceito | sucesso técnico | Não aplicável. |
+| 400 | JSON inválido, campo ausente, tipo inválido ou certificado inválido | normalmente definitivo ou erro de configuração/dados | Não automático; corrigir payload, cadastro ou certificado. |
+| 401 | token ausente/inválido ou token não configurado | configuração/autenticação | Retry muito limitado apenas se houver suspeita de rotação; exige ação operacional. |
+| 405 | método não permitido | erro de implementação | Não; corrigir cliente HTTP. |
+| 502 | falha do serviço externo da NFS-e Nacional | temporário | Sim, com backoff; se ocorreu durante emissão, reconciliar antes de nova emissão. |
+| 500 | erro interno inesperado | indeterminado | Retry limitado, com observabilidade e análise. |
+| Timeout/conexão | sem HTTP | temporário com risco de sucesso remoto | Não repetir cegamente; consultar por DPS/chave antes. |
 
-A implementação só deve avançar quando esta seção for substituída por dados reais extraídos do RL2 NFS-e. É proibido inferir endpoints por convenção como `/nfse/emitir`, `/pdf` ou `/xml` sem evidência do repositório/API.
+Envelope JSON padrão de sucesso:
 
-## 9. Matriz de integração
+```json
+{
+  "success": true,
+  "requestId": "identificador-unico",
+  "operation": "nomeDaOperacao",
+  "data": {},
+  "warnings": []
+}
+```
 
-Como o contrato real está pendente, a matriz abaixo define responsabilidades locais e campos a preencher após leitura da API.
+Envelope JSON padrão de erro:
 
-| Operação | Endpoint real | Método | Payload | Response | Erro | Auth | Idempotência | Origem no Disparador | Persistência | Retry | Reconciliação |
+```json
+{
+  "success": false,
+  "requestId": "identificador-unico",
+  "operation": "nomeDaOperacao",
+  "data": null,
+  "error": {
+    "code": "CODIGO_PADRONIZADO",
+    "message": "Mensagem segura",
+    "details": {}
+  }
+}
+```
+
+O `requestId` também é retornado no header `X-Request-Id` e deve ser persistido para rastreabilidade.
+
+### 8.2 Endpoints reais
+
+| Endpoint | Método | Sucesso | Erro | Uso na integração | Observações de segurança |
+|---|---|---|---|---|---|
+| `/acoes/GeraDps.php` | POST | JSON padrão com `data` podendo conter `tipoAmbiente`, `versaoAplicativo`, `dataHoraProcessamento`, `idDps`, `chaveAcesso`, `nfseXmlGZipB64` | JSON padrão | Emissão da NFS-e a partir de pagamento confirmado | Recebe `cert` e `senhaCert`; nunca persistir esses campos. |
+| `/acoes/CancelaNfse.php` | POST | JSON padrão | JSON padrão | Cancelamento fiscal quando nota já emitida e operação aprovar cancelamento | Confirmar payload real de cancelamento antes da implementação. |
+| `/acoes/ConsultaDanfse.php` | POST | PDF binário | JSON padrão | Obter DANFSE/PDF após emissão ou sob demanda | Tratar `Content-Type`; não logar binário. |
+| `/acoes/ConsultaDpsChave.php` | POST | JSON padrão | JSON padrão | Reconciliação por chave/DPS após timeout ou estado incerto | Payload exato de consulta ainda deve ser confirmado no repo/API. |
+| `/acoes/ConsultaNfseChave.php` | POST | XML em sucesso | JSON padrão | Obter XML oficial por chave da NFS-e | Tratar sucesso como binário/texto XML, erro como JSON. |
+| `/acoes/ConsultaNfseEventos.php` | POST | JSON padrão | JSON padrão | Auditoria/reconciliação de eventos da NFS-e | Payload exato ainda deve ser confirmado. |
+
+### 8.3 Contrato real de emissão — `POST /acoes/GeraDps.php`
+
+Payload confirmado:
+
+```json
+{
+  "cert": "PFX_BASE64",
+  "senhaCert": "SENHA",
+  "dadosNota": {
+    "numDPS": "string",
+    "dataNota": "AAAA-MM-DD",
+    "localEmissao": "codigo IBGE com 7 dígitos",
+    "prestador": {
+      "CNPJ": "string",
+      "IM": "string opcional",
+      "optSimplesNacional": "número"
+    },
+    "tomador": {
+      "CNPJ": "string",
+      "nome": "string",
+      "codMunicipio": "codigo IBGE",
+      "CEP": "string",
+      "logradouro": "string",
+      "numero": "string",
+      "bairro": "string",
+      "fone": "string opcional",
+      "email": "string opcional",
+      "complemento": "string opcional"
+    },
+    "descServico": "string",
+    "valorNota": "número"
+  }
+}
+```
+
+Campos obrigatórios confirmados: `dadosNota`, `dadosNota.prestador`, `dadosNota.tomador`, `dadosNota.numDPS`, `dadosNota.dataNota`, `dadosNota.localEmissao`, `dadosNota.prestador.CNPJ`, `dadosNota.prestador.optSimplesNacional`, `dadosNota.tomador.CNPJ`, `dadosNota.tomador.nome`, `dadosNota.tomador.codMunicipio`, `dadosNota.tomador.CEP`, `dadosNota.tomador.logradouro`, `dadosNota.tomador.numero`, `dadosNota.tomador.bairro`, `dadosNota.descServico`, `dadosNota.valorNota`.
+
+Campos opcionais confirmados: `dadosNota.prestador.IM`, `dadosNota.tomador.fone`, `dadosNota.tomador.email`, `dadosNota.tomador.complemento`.
+
+Configurações fiscais fixadas pela API: série DPS `900`, código de tributação nacional `170601`, tipo de emitente `prestador`, ISSQN como operação tributável, ISSQN não retido e percentual total aproximado do Simples `2`. Essas configurações não devem ser reenviadas pelo Disparador salvo se a API evoluir o contrato.
+
+### 8.4 Matriz completa de integração
+
+| Operação | Endpoint | Método | Payload | Response | Erro | Auth | Campo/referência de idempotência | Origem do dado no Disparador | Persistência necessária | Retry | Reconciliação |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Emitir NFS-e | Pendente RL2 | Pendente | Tomador + serviço + valor + competência + referência cobrança | Número, código, remote id, status, links/arquivos | Validação, conflito, 4xx/5xx/timeout | Pendente | `NFE_IdempotencyKey` se API suportar | `cobrancas`, `clientes`, `planos`, `assinaturas` | `nfse_emissoes`, `nfse_eventos` | Sim para temporários | Consulta por chave/reference/remote id |
-| Consultar NFS-e | Pendente RL2 | Pendente | ID remoto/chave/numero | Status, dados oficiais, links | 404, ainda processando, 5xx | Pendente | Não cria nota | `nfse_emissoes.NFE_RemoteId` ou chave | Atualiza status/resposta | Sim em timeout/5xx | Principal mecanismo pós-timeout |
-| Cancelar NFS-e | Pendente RL2 | Pendente | ID/numero + motivo | Status cancelada/protocolo | Prazo expirado, já cancelada, 5xx | Pendente | Chave de cancelamento opcional | Estorno/cancelamento admin | `cancelamento_pendente/cancelada` | Sim para temporários | Consulta posterior |
-| PDF | Pendente RL2 | Pendente | ID/numero | Binário ou URL | 404, não emitida, 5xx | Pendente | Não aplicável | Cliente/admin autenticado | Link/path/download auditado | Retry simples | Nova tentativa/consulta |
-| XML | Pendente RL2 | Pendente | ID/numero | Binário ou URL | 404, não emitida, 5xx | Pendente | Não aplicável | Cliente/admin autenticado | Link/path/download auditado | Retry simples | Nova tentativa/consulta |
+| Emitir DPS/NFS-e | `/acoes/GeraDps.php` | POST | `cert`, `senhaCert`, `dadosNota` | JSON com `requestId`, `operation`, `data.idDps`, `data.chaveAcesso`, `data.nfseXmlGZipB64` quando disponíveis | JSON padrão | Bearer | Local: `COB_ID`, `NFE_IdempotencyKey`, `numDPS`; API sem idempotência nativa confirmada | Cobrança paga, cliente PJ com CNPJ/endereço, configurações fiscais do prestador em ambiente seguro | requestId, operation, numDPS, idDps, chaveAcesso, XML gzip/base64 ou XML extraído, status, tentativas, erro | Sim para 502/500 limitado; 400/401 não automático | Em timeout/502 incerto consultar `ConsultaDpsChave.php` antes de nova emissão |
+| Cancelar NFS-e | `/acoes/CancelaNfse.php` | POST | Payload real pendente; deve referenciar nota/chave e motivo | JSON padrão | JSON padrão | Bearer | Cancelamento local por `NFE_ID` e chave de acesso | Estorno/cancelamento admin com motivo | requestId, operation, protocolo/dados retornados, status cancelamento | Sim para 502/conexão; 400 definitivo | Consultar eventos/nota após timeout |
+| Consultar DANFSE PDF | `/acoes/ConsultaDanfse.php` | POST | Payload real pendente; deve referenciar chave/nota | PDF binário | JSON padrão | Bearer | Não cria nota | `NFE_ChaveAcesso`/idDps | PDF em storage privado ou cache, requestId em erros | Retry simples para 502/500 | Reconsultar após emissão confirmada |
+| Consultar DPS por chave | `/acoes/ConsultaDpsChave.php` | POST | Payload real pendente; usar `numDPS`/chave quando confirmado | JSON padrão | JSON padrão | Bearer | `numDPS` como referência local | `NFE_NumDps` | requestId, operation, response sanitizada, status remoto | Sim | Principal após timeout de emissão |
+| Consultar NFS-e por chave/XML | `/acoes/ConsultaNfseChave.php` | POST | Payload real pendente; usar chave da NFS-e quando disponível | XML em sucesso | JSON padrão | Bearer | Chave de acesso | `NFE_ChaveAcesso` | XML oficial, data de consulta, erros | Retry simples | Recuperar XML ausente ou confirmar emissão |
+| Consultar eventos | `/acoes/ConsultaNfseEventos.php` | POST | Payload real pendente | JSON padrão | JSON padrão | Bearer | Chave/nota | `NFE_ChaveAcesso` | Eventos remotos sanitizados | Retry limitado | Auditoria/cancelamento/reconciliação |
+
+## 9. Mapeamento de campos de `GeraDps.php` para o Disparador
+
+| Campo API | Obrigatório | Origem definida no Disparador | Existe hoje? | Adequação necessária | Persistência/log |
+|---|---:|---|---:|---|---|
+| `cert` | Sim | Variável de ambiente/arquivo seguro operacional, por exemplo `NFSE_CERT_PFX_BASE64` ou path privado convertido em memória | Não | Definir operação segura de provisionamento | Nunca persistir em cobrança, histórico, payload salvo ou logs. |
+| `senhaCert` | Sim | Variável de ambiente secreta, por exemplo `NFSE_CERT_PASSWORD` | Não | Definir segredo no ambiente da VPS/systemd | Nunca persistir ou logar. |
+| `dadosNota.numDPS` | Sim | Gerado pelo Disparador a partir de `COB_ID` e ano/ambiente; persistido em `NFE_NumDps` | Não | Criar regra e índice único | Pode persistir; é referência fiscal. |
+| `dadosNota.dataNota` | Sim | Data de emissão pretendida, preferencialmente data do processamento fiscal ou `COB_DataPagamento` conforme decisão fiscal | Derivável | Fechar regra de competência/data | Persistir. |
+| `dadosNota.localEmissao` | Sim | Configuração do prestador no Disparador/env, código IBGE de 7 dígitos do município de emissão | Não | Definir `NFSE_LOCAL_EMISSAO_IBGE` | Persistir apenas valor não secreto se útil. |
+| `dadosNota.prestador.CNPJ` | Sim | Configuração fiscal do prestador (`NFSE_PRESTADOR_CNPJ`) | Não no fluxo financeiro | Definir fonte operacional | Não é secreto, mas evitar duplicar por cobrança. |
+| `dadosNota.prestador.IM` | Opcional | Configuração fiscal do prestador (`NFSE_PRESTADOR_IM`) | Não | Definir se aplicável | Não secreto. |
+| `dadosNota.prestador.optSimplesNacional` | Sim | Configuração fiscal do prestador (`NFSE_OPT_SIMPLES_NACIONAL`) | Não | Definir valor numérico aceito pela API/fiscal | Não secreto. |
+| `dadosNota.tomador.CNPJ` | Sim | `clientes.CLI_CPF_CNPJ`, somente quando cliente for PJ/CNPJ | Sim parcialmente | Primeira versão deve limitar emissão automática a PJ; CPF não é suportado no contrato informado | Persistir snapshot sanitizado. |
+| `dadosNota.tomador.nome` | Sim | `CLI_RazaoSocial` para PJ; fallback controlado para `CLI_Nome` se fiscalmente aceito | Sim | Exigir razão social para PJ | Persistir snapshot. |
+| `dadosNota.tomador.codMunicipio` | Sim | Novo campo fiscal de cliente/endereço, código IBGE | Não | Criar cadastro/validação antes da emissão | Persistir snapshot. |
+| `dadosNota.tomador.CEP` | Sim | Novo campo de endereço fiscal do cliente | Não | Criar campo | Persistir snapshot. |
+| `dadosNota.tomador.logradouro` | Sim | Novo campo de endereço fiscal do cliente | Não | Criar campo | Persistir snapshot. |
+| `dadosNota.tomador.numero` | Sim | Novo campo de endereço fiscal do cliente | Não | Criar campo; validar `S/N` somente se aceito operacionalmente | Persistir snapshot. |
+| `dadosNota.tomador.bairro` | Sim | Novo campo de endereço fiscal do cliente | Não | Criar campo | Persistir snapshot. |
+| `dadosNota.tomador.fone` | Não | `clientes.CLI_Telefone` | Sim | Normalizar dígitos | Persistir snapshot se enviado. |
+| `dadosNota.tomador.email` | Não | `clientes.CLI_Email` | Sim | Validar formato | Persistir snapshot se enviado. |
+| `dadosNota.tomador.complemento` | Não | Novo campo de endereço fiscal | Não | Criar campo opcional | Persistir snapshot se enviado. |
+| `dadosNota.descServico` | Sim | Descrição fiscal definida por plano/cobrança, por exemplo mensalidade do SaaS no ciclo contratado | Parcial | Padronizar texto fiscal aprovado | Persistir. |
+| `dadosNota.valorNota` | Sim | `cobrancas.COB_Valor` ou valor efetivamente pago se houver ajustes futuros | Sim | Definir regra para juros/desconto/estorno parcial | Persistir. |
+
+### 9.1 Emissão exige CNPJ do tomador
+
+O contrato informado de `GeraDps.php` exige `dadosNota.tomador.CNPJ`; não há campo de CPF no payload confirmado. Portanto, o Disparador não deve presumir suporte a CPF.
+
+Alternativas:
+
+| Alternativa | Vantagens | Desvantagens | Decisão recomendada |
+|---|---|---|---|
+| Primeira versão somente para clientes PJ com CNPJ | Usa contrato atual sem modificar API; menor risco fiscal/técnico | Clientes PF ficam com pendência/manual ou sem emissão automática | Recomendada para primeira implementação. |
+| Evoluir previamente a API RL2 NFS-e para aceitar CPF | Atende PF automaticamente | Exige alteração fora do escopo, validação fiscal e novo contrato | Registrar como evolução possível da API, não assumir agora. |
 
 ## 10. Campos exigidos pela API versus cadastro atual
 
-| Campo | Obrigatório provável | Existe hoje | Origem atual | Adequação necessária |
+| Campo | Obrigatório em `GeraDps.php` | Existe hoje | Origem atual | Adequação necessária |
 |---|---:|---:|---|---|
-| CPF | Sim para PF | Sim | `clientes.CLI_CPF_CNPJ` | Validar tamanho/dígitos e tipo pessoa. |
-| CNPJ | Sim para PJ | Sim | `clientes.CLI_CPF_CNPJ` | Validar tamanho/dígitos e tipo pessoa. |
-| Razão Social | Sim para PJ | Sim | `clientes.CLI_RazaoSocial` | Tornar obrigatório para PJ antes da emissão. |
-| Nome | Sim | Sim | `clientes.CLI_Nome` | Usar como nome PF ou fallback, sanitizado. |
-| Email | Provável | Sim | `clientes.CLI_Email` | Validar formato e obrigatoriedade conforme API. |
-| Telefone | Provável | Sim | `clientes.CLI_Telefone` | Normalizar DDD/número. |
-| CEP | Provável/municipal | Não identificado no modelo atual | Ausente no cadastro básico analisado | Criar campos de endereço antes de automatizar emissão. |
-| Cidade | Provável/municipal | Não identificado | Ausente | Criar campo ou tabela de endereço. |
-| UF | Provável/municipal | Não identificado | Ausente | Criar campo com validação UF. |
-| Endereço/logradouro | Provável/municipal | Não identificado | Ausente | Criar campo obrigatório fiscal. |
-| Número | Provável/municipal | Não identificado | Ausente | Criar campo obrigatório fiscal; suportar `S/N` se API aceitar. |
-| Complemento | Não obrigatório | Não identificado | Ausente | Campo opcional. |
-| Bairro | Provável/municipal | Não identificado | Ausente | Criar campo fiscal. |
-| Código IBGE cidade | Pode ser obrigatório | Não identificado | Ausente | Derivar por tabela/localidade ou exigir cadastro. Sem nova infra. |
-| Descrição do serviço | Sim | Parcial | Plano/cobrança | Definir texto fiscal padrão por plano/ciclo. |
-| Competência | Sim | Sim por derivação | `COB_DataPagamento` ou período da assinatura | Definir regra: competência = mês/ano do pagamento ou período cobrado. |
-| Valor | Sim | Sim | `cobrancas.COB_Valor` | Usar valor pago/cobrado; decidir descontos/juros se houver. |
-| Código de serviço | Sim | Não | Ausente | Decisão fiscal pendente, configurar em env/admin. |
-| Tributação/regime/ISS | Sim | Não | Ausente | Decisão fiscal pendente da RL2 Net/API. |
+| CNPJ do tomador | Sim | Parcial | `clientes.CLI_CPF_CNPJ` | Validar que é CNPJ e que `CLI_TipoPessoa` representa PJ. CPF não é suportado no contrato atual. |
+| Razão Social/Nome do tomador | Sim (`nome`) | Sim | `CLI_RazaoSocial`/`CLI_Nome` | Exigir razão social para PJ ou regra fiscal de fallback. |
+| Email | Opcional | Sim | `CLI_Email` | Validar formato; enviar se válido. |
+| Telefone | Opcional | Sim | `CLI_Telefone` | Normalizar dígitos; enviar se válido. |
+| CEP | Sim | Não identificado no cadastro atual | Ausente | Criar campo fiscal antes de emissão automática. |
+| Cidade/Código IBGE | Sim (`codMunicipio`) | Não identificado | Ausente | Criar campo de código IBGE de 7 dígitos ou cadastro de endereço com seleção municipal. |
+| UF | Não aparece diretamente no payload | Não identificado | Ausente | Pode ser necessário para UX/validação de município, mas não é enviado em `GeraDps.php`. |
+| Endereço/logradouro | Sim | Não identificado | Ausente | Criar campo fiscal. |
+| Número | Sim | Não identificado | Ausente | Criar campo fiscal obrigatório. |
+| Complemento | Opcional | Não identificado | Ausente | Criar campo opcional. |
+| Bairro | Sim | Não identificado | Ausente | Criar campo fiscal obrigatório. |
+| `numDPS` | Sim | Não | Novo controle NFS-e | Gerar de forma única/determinística por cobrança e persistir. |
+| `dataNota` | Sim | Derivável | `COB_DataPagamento`/data atual | Fechar regra fiscal. |
+| `localEmissao` | Sim | Não | Configuração fiscal do prestador | Definir código IBGE do município de emissão. |
+| CNPJ do prestador | Sim | Não no financeiro | Configuração fiscal segura | Definir em ambiente/configuração operacional. |
+| IM do prestador | Opcional | Não | Configuração fiscal segura | Definir se houver. |
+| Optante Simples | Sim | Não | Configuração fiscal segura | Definir valor numérico exigido. |
+| Descrição do serviço | Sim | Parcial | Plano/ciclo/cobrança | Padronizar `descServico` fiscal. |
+| Valor | Sim | Sim | `cobrancas.COB_Valor` | Definir tratamento de descontos/juros se surgirem. |
+| Código de serviço/tributação | Fixado na API | Não enviado | API fixa `170601` e demais regras | Sem campo no payload atual; pendência apenas se operação precisar parametrizar no futuro. |
+| Certificado PFX Base64 | Sim | Não | Segredo de ambiente/arquivo privado | Provisionar sem persistir por cobrança/log. |
+| Senha do certificado | Sim | Não | Segredo de ambiente/systemd | Provisionar sem persistir por cobrança/log. |
 
-Conclusão: o cadastro atual tem identificação e contato básicos, mas não contém endereço fiscal completo nem código IBGE/código de serviço/tributação. A primeira etapa funcional deve validar e bloquear emissão automática quando dados fiscais obrigatórios estiverem ausentes, exibindo pendência administrativa.
+Conclusão: a primeira versão implementável com o contrato atual deve atender somente clientes PJ com CNPJ e endereço fiscal completo. O cadastro atual contém identificação e contato básicos, mas faltam endereço fiscal, código IBGE do tomador, configurações do prestador, certificado, senha, município de emissão e controle de `numDPS`.
 
 ## 11. Classificação de erros e retry
 
@@ -412,15 +551,15 @@ Conclusão: o cadastro atual tem identificação e contato básicos, mas não co
 | Servidor API | HTTP 500/502/503/504 | `erro_temporario` | Sim | Retry e observabilidade. |
 | Processamento remoto assíncrono | response “processando” | `processando` ou `consulta_pendente` | Consulta posterior | Não emitir novamente. |
 | Validação | HTTP 400/422 campos inválidos | `erro_definitivo` | Não automático | Corrigir cadastro/payload e reprocessar manualmente. |
-| CPF inválido | validação local/remota | `erro_definitivo` | Não | Solicitar correção. |
+| Cliente PF/CPF no contrato atual | payload exige `tomador.CNPJ` e não há CPF confirmado | `erro_definitivo_dados` ou `nao_elegivel_automatico` | Não | Primeira versão somente PJ ou evolução prévia da API para CPF. |
 | CNPJ inválido | validação local/remota | `erro_definitivo` | Não | Solicitar correção. |
 | Dados incompletos | endereço/código serviço ausente | `erro_definitivo` | Não | Pendência administrativa/cadastral. |
 | Nota já emitida | conflito remoto/idempotência | `emitida` se identificável; senão `reconciliacao_pendente` | Consulta, não nova emissão | Persistir nota existente. |
 | Persistência local | erro SQL após response | `reconciliacao_pendente` se possível | Consulta posterior | Não repetir emissão antes de consultar. |
-| Autenticação | 401/403 | `erro_temporario` inicialmente, depois `erro_definitivo_config` | Poucas tentativas | Corrigir token/config. |
+| Autenticação | HTTP 401 | `erro_definitivo_config` após uma confirmação curta | Não automático | Corrigir Bearer token/API_AUTH_TOKEN. |
 | Cancelamento fora de prazo | 4xx fiscal | `cancelamento_erro_definitivo` | Não | Tratar manualmente. |
 
-Política sugerida: 8 tentativas máximas para temporários, atrasos aproximados de 1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h, com jitter. Erros definitivos exigem ação admin e não devem consumir retry automático.
+Política sugerida: 8 tentativas máximas para temporários, atrasos aproximados de 1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h, com jitter. Erros definitivos exigem ação admin e não devem consumir retry automático. Timeout em emissão é caso especial: marcar `reconciliacao_pendente`, consultar primeiro por `numDPS`/chave via endpoints de consulta disponíveis e só chamar `GeraDps.php` novamente se a consulta demonstrar com segurança que não houve emissão.
 
 ## 12. Fila de emissão
 
@@ -493,6 +632,8 @@ Autorização:
 - admin pode acessar todas;
 - downloads devem passar por controller autenticado, não por URL pública direta para arquivo privado;
 - registrar evento de download com usuário, IP e tipo de arquivo.
+
+Estratégia PDF/XML recomendada: híbrida. Persistir o XML retornado na emissão (`nfseXmlGZipB64` e/ou XML descompactado em storage privado) porque ele compõe o retorno fiscal e apoia reconciliação. Obter o PDF via `ConsultaDanfse.php` após emissão e armazenar em storage privado para disponibilidade ao cliente; se o download falhar, manter status `emitida_pdf_pendente`/pendência operacional e permitir nova consulta. XML por `ConsultaNfseChave.php` deve ser usado para recuperar/validar XML quando o XML da emissão estiver ausente ou divergente.
 
 ## 15. Painel administrativo
 
@@ -645,7 +786,7 @@ Regra principal: **nunca manter transação de banco aberta durante chamada HTTP
 
 ## 24. Riscos
 
-- Contrato RL2 NFS-e não verificado neste ambiente; implementação deve aguardar acesso.
+- Payloads exatos de cancelamento, consultas de PDF/XML/eventos e consulta por DPS/chave ainda precisam ser confirmados antes da implementação desses fluxos.
 - Cadastro atual parece insuficiente para endereço fiscal completo.
 - Diferença entre valor cobrado e valor fiscal se houver juros/desconto/taxa no provedor.
 - Estornos após emissão exigem decisão fiscal/contábil, não apenas técnica.
@@ -655,17 +796,26 @@ Regra principal: **nunca manter transação de banco aberta durante chamada HTTP
 
 ## 25. Decisões pendentes
 
-1. Acesso ao repositório `lembergrs/rl2-nfse` e preenchimento do contrato real.
-2. URL base de produção/homologação da API RL2 NFS-e.
-3. Método de autenticação real e rotação de token.
-4. Suporte real da API a idempotência e campo/header aceito.
-5. Campos fiscais obrigatórios do tomador no município/provedor.
-6. Código de serviço, item da lista de serviços, CNAE/tributação/regime e alíquotas aplicáveis.
-7. Regra de competência: data de pagamento versus período de serviço.
-8. Política operacional para cancelar NFS-e após reembolso.
-9. Se PDF/XML serão armazenados localmente ou baixados sob demanda.
-10. Política de envio por e-mail com link versus anexo.
-11. Tratamento de cobranças pagas históricas antes da integração.
+### 25.1 Pendências do Disparador
+
+1. Definir provisionamento seguro do certificado PFX Base64: variável de ambiente, arquivo privado fora do webroot ou segredo injetado no systemd.
+2. Definir provisionamento seguro da senha do certificado, sem persistência em banco/log/eventos.
+3. Definir CNPJ do prestador, inscrição municipal, opção do Simples e município de emissão (`localEmissao` IBGE).
+4. Criar/validar cadastro fiscal do tomador PJ: CNPJ, razão social, CEP, código IBGE, logradouro, número, bairro e complemento opcional.
+5. Fechar regra de `dataNota`/competência: data do pagamento, data de processamento ou período da assinatura.
+6. Fechar formato final de `numDPS`, tamanho aceito e índice único local.
+7. Definir armazenamento híbrido de XML/PDF em storage privado e política de retenção.
+8. Definir política para clientes PF enquanto a API exigir CNPJ: bloquear emissão automática, tratar manualmente ou exigir PJ.
+9. Definir texto fiscal de `descServico` por plano/ciclo e tratamento de descontos/juros.
+10. Definir política fiscal de cancelamento após estorno, incluindo prazo e aprovação administrativa.
+
+### 25.2 Possíveis evoluções da API RL2 NFS-e
+
+1. Suporte explícito a CPF do tomador, com contrato versionado e validação fiscal.
+2. Idempotência nativa documentada, por header ou campo, se a API vier a suportar.
+3. Documentação dos payloads de `CancelaNfse.php`, `ConsultaDanfse.php`, `ConsultaDpsChave.php`, `ConsultaNfseChave.php` e `ConsultaNfseEventos.php`.
+4. Endpoint/consulta explícita por `numDPS` com semântica garantida para reconciliação pós-timeout.
+5. Parametrização futura de código de tributação, série, retenção de ISSQN ou percentual do Simples se a operação fiscal exigir.
 
 ## 26. Melhorias futuras
 
