@@ -284,6 +284,26 @@ class NfseEmissao
         ]);
     }
 
+
+    public function registrarFalhaDocumento($nfseId, $tipo, $codigo, $mensagem)
+    {
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_UltimoErroTipo = :erro_tipo,
+                NFE_UltimoErroCodigo = :erro_codigo,
+                NFE_UltimoErroMensagem = :erro_mensagem,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+        ");
+
+        return $sql->execute([
+            ':erro_tipo' => $tipo,
+            ':erro_codigo' => $codigo,
+            ':erro_mensagem' => $this->sanitizarMensagem($mensagem),
+            ':id' => (int) $nfseId
+        ]);
+    }
+
     public function persistirArquivoXml($nfseId, $pathRelativo, $hash)
     {
         $sql = $this->db->prepare("

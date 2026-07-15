@@ -21,7 +21,7 @@ class NfsePayloadBuilder
         if(($cliente['CLI_TipoPessoa'] ?? '') !== 'PJ'){
             throw new \InvalidArgumentException('A emissão de NFS-e nesta etapa exige cliente PJ.');
         }
-        if(strlen($tomadorCnpj) !== 14){
+        if(strlen($tomadorCnpj) !== 14 || preg_match('/^(\d)\1{13}$/', $tomadorCnpj)){
             throw new \InvalidArgumentException('CNPJ fiscal do tomador inválido para emissão de NFS-e.');
         }
         if($numDps === '' || !ctype_digit($numDps) || (int) $numDps <= 0){
@@ -94,14 +94,22 @@ class NfsePayloadBuilder
         if($path === '' || $senha === ''){
             throw new \RuntimeException('Certificado NFS-e ou senha não configurados.');
         }
-        if(strpos(realpath($path) ?: $path, realpath(dirname(__DIR__, 2) . '/public') ?: dirname(__DIR__, 2) . '/public') === 0){
+        $realPath = realpath($path);
+        if($realPath === false || !is_file($realPath)){
+            throw new \RuntimeException('Certificado NFS-e indisponível.');
+        }
+        if(strpos($realPath, realpath(dirname(__DIR__, 2) . '/public') ?: dirname(__DIR__, 2) . '/public') === 0){
             throw new \RuntimeException('Certificado NFS-e não pode estar sob o diretório público.');
         }
-        if(!is_readable($path)){
+        if(!is_readable($realPath)){
             throw new \RuntimeException('Certificado NFS-e não está legível pela aplicação.');
         }
 
-        $conteudo = file_get_contents($path);
+        if(filesize($realPath) === false || filesize($realPath) <= 0 || filesize($realPath) > 5242880){
+            throw new \RuntimeException('Certificado NFS-e fora do limite operacional.');
+        }
+
+        $conteudo = file_get_contents($realPath);
         if($conteudo === false || $conteudo === ''){
             throw new \RuntimeException('Certificado NFS-e vazio ou indisponível.');
         }

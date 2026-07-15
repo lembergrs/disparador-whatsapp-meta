@@ -50,6 +50,14 @@ class NfseEmissionService
             throw new \InvalidArgumentException('Cliente ou cobrança inválidos para emissão manual de NFS-e.');
         }
 
+        if(($cobranca['COB_Status'] ?? '') !== 'pago'){
+            throw new \InvalidArgumentException('A emissão manual de NFS-e exige cobrança paga.');
+        }
+
+        if((float) ($cobranca['COB_Valor'] ?? 0) <= 0){
+            throw new \InvalidArgumentException('A emissão manual de NFS-e exige cobrança com valor positivo.');
+        }
+
         $emissao = $this->emissoes->criarOuBuscarPorCobranca($cobranca, [
             'status' => NfseEmissao::STATUS_PENDENTE_DADOS,
             'valor' => $cobranca['COB_Valor'] ?? 0,
@@ -75,16 +83,11 @@ class NfseEmissionService
             return ['sucesso' => false, 'emissao' => $emissao, 'aptidao' => $aptidao, 'tipo' => 'cliente_nao_apto', 'mensagem' => $aptidao['mensagem'] ?? 'Cliente não apto.'];
         }
 
-        if(empty($emissao['NFE_NumDps'])){
-            $numDps = $this->sequencias->reservar(NfseConfigService::prestadorCnpj(), NfseConfigService::ambiente(), NfseConfigService::dpsSerie());
-            $this->emissoes->atribuirNumDps((int) $emissao['NFE_ID'], $numDps);
-            $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
-        }
-
         $statusAtual = $emissao['NFE_Status'] ?? NfseEmissao::STATUS_PENDENTE_DADOS;
         if($statusAtual === NfseEmissao::STATUS_PENDENTE_DADOS){
             $this->emissoes->atualizarStatus((int) $emissao['NFE_ID'], NfseEmissao::STATUS_PENDENTE, [], NfseEmissao::STATUS_PENDENTE_DADOS);
             $statusAtual = NfseEmissao::STATUS_PENDENTE;
+            $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
         }
 
         if(!$this->emissoes->prepararProcessamento((int) $emissao['NFE_ID'], $statusAtual)){
@@ -92,9 +95,28 @@ class NfseEmissionService
         }
 
         $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
-        $payload = $this->builder->montarEmissao($cliente, $cobranca, $emissao, $this->builder->carregarSegredosCertificado());
-        $http = $this->client->emitir($payload);
-        $resultado = $this->mapper->mapearEmissao($http);
+
+        try{
+            if(empty($emissao['NFE_NumDps'])){
+                $numDps = $this->sequencias->reservar(NfseConfigService::prestadorCnpj(), NfseConfigService::ambiente(), NfseConfigService::dpsSerie());
+                $this->emissoes->atribuirNumDps((int) $emissao['NFE_ID'], $numDps);
+                $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
+            }
+
+            $payload = $this->builder->montarEmissao($cliente, $cobranca, $emissao, $this->builder->carregarSegredosCertificado());
+            $http = $this->client->emitir($payload);
+            $resultado = $this->mapper->mapearEmissao($http);
+        }catch(\Throwable $e){
+            $resultado = [
+                'sucesso' => false,
+                'tipo_erro' => 'definitivo',
+                'temporario' => false,
+                'incerto' => false,
+                'error_code' => 'falha_local_pre_envio',
+                'error_message' => $e->getMessage(),
+                'retorno_sanitizado' => []
+            ];
+        }
 
         if(!empty($resultado['sucesso'])){
             $this->emissoes->persistirSucessoEmissao((int) $emissao['NFE_ID'], $resultado);
@@ -156,12 +178,18 @@ class NfseEmissionService
 
         $binario = base64_decode((string) $gzipB64, true);
         if($binario === false){
-            $this->emissoes->persistirErroEmissao($nfseId, ['tipo_erro' => 'persistencia_local', 'error_code' => 'xml_base64_invalido', 'error_message' => 'XML retornado pela emissão não pôde ser decodificado.', 'temporario' => false, 'incerto' => true], NfseEmissao::STATUS_EMITIDA);
+            $this->emissoes->registrarFalhaDocumento($nfseId, 'persistencia_xml', 'xml_base64_invalido', 'XML retornado pela emissão não pôde ser decodificado.');
+            return;
+        }
+
+        if(strlen($binario) > 10485760){
+            $this->emissoes->registrarFalhaDocumento($nfseId, 'persistencia_xml', 'xml_gzip_grande', 'XML compactado excedeu o limite operacional.');
             return;
         }
 
         $xml = function_exists('gzdecode') ? gzdecode($binario) : false;
-        if($xml === false || stripos((string) $xml, '<') === false){
+        if($xml === false || strlen((string) $xml) > 10485760 || stripos((string) $xml, '<') === false){
+            $this->emissoes->registrarFalhaDocumento($nfseId, 'persistencia_xml', 'xml_invalido', 'XML retornado pela emissão não pôde ser validado.');
             return;
         }
 
@@ -179,7 +207,10 @@ class NfseEmissionService
 
         $nome = date('YmdHis') . '_' . bin2hex(random_bytes(12)) . '.' . $tipo;
         $path = $base . '/' . $nome;
-        file_put_contents($path, $conteudo, LOCK_EX);
+        $tmp = $path . '.tmp';
+        file_put_contents($tmp, $conteudo, LOCK_EX);
+        chmod($tmp, 0660);
+        rename($tmp, $path);
 
         return 'storage/nfse/' . $tipo . '/' . $nome;
     }
@@ -196,6 +227,10 @@ class NfseEmissionService
         if(!is_dir($dir)){
             mkdir($dir, 0770, true);
         }
+        $logPath = $dir . '/nfse.log';
+        if(is_file($logPath) && filesize($logPath) !== false && filesize($logPath) > 10485760){
+            rename($logPath, $dir . '/nfse-' . date('YmdHis') . '.log');
+        }
 
         $linha = [
             'timestamp' => date('c'),
@@ -211,6 +246,6 @@ class NfseEmissionService
             'codigo_erro' => $resultado['error_code'] ?? null
         ];
 
-        error_log(json_encode(NfseSanitizer::dados($linha), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $dir . '/nfse.log');
+        error_log(json_encode(NfseSanitizer::dados($linha), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $logPath);
     }
 }

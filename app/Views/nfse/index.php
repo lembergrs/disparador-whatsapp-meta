@@ -30,6 +30,7 @@ use Core\Csrf;
                     <select name="cobranca_id" id="nfse_cobranca_id" class="form-control" required>
                         <option value="">Selecione</option>
                         <?php foreach($cobrancas as $cobranca){ ?>
+                            <?php if(($cobranca['COB_Status'] ?? '') !== 'pago' || (float) ($cobranca['COB_Valor'] ?? 0) <= 0){ continue; } ?>
                             <option value="<?= (int) $cobranca['COB_ID']; ?>" data-cliente-id="<?= (int) $cobranca['CLI_ID']; ?>">
                                 #<?= (int) $cobranca['COB_ID']; ?> - Cliente #<?= (int) $cobranca['CLI_ID']; ?> - R$ <?= number_format((float) ($cobranca['COB_Valor'] ?? 0), 2, ',', '.'); ?> - <?= htmlspecialchars($cobranca['COB_Status'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                             </option>
@@ -37,12 +38,12 @@ use Core\Csrf;
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary btn-block" onclick="return confirm('Confirmar emissão manual de NFS-e para esta cobrança?');">
+                    <button type="submit" class="btn btn-primary btn-block" onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
                         Emitir manualmente
                     </button>
                 </div>
             </div>
-            <small class="form-text text-muted">A aptidão fiscal será validada novamente no servidor antes de qualquer chamada à API.</small>
+            <small class="form-text text-muted">A aptidão fiscal, o vínculo cliente/cobrança e o status pago serão validados novamente no servidor antes de qualquer chamada à API.</small>
         </form>
 
         <form method="get" action="<?= BASE_URL; ?>/index.php" class="form-inline mb-3">

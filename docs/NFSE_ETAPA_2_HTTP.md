@@ -180,3 +180,16 @@ Usa as variáveis já criadas na Etapa 1:
 ## 13. Rollback
 
 Rollback de código: reverter o commit da Etapa 2. Como não há migration complementar nesta etapa, não há rollback de banco novo. Arquivos XML/PDF reais eventualmente gerados em teste controlado devem ser tratados operacionalmente conforme política fiscal/contábil, nunca apagados sem validação fiscal.
+
+## 14. Auditoria da Etapa 2
+
+A auditoria da Etapa 2 reforçou pontos operacionais antes de qualquer emissão real:
+
+- `numDPS` só é reservado depois de o registro local ser assumido em `processando` por update condicionado;
+- cobranças elegíveis para a tela manual devem estar pagas e possuir valor positivo;
+- falhas de XML após sucesso remoto registram pendência de documento, sem transformar a emissão confirmada em emissão incerta;
+- falhas DNS/conexão/TLS são tratadas como temporárias pré-envio, enquanto timeout sem evidência suficiente permanece incerto;
+- PDF exige `application/pdf`, assinatura `%PDF-` e limites de tamanho;
+- XML possui limites de tamanho e validação sem rede (`LIBXML_NONET` quando disponível);
+- certificado deve ser arquivo real, legível, fora de `public/` e dentro do limite operacional;
+- logs de NFS-e têm rotação local simples e continuam sem payload, XML, PDF ou segredos.

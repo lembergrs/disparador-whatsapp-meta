@@ -44,7 +44,7 @@ class FakeEmissoes extends NfseEmissao {
 }
 
 $cliente = ['CLI_ID' => 1, 'CLI_TipoPessoa' => 'PJ'];
-$cobranca = ['COB_ID' => 2, 'CLI_ID' => 1, 'COB_Valor' => '10.00'];
+$cobranca = ['COB_ID' => 2, 'CLI_ID' => 1, 'COB_Valor' => '10.00', 'COB_Status' => 'pago'];
 
 $emissoes = new FakeEmissoes(); $clientes = new FakeClienteModel(); $clientes->cliente = $cliente; $cobrancas = new FakeCobrancaModel(); $cobrancas->cobranca = $cobranca; $aptidao = new FakeAptidao(); $seq = new FakeSeq(); $builder = new FakeBuilder(); $client = new FakeClient(); $mapper = new FakeMapper();
 $service = new NfseEmissionService($emissoes, $clientes, $cobrancas, $aptidao, $seq, $builder, $client, $mapper);
@@ -64,6 +64,11 @@ $emissoes3 = new FakeEmissoes(); $emissoes3->row['NFE_Status'] = NfseEmissao::ST
 $service3 = new NfseEmissionService($emissoes3, $clientes, $cobrancas, $aptidao, $seq, $builder, $client3, $mapper);
 $res3 = $service3->emitirManual(1, 2, ['nivel' => 'admin']);
 nfseEmissionServiceAssert($res3['tipo'] === 'status_bloqueado' && $client3->chamadas === 0, 'emitida não é reenviada');
+
+$emissoesProcessando = new FakeEmissoes(); $emissoesProcessando->row['NFE_Status'] = NfseEmissao::STATUS_PROCESSANDO; $clientProcessando = new FakeClient();
+$serviceProcessando = new NfseEmissionService($emissoesProcessando, $clientes, $cobrancas, $aptidao, $seq, $builder, $clientProcessando, $mapper);
+$resProcessando = $serviceProcessando->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resProcessando['tipo'] === 'status_bloqueado' && $clientProcessando->chamadas === 0, 'processando não é reenviado');
 
 $emissoes4 = new FakeEmissoes(); $mapper4 = new FakeMapper(); $mapper4->resultado = ['sucesso' => false, 'incerto' => true, 'temporario' => false, 'tipo_erro' => 'incerto', 'error_code' => 'timeout', 'error_message' => 'timeout'];
 $service4 = new NfseEmissionService($emissoes4, $clientes, $cobrancas, $aptidao, new FakeSeq(), $builder, new FakeClient(), $mapper4);

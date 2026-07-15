@@ -48,6 +48,18 @@ $xml = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_toke
 });
 nfseClientAssert(strpos($xml->consultarXml(['idNota' => 'abc'])['body'], '<n/>') !== false, 'XML textual capturado');
 
+
+$preEnvio = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_token' => 'TOKEN_FICTICIO_INVALIDO'], function(){
+    return ['transport_error' => true, 'timeout' => false, 'incerto' => false, 'error_code' => 'curl_6', 'error_message' => 'DNS indisponível', 'failure_stage' => 'temporario_pre_envio'];
+});
+$res = $preEnvio->emitir([]);
+nfseClientAssert($res['transport_error'] === true && $res['incerto'] === false, 'falha pré-envio não é incerta');
+
+$grande = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_token' => 'TOKEN_FICTICIO_INVALIDO', 'max_response_bytes' => 1024], function(){
+    return ['http_status' => 200, 'content_type' => 'application/json', 'body' => str_repeat('x', 2048)];
+});
+nfseClientAssert($grande->emitir([])['body'] === '', 'resposta acima do limite é descartada no fake transport');
+
 try{
     (new NfseApiClient(['base_url' => '', 'auth_token' => '']))->emitir([]);
     nfseClientAssert(false, 'configuração ausente deveria falhar');

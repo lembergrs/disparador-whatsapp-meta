@@ -48,7 +48,7 @@ class NfseApiResponseMapper
             return $this->erroTransporte($http);
         }
 
-        if((int) ($http['http_status'] ?? 0) === 200 && strpos($contentType, 'application/pdf') !== false && strncmp($body, '%PDF', 4) === 0){
+        if((int) ($http['http_status'] ?? 0) === 200 && strpos($contentType, 'application/pdf') !== false && strncmp($body, '%PDF-', 5) === 0 && strlen($body) >= 8 && strlen($body) <= 10485760){
             return [
                 'sucesso' => true,
                 'tipo_resultado' => 'pdf',
@@ -74,7 +74,7 @@ class NfseApiResponseMapper
             return $this->erroTransporte($http);
         }
 
-        if((int) ($http['http_status'] ?? 0) === 200 && (strpos($contentType, 'xml') !== false || strncmp($body, '<?xml', 5) === 0) && $this->xmlValido($body)){
+        if((int) ($http['http_status'] ?? 0) === 200 && strlen($body) > 0 && strlen($body) <= 10485760 && (strpos($contentType, 'xml') !== false || strncmp($body, '<?xml', 5) === 0) && $this->xmlValido($body)){
             return [
                 'sucesso' => true,
                 'tipo_resultado' => 'xml',
@@ -153,7 +153,7 @@ class NfseApiResponseMapper
 
     private function erroTransporte(array $http)
     {
-        $incerto = !empty($http['timeout']);
+        $incerto = !empty($http['incerto']) || (!empty($http['timeout']) && (($http['failure_stage'] ?? '') !== 'temporario_pre_envio'));
         return [
             'sucesso' => false,
             'request_id' => $http['request_id'] ?? null,
@@ -206,7 +206,7 @@ class NfseApiResponseMapper
         }
         if(function_exists('simplexml_load_string')){
             libxml_use_internal_errors(true);
-            $ok = simplexml_load_string($xml) !== false;
+            $ok = simplexml_load_string($xml, 'SimpleXMLElement', LIBXML_NONET) !== false;
             libxml_clear_errors();
             return $ok;
         }
