@@ -331,9 +331,16 @@ class Campanha
 
             SET
                 FIL_Status = 'pendente',
-                FIL_Tentativas = 0,
+                FIL_MessageId = NULL,
+                FIL_DataEnvio = NULL,
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_ProximaTentativa = NULL,
+                FIL_UltimoErroTipo = NULL,
+                FIL_UltimoErroCodigo = NULL,
                 FIL_Erro = NULL,
-                FIL_DataEnvio = NULL
+                FIL_Retorno = NULL,
+                FIL_Tentativas = 0
 
             WHERE CAM_ID = ?
 
@@ -352,9 +359,16 @@ class Campanha
                 ON c.CAM_ID = f.CAM_ID
             SET
                 f.FIL_Status = 'pendente',
-                f.FIL_Tentativas = 0,
+                f.FIL_MessageId = NULL,
+                f.FIL_DataEnvio = NULL,
+                f.FIL_WorkerId = NULL,
+                f.FIL_DataReserva = NULL,
+                f.FIL_ProximaTentativa = NULL,
+                f.FIL_UltimoErroTipo = NULL,
+                f.FIL_UltimoErroCodigo = NULL,
                 f.FIL_Erro = NULL,
-                f.FIL_DataEnvio = NULL
+                f.FIL_Retorno = NULL,
+                f.FIL_Tentativas = 0
             WHERE f.CAM_ID = ?
             AND c.CLI_ID = ?
         "
