@@ -23,7 +23,8 @@ nfseUiAssert(strpos($view, 'limparCobrancas') !== false, 'troca de cliente limpa
 nfseUiAssert(strpos($view, "form.addEventListener('submit'") !== false && strpos($view, "emitirBtn.disabled = true") !== false, 'submit previne duplo clique');
 nfseUiAssert(strpos($view, 'Esta ação emitirá uma NFS-e real no ambiente configurado') !== false, 'confirmação forte de emissão real');
 nfseUiAssert(strpos($view, 'htmlspecialchars') !== false, 'view escapa saída');
-nfseUiAssert(strpos($view, 'NFE_XmlStoragePath') === false && strpos($view, 'NFE_PdfStoragePath') === false, 'view não expõe caminhos internos');
+nfseUiAssert(strpos($view, 'url=nfse/pdf/') !== false && strpos($view, 'url=nfse/xml/') !== false, 'view usa downloads protegidos sem link direto para storage');
+nfseUiAssert(strpos($view, 'storage/nfse') === false, 'view não expõe caminhos internos reais');
 nfseUiAssert(strpos($menu, "url=nfse") !== false && strpos($menu, "usuario['nivel'] == 'admin'") !== false, 'menu NFS-e está no bloco admin');
 
 echo "NFS-e admin UI static tests passed\n";

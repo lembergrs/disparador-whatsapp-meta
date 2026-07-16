@@ -156,7 +156,133 @@ class NfseEmissionService
             $this->emissoes->persistirArquivoPdf((int) $nfseId, $path, $resultado['hash']);
         }
 
+        $this->emissoes->persistirRequestConsulta((int) $nfseId, $resultado, 'consulta');
+        $this->registrarLogSeguro('consultar_pdf', ['CLI_ID' => $emissao['CLI_ID'] ?? 0], ['COB_ID' => $emissao['COB_ID'] ?? 0], $emissao, $resultado);
+
         return $this->resultadoSeguro($resultado);
+    }
+
+
+    public function consultarXmlManual($nfseId, array $admin = [])
+    {
+        if(($admin['nivel'] ?? '') !== 'admin'){
+            throw new \RuntimeException('Apenas administradores podem consultar XML de NFS-e.');
+        }
+
+        $emissao = $this->emissoes->buscarPorId((int) $nfseId);
+        if(!$emissao || empty($emissao['NFE_ChaveAcesso'])){
+            throw new \InvalidArgumentException('NFS-e sem chave de acesso para consulta de XML.');
+        }
+
+        $segredos = $this->builder->carregarSegredosCertificado();
+        $http = $this->client->consultarXml(['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'idNota' => $emissao['NFE_ChaveAcesso']]);
+        $resultado = $this->mapper->mapearXml($http);
+
+        if(!empty($resultado['sucesso'])){
+            $path = $this->salvarArquivoPrivado('xml', $resultado['conteudo']);
+            $this->emissoes->persistirArquivoXml((int) $nfseId, $path, $resultado['hash']);
+        }
+
+        $this->emissoes->persistirRequestConsulta((int) $nfseId, $resultado, 'consulta');
+        $this->registrarLogSeguro('consultar_xml', ['CLI_ID' => $emissao['CLI_ID'] ?? 0], ['COB_ID' => $emissao['COB_ID'] ?? 0], $emissao, $resultado);
+
+        return $this->resultadoSeguro($resultado);
+    }
+
+    public function consultarEventosManual($nfseId, array $admin = [])
+    {
+        if(($admin['nivel'] ?? '') !== 'admin'){
+            throw new \RuntimeException('Apenas administradores podem consultar eventos de NFS-e.');
+        }
+
+        $emissao = $this->emissoes->buscarPorId((int) $nfseId);
+        if(!$emissao || empty($emissao['NFE_ChaveAcesso'])){
+            throw new \InvalidArgumentException('NFS-e sem chave de acesso para consulta de eventos.');
+        }
+
+        $segredos = $this->builder->carregarSegredosCertificado();
+        $http = $this->client->consultarEventos([
+            'cert' => $segredos['cert'],
+            'senhaCert' => $segredos['senhaCert'],
+            'idNota' => $emissao['NFE_ChaveAcesso'],
+            'tipoEvento' => '101101',
+            'numeroSequencial' => 1
+        ]);
+        $resultado = $this->mapper->mapearConsultaJson($http);
+        $this->emissoes->persistirRequestConsulta((int) $nfseId, $resultado, 'consulta');
+        $this->registrarLogSeguro('consultar_eventos', ['CLI_ID' => $emissao['CLI_ID'] ?? 0], ['COB_ID' => $emissao['COB_ID'] ?? 0], $emissao, $resultado);
+
+        return $this->resultadoSeguro($resultado);
+    }
+
+    public function reconsultarManual($nfseId, array $admin = [])
+    {
+        $xml = $this->consultarXmlManual($nfseId, $admin);
+        $pdf = $this->consultarPdfManual($nfseId, $admin);
+        $eventos = $this->consultarEventosManual($nfseId, $admin);
+
+        return ['sucesso' => !empty($xml['sucesso']) || !empty($pdf['sucesso']) || !empty($eventos['sucesso']), 'xml' => $xml, 'pdf' => $pdf, 'eventos' => $eventos];
+    }
+
+    public function cancelarManual($nfseId, $codigoMotivo, $motivo, array $admin = [])
+    {
+        if(($admin['nivel'] ?? '') !== 'admin'){
+            throw new \RuntimeException('Apenas administradores podem cancelar NFS-e.');
+        }
+
+        $codigoMotivo = (int) $codigoMotivo;
+        $motivo = trim((string) $motivo);
+        if(!in_array($codigoMotivo, [1,2,3,4,5,9], true) || $motivo === ''){
+            throw new \InvalidArgumentException('Motivo fiscal de cancelamento inválido.');
+        }
+
+        $emissao = $this->emissoes->buscarPorId((int) $nfseId);
+        if(!$emissao || empty($emissao['NFE_ChaveAcesso'])){
+            throw new \InvalidArgumentException('NFS-e sem chave de acesso para cancelamento.');
+        }
+
+        $segredos = $this->builder->carregarSegredosCertificado();
+        $http = $this->client->cancelar([
+            'cert' => $segredos['cert'],
+            'senhaCert' => $segredos['senhaCert'],
+            'idNota' => $emissao['NFE_ChaveAcesso'],
+            'cnpjEmitente' => NfseConfigService::prestadorCnpj(),
+            'codigoMotivo' => $codigoMotivo,
+            'motivo' => $motivo
+        ]);
+        $resultado = $this->mapper->mapearConsultaJson($http);
+        $this->emissoes->persistirRequestConsulta((int) $nfseId, $resultado, 'cancelamento');
+        $this->registrarLogSeguro('cancelar', ['CLI_ID' => $emissao['CLI_ID'] ?? 0], ['COB_ID' => $emissao['COB_ID'] ?? 0], $emissao, $resultado);
+
+        return $this->resultadoSeguro($resultado);
+    }
+
+    public function arquivoDownload($nfseId, $tipo, array $admin = [])
+    {
+        if(($admin['nivel'] ?? '') !== 'admin'){
+            throw new \RuntimeException('Apenas administradores podem baixar documentos de NFS-e.');
+        }
+
+        $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
+        $info = $this->emissoes->arquivoPrivado((int) $nfseId, $tipo);
+        $pathRelativo = $info['path'] ?? '';
+        if(!$info || $pathRelativo === '' || strpos($pathRelativo, '..') !== false || $pathRelativo[0] === '/'){
+            throw new \InvalidArgumentException('Documento fiscal não encontrado.');
+        }
+
+        $path = dirname(__DIR__, 2) . '/' . ltrim(str_replace('\\', '/', $pathRelativo), '/');
+        $base = dirname(__DIR__, 2) . '/storage/nfse/' . $tipo . '/';
+        $real = realpath($path);
+        $realBase = realpath($base);
+        if(!$real || !$realBase || strpos($real, $realBase) !== 0 || !is_file($real)){
+            throw new \InvalidArgumentException('Documento fiscal indisponível.');
+        }
+
+        return [
+            'path' => $real,
+            'filename' => 'nfse-' . (int) $nfseId . '.' . $tipo,
+            'content_type' => $tipo === 'pdf' ? 'application/pdf' : 'application/xml'
+        ];
     }
 
     private function bloqueioPorStatus($status)
@@ -230,6 +356,11 @@ class NfseEmissionService
         $logPath = $dir . '/nfse.log';
         if(is_file($logPath) && filesize($logPath) !== false && filesize($logPath) > 10485760){
             rename($logPath, $dir . '/nfse-' . date('YmdHis') . '.log');
+        }
+
+        if(!is_file($logPath)){
+            touch($logPath);
+            chmod($logPath, 0660);
         }
 
         $linha = [

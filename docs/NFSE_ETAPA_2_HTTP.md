@@ -197,3 +197,7 @@ A auditoria da Etapa 2 reforçou pontos operacionais antes de qualquer emissão 
 ## 15. Seleção dependente Cliente → Cobrança
 
 A tela administrativa de emissão manual usa seleção dependente: o select de cobrança inicia vazio/desabilitado e só recebe cobranças elegíveis após a escolha do cliente. O backend entrega à view um mapa JSON seguro de cobranças pagas, positivas, com identificador local e agrupadas por `CLI_ID`; o JavaScript apenas filtra visualmente esse mapa. A validação obrigatória permanece no backend em `NfseEmissionService`, que confirma cliente válido, cobrança válida, vínculo cliente/cobrança, status pago, valor positivo e bloqueios de emissão duplicada antes de qualquer chamada HTTP.
+
+## 16. Evolução operacional — Etapa 3
+
+Após homologação real, o módulo administrativo foi evoluído para painel operacional com listagem enxuta, badges, detalhes em modal, downloads autenticados de PDF/XML, reconsulta manual de documentos/eventos e cancelamento administrativo explícito. A evolução não altera payload, contrato RL2, Worker, webhook, retry automático, migrations ou automação de emissão.

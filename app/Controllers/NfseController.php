@@ -132,4 +132,84 @@ class NfseController extends Controller
 
         $this->redirect('nfse');
     }
+
+    public function reconsultar()
+    {
+        $this->validarCsrfPost();
+        Auth::admin();
+
+        try{
+            $resultado = (new NfseEmissionService())->reconsultarManual((int) ($_POST['nfse_id'] ?? 0), Auth::usuario() ?: []);
+            Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', !empty($resultado['sucesso']) ? 'Reconsulta concluída.' : 'Reconsulta não retornou documentos atualizados.');
+        }catch(\Throwable $e){
+            Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
+        }
+
+        $this->redirect('nfse');
+    }
+
+    public function consultarXml()
+    {
+        $this->validarCsrfPost();
+        Auth::admin();
+
+        try{
+            $resultado = (new NfseEmissionService())->consultarXmlManual((int) ($_POST['nfse_id'] ?? 0), Auth::usuario() ?: []);
+            Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', !empty($resultado['sucesso']) ? 'XML consultado e armazenado com sucesso.' : ($resultado['error_message'] ?? 'XML não consultado.'));
+        }catch(\Throwable $e){
+            Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
+        }
+
+        $this->redirect('nfse');
+    }
+
+    public function cancelar()
+    {
+        $this->validarCsrfPost();
+        Auth::admin();
+
+        try{
+            $resultado = (new NfseEmissionService())->cancelarManual(
+                (int) ($_POST['nfse_id'] ?? 0),
+                (int) ($_POST['codigo_motivo'] ?? 0),
+                (string) ($_POST['motivo'] ?? ''),
+                Auth::usuario() ?: []
+            );
+            Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', !empty($resultado['sucesso']) ? 'Cancelamento solicitado com sucesso.' : ($resultado['error_message'] ?? 'Cancelamento não concluído.'));
+        }catch(\Throwable $e){
+            Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
+        }
+
+        $this->redirect('nfse');
+    }
+
+    public function pdf()
+    {
+        $this->download('pdf');
+    }
+
+    public function xml()
+    {
+        $this->download('xml');
+    }
+
+    private function download($tipo)
+    {
+        Auth::admin();
+        $partes = explode('/', $_GET['url'] ?? '');
+        $nfseId = (int) ($partes[2] ?? ($_GET['id'] ?? 0));
+
+        try{
+            $arquivo = (new NfseEmissionService())->arquivoDownload($nfseId, $tipo, Auth::usuario() ?: []);
+            header('Content-Type: ' . $arquivo['content_type']);
+            header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
+            header('X-Content-Type-Options: nosniff');
+            readfile($arquivo['path']);
+            exit;
+        }catch(\Throwable $e){
+            http_response_code(404);
+            exit('Documento fiscal não encontrado.');
+        }
+    }
+
 }

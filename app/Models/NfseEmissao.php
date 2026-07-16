@@ -304,6 +304,49 @@ class NfseEmissao
         ]);
     }
 
+
+    public function persistirRequestConsulta($nfseId, array $resultado, $tipo = 'consulta')
+    {
+        $campoRequest = $tipo === 'cancelamento' ? 'NFE_RequestIdCancelamento' : 'NFE_RequestIdConsulta';
+        $statusSet = $tipo === 'cancelamento' && !empty($resultado['sucesso']) ? ', NFE_Status = :status_cancelada, NFE_DataCancelamento = NOW()' : '';
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET {$campoRequest} = :request_id,
+                NFE_RetornoSanitizado = :retorno,
+                NFE_UltimoErroTipo = :erro_tipo,
+                NFE_UltimoErroCodigo = :erro_codigo,
+                NFE_UltimoErroMensagem = :erro_mensagem,
+                NFE_DataAtualizacao = NOW()
+                {$statusSet}
+            WHERE NFE_ID = :id
+        ");
+
+        $params = [
+            ':request_id' => $resultado['request_id'] ?? null,
+            ':retorno' => json_encode($this->sanitizarArray($resultado['retorno_sanitizado'] ?? $resultado), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            ':erro_tipo' => empty($resultado['sucesso']) ? ($resultado['tipo_erro'] ?? 'consulta') : null,
+            ':erro_codigo' => empty($resultado['sucesso']) ? ($resultado['error_code'] ?? null) : null,
+            ':erro_mensagem' => empty($resultado['sucesso']) ? $this->sanitizarMensagem($resultado['error_message'] ?? null) : null,
+            ':id' => (int) $nfseId
+        ];
+
+        if($tipo === 'cancelamento' && !empty($resultado['sucesso'])){
+            $params[':status_cancelada'] = self::STATUS_CANCELADA;
+        }
+
+        return $sql->execute($params);
+    }
+
+    public function arquivoPrivado($nfseId, $tipo)
+    {
+        $colPath = $tipo === 'pdf' ? 'NFE_PdfStoragePath' : 'NFE_XmlStoragePath';
+        $colHash = $tipo === 'pdf' ? 'NFE_PdfSha256' : 'NFE_XmlSha256';
+        $sql = $this->db->prepare("SELECT NFE_ID, CLI_ID, {$colPath} AS path, {$colHash} AS hash FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
+        $sql->execute([(int) $nfseId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function persistirArquivoXml($nfseId, $pathRelativo, $hash)
     {
         $sql = $this->db->prepare("
