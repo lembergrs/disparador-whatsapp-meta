@@ -201,3 +201,7 @@ A tela administrativa de emissão manual usa seleção dependente: o select de c
 ## 16. Evolução operacional — Etapa 3
 
 Após homologação real, o módulo administrativo foi evoluído para painel operacional com listagem enxuta, badges, detalhes em modal, downloads autenticados de PDF/XML, reconsulta manual de documentos/eventos e cancelamento administrativo explícito. A evolução não altera payload, contrato RL2, Worker, webhook, retry automático, migrations ou automação de emissão.
+
+## 17. Parametrização fiscal preparada
+
+O Disparador passa a ler `NFSE_CODIGO_TRIBUTACAO_NACIONAL` e `NFSE_DESCRICAO_SERVICO` por ambiente. A ausência de qualquer uma dessas configurações bloqueia a emissão manual antes da reserva de DPS e antes da chamada HTTP. Nesta etapa o contrato da API RL2 ainda não é alterado: há TODO explícito para enviar `codigoTributacaoNacional` quando a API suportar o campo, enquanto `descServico` usa a descrição configurada sem concatenar automaticamente o nome da plataforma.

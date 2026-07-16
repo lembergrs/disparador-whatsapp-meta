@@ -1,5 +1,8 @@
 <?php
 
+if(!defined('NFSE_CODIGO_TRIBUTACAO_NACIONAL')) define('NFSE_CODIGO_TRIBUTACAO_NACIONAL', '01.02.03');
+if(!defined('NFSE_DESCRICAO_SERVICO')) define('NFSE_DESCRICAO_SERVICO', 'Licenciamento de uso da plataforma');
+
 require_once __DIR__ . '/../app/Models/NfseEmissao.php';
 require_once __DIR__ . '/../app/Models/Cliente.php';
 require_once __DIR__ . '/../app/Models/Cobranca.php';
@@ -28,14 +31,16 @@ class FakeClienteModel extends Cliente { public $cliente; public function __cons
 class FakeCobrancaModel extends Cobranca { public $cobranca; public function __construct(){} public function buscar($id){ return $this->cobranca; } }
 class FakeAptidao extends NfseAptidaoFiscalService { public $apto = true; public function validarCliente($cliente){ return $this->apto ? ['apto' => true, 'tipo_bloqueio' => null, 'campos_faltantes' => [], 'mensagem' => 'Apto'] : ['apto' => false, 'tipo_bloqueio' => 'dados_incompletos', 'campos_faltantes' => ['cnpj'], 'mensagem' => 'Não apto']; } }
 class FakeSeq extends NfseDpsSequenciaService { public $reservas = 0; public function __construct(){} public function reservar($prestadorCnpj = null, $ambiente = null, $serie = null){ $this->reservas++; return '1'; } }
+class FakeBuilderIncompleto extends NfsePayloadBuilder { public function validarParametrosFiscaisConfigurados(array $emissao = []){ throw new \RuntimeException('Configuração fiscal de NFS-e incompleta: código tributário.'); } public function carregarSegredosCertificado(){ throw new \RuntimeException('não deveria ler certificado'); } public function montarEmissao(array $cliente, array $cobranca, array $emissao, array $segredos){ throw new \RuntimeException('não deveria montar payload'); } }
 class FakeBuilder extends NfsePayloadBuilder { public function carregarSegredosCertificado(){ return ['cert' => 'CERTIFICADO_FICTICIO_BASE64', 'senhaCert' => 'SENHA_FICTICIA']; } public function montarEmissao(array $cliente, array $cobranca, array $emissao, array $segredos){ return ['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'dadosNota' => ['numDPS' => $emissao['NFE_NumDps'] ?? '1']]; } }
 class FakeClient extends NfseApiClient { public $chamadas = 0; public function __construct(){} public function emitir(array $payload){ $this->chamadas++; return ['http_status' => 200, 'content_type' => 'application/json', 'body' => '{}']; } }
 class FakeMapper extends NfseApiResponseMapper { public $resultado; public function mapearEmissao(array $http){ return $this->resultado ?: ['sucesso' => true, 'request_id' => 'req-1', 'id_dps' => 'id-1', 'chave_acesso' => 'chave-1', 'retorno_sanitizado' => ['success' => true]]; } }
 class FakeEmissoes extends NfseEmissao {
     public $row; public $statusUpdates = []; public $sucesso = false; public $erro = false; public $numDps = false;
-    public function __construct(){ $this->row = ['NFE_ID' => 7, 'CLI_ID' => 1, 'COB_ID' => 2, 'NFE_Status' => self::STATUS_PENDENTE_DADOS, 'NFE_NumDps' => null, 'NFE_ValorFiscal' => '10.00', 'NFE_Competencia' => '2026-07-15']; }
+    public function __construct(){ $this->row = ['NFE_ID' => 7, 'CLI_ID' => 1, 'COB_ID' => 2, 'NFE_Status' => self::STATUS_PENDENTE_DADOS, 'NFE_NumDps' => null, 'NFE_ValorFiscal' => '10.00', 'NFE_Competencia' => '2026-07-15', 'NFE_CodigoTributacaoNacional' => null, 'NFE_DescricaoServicoSnapshot' => null]; }
     public function criarOuBuscarPorCobranca(array $cobranca, array $opcoes = []){ return $this->row; }
     public function atualizarStatus($nfseId, $status, array $erro = [], $statusAtualEsperado = null){ $this->statusUpdates[] = [$status, $statusAtualEsperado]; $this->row['NFE_Status'] = $status; return true; }
+    public function prepararSnapshotFiscal($nfseId, $codigoTributacao, $descricaoServico){ if(empty($this->row['NFE_CodigoTributacaoNacional'])){ $this->row['NFE_CodigoTributacaoNacional'] = $codigoTributacao; } if(empty($this->row['NFE_DescricaoServicoSnapshot'])){ $this->row['NFE_DescricaoServicoSnapshot'] = $descricaoServico; } return true; }
     public function atribuirNumDps($nfseId, $numDps){ $this->numDps = true; $this->row['NFE_NumDps'] = $numDps; return true; }
     public function buscarPorId($nfseId){ return $this->row; }
     public function prepararProcessamento($nfseId, $statusAtualEsperado){ return $this->atualizarStatus($nfseId, self::STATUS_PROCESSANDO, [], $statusAtualEsperado); }
@@ -53,6 +58,12 @@ nfseEmissionServiceAssert($res['sucesso'] === true, 'emissão manual sucesso');
 nfseEmissionServiceAssert($seq->reservas === 1 && $emissoes->numDps === true, 'numDPS reservado somente no fluxo apto');
 nfseEmissionServiceAssert($client->chamadas === 1, 'API chamada uma vez no sucesso');
 nfseEmissionServiceAssert($emissoes->sucesso === true, 'sucesso persistido');
+
+$emissoesConfig = new FakeEmissoes(); $seqConfig = new FakeSeq(); $clientConfig = new FakeClient();
+$serviceConfig = new NfseEmissionService($emissoesConfig, $clientes, $cobrancas, $aptidao, $seqConfig, new FakeBuilderIncompleto(), $clientConfig, $mapper);
+$resConfig = $serviceConfig->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resConfig['tipo'] === 'configuracao_fiscal_incompleta', 'configuração fiscal incompleta bloqueia emissão');
+nfseEmissionServiceAssert($seqConfig->reservas === 0 && $clientConfig->chamadas === 0 && $emissoesConfig->row['NFE_Status'] === NfseEmissao::STATUS_PENDENTE_DADOS, 'configuração incompleta não reserva numDPS, não chama API e mantém estado coerente');
 
 $emissoes2 = new FakeEmissoes(); $aptidao2 = new FakeAptidao(); $aptidao2->apto = false; $seq2 = new FakeSeq(); $client2 = new FakeClient();
 $service2 = new NfseEmissionService($emissoes2, $clientes, $cobrancas, $aptidao2, $seq2, $builder, $client2, $mapper);

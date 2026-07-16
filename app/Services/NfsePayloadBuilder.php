@@ -14,6 +14,7 @@ class NfsePayloadBuilder
         $prestadorCnpj = NfseConfigService::prestadorCnpj();
         $localEmissao = NfseConfigService::localEmissaoIbge();
         $optSimples = NfseConfigService::optSimplesNacional();
+        $parametrosFiscais = $this->parametrosFiscaisConfigurados($emissao);
         $tomadorCnpj = $this->somenteDigitos($cliente['CLI_NFSe_CNPJ'] ?? $cliente['CLI_CPF_CNPJ'] ?? '');
         $cep = $this->somenteDigitos($cliente['CLI_NFSe_CEP'] ?? '');
         $ibge = $this->somenteDigitos($cliente['CLI_NFSe_CodigoIBGE'] ?? '');
@@ -57,7 +58,9 @@ class NfsePayloadBuilder
                 'numero' => trim((string) ($cliente['CLI_NFSe_Numero'] ?? '')),
                 'bairro' => trim((string) ($cliente['CLI_NFSe_Bairro'] ?? ''))
             ],
-            'descServico' => $this->descricaoServico($cobranca),
+            // TODO(NFS-e): enviar codigoTributacaoNacional no payload quando a API RL2 aceitar o novo campo.
+            // A descrição já vem do ConfigService para evitar valor fiscal hardcoded no Disparador.
+            'descServico' => $parametrosFiscais['descricao_servico'],
             'valorNota' => $valor
         ];
 
@@ -127,10 +130,43 @@ class NfsePayloadBuilder
         }
     }
 
-    private function descricaoServico(array $cobranca)
+    public function validarParametrosFiscaisConfigurados(array $emissao = [])
     {
-        $plano = trim((string) ($cobranca['PLA_Nome'] ?? 'Disparador.net'));
-        return 'Licenciamento de uso da plataforma Disparador.net - ' . $plano;
+        return $this->parametrosFiscaisConfigurados($emissao);
+    }
+
+    private function parametrosFiscaisConfigurados(array $emissao = [])
+    {
+        $codigo = trim((string) ($emissao['NFE_CodigoTributacaoNacional'] ?? ''));
+        $descricao = trim((string) ($emissao['NFE_DescricaoServicoSnapshot'] ?? ''));
+
+        if($codigo === ''){
+            $codigo = NfseConfigService::codigoTributacaoNacional();
+        }
+
+        if($descricao === ''){
+            $descricao = NfseConfigService::descricaoServico();
+        }
+        $pendencias = [];
+
+        if($codigo === ''){
+            $pendencias[] = 'código tributário';
+        }
+
+        if($descricao === ''){
+            $pendencias[] = 'descrição do serviço';
+        }
+
+        if(!empty($pendencias)){
+            throw new \RuntimeException('Configuração fiscal de NFS-e incompleta: ' . implode(', ', $pendencias) . '.');
+        }
+
+        // TODO(NFS-e): quando a API RL2 aceitar codigoTributacaoNacional no payload,
+        // incluir $codigo em dadosNota sem alterar a descrição configurada.
+        return [
+            'codigo_tributacao_nacional' => $codigo,
+            'descricao_servico' => $descricao
+        ];
     }
 
     private function somenteDigitos($valor)

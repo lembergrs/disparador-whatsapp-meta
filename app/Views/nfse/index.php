@@ -49,6 +49,14 @@ function nfse_aptidao_item($campo, $pendencias){
     $faltante = in_array($campo, $pendencias, true) || in_array($campo . '_valido', $pendencias, true);
     return '<li class="list-inline-item mr-3">' . ($faltante ? '<span class="text-danger">✗</span>' : '<span class="text-success">✓</span>') . ' ' . nfse_e(ucwords(str_replace('_', ' ', $campo))) . '</li>';
 }
+
+$nfseConfigPublica = is_array($nfseConfigPublica ?? null) ? $nfseConfigPublica : [];
+$nfseCodigoConfigurado = !empty($nfseConfigPublica['codigo_tributacao_configurado']);
+$nfseDescricaoConfigurada = !empty($nfseConfigPublica['descricao_servico_configurada']);
+$nfseConfigFiscalCompleta = $nfseCodigoConfigurado && $nfseDescricaoConfigurada;
+$nfseFiscalPreview = is_array($nfseFiscalPreview ?? null) ? $nfseFiscalPreview : [];
+$nfseCodigoPreview = trim((string) ($nfseFiscalPreview['codigo_tributacao_nacional'] ?? ''));
+$nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?? ''));
 ?>
 
 <div class="card">
@@ -59,6 +67,21 @@ function nfse_aptidao_item($campo, $pendencias){
     <div class="card-body">
         <div class="alert alert-warning">
             Esta tela é exclusiva para administradores. A emissão é manual, não aciona webhook, Worker, retry automático, e-mail ou download pelo cliente.
+        </div>
+
+        <?php if(!$nfseConfigFiscalCompleta){ ?>
+            <div class="alert alert-danger">
+                <strong>⚠ Configuração fiscal incompleta</strong><br>
+                <?php if(!$nfseCodigoConfigurado){ ?>Código tributário não configurado.<br><?php } ?>
+                <?php if(!$nfseDescricaoConfigurada){ ?>Descrição do serviço não configurada.<br><?php } ?>
+                A emissão manual ficará desabilitada até a configuração fiscal ser concluída no ambiente.
+            </div>
+        <?php } ?>
+
+        <div class="alert alert-info">
+            <strong>Prévia fiscal para conferência:</strong><br>
+            Código tributário: <?= $nfseCodigoConfigurado ? nfse_e($nfseCodigoPreview) : '<span class="text-muted">Não configurado</span>'; ?><br>
+            Descrição do serviço: <?= $nfseDescricaoConfigurada ? nfse_e($nfseDescricaoPreview) : '<span class="text-muted">Não configurada</span>'; ?>
         </div>
 
         <form method="post" action="<?= BASE_URL; ?>/index.php?url=nfse/emitir" class="mb-4">
@@ -83,7 +106,7 @@ function nfse_aptidao_item($campo, $pendencias){
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" id="nfse_emitir_btn" class="btn btn-primary btn-block" disabled onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
+                    <button type="submit" id="nfse_emitir_btn" class="btn btn-primary btn-block" data-config-fiscal-completa="<?= $nfseConfigFiscalCompleta ? '1' : '0'; ?>" disabled onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
                         Emitir manualmente
                     </button>
                 </div>
@@ -251,7 +274,8 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function atualizarEstadoBotaoEmissao(){
         if(!emitirBtn || !clienteSelect || !cobrancaSelect){ return; }
-        emitirBtn.disabled = !(String(clienteSelect.value || '') !== '' && String(cobrancaSelect.value || '') !== '' && !cobrancaSelect.disabled);
+        var configFiscalCompleta = emitirBtn.getAttribute('data-config-fiscal-completa') === '1';
+        emitirBtn.disabled = !(configFiscalCompleta && String(clienteSelect.value || '') !== '' && String(cobrancaSelect.value || '') !== '' && !cobrancaSelect.disabled);
     }
 
     document.querySelectorAll('.nfse-copy').forEach(function(btn){

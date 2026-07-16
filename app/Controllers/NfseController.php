@@ -10,6 +10,7 @@ use Models\Cliente;
 use Models\NfseEmissao;
 use Services\NfseAptidaoFiscalService;
 use Services\NfseEmissionService;
+use Services\NfseConfigService;
 use Services\NfseSanitizer;
 
 class NfseController extends Controller
@@ -23,6 +24,11 @@ class NfseController extends Controller
         $cobrancas = (new Cobranca())->listar();
         $clientes = (new Cliente())->listar();
         $cobrancasElegiveisPorCliente = $this->mapearCobrancasElegiveisPorCliente($cobrancas);
+        $nfseConfigPublica = NfseConfigService::dadosPublicos();
+        $nfseFiscalPreview = [
+            'codigo_tributacao_nacional' => NfseConfigService::codigoTributacaoNacional(),
+            'descricao_servico' => NfseConfigService::descricaoServico()
+        ];
 
         $this->view('nfse/index', [
             'titulo' => 'NFS-e',
@@ -30,6 +36,8 @@ class NfseController extends Controller
             'cobrancas' => $cobrancas,
             'cobrancasElegiveisPorCliente' => $cobrancasElegiveisPorCliente,
             'clientes' => $clientes,
+            'nfseConfigPublica' => $nfseConfigPublica,
+            'nfseFiscalPreview' => $nfseFiscalPreview,
             'statusFiltro' => $status,
             'statusPermitidos' => NfseEmissao::statusPermitidos()
         ]);

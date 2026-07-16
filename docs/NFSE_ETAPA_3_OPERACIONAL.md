@@ -31,3 +31,7 @@ O log `storage/logs/nfse.log` registra operações `emitir`, `consultar_pdf`, `c
 ## Rollback
 
 Como não há migration ou alteração de payload, o rollback é reverter este commit. Arquivos privados já gravados em `storage/nfse/` permanecem fora do Git e podem ser mantidos para auditoria fiscal.
+
+## Parametrização fiscal
+
+O painel operacional exibe aviso de configuração fiscal incompleta quando `NFSE_CODIGO_TRIBUTACAO_NACIONAL` ou `NFSE_DESCRICAO_SERVICO` estiver ausente. O botão de emissão permanece desabilitado enquanto faltar qualquer valor e a prévia fiscal mostra, para conferência administrativa, o código tributário e a descrição configurados. O código ainda não é enviado à API até adaptação futura da `rl2-nfse`.

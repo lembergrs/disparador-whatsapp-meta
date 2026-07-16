@@ -1011,3 +1011,9 @@ Decisões preservadas:
 - nunca persistir token, certificado, senha, payload completo, XML integral em logs ou PDF em logs.
 
 Não foi criada migration complementar nesta etapa: o schema da fundação já contém os campos necessários para requestIds, identificadores fiscais, status, retorno sanitizado e paths/hashes privados de XML/PDF.
+
+## Implementação — Parametrização fiscal preparada no Disparador
+
+O Disparador agora possui as variáveis `NFSE_CODIGO_TRIBUTACAO_NACIONAL` e `NFSE_DESCRICAO_SERVICO` para preparar a parametrização do código tributário e da descrição do serviço por ambiente. A API RL2 NFS-e ainda não foi alterada nesta etapa; portanto, o contrato HTTP permanece compatível e o `NfsePayloadBuilder` mantém um TODO explícito para enviar `codigoTributacaoNacional` somente quando a API suportar o campo.
+
+A descrição usada em `descServico` deixa de ser montada com texto fixo e passa a vir de `NfseConfigService::descricaoServico()`, sem concatenação automática do nome da plataforma. Se código tributário ou descrição estiverem ausentes, a emissão manual é bloqueada antes da reserva de DPS e antes da chamada HTTP. O painel administrativo mostra aviso de configuração incompleta e prévia dos valores configurados para conferência. As ocorrências anteriores de `170601` neste documento permanecem como registro histórico do contrato observado na API antes da parametrização.

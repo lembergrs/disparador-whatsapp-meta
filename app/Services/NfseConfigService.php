@@ -66,6 +66,35 @@ class NfseConfigService
         return preg_replace('/\D/', '', (string) (defined('NFSE_PRESTADOR_CNPJ') ? NFSE_PRESTADOR_CNPJ : ''));
     }
 
+
+    public static function codigoTributacaoNacional()
+    {
+        return defined('NFSE_CODIGO_TRIBUTACAO_NACIONAL') ? trim((string) NFSE_CODIGO_TRIBUTACAO_NACIONAL) : '';
+    }
+
+    public static function descricaoServico()
+    {
+        return defined('NFSE_DESCRICAO_SERVICO') ? trim((string) NFSE_DESCRICAO_SERVICO) : '';
+    }
+
+    public static function configuracaoFiscalParametrizada()
+    {
+        $pendencias = [];
+        if(self::codigoTributacaoNacional() === ''){
+            $pendencias[] = 'codigo_tributacao';
+        }
+        if(self::descricaoServico() === ''){
+            $pendencias[] = 'descricao_servico';
+        }
+
+        return [
+            'completa' => empty($pendencias),
+            'pendencias' => $pendencias,
+            'codigo_tributacao_configurado' => self::codigoTributacaoNacional() !== '',
+            'descricao_servico_configurada' => self::descricaoServico() !== ''
+        ];
+    }
+
     public static function dadosPublicos()
     {
         return [
@@ -74,6 +103,8 @@ class NfseConfigService
             'prestador_im_configurado' => defined('NFSE_PRESTADOR_IM') && trim((string) NFSE_PRESTADOR_IM) !== '',
             'opt_simples_configurado' => defined('NFSE_PRESTADOR_OP_SIMPLES') && trim((string) NFSE_PRESTADOR_OP_SIMPLES) !== '',
             'local_emissao_configurado' => defined('NFSE_LOCAL_EMISSAO_IBGE') && trim((string) NFSE_LOCAL_EMISSAO_IBGE) !== '',
+            'codigo_tributacao_configurado' => self::codigoTributacaoNacional() !== '',
+            'descricao_servico_configurada' => self::descricaoServico() !== '',
             'serie' => self::dpsSerie(),
             'cert_path_configurado' => defined('NFSE_CERT_PATH') && trim((string) NFSE_CERT_PATH) !== '',
             'cert_password_configurado' => defined('NFSE_CERT_PASSWORD') && trim((string) NFSE_CERT_PASSWORD) !== '',

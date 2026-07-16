@@ -118,7 +118,7 @@ class NfseEmissao
                 ':ambiente' => $opcoes['ambiente'] ?? (defined('NFSE_AMBIENTE') ? NFSE_AMBIENTE : 'production'),
                 ':competencia' => $opcoes['competencia'] ?? date('Y-m-d'),
                 ':valor' => $opcoes['valor'] ?? ($cobranca['COB_Valor'] ?? 0),
-                ':descricao' => $opcoes['descricao'] ?? 'Mensalidade Disparador.net',
+                ':descricao' => $opcoes['descricao'] ?? null,
                 ':serie' => $opcoes['serie'] ?? (defined('NFSE_DPS_SERIE') ? NFSE_DPS_SERIE : '900')
             ]);
         }catch(\PDOException $e){
@@ -136,6 +136,39 @@ class NfseEmissao
         }
 
         return $this->buscarPorCobranca($cobrancaId);
+    }
+
+
+    public function prepararSnapshotFiscal($nfseId, $codigoTributacao, $descricaoServico)
+    {
+        $codigoTributacao = trim((string) $codigoTributacao);
+        $descricaoServico = trim((string) $descricaoServico);
+
+        if($codigoTributacao === '' || $descricaoServico === ''){
+            throw new \InvalidArgumentException('Snapshot fiscal de NFS-e exige código tributário e descrição.');
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_CodigoTributacaoNacional = COALESCE(NFE_CodigoTributacaoNacional, :codigo),
+                NFE_DescricaoServicoSnapshot = COALESCE(NFE_DescricaoServicoSnapshot, :descricao),
+                NFE_DescricaoServico = COALESCE(NFE_DescricaoServico, :descricao_legado),
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+            AND NFE_Status IN (:pendente_dados, :pendente, :erro_temporario)
+        ");
+
+        $sql->execute([
+            ':codigo' => $codigoTributacao,
+            ':descricao' => $descricaoServico,
+            ':descricao_legado' => $descricaoServico,
+            ':id' => (int) $nfseId,
+            ':pendente_dados' => self::STATUS_PENDENTE_DADOS,
+            ':pendente' => self::STATUS_PENDENTE,
+            ':erro_temporario' => self::STATUS_ERRO_TEMPORARIO
+        ]);
+
+        return $sql->rowCount() >= 0;
     }
 
     public function atribuirNumDps($nfseId, $numDps)
