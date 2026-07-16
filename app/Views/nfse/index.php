@@ -54,13 +54,13 @@ function nfse_detail_item($label, $html){
 function nfse_timeline(array $emissao){
     $eventos = [];
     if(!empty($emissao['NFE_DataCriacao'])){ $eventos[] = ['Emissão iniciada', $emissao['NFE_DataCriacao'], 'primary']; }
-    if(!empty($emissao['NFE_DataReserva']) || !empty($emissao['NFE_NumDps'])){ $eventos[] = ['DPS reservada', $emissao['NFE_DataReserva'] ?? $emissao['NFE_DataAtualizacao'] ?? null, 'info']; }
-    if(!empty($emissao['NFE_ChaveDps'])){ $eventos[] = ['XML assinado', $emissao['NFE_DataEmissao'] ?? $emissao['NFE_DataAtualizacao'] ?? null, 'info']; }
-    if(!empty($emissao['NFE_DataEmissao'])){ $eventos[] = ['NFS-e emitida', $emissao['NFE_DataEmissao'], 'success']; }
+    if(!empty($emissao['NFE_NumDps'])){ $eventos[] = ['DPS reservada', $emissao['NFE_DataReserva'] ?? $emissao['NFE_DataAtualizacao'] ?? null, 'info']; }
+    if(!empty($emissao['NFE_ChaveDps']) && !empty($emissao['NFE_NumDps'])){ $eventos[] = ['XML assinado', $emissao['NFE_DataEmissao'] ?? $emissao['NFE_DataAtualizacao'] ?? null, 'info']; }
+    if(in_array($emissao['NFE_Status'] ?? '', ['emitida', 'cancelada'], true) && !empty($emissao['NFE_ChaveAcesso']) && !empty($emissao['NFE_DataEmissao'])){ $eventos[] = ['NFS-e emitida', $emissao['NFE_DataEmissao'], 'success']; }
     if(!empty($emissao['NFE_RequestIdConsulta'])){ $eventos[] = ['Consulta executada', $emissao['NFE_DataAtualizacao'] ?? null, 'secondary']; }
     if(!empty($emissao['NFE_PdfStoragePath'])){ $eventos[] = ['PDF armazenado', $emissao['NFE_DataAtualizacao'] ?? null, 'success']; }
     if(!empty($emissao['NFE_XmlStoragePath'])){ $eventos[] = ['XML armazenado', $emissao['NFE_DataAtualizacao'] ?? null, 'success']; }
-    if(!empty($emissao['NFE_DataCancelamento'])){ $eventos[] = ['Cancelada', $emissao['NFE_DataCancelamento'], 'dark']; }
+    if(($emissao['NFE_Status'] ?? '') === 'cancelada' && !empty($emissao['NFE_DataCancelamento'])){ $eventos[] = ['Cancelada', $emissao['NFE_DataCancelamento'], 'dark']; }
     $html = '<div class="nfse-timeline">';
     foreach($eventos as $evento){
         $html .= '<div class="nfse-timeline-item"><span class="badge badge-' . $evento[2] . '">' . nfse_e($evento[0]) . '</span> <small class="text-muted">' . nfse_data_hora($evento[1]) . '</small></div>';

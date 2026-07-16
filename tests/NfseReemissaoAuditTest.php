@@ -19,11 +19,17 @@ nfseAuditHas($migration, 'DROP INDEX uk_nfse_cobranca', 'constraint antiga por C
 
 nfseAuditHas($model, 'NFE_EmissaoAtiva, NFE_DataReserva', 'novas emissões informam a flag ativa');
 nfseAuditHas($model, ':prestador_cnpj, :ambiente, :competencia, :valor, :descricao, :serie, 1, NOW()', 'nova emissão nasce ativa com NFE_EmissaoAtiva = 1');
+nfseAuditNot($model, "defined('NFSE_AMBIENTE') ? NFSE_AMBIENTE : 'production'", 'model não inventa fallback de ambiente fiscal');
+nfseAuditNot($model, "defined('NFSE_DPS_SERIE') ? NFSE_DPS_SERIE : '900'", 'model não inventa série fiscal');
 nfseAuditHas($model, "NFE_Status <> 'cancelada' ORDER BY NFE_ID DESC LIMIT 1", 'busca ativa ignora canceladas');
 nfseAuditHas($model, 'CASE WHEN NFE_Status <> \'cancelada\' THEN 0 ELSE 1 END', 'vigente prioriza não cancelada sobre cancelada');
 nfseAuditHas($model, 'NFE_ID DESC', 'vigente escolhe registro mais recente dentro da prioridade');
 nfseAuditHas($model, '$existente = $this->buscarPorCobranca($cobrancaId);', 'em concorrência após duplicidade, busca ativa vencedora é retornada');
 nfseAuditHas($model, 'Migration de reemissão de NFS-e pendente', 'falha de migration ausente fica explícita');
+nfseAuditHas($model, 'function prepararContextoFiscalAntesDaReserva', 'model possui reparo controlado de contexto antes da reserva');
+nfseAuditHas($model, 'AND NFE_NumDps IS NULL', 'reparo só ocorre sem numDPS');
+nfseAuditHas($model, 'AND NFE_RequestIdEmissao IS NULL', 'reparo só ocorre sem RequestId');
+nfseAuditHas($model, 'NFE_Status IN (:pendente_dados, :pendente, :erro_temporario, :erro_definitivo)', 'reparo só ocorre em status preparável');
 
 nfseAuditHas($model, 'NFE_EmissaoAtiva = NULL, NFE_DataCancelamento = NOW()', 'cancelamento inativa a emissão na mesma atualização lógica');
 nfseAuditHas($service, 'usuarioPodeBaixarArquivo', 'download é autorizado no service');
@@ -42,5 +48,9 @@ nfseAuditHas($financeiro, 'buscarVigentesPorCobrancas(', 'Financeiro só consult
 nfseAuditNot($financeiro, 'criarOuBuscarPorCobranca(', 'abrir Financeiro não cria emissão');
 nfseAuditNot($financeiro, 'reservar(', 'abrir Financeiro não reserva DPS');
 nfseAuditNot($financeiro, '->emitir(', 'abrir Financeiro não chama API de emissão');
+nfseAuditHas($service, 'validarContextoFiscalAntesDaReserva', 'service valida contexto fiscal antes de reservar');
+nfseAuditHas($service, 'NfseConfigService::prestadorCnpj()', 'service resolve CNPJ pela configuração atual');
+nfseAuditHas($service, 'NfseConfigService::ambiente()', 'service resolve ambiente pela configuração atual');
+nfseAuditHas($service, 'NfseConfigService::dpsSerie()', 'service resolve série pela configuração atual');
 
 echo "NFS-e reemission audit static checks passed\n";

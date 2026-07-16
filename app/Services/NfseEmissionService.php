@@ -58,16 +58,20 @@ class NfseEmissionService
             throw new \InvalidArgumentException('A emissão manual de NFS-e exige cobrança com valor positivo.');
         }
 
+        $contextoFiscalAtual = $this->contextoFiscalAtual();
         $emissao = $this->emissoes->criarOuBuscarPorCobranca($cobranca, [
             'status' => NfseEmissao::STATUS_PENDENTE_DADOS,
             'valor' => $cobranca['COB_Valor'] ?? 0,
             'competencia' => !empty($cobranca['COB_DataPagamento']) ? substr((string) $cobranca['COB_DataPagamento'], 0, 10) : date('Y-m-d'),
-            'prestador_cnpj' => NfseConfigService::prestadorCnpj(),
-            'ambiente' => NfseConfigService::ambiente(),
-            'serie' => NfseConfigService::dpsSerie()
+            'prestador_cnpj' => $contextoFiscalAtual['prestador_cnpj'],
+            'ambiente' => $contextoFiscalAtual['ambiente'],
+            'serie' => $contextoFiscalAtual['serie']
         ]);
 
-        $bloqueio = $this->bloqueioPorStatus($emissao['NFE_Status'] ?? null);
+        $this->prepararContextoFiscalAntesDaReserva((int) $emissao['NFE_ID']);
+        $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
+
+        $bloqueio = $this->bloqueioPorStatus($emissao);
         if($bloqueio !== null){
             return ['sucesso' => false, 'emissao' => $emissao, 'tipo' => 'status_bloqueado', 'mensagem' => $bloqueio];
         }
@@ -123,10 +127,12 @@ class NfseEmissionService
 
         try{
             if(empty($emissao['NFE_NumDps'])){
+                $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
+                $this->validarContextoFiscalAntesDaReserva($emissao);
                 $numDps = $this->sequencias->reservar(
-                    $emissao['NFE_PrestadorCnpj'] ?? NfseConfigService::prestadorCnpj(),
-                    $emissao['NFE_Ambiente'] ?? NfseConfigService::ambiente(),
-                    $emissao['NFE_Serie'] ?? NfseConfigService::dpsSerie()
+                    $emissao['NFE_PrestadorCnpj'],
+                    $emissao['NFE_Ambiente'],
+                    $emissao['NFE_Serie']
                 );
                 $this->emissoes->atribuirNumDps((int) $emissao['NFE_ID'], $numDps);
                 $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
@@ -330,13 +336,69 @@ class NfseEmissionService
         return $cobranca && (int) ($cobranca['CLI_ID'] ?? 0) === $clienteId;
     }
 
-    private function bloqueioPorStatus($status)
+    private function bloqueioPorStatus($emissao)
     {
+        $status = is_array($emissao) ? ($emissao['NFE_Status'] ?? null) : $emissao;
         if($status === NfseEmissao::STATUS_EMITIDA){ return 'NFS-e já emitida para esta cobrança.'; }
         if($status === NfseEmissao::STATUS_PROCESSANDO){ return 'NFS-e já está em processamento.'; }
         if($status === NfseEmissao::STATUS_RECONCILIACAO_PENDENTE){ return 'NFS-e em reconciliação pendente; não reenviar emissão.'; }
-        if($status === NfseEmissao::STATUS_ERRO_DEFINITIVO){ return 'NFS-e com erro definitivo exige ação administrativa explícita.'; }
+        if($status === NfseEmissao::STATUS_CANCELADA){ return 'NFS-e cancelada permanece apenas para auditoria.'; }
+        if($status === NfseEmissao::STATUS_ERRO_DEFINITIVO && !$this->emissaoPreparavelAntesDaReserva($emissao)){ return 'NFS-e com erro definitivo exige ação administrativa explícita.'; }
         return null;
+    }
+
+    private function contextoFiscalAtual()
+    {
+        return [
+            'prestador_cnpj' => NfseConfigService::prestadorCnpj(),
+            'ambiente' => NfseConfigService::ambiente(),
+            'serie' => NfseConfigService::dpsSerie()
+        ];
+    }
+
+    private function prepararContextoFiscalAntesDaReserva($nfseId)
+    {
+        $emissao = $this->emissoes->buscarPorId((int) $nfseId);
+        if(!$this->emissaoPreparavelAntesDaReserva($emissao)){
+            return;
+        }
+
+        $contexto = $this->contextoFiscalAtual();
+        $this->emissoes->prepararContextoFiscalAntesDaReserva((int) $nfseId, $contexto['prestador_cnpj'], $contexto['ambiente'], $contexto['serie']);
+    }
+
+    private function emissaoPreparavelAntesDaReserva($emissao)
+    {
+        if(!is_array($emissao) || empty($emissao['NFE_ID'])){
+            return false;
+        }
+        if(!empty($emissao['NFE_NumDps']) || !empty($emissao['NFE_RequestIdEmissao'])){
+            return false;
+        }
+        if(($emissao['NFE_EmissaoAtiva'] ?? 1) != 1){
+            return false;
+        }
+        return in_array($emissao['NFE_Status'] ?? null, [
+            NfseEmissao::STATUS_PENDENTE_DADOS,
+            NfseEmissao::STATUS_PENDENTE,
+            NfseEmissao::STATUS_ERRO_TEMPORARIO,
+            NfseEmissao::STATUS_ERRO_DEFINITIVO
+        ], true);
+    }
+
+    private function validarContextoFiscalAntesDaReserva(array $emissao)
+    {
+        $prestadorCnpj = preg_replace('/\D/', '', (string) ($emissao['NFE_PrestadorCnpj'] ?? ''));
+        $ambiente = trim((string) ($emissao['NFE_Ambiente'] ?? ''));
+        $serie = trim((string) ($emissao['NFE_Serie'] ?? ''));
+
+        if(($emissao['NFE_EmissaoAtiva'] ?? 1) != 1 || ($emissao['NFE_Status'] ?? null) === NfseEmissao::STATUS_CANCELADA){
+            throw new \RuntimeException('Emissão fiscal não está ativa para reservar numDPS.');
+        }
+        if(strlen($prestadorCnpj) !== 14 || !in_array($ambiente, ['production', 'sandbox', 'homologation', 'local'], true) || $serie === ''){
+            throw new \InvalidArgumentException('Contexto fiscal incompleto para reservar numDPS.');
+        }
+        $this->builder->validarParametrosFiscaisConfigurados($emissao);
     }
 
     private function salvarXmlDaEmissao($nfseId, array $resultado)

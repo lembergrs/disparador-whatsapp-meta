@@ -38,7 +38,7 @@ class NfseEmissao
             self::STATUS_RECONCILIACAO_PENDENTE => [self::STATUS_EMITIDA, self::STATUS_ERRO_DEFINITIVO],
             self::STATUS_EMITIDA => [self::STATUS_CANCELAMENTO_PENDENTE],
             self::STATUS_ERRO_TEMPORARIO => [self::STATUS_PENDENTE, self::STATUS_PROCESSANDO, self::STATUS_ERRO_DEFINITIVO],
-            self::STATUS_ERRO_DEFINITIVO => [],
+            self::STATUS_ERRO_DEFINITIVO => [self::STATUS_PROCESSANDO],
             self::STATUS_CANCELAMENTO_PENDENTE => [self::STATUS_CANCELADA, self::STATUS_ERRO_TEMPORARIO, self::STATUS_ERRO_DEFINITIVO],
             self::STATUS_CANCELADA => []
         ];
@@ -114,12 +114,12 @@ class NfseEmissao
                 ':referencia' => $cobranca['COB_ProviderPaymentId'] ?? null,
                 ':status' => $status,
                 ':idempotency' => $idempotencyKey,
-                ':prestador_cnpj' => $opcoes['prestador_cnpj'] ?? (defined('NFSE_PRESTADOR_CNPJ') ? preg_replace('/\D/', '', (string) NFSE_PRESTADOR_CNPJ) : null),
-                ':ambiente' => $opcoes['ambiente'] ?? (defined('NFSE_AMBIENTE') ? NFSE_AMBIENTE : 'production'),
+                ':prestador_cnpj' => isset($opcoes['prestador_cnpj']) ? preg_replace('/\D/', '', (string) $opcoes['prestador_cnpj']) : null,
+                ':ambiente' => $opcoes['ambiente'] ?? null,
                 ':competencia' => $opcoes['competencia'] ?? date('Y-m-d'),
                 ':valor' => $opcoes['valor'] ?? ($cobranca['COB_Valor'] ?? 0),
                 ':descricao' => $opcoes['descricao'] ?? null,
-                ':serie' => $opcoes['serie'] ?? (defined('NFSE_DPS_SERIE') ? NFSE_DPS_SERIE : '900')
+                ':serie' => $opcoes['serie'] ?? null
             ]);
         }catch(\PDOException $e){
             if(!$this->erroDuplicidade($e)){
@@ -173,6 +173,51 @@ class NfseEmissao
         ]);
 
         return $sql->rowCount() >= 0;
+    }
+
+
+    public function prepararContextoFiscalAntesDaReserva($nfseId, $prestadorCnpj, $ambiente, $serie)
+    {
+        $prestadorCnpj = preg_replace('/\D/', '', (string) $prestadorCnpj);
+        $ambiente = trim((string) $ambiente);
+        $serie = trim((string) $serie);
+
+        if(strlen($prestadorCnpj) !== 14 || $ambiente === '' || $serie === ''){
+            throw new \InvalidArgumentException('Contexto fiscal atual inválido para preparar reserva de numDPS.');
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_PrestadorCnpj = CASE
+                    WHEN NFE_PrestadorCnpj IS NULL OR NFE_PrestadorCnpj = '' OR LENGTH(REPLACE(REPLACE(REPLACE(NFE_PrestadorCnpj, '.', ''), '/', ''), '-', '')) <> 14 THEN :prestador_cnpj
+                    ELSE NFE_PrestadorCnpj
+                END,
+                NFE_Ambiente = CASE
+                    WHEN NFE_Ambiente IS NULL OR NFE_Ambiente = '' OR NFE_Ambiente NOT IN ('production','sandbox','homologation','local') THEN :ambiente
+                    ELSE NFE_Ambiente
+                END,
+                NFE_Serie = CASE
+                    WHEN NFE_Serie IS NULL OR NFE_Serie = '' THEN :serie
+                    ELSE NFE_Serie
+                END,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+            AND NFE_EmissaoAtiva = 1
+            AND NFE_NumDps IS NULL
+            AND NFE_RequestIdEmissao IS NULL
+            AND NFE_Status IN (:pendente_dados, :pendente, :erro_temporario, :erro_definitivo)
+        ");
+
+        return $sql->execute([
+            ':prestador_cnpj' => $prestadorCnpj,
+            ':ambiente' => $ambiente,
+            ':serie' => $serie,
+            ':id' => (int) $nfseId,
+            ':pendente_dados' => self::STATUS_PENDENTE_DADOS,
+            ':pendente' => self::STATUS_PENDENTE,
+            ':erro_temporario' => self::STATUS_ERRO_TEMPORARIO,
+            ':erro_definitivo' => self::STATUS_ERRO_DEFINITIVO
+        ]);
     }
 
     public function atribuirNumDps($nfseId, $numDps)
