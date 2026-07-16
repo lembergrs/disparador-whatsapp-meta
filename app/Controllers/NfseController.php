@@ -22,15 +22,64 @@ class NfseController extends Controller
         $emissoes = (new NfseEmissao())->listarAdmin($status);
         $cobrancas = (new Cobranca())->listar();
         $clientes = (new Cliente())->listar();
+        $cobrancasElegiveisPorCliente = $this->mapearCobrancasElegiveisPorCliente($cobrancas);
 
         $this->view('nfse/index', [
             'titulo' => 'NFS-e',
             'emissoes' => $emissoes,
             'cobrancas' => $cobrancas,
+            'cobrancasElegiveisPorCliente' => $cobrancasElegiveisPorCliente,
             'clientes' => $clientes,
             'statusFiltro' => $status,
             'statusPermitidos' => NfseEmissao::statusPermitidos()
         ]);
+    }
+
+
+    private function mapearCobrancasElegiveisPorCliente(array $cobrancas)
+    {
+        $mapa = [];
+
+        foreach($cobrancas as $cobranca){
+            $clienteId = (int) ($cobranca['CLI_ID'] ?? 0);
+            $cobrancaId = (int) ($cobranca['COB_ID'] ?? 0);
+            $valor = (float) ($cobranca['COB_Valor'] ?? 0);
+            $status = (string) ($cobranca['COB_Status'] ?? '');
+
+            if($clienteId <= 0 || $cobrancaId <= 0 || $status !== 'pago' || $valor <= 0){
+                continue;
+            }
+
+            $dataReferencia = $cobranca['COB_DataPagamento']
+                ?? $cobranca['COB_DataVencimento']
+                ?? null;
+
+            $mapa[(string) $clienteId][] = [
+                'COB_ID' => $cobrancaId,
+                'CLI_ID' => $clienteId,
+                'descricao' => $this->descricaoCobrancaNfse($cobranca, $valor, $dataReferencia),
+                'valor' => $valor,
+                'status' => $status,
+                'data_referencia' => $dataReferencia ? substr((string) $dataReferencia, 0, 10) : null
+            ];
+        }
+
+        return $mapa;
+    }
+
+    private function descricaoCobrancaNfse(array $cobranca, $valor, $dataReferencia)
+    {
+        $partes = [
+            '#' . (int) ($cobranca['COB_ID'] ?? 0),
+            'R$ ' . number_format((float) $valor, 2, ',', '.'),
+            'pago'
+        ];
+
+        if(!empty($dataReferencia)){
+            $partes[] = 'ref. ' . date('d/m/Y', strtotime((string) $dataReferencia));
+        }
+
+        return implode(' - ', $partes);
     }
 
     public function aptidao()

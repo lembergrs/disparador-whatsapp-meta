@@ -1,5 +1,10 @@
 <?php
 use Core\Csrf;
+
+$cobrancasElegiveisJson = json_encode(
+    $cobrancasElegiveisPorCliente ?? [],
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT
+);
 ?>
 
 <div class="card">
@@ -27,18 +32,12 @@ use Core\Csrf;
                 </div>
                 <div class="col-md-5">
                     <label for="nfse_cobranca_id">Cobrança</label>
-                    <select name="cobranca_id" id="nfse_cobranca_id" class="form-control" required>
-                        <option value="">Selecione</option>
-                        <?php foreach($cobrancas as $cobranca){ ?>
-                            <?php if(($cobranca['COB_Status'] ?? '') !== 'pago' || (float) ($cobranca['COB_Valor'] ?? 0) <= 0){ continue; } ?>
-                            <option value="<?= (int) $cobranca['COB_ID']; ?>" data-cliente-id="<?= (int) $cobranca['CLI_ID']; ?>">
-                                #<?= (int) $cobranca['COB_ID']; ?> - Cliente #<?= (int) $cobranca['CLI_ID']; ?> - R$ <?= number_format((float) ($cobranca['COB_Valor'] ?? 0), 2, ',', '.'); ?> - <?= htmlspecialchars($cobranca['COB_Status'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
-                            </option>
-                        <?php } ?>
+                    <select name="cobranca_id" id="nfse_cobranca_id" class="form-control" required disabled>
+                        <option value="">Selecione um cliente primeiro</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary btn-block" onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
+                    <button type="submit" id="nfse_emitir_btn" class="btn btn-primary btn-block" disabled onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
                         Emitir manualmente
                     </button>
                 </div>
@@ -107,3 +106,77 @@ use Core\Csrf;
         </div>
     </div>
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    var cobrancasPorCliente = <?= $cobrancasElegiveisJson ?: '{}'; ?>;
+    var clienteSelect = document.getElementById('nfse_cliente_id');
+    var cobrancaSelect = document.getElementById('nfse_cobranca_id');
+    var emitirBtn = document.getElementById('nfse_emitir_btn');
+    var form = clienteSelect ? clienteSelect.closest('form') : null;
+
+    function limparCobrancas(mensagem){
+        cobrancaSelect.innerHTML = '';
+        var option = document.createElement('option');
+        option.value = '';
+        option.textContent = mensagem || 'Selecione';
+        cobrancaSelect.appendChild(option);
+        cobrancaSelect.value = '';
+        cobrancaSelect.disabled = true;
+        atualizarEstadoBotaoEmissao();
+    }
+
+    function atualizarCobrancasPorCliente(){
+        if(!clienteSelect || !cobrancaSelect){
+            return;
+        }
+
+        var clienteId = String(clienteSelect.value || '');
+        limparCobrancas(clienteId === '' ? 'Selecione um cliente primeiro' : 'Selecione');
+
+        if(clienteId === ''){
+            return;
+        }
+
+        var cobrancas = cobrancasPorCliente[clienteId] || [];
+        if(!Array.isArray(cobrancas) || cobrancas.length === 0){
+            limparCobrancas('Nenhuma cobrança elegível');
+            return;
+        }
+
+        cobrancas.forEach(function(cobranca){
+            var option = document.createElement('option');
+            option.value = String(cobranca.COB_ID || '');
+            option.textContent = String(cobranca.descricao || ('Cobrança #' + option.value));
+            cobrancaSelect.appendChild(option);
+        });
+
+        cobrancaSelect.disabled = false;
+        atualizarEstadoBotaoEmissao();
+    }
+
+    function atualizarEstadoBotaoEmissao(){
+        if(!emitirBtn || !clienteSelect || !cobrancaSelect){
+            return;
+        }
+
+        emitirBtn.disabled = !(String(clienteSelect.value || '') !== '' && String(cobrancaSelect.value || '') !== '' && !cobrancaSelect.disabled);
+    }
+
+    if(clienteSelect && cobrancaSelect){
+        limparCobrancas('Selecione um cliente primeiro');
+        clienteSelect.addEventListener('change', atualizarCobrancasPorCliente);
+        cobrancaSelect.addEventListener('change', atualizarEstadoBotaoEmissao);
+    }
+
+    if(form && emitirBtn){
+        form.addEventListener('submit', function(){
+            if(!emitirBtn.disabled){
+                emitirBtn.disabled = true;
+                emitirBtn.textContent = 'Enviando...';
+            }
+        });
+    }
+});
+</script>

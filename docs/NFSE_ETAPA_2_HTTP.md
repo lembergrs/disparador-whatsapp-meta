@@ -193,3 +193,7 @@ A auditoria da Etapa 2 reforçou pontos operacionais antes de qualquer emissão 
 - XML possui limites de tamanho e validação sem rede (`LIBXML_NONET` quando disponível);
 - certificado deve ser arquivo real, legível, fora de `public/` e dentro do limite operacional;
 - logs de NFS-e têm rotação local simples e continuam sem payload, XML, PDF ou segredos.
+
+## 15. Seleção dependente Cliente → Cobrança
+
+A tela administrativa de emissão manual usa seleção dependente: o select de cobrança inicia vazio/desabilitado e só recebe cobranças elegíveis após a escolha do cliente. O backend entrega à view um mapa JSON seguro de cobranças pagas, positivas, com identificador local e agrupadas por `CLI_ID`; o JavaScript apenas filtra visualmente esse mapa. A validação obrigatória permanece no backend em `NfseEmissionService`, que confirma cliente válido, cobrança válida, vínculo cliente/cobrança, status pago, valor positivo e bloqueios de emissão duplicada antes de qualquer chamada HTTP.
