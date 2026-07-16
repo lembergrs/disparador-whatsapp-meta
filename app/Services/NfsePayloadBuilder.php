@@ -14,7 +14,7 @@ class NfsePayloadBuilder
         $prestadorCnpj = NfseConfigService::prestadorCnpj();
         $localEmissao = NfseConfigService::localEmissaoIbge();
         $optSimples = NfseConfigService::optSimplesNacional();
-        $parametrosFiscais = $this->parametrosFiscaisConfigurados();
+        $parametrosFiscais = $this->parametrosFiscaisConfigurados($emissao);
         $tomadorCnpj = $this->somenteDigitos($cliente['CLI_NFSe_CNPJ'] ?? $cliente['CLI_CPF_CNPJ'] ?? '');
         $cep = $this->somenteDigitos($cliente['CLI_NFSe_CEP'] ?? '');
         $ibge = $this->somenteDigitos($cliente['CLI_NFSe_CodigoIBGE'] ?? '');
@@ -130,16 +130,23 @@ class NfsePayloadBuilder
         }
     }
 
-    public function validarParametrosFiscaisConfigurados()
+    public function validarParametrosFiscaisConfigurados(array $emissao = [])
     {
-        $this->parametrosFiscaisConfigurados();
-        return true;
+        return $this->parametrosFiscaisConfigurados($emissao);
     }
 
-    private function parametrosFiscaisConfigurados()
+    private function parametrosFiscaisConfigurados(array $emissao = [])
     {
-        $codigo = NfseConfigService::codigoTributacaoNacional();
-        $descricao = NfseConfigService::descricaoServico();
+        $codigo = trim((string) ($emissao['NFE_CodigoTributacaoNacional'] ?? ''));
+        $descricao = trim((string) ($emissao['NFE_DescricaoServicoSnapshot'] ?? ''));
+
+        if($codigo === ''){
+            $codigo = NfseConfigService::codigoTributacaoNacional();
+        }
+
+        if($descricao === ''){
+            $descricao = NfseConfigService::descricaoServico();
+        }
         $pendencias = [];
 
         if($codigo === ''){

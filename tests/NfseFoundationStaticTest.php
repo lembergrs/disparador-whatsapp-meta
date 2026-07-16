@@ -7,6 +7,7 @@ $sequencia = file_get_contents($root . '/app/Services/NfseDpsSequenciaService.ph
 $clienteModel = file_get_contents($root . '/app/Models/Cliente.php');
 $config = file_get_contents($root . '/config/config.php');
 $docs = file_get_contents($root . '/docs/NFSE_LEVANTAMENTO_TECNICO.md');
+$snapshotMigration = file_get_contents($root . '/database/migrations/20260716_add_nfse_fiscal_snapshot.sql');
 
 function nfseAssert($condition, $message)
 {
@@ -33,6 +34,8 @@ nfseContains($migration, 'UNIQUE KEY uk_nfse_idempotency (NFE_IdempotencyKey)', 
 nfseContains($migration, 'UNIQUE KEY uk_nfse_numdps_contexto (NFE_PrestadorCnpj, NFE_Ambiente, NFE_Serie, NFE_NumDps)', 'migration has contextual unique numDPS');
 nfseContains($migration, 'UNIQUE KEY uk_nfse_dps_contexto (NDS_PrestadorCnpj, NDS_Ambiente, NDS_Serie)', 'sequence separated by prestador/ambiente/série');
 nfseContains($migration, 'CLI_NFSe_CodigoIBGE', 'migration adds fiscal IBGE code');
+nfseContains($snapshotMigration, 'NFE_CodigoTributacaoNacional', 'snapshot migration stores fiscal code');
+nfseContains($snapshotMigration, 'NFE_DescricaoServicoSnapshot', 'snapshot migration stores fiscal description');
 nfseNotContains($migration, 'NFE_API_AUTH_TOKEN', 'migration does not store API token column');
 nfseNotContains($migration, 'NFE_senhaCert', 'migration does not store senhaCert column');
 nfseNotContains($migration, 'NFE_Authorization', 'migration does not store Authorization column');

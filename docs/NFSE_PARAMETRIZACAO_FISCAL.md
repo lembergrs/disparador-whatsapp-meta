@@ -30,3 +30,7 @@ Nesta etapa não há migration e não são criados campos novos. A descrição u
 ## Restrições
 
 Não há alteração de payload fiscal além da origem configurável da descrição já existente, não há automação, não há Worker, não há Webhook, não há retry automático, não há emissão real e não há alteração da API `rl2-nfse`.
+
+## Auditoria — snapshot fiscal dedicado
+
+A auditoria concluiu que `NFE_RetornoSanitizado` não é suficiente como fonte histórica única para código e descrição em todos os cenários de retentativa e falha. Por isso foi adicionada migration complementar com `NFE_CodigoTributacaoNacional` e `NFE_DescricaoServicoSnapshot`, ambos nullable para registros existentes. O snapshot é gravado antes da primeira tentativa fiscal e passa a ser reutilizado em retentativas, impedindo que alteração futura do `.env` mude uma emissão já preparada.

@@ -84,7 +84,7 @@ class NfseEmissionService
         }
 
         try{
-            $this->builder->validarParametrosFiscaisConfigurados();
+            $snapshotFiscal = $this->builder->validarParametrosFiscaisConfigurados($emissao);
         }catch(\Throwable $e){
             $resultadoBloqueio = [
                 'sucesso' => false,
@@ -104,6 +104,9 @@ class NfseEmissionService
 
             return ['sucesso' => false, 'emissao' => $emissao, 'tipo' => 'configuracao_fiscal_incompleta', 'mensagem' => $e->getMessage()];
         }
+
+        $this->emissoes->prepararSnapshotFiscal((int) $emissao['NFE_ID'], $snapshotFiscal['codigo_tributacao_nacional'], $snapshotFiscal['descricao_servico']);
+        $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
 
         $statusAtual = $emissao['NFE_Status'] ?? NfseEmissao::STATUS_PENDENTE_DADOS;
         if($statusAtual === NfseEmissao::STATUS_PENDENTE_DADOS){
