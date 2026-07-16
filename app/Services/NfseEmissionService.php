@@ -123,7 +123,11 @@ class NfseEmissionService
 
         try{
             if(empty($emissao['NFE_NumDps'])){
-                $numDps = $this->sequencias->reservar(NfseConfigService::prestadorCnpj(), NfseConfigService::ambiente(), NfseConfigService::dpsSerie());
+                $numDps = $this->sequencias->reservar(
+                    $emissao['NFE_PrestadorCnpj'] ?? NfseConfigService::prestadorCnpj(),
+                    $emissao['NFE_Ambiente'] ?? NfseConfigService::ambiente(),
+                    $emissao['NFE_Serie'] ?? NfseConfigService::dpsSerie()
+                );
                 $this->emissoes->atribuirNumDps((int) $emissao['NFE_ID'], $numDps);
                 $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
             }
@@ -282,16 +286,13 @@ class NfseEmissionService
         return $this->resultadoSeguro($resultado);
     }
 
-    public function arquivoDownload($nfseId, $tipo, array $admin = [])
+    public function arquivoDownload($nfseId, $tipo, array $usuario = [])
     {
-        if(($admin['nivel'] ?? '') !== 'admin'){
-            throw new \RuntimeException('Apenas administradores podem baixar documentos de NFS-e.');
-        }
-
         $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
         $info = $this->emissoes->arquivoPrivado((int) $nfseId, $tipo);
         $pathRelativo = $info['path'] ?? '';
-        if(!$info || $pathRelativo === '' || strpos($pathRelativo, '..') !== false || $pathRelativo[0] === '/'){
+
+        if(!$info || !$this->usuarioPodeBaixarArquivo($info, $usuario) || $pathRelativo === '' || strpos($pathRelativo, '..') !== false || $pathRelativo[0] === '/'){
             throw new \InvalidArgumentException('Documento fiscal não encontrado.');
         }
 
@@ -310,10 +311,28 @@ class NfseEmissionService
         ];
     }
 
+    private function usuarioPodeBaixarArquivo(array $info, array $usuario)
+    {
+        if(($usuario['nivel'] ?? '') === 'admin'){
+            return true;
+        }
+
+        if(!in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_admin', 'cliente_usuario'], true)){
+            return false;
+        }
+
+        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        if($clienteId <= 0 || (int) ($info['CLI_ID'] ?? 0) !== $clienteId){
+            return false;
+        }
+
+        $cobranca = $this->cobrancas->buscar((int) ($info['COB_ID'] ?? 0));
+        return $cobranca && (int) ($cobranca['CLI_ID'] ?? 0) === $clienteId;
+    }
+
     private function bloqueioPorStatus($status)
     {
         if($status === NfseEmissao::STATUS_EMITIDA){ return 'NFS-e já emitida para esta cobrança.'; }
-        if($status === NfseEmissao::STATUS_CANCELADA){ return 'NFS-e cancelada não pode ser reemitida automaticamente.'; }
         if($status === NfseEmissao::STATUS_PROCESSANDO){ return 'NFS-e já está em processamento.'; }
         if($status === NfseEmissao::STATUS_RECONCILIACAO_PENDENTE){ return 'NFS-e em reconciliação pendente; não reenviar emissão.'; }
         if($status === NfseEmissao::STATUS_ERRO_DEFINITIVO){ return 'NFS-e com erro definitivo exige ação administrativa explícita.'; }
