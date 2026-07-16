@@ -286,16 +286,13 @@ class NfseEmissionService
         return $this->resultadoSeguro($resultado);
     }
 
-    public function arquivoDownload($nfseId, $tipo, array $admin = [])
+    public function arquivoDownload($nfseId, $tipo, array $usuario = [])
     {
-        if(($admin['nivel'] ?? '') !== 'admin'){
-            throw new \RuntimeException('Apenas administradores podem baixar documentos de NFS-e.');
-        }
-
         $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
         $info = $this->emissoes->arquivoPrivado((int) $nfseId, $tipo);
         $pathRelativo = $info['path'] ?? '';
-        if(!$info || $pathRelativo === '' || strpos($pathRelativo, '..') !== false || $pathRelativo[0] === '/'){
+
+        if(!$info || !$this->usuarioPodeBaixarArquivo($info, $usuario) || $pathRelativo === '' || strpos($pathRelativo, '..') !== false || $pathRelativo[0] === '/'){
             throw new \InvalidArgumentException('Documento fiscal não encontrado.');
         }
 
@@ -312,6 +309,25 @@ class NfseEmissionService
             'filename' => 'nfse-' . (int) $nfseId . '.' . $tipo,
             'content_type' => $tipo === 'pdf' ? 'application/pdf' : 'application/xml'
         ];
+    }
+
+    private function usuarioPodeBaixarArquivo(array $info, array $usuario)
+    {
+        if(($usuario['nivel'] ?? '') === 'admin'){
+            return true;
+        }
+
+        if(!in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_admin', 'cliente_usuario'], true)){
+            return false;
+        }
+
+        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        if($clienteId <= 0 || (int) ($info['CLI_ID'] ?? 0) !== $clienteId){
+            return false;
+        }
+
+        $cobranca = $this->cobrancas->buscar((int) ($info['COB_ID'] ?? 0));
+        return $cobranca && (int) ($cobranca['CLI_ID'] ?? 0) === $clienteId;
     }
 
     private function bloqueioPorStatus($status)

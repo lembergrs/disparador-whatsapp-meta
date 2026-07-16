@@ -127,12 +127,14 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                         <th>Status</th>
                         <th>Forma</th>
                         <th>Data pagamento</th>
+                        <th>NFS-e</th>
+                        <th>Documentos</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody id="faturasTabelaCorpo">
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">Carregando faturas...</td>
+                        <td colspan="8" class="text-center text-muted py-4">Carregando faturas...</td>
                     </tr>
                 </tbody>
             </table>
@@ -494,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function(){
             faturasRequest.abort();
         }
 
-        faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">Carregando faturas...</td></tr>';
+        faturasTabelaCorpo.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Carregando faturas...</td></tr>';
         faturasContador.textContent = 'Carregando faturas...';
 
         faturasRequest = window.jQuery.ajax({
@@ -508,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function(){
         })
         .done(function(resposta){
             if(!resposta || !resposta.sucesso){
-                faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
+                faturasTabelaCorpo.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
                 faturasPaginacao.innerHTML = '';
                 faturasContador.textContent = 'Erro ao carregar faturas';
                 return;
@@ -523,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 return;
             }
 
-            faturasTabelaCorpo.innerHTML = '<tr><td colspan="6" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
+            faturasTabelaCorpo.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Não foi possível carregar as faturas.</td></tr>';
             faturasPaginacao.innerHTML = '';
             faturasContador.textContent = 'Erro ao carregar faturas';
         })

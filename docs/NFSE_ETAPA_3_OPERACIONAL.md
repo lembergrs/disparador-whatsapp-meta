@@ -30,8 +30,20 @@ O log `storage/logs/nfse.log` registra operações `emitir`, `consultar_pdf`, `c
 
 ## Rollback
 
-Como não há migration ou alteração de payload, o rollback é reverter este commit. Arquivos privados já gravados em `storage/nfse/` permanecem fora do Git e podem ser mantidos para auditoria fiscal.
+O rollback operacional é reverter os commits do módulo e, se aplicada, reverter a migration de reemissão conforme plano de banco. Arquivos privados já gravados em `storage/nfse/` permanecem fora do Git e podem ser mantidos para auditoria fiscal.
 
 ## Parametrização fiscal
 
-O painel operacional exibe aviso de configuração fiscal incompleta quando `NFSE_CODIGO_TRIBUTACAO_NACIONAL` ou `NFSE_DESCRICAO_SERVICO` estiver ausente. O botão de emissão permanece desabilitado enquanto faltar qualquer valor e a prévia fiscal mostra, para conferência administrativa, o código tributário e a descrição configurados. O código ainda não é enviado à API até adaptação futura da `rl2-nfse`.
+O painel operacional exibe aviso de configuração fiscal incompleta quando `NFSE_CODIGO_TRIBUTACAO_NACIONAL` ou `NFSE_DESCRICAO_SERVICO` estiver ausente. O botão de emissão permanece desabilitado enquanto faltar qualquer valor e a prévia fiscal mostra, para conferência administrativa, o código tributário e a descrição configurados. O código tributário nacional é enviado no payload da emissão quando resolvido pelo snapshot/configuração fiscal.
+
+## Disponibilização ao cliente
+
+A NFS-e é exibida diretamente na tela **Financeiro** do cliente, junto da cobrança correspondente. Não há menu fiscal separado para o cliente.
+
+Para cada cobrança, o sistema carrega as emissões fiscais relevantes em lote e escolhe uma única emissão vigente: primeiro uma emissão ativa; se não existir, a emissão cancelada mais recente; se não houver histórico fiscal, a cobrança aparece como nota não emitida/pendente. Quando uma cobrança possui uma emissão cancelada antiga e uma nova emissão ativa/emitida, somente a nova emissão é apresentada como vigente.
+
+Os status são simplificados para o cliente: **Não emitida**, **Pendente**, **Emitindo**, **Processando**, **Emitida** ou **Cancelada**. Erros técnicos não são expostos; nesses casos a tela mostra mensagens amigáveis como nota fiscal pendente ou em processamento.
+
+Os botões **PDF** e **XML** só aparecem quando os arquivos já estão armazenados. Os links usam as rotas autenticadas `nfse/pdf/{id}` e `nfse/xml/{id}`; nunca há link direto para `storage/nfse` ou caminho interno.
+
+A autorização dos downloads é validada no backend. Administradores podem baixar documentos pelo módulo protegido. Clientes só podem baixar documentos de emissões vinculadas ao próprio `CLI_ID` e a uma cobrança do mesmo cliente. Tentativas de acessar documento de outro cliente não revelam a existência do arquivo nem caminhos internos.

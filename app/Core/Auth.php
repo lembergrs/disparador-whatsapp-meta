@@ -427,6 +427,7 @@ class Auth
                 [
                     'dashboard',
                     'financeiro',
+                    'nfse',
                     'conta',
                     'login',
                     'site'

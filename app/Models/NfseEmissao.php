@@ -252,6 +252,56 @@ class NfseEmissao
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+
+    public function buscarVigentesPorCobrancas(array $cobrancaIds, $clienteId = null)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $cobrancaIds), function($id){ return $id > 0; })));
+        if(empty($ids)){
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params = $ids;
+        $filtroCliente = '';
+
+        if($clienteId !== null){
+            $filtroCliente = ' AND CLI_ID = ?';
+            $params[] = (int) $clienteId;
+        }
+
+        $sql = $this->db->prepare("
+            SELECT NFE_ID, CLI_ID, COB_ID, NFE_Status, NFE_DataEmissao,
+                   NFE_PdfStoragePath, NFE_XmlStoragePath, NFE_EmissaoAtiva
+            FROM nfse_emissoes
+            WHERE COB_ID IN ({$placeholders})
+            {$filtroCliente}
+            AND NFE_Status IN ('pendente_dados','pendente','processando','reconciliacao_pendente','emitida','erro_temporario','erro_definitivo','cancelamento_pendente','cancelada')
+            ORDER BY COB_ID ASC,
+                     CASE WHEN NFE_Status <> 'cancelada' THEN 0 ELSE 1 END ASC,
+                     NFE_ID DESC
+        ");
+        $sql->execute($params);
+
+        $vigentes = [];
+        while($row = $sql->fetch(PDO::FETCH_ASSOC)){
+            $cobrancaId = (int) ($row['COB_ID'] ?? 0);
+            if($cobrancaId <= 0 || isset($vigentes[$cobrancaId])){
+                continue;
+            }
+
+            $vigentes[$cobrancaId] = [
+                'NFE_ID' => (int) ($row['NFE_ID'] ?? 0),
+                'COB_ID' => $cobrancaId,
+                'NFE_Status' => (string) ($row['NFE_Status'] ?? ''),
+                'NFE_DataEmissao' => $row['NFE_DataEmissao'] ?? null,
+                'tem_pdf' => !empty($row['NFE_PdfStoragePath']),
+                'tem_xml' => !empty($row['NFE_XmlStoragePath'])
+            ];
+        }
+
+        return $vigentes;
+    }
+
     public function prepararProcessamento($nfseId, $statusAtualEsperado)
     {
         return $this->atualizarStatus($nfseId, self::STATUS_PROCESSANDO, [], $statusAtualEsperado);
@@ -379,7 +429,7 @@ class NfseEmissao
     {
         $colPath = $tipo === 'pdf' ? 'NFE_PdfStoragePath' : 'NFE_XmlStoragePath';
         $colHash = $tipo === 'pdf' ? 'NFE_PdfSha256' : 'NFE_XmlSha256';
-        $sql = $this->db->prepare("SELECT NFE_ID, CLI_ID, {$colPath} AS path, {$colHash} AS hash FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
+        $sql = $this->db->prepare("SELECT NFE_ID, CLI_ID, COB_ID, {$colPath} AS path, {$colHash} AS hash FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
         $sql->execute([(int) $nfseId]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
