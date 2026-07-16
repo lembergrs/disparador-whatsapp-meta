@@ -8,4 +8,13 @@
 *.log
 Thumbs.db
 .DS_Store
+
+# Logs e arquivos operacionais
+/storage/logs/*.log.*
+/storage/logs/worker-daemon.jsonl
+/storage/logs/worker-daemon.jsonl.*
+/storage/worker-daemon.lock
+
+# Arquivos de NFS-e
 /storage/nfse/
+
