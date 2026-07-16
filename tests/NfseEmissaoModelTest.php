@@ -32,7 +32,12 @@ class FakeNfseEmissaoStatement
     {
         if(strpos($this->sql, 'SELECT * FROM nfse_emissoes WHERE COB_ID') !== false){
             $cobrancaId = (int) ($params[0] ?? 0);
-            $this->result = $this->db->rows[$cobrancaId] ?? false;
+            $this->result = false;
+            if(isset($this->db->rows[$cobrancaId])){
+                foreach(array_reverse($this->db->rows[$cobrancaId]) as $row){
+                    if(($row['NFE_Status'] ?? '') !== NfseEmissao::STATUS_CANCELADA){ $this->result = $row; break; }
+                }
+            }
             return true;
         }
 
@@ -42,18 +47,25 @@ class FakeNfseEmissaoStatement
             }
 
             $cobrancaId = (int) $params[':cobranca'];
-            if(isset($this->db->rows[$cobrancaId])){
+            $ativa = false;
+            foreach($this->db->rows[$cobrancaId] ?? [] as $row){
+                if(($row['NFE_Status'] ?? '') !== NfseEmissao::STATUS_CANCELADA){ $ativa = true; }
+            }
+            if($ativa){
                 $e = new PDOException('Duplicate entry');
                 $e->errorInfo = ['23000', 1062, 'Duplicate entry'];
                 throw $e;
             }
 
-            $this->db->rows[$cobrancaId] = [
-                'NFE_ID' => count($this->db->rows) + 1,
+            $this->db->rows[$cobrancaId][] = [
+                'NFE_ID' => array_sum(array_map('count', $this->db->rows)) + 1,
                 'CLI_ID' => (int) $params[':cliente'],
                 'COB_ID' => $cobrancaId,
                 'NFE_IdempotencyKey' => $params[':idempotency'],
-                'NFE_Status' => $params[':status']
+                'NFE_Status' => $params[':status'],
+                'NFE_PrestadorCnpj' => $params[':prestador_cnpj'],
+                'NFE_Ambiente' => $params[':ambiente'],
+                'NFE_Serie' => $params[':serie']
             ];
             return true;
         }
@@ -89,12 +101,19 @@ $db = new FakeNfseEmissaoDb();
 $model = new NfseEmissao($db);
 $cobranca = ['COB_ID' => 123, 'CLI_ID' => 45, 'COB_Valor' => '99.90'];
 
-$primeira = $model->criarOuBuscarPorCobranca($cobranca, ['status' => NfseEmissao::STATUS_PENDENTE]);
+$primeira = $model->criarOuBuscarPorCobranca($cobranca, ['status' => NfseEmissao::STATUS_PENDENTE, 'prestador_cnpj' => '11.534.763/0001-39', 'ambiente' => 'production', 'serie' => '900']);
 nfseEmissaoAssert($primeira['COB_ID'] === 123, 'primeira chamada cria registro local');
-nfseEmissaoAssert($primeira['NFE_IdempotencyKey'] === 'nfse:cobranca:123', 'chave idempotente estável');
+nfseEmissaoAssert(strpos($primeira['NFE_IdempotencyKey'], 'nfse:cobranca:123:') === 0, 'chave idempotente única por emissão');
+nfseEmissaoAssert($primeira['NFE_PrestadorCnpj'] === '11534763000139' && $primeira['NFE_Ambiente'] === 'production' && $primeira['NFE_Serie'] === '900', 'nova emissão comum persiste CNPJ/production/série recebidos do service');
 
 $segunda = $model->criarOuBuscarPorCobranca($cobranca, ['status' => NfseEmissao::STATUS_PENDENTE]);
 nfseEmissaoAssert($segunda === $primeira, 'chamada repetida retorna registro existente');
+$db->rows[123][0]['NFE_Status'] = NfseEmissao::STATUS_CANCELADA;
+$terceira = $model->criarOuBuscarPorCobranca($cobranca, ['status' => NfseEmissao::STATUS_PENDENTE, 'prestador_cnpj' => '11.534.763/0001-39', 'ambiente' => 'production', 'serie' => '900']);
+nfseEmissaoAssert($terceira['NFE_ID'] !== $primeira['NFE_ID'], 'reemissão após cancelamento cria novo NFE_ID');
+nfseEmissaoAssert($terceira['NFE_IdempotencyKey'] !== $primeira['NFE_IdempotencyKey'], 'reemissão após cancelamento cria novo RequestId/idempotência local');
+nfseEmissaoAssert($db->rows[123][0]['NFE_Status'] === NfseEmissao::STATUS_CANCELADA, 'histórico cancelado preservado');
+nfseEmissaoAssert($terceira['NFE_PrestadorCnpj'] === '11534763000139' && $terceira['NFE_Ambiente'] === 'production' && $terceira['NFE_Serie'] === '900', 'reemissão após cancelamento persiste CNPJ/production/900');
 
 try{
     $model->criarOuBuscarPorCobranca(['COB_ID' => null, 'CLI_ID' => 45]);

@@ -2,6 +2,9 @@
 
 if(!defined('NFSE_CODIGO_TRIBUTACAO_NACIONAL')) define('NFSE_CODIGO_TRIBUTACAO_NACIONAL', '01.02.03');
 if(!defined('NFSE_DESCRICAO_SERVICO')) define('NFSE_DESCRICAO_SERVICO', 'Licenciamento de uso da plataforma');
+if(!defined('NFSE_PRESTADOR_CNPJ')) define('NFSE_PRESTADOR_CNPJ', '11.534.763/0001-39');
+if(!defined('NFSE_AMBIENTE')) define('NFSE_AMBIENTE', 'production');
+if(!defined('NFSE_DPS_SERIE')) define('NFSE_DPS_SERIE', '900');
 
 require_once __DIR__ . '/../app/Models/NfseEmissao.php';
 require_once __DIR__ . '/../app/Models/Cliente.php';
@@ -30,16 +33,17 @@ function nfseEmissionServiceAssert($cond, $msg){ if(!$cond){ fwrite(STDERR, "FAI
 class FakeClienteModel extends Cliente { public $cliente; public function __construct(){} public function buscar($id){ return $this->cliente; } }
 class FakeCobrancaModel extends Cobranca { public $cobranca; public function __construct(){} public function buscar($id){ return $this->cobranca; } }
 class FakeAptidao extends NfseAptidaoFiscalService { public $apto = true; public function validarCliente($cliente){ return $this->apto ? ['apto' => true, 'tipo_bloqueio' => null, 'campos_faltantes' => [], 'mensagem' => 'Apto'] : ['apto' => false, 'tipo_bloqueio' => 'dados_incompletos', 'campos_faltantes' => ['cnpj'], 'mensagem' => 'Não apto']; } }
-class FakeSeq extends NfseDpsSequenciaService { public $reservas = 0; public function __construct(){} public function reservar($prestadorCnpj = null, $ambiente = null, $serie = null){ $this->reservas++; return '1'; } }
+class FakeSeq extends NfseDpsSequenciaService { public $reservas = 0; public $lastArgs = []; public function __construct(){} public function reservar($prestadorCnpj = null, $ambiente = null, $serie = null){ $this->reservas++; $this->lastArgs = [$prestadorCnpj, $ambiente, $serie]; return (string) $this->reservas; } }
 class FakeBuilderIncompleto extends NfsePayloadBuilder { public function validarParametrosFiscaisConfigurados(array $emissao = []){ throw new \RuntimeException('Configuração fiscal de NFS-e incompleta: código tributário.'); } public function carregarSegredosCertificado(){ throw new \RuntimeException('não deveria ler certificado'); } public function montarEmissao(array $cliente, array $cobranca, array $emissao, array $segredos){ throw new \RuntimeException('não deveria montar payload'); } }
 class FakeBuilder extends NfsePayloadBuilder { public function carregarSegredosCertificado(){ return ['cert' => 'CERTIFICADO_FICTICIO_BASE64', 'senhaCert' => 'SENHA_FICTICIA']; } public function montarEmissao(array $cliente, array $cobranca, array $emissao, array $segredos){ return ['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'dadosNota' => ['numDPS' => $emissao['NFE_NumDps'] ?? '1']]; } }
 class FakeClient extends NfseApiClient { public $chamadas = 0; public function __construct(){} public function emitir(array $payload){ $this->chamadas++; return ['http_status' => 200, 'content_type' => 'application/json', 'body' => '{}']; } }
 class FakeMapper extends NfseApiResponseMapper { public $resultado; public function mapearEmissao(array $http){ return $this->resultado ?: ['sucesso' => true, 'request_id' => 'req-1', 'id_dps' => 'id-1', 'chave_acesso' => 'chave-1', 'retorno_sanitizado' => ['success' => true]]; } }
 class FakeEmissoes extends NfseEmissao {
-    public $row; public $statusUpdates = []; public $sucesso = false; public $erro = false; public $numDps = false;
-    public function __construct(){ $this->row = ['NFE_ID' => 7, 'CLI_ID' => 1, 'COB_ID' => 2, 'NFE_Status' => self::STATUS_PENDENTE_DADOS, 'NFE_NumDps' => null, 'NFE_ValorFiscal' => '10.00', 'NFE_Competencia' => '2026-07-15', 'NFE_CodigoTributacaoNacional' => null, 'NFE_DescricaoServicoSnapshot' => null]; }
+    public $row; public $statusUpdates = []; public $sucesso = false; public $erro = false; public $numDps = false; public $contextosPreparados = 0;
+    public function __construct(){ $this->row = ['NFE_ID' => 7, 'CLI_ID' => 1, 'COB_ID' => 2, 'NFE_Status' => self::STATUS_PENDENTE_DADOS, 'NFE_NumDps' => null, 'NFE_ValorFiscal' => '10.00', 'NFE_Competencia' => '2026-07-15', 'NFE_PrestadorCnpj' => '11534763000139', 'NFE_Ambiente' => 'production', 'NFE_Serie' => '900', 'NFE_CodigoTributacaoNacional' => null, 'NFE_DescricaoServicoSnapshot' => null]; }
     public function criarOuBuscarPorCobranca(array $cobranca, array $opcoes = []){ return $this->row; }
     public function atualizarStatus($nfseId, $status, array $erro = [], $statusAtualEsperado = null){ $this->statusUpdates[] = [$status, $statusAtualEsperado]; $this->row['NFE_Status'] = $status; return true; }
+    public function prepararContextoFiscalAntesDaReserva($nfseId, $prestadorCnpj, $ambiente, $serie){ $this->contextosPreparados++; if(empty($this->row['NFE_NumDps']) && empty($this->row['NFE_RequestIdEmissao']) && !in_array($this->row['NFE_Status'], [self::STATUS_EMITIDA, self::STATUS_CANCELADA, self::STATUS_RECONCILIACAO_PENDENTE], true)){ if(empty($this->row['NFE_PrestadorCnpj']) || strlen(preg_replace('/\D/', '', $this->row['NFE_PrestadorCnpj'])) !== 14){ $this->row['NFE_PrestadorCnpj'] = preg_replace('/\D/', '', $prestadorCnpj); } if(empty($this->row['NFE_Ambiente']) || !in_array($this->row['NFE_Ambiente'], ['production','sandbox','homologation','local'], true)){ $this->row['NFE_Ambiente'] = $ambiente; } if(empty($this->row['NFE_Serie'])){ $this->row['NFE_Serie'] = $serie; } } return true; }
     public function prepararSnapshotFiscal($nfseId, $codigoTributacao, $descricaoServico){ if(empty($this->row['NFE_CodigoTributacaoNacional'])){ $this->row['NFE_CodigoTributacaoNacional'] = $codigoTributacao; } if(empty($this->row['NFE_DescricaoServicoSnapshot'])){ $this->row['NFE_DescricaoServicoSnapshot'] = $descricaoServico; } return true; }
     public function atribuirNumDps($nfseId, $numDps){ $this->numDps = true; $this->row['NFE_NumDps'] = $numDps; return true; }
     public function buscarPorId($nfseId){ return $this->row; }
@@ -56,6 +60,7 @@ $service = new NfseEmissionService($emissoes, $clientes, $cobrancas, $aptidao, $
 $res = $service->emitirManual(1, 2, ['nivel' => 'admin']);
 nfseEmissionServiceAssert($res['sucesso'] === true, 'emissão manual sucesso');
 nfseEmissionServiceAssert($seq->reservas === 1 && $emissoes->numDps === true, 'numDPS reservado somente no fluxo apto');
+nfseEmissionServiceAssert($seq->lastArgs === ['11534763000139', 'production', '900'], 'numDPS usa contexto fiscal persistido na emissão production');
 nfseEmissionServiceAssert($client->chamadas === 1, 'API chamada uma vez no sucesso');
 nfseEmissionServiceAssert($emissoes->sucesso === true, 'sucesso persistido');
 
@@ -81,9 +86,47 @@ $serviceProcessando = new NfseEmissionService($emissoesProcessando, $clientes, $
 $resProcessando = $serviceProcessando->emitirManual(1, 2, ['nivel' => 'admin']);
 nfseEmissionServiceAssert($resProcessando['tipo'] === 'status_bloqueado' && $clientProcessando->chamadas === 0, 'processando não é reenviado');
 
+nfseEmissionServiceAssert(NfseEmissao::transicaoPermitida(NfseEmissao::STATUS_CANCELADA, NfseEmissao::STATUS_PENDENTE) === false, 'reativação de cancelada bloqueada');
+
 $emissoes4 = new FakeEmissoes(); $mapper4 = new FakeMapper(); $mapper4->resultado = ['sucesso' => false, 'incerto' => true, 'temporario' => false, 'tipo_erro' => 'incerto', 'error_code' => 'timeout', 'error_message' => 'timeout'];
 $service4 = new NfseEmissionService($emissoes4, $clientes, $cobrancas, $aptidao, new FakeSeq(), $builder, new FakeClient(), $mapper4);
 $res4 = $service4->emitirManual(1, 2, ['nivel' => 'admin']);
 nfseEmissionServiceAssert($res4['tipo'] === 'incerto' && $emissoes4->row['NFE_Status'] === NfseEmissao::STATUS_RECONCILIACAO_PENDENTE, 'timeout incerto vira reconciliação pendente');
+
+
+$emissoesReparo = new FakeEmissoes();
+$emissoesReparo->row['NFE_Status'] = NfseEmissao::STATUS_ERRO_DEFINITIVO;
+$emissoesReparo->row['NFE_PrestadorCnpj'] = '';
+$emissoesReparo->row['NFE_Ambiente'] = 'sandbox';
+$emissoesReparo->row['NFE_CodigoTributacaoNacional'] = '99.88.77';
+$emissoesReparo->row['NFE_DescricaoServicoSnapshot'] = 'Descrição snapshot original';
+$seqReparo = new FakeSeq();
+$serviceReparo = new NfseEmissionService($emissoesReparo, $clientes, $cobrancas, $aptidao, $seqReparo, $builder, new FakeClient(), $mapper);
+$resReparo = $serviceReparo->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resReparo['sucesso'] === true && $seqReparo->lastArgs === ['11534763000139', 'sandbox', '900'], 'emissão ativa sem numDPS/request tem CNPJ reparado e reserva com contexto seguro');
+nfseEmissionServiceAssert($emissoesReparo->row['NFE_CodigoTributacaoNacional'] === '99.88.77' && $emissoesReparo->row['NFE_DescricaoServicoSnapshot'] === 'Descrição snapshot original', 'reparo não sobrescreve código nem descrição do snapshot');
+
+$emissoesComDps = new FakeEmissoes();
+$emissoesComDps->row['NFE_NumDps'] = '32';
+$emissoesComDps->row['NFE_PrestadorCnpj'] = '';
+$serviceComDps = new NfseEmissionService($emissoesComDps, $clientes, $cobrancas, $aptidao, new FakeSeq(), $builder, new FakeClient(), $mapper);
+$resComDps = $serviceComDps->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($emissoesComDps->row['NFE_PrestadorCnpj'] === '', 'emissão com numDPS não tem contexto alterado pelo reparo seguro');
+
+$emissoesSemReparoSeguro = new FakeEmissoes();
+$emissoesSemReparoSeguro->row['NFE_PrestadorCnpj'] = '';
+$emissoesSemReparoSeguro->row['NFE_RequestIdEmissao'] = 'req-ja-iniciado';
+$seqSemReparoSeguro = new FakeSeq();
+$clientSemReparoSeguro = new FakeClient();
+$serviceSemReparoSeguro = new NfseEmissionService($emissoesSemReparoSeguro, $clientes, $cobrancas, $aptidao, $seqSemReparoSeguro, $builder, $clientSemReparoSeguro, $mapper);
+$resSemReparoSeguro = $serviceSemReparoSeguro->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resSemReparoSeguro['sucesso'] === false && $seqSemReparoSeguro->reservas === 0 && $clientSemReparoSeguro->chamadas === 0, 'contexto inválido não reparável falha sem consumir sequência e sem API');
+
+$emissoesCanceladaProtegida = new FakeEmissoes();
+$emissoesCanceladaProtegida->row['NFE_Status'] = NfseEmissao::STATUS_CANCELADA;
+$emissoesCanceladaProtegida->row['NFE_PrestadorCnpj'] = '';
+$serviceCanceladaProtegida = new NfseEmissionService($emissoesCanceladaProtegida, $clientes, $cobrancas, $aptidao, new FakeSeq(), $builder, new FakeClient(), $mapper);
+$resCanceladaProtegida = $serviceCanceladaProtegida->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resCanceladaProtegida['tipo'] === 'status_bloqueado' && $emissoesCanceladaProtegida->row['NFE_PrestadorCnpj'] === '', 'cancelada não tem contexto reparado nem reativado');
 
 echo "NFS-e emission service tests passed\n";

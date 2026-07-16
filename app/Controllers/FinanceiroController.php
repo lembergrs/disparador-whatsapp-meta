@@ -11,6 +11,7 @@ use Models\Cobranca;
 use Models\MetaConta;
 use Models\Assinatura;
 use Models\Cliente;
+use Models\NfseEmissao;
 use Services\AsaasService;
 
 class FinanceiroController extends Controller
@@ -108,10 +109,14 @@ class FinanceiroController extends Controller
                 $perPage,
                 $offset
             );
+            $nfsePorCobranca = (new NfseEmissao())->buscarVigentesPorCobrancas(
+                array_column($faturas, 'COB_ID'),
+                $clienteId
+            );
 
             echo json_encode([
                 'sucesso' => true,
-                'html' => $this->renderFaturasRows($faturas),
+                'html' => $this->renderFaturasRows($faturas, $nfsePorCobranca),
                 'paginacao_html' => $this->renderFaturasPaginacao($page, $totalPaginas),
                 'contador_html' => $this->renderFaturasContador($page, $perPage, $totalRegistros),
                 'pagina_atual' => $page,
@@ -141,10 +146,10 @@ class FinanceiroController extends Controller
         ));
     }
 
-    private function renderFaturasRows(array $faturas)
+    private function renderFaturasRows(array $faturas, array $nfsePorCobranca = [])
     {
         if(empty($faturas)){
-            return '<tr><td colspan="6" class="text-center text-muted py-4">Nenhuma fatura encontrada.</td></tr>';
+            return '<tr><td colspan="8" class="text-center text-muted py-4">Nenhuma fatura encontrada.</td></tr>';
         }
 
         $html = '';
@@ -152,6 +157,7 @@ class FinanceiroController extends Controller
         foreach($faturas as $fatura){
             $statusFatura = (string) ($fatura['COB_Status'] ?? '');
             $linkPagamento = (string) ($fatura['COB_LinkPagamento'] ?? '');
+            $nfse = $nfsePorCobranca[(int) ($fatura['COB_ID'] ?? 0)] ?? null;
 
             $html .= '<tr>';
             $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataVencimento'] ?? null) . '</td>';
@@ -159,6 +165,8 @@ class FinanceiroController extends Controller
             $html .= '<td><span class="badge badge-' . $this->badgeFatura($statusFatura) . '">' . $this->e($this->statusFatura($statusFatura)) . '</span></td>';
             $html .= '<td>' . $this->e($fatura['COB_Forma'] ?? '-') . '</td>';
             $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataPagamento'] ?? null) . '</td>';
+            $html .= '<td>' . $this->renderNfseStatusCliente($nfse) . '</td>';
+            $html .= '<td>' . $this->renderNfseDocumentosCliente($nfse) . '</td>';
             $html .= '<td>';
 
             if($statusFatura === 'pendente' && $this->linkPagamentoValido($linkPagamento)){
@@ -171,11 +179,62 @@ class FinanceiroController extends Controller
             $html .= '</tr>';
 
             if(($fatura['COB_ProviderStatus'] ?? '') === 'erro_cliente'){
-                $html .= '<tr><td colspan="6"><div class="alert alert-danger mb-0">Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.</div></td></tr>';
+                $html .= '<tr><td colspan="8"><div class="alert alert-danger mb-0">Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.</div></td></tr>';
             }
         }
 
         return $html;
+    }
+
+
+    private function renderNfseStatusCliente($nfse)
+    {
+        if(empty($nfse)){
+            return '<span class="badge badge-secondary">Não emitida</span>';
+        }
+
+        $status = (string) ($nfse['NFE_Status'] ?? '');
+        $mapa = [
+            'emitida' => ['Emitida', 'success'],
+            'cancelada' => ['Cancelada', 'secondary'],
+            'processando' => ['Emitindo', 'info'],
+            'cancelamento_pendente' => ['Processando', 'info'],
+            'reconciliacao_pendente' => ['Processando', 'info'],
+            'pendente_dados' => ['Pendente', 'warning'],
+            'pendente' => ['Pendente', 'warning'],
+            'erro_temporario' => ['Processando nota fiscal', 'info'],
+            'erro_definitivo' => ['Nota fiscal pendente', 'warning']
+        ];
+
+        [$label, $classe] = $mapa[$status] ?? ['Pendente', 'warning'];
+        $tooltip = '';
+        if($status === 'emitida' && !empty($nfse['NFE_DataEmissao'])){
+            $tooltip = ' title="' . $this->e('Emitida em ' . date('d/m/Y \\à\\s H:i', strtotime((string) $nfse['NFE_DataEmissao']))) . '"';
+        }
+
+        return '<span class="badge badge-' . $classe . '"' . $tooltip . '>' . $this->e($label) . '</span>';
+    }
+
+    private function renderNfseDocumentosCliente($nfse)
+    {
+        if(empty($nfse) || (string) ($nfse['NFE_Status'] ?? '') !== 'emitida'){
+            return '<span class="text-muted">-</span>';
+        }
+
+        $nfseId = (int) ($nfse['NFE_ID'] ?? 0);
+        if($nfseId <= 0){
+            return '<span class="text-muted">-</span>';
+        }
+
+        $links = [];
+        if(!empty($nfse['tem_pdf'])){
+            $links[] = '<a class="btn btn-xs btn-outline-primary" href="' . BASE_URL . '/index.php?url=nfse/pdf/' . $nfseId . '" title="Baixar PDF da NFS-e"><i class="fas fa-file-pdf"></i> PDF</a>';
+        }
+        if(!empty($nfse['tem_xml'])){
+            $links[] = '<a class="btn btn-xs btn-outline-success" href="' . BASE_URL . '/index.php?url=nfse/xml/' . $nfseId . '" title="Baixar XML da NFS-e"><i class="fas fa-file-code"></i> XML</a>';
+        }
+
+        return !empty($links) ? implode(' ', $links) : '<span class="text-muted">Indisponível</span>';
     }
 
     private function renderFaturasPaginacao($paginaAtual, $totalPaginas)

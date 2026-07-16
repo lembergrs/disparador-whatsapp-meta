@@ -40,10 +40,11 @@ nfsePayloadAssert($payload['dadosNota']['tomador']['codMunicipio'] === '4314902'
 nfsePayloadAssert($payload['dadosNota']['valorNota'] === 99.90, 'valor fiscal positivo');
 nfsePayloadAssert($payload['dadosNota']['numDPS'] === '1', 'numDPS informado');
 $payloadSnapshot = $builder->montarEmissao($cliente, $cobranca, array_merge($emissao, ['NFE_CodigoTributacaoNacional' => '99.88.77', 'NFE_DescricaoServicoSnapshot' => 'Descrição original da emissão']), ['cert' => 'CERTIFICADO_FICTICIO_BASE64', 'senhaCert' => 'SENHA_FICTICIA']);
+nfsePayloadAssert($payloadSnapshot['dadosNota']['codigoTributacaoNacional'] === '99.88.77', 'código tributário vem do snapshot fiscal quando existir');
 nfsePayloadAssert($payloadSnapshot['dadosNota']['descServico'] === 'Descrição original da emissão', 'snapshot fiscal prevalece sobre configuração atual');
 nfsePayloadAssert($payload['dadosNota']['descServico'] === 'Licenciamento de uso da plataforma', 'descrição vem da configuração sem duplicação');
 nfsePayloadAssert(strpos($payload['dadosNota']['descServico'], 'Disparador.net - Disparador.net') === false, 'descrição não é duplicada');
-nfsePayloadAssert(!isset($payload['dadosNota']['codigoTributacaoNacional']), 'código tributário ainda não é enviado até a API suportar o campo');
+nfsePayloadAssert($payload['dadosNota']['codigoTributacaoNacional'] === '01.02.03', 'código tributário vem da configuração quando não há snapshot');
 nfsePayloadAssert(isset($payload['cert'], $payload['senhaCert']), 'segredos só no payload em memória');
 
 foreach([
