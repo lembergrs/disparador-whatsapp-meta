@@ -123,7 +123,11 @@ class NfseEmissionService
 
         try{
             if(empty($emissao['NFE_NumDps'])){
-                $numDps = $this->sequencias->reservar(NfseConfigService::prestadorCnpj(), NfseConfigService::ambiente(), NfseConfigService::dpsSerie());
+                $numDps = $this->sequencias->reservar(
+                    $emissao['NFE_PrestadorCnpj'] ?? NfseConfigService::prestadorCnpj(),
+                    $emissao['NFE_Ambiente'] ?? NfseConfigService::ambiente(),
+                    $emissao['NFE_Serie'] ?? NfseConfigService::dpsSerie()
+                );
                 $this->emissoes->atribuirNumDps((int) $emissao['NFE_ID'], $numDps);
                 $emissao = $this->emissoes->buscarPorId((int) $emissao['NFE_ID']);
             }
@@ -313,7 +317,6 @@ class NfseEmissionService
     private function bloqueioPorStatus($status)
     {
         if($status === NfseEmissao::STATUS_EMITIDA){ return 'NFS-e já emitida para esta cobrança.'; }
-        if($status === NfseEmissao::STATUS_CANCELADA){ return 'NFS-e cancelada não pode ser reemitida automaticamente.'; }
         if($status === NfseEmissao::STATUS_PROCESSANDO){ return 'NFS-e já está em processamento.'; }
         if($status === NfseEmissao::STATUS_RECONCILIACAO_PENDENTE){ return 'NFS-e em reconciliação pendente; não reenviar emissão.'; }
         if($status === NfseEmissao::STATUS_ERRO_DEFINITIVO){ return 'NFS-e com erro definitivo exige ação administrativa explícita.'; }
