@@ -47,7 +47,9 @@ financeiroNfseHas($model, "'tem_xml' => !empty($" . "row['NFE_XmlStoragePath'])"
 financeiroNfseNot($model, "'NFE_RetornoSanitizado' =>", 'model não retorna retorno sanitizado para financeiro');
 
 financeiroNfseHas($nfseController, 'Auth::check();', 'download permite usuário autenticado e delega autorização ao service');
-financeiroNfseHas($auth, "'nfse',", 'rota de download NFS-e não é bloqueada pelo bloqueio financeiro antes da autorização do service');
+financeiroNfseHas($auth, "if($" . "controller == 'nfse')", 'Auth trata NFS-e de forma específica');
+financeiroNfseHas($auth, "return in_array($" . "metodo, ['pdf', 'xml'], true);", 'somente downloads pdf/xml passam pelo bloqueio financeiro');
+financeiroNfseNot($auth, "'nfse',", 'Auth não libera todo o controller nfse para cliente');
 financeiroNfseHas($service, 'usuarioPodeBaixarArquivo', 'service valida autorização de download');
 financeiroNfseHas($service, "($" . "usuario['nivel'] ?? '') === 'admin'", 'administrador continua autorizado');
 financeiroNfseHas($service, "['cliente', 'cliente_admin', 'cliente_usuario']", 'cliente autenticado pode ser avaliado');
