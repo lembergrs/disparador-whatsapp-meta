@@ -21,10 +21,14 @@ nfseAuditHas($model, 'NFE_EmissaoAtiva, NFE_DataReserva', 'novas emissões infor
 nfseAuditHas($model, ':prestador_cnpj, :ambiente, :competencia, :valor, :descricao, :serie, 1, NOW()', 'nova emissão nasce ativa com NFE_EmissaoAtiva = 1');
 nfseAuditNot($model, "defined('NFSE_AMBIENTE') ? NFSE_AMBIENTE : 'production'", 'model não inventa fallback de ambiente fiscal');
 nfseAuditNot($model, "defined('NFSE_DPS_SERIE') ? NFSE_DPS_SERIE : '900'", 'model não inventa série fiscal');
-nfseAuditHas($model, "NFE_Status <> 'cancelada' ORDER BY NFE_ID DESC LIMIT 1", 'busca ativa ignora canceladas');
-nfseAuditHas($model, 'CASE WHEN NFE_Status <> \'cancelada\' THEN 0 ELSE 1 END', 'vigente prioriza não cancelada sobre cancelada');
+nfseAuditHas($model, 'function buscarAtivaPorCobranca', 'model separa busca operacional ativa');
+nfseAuditHas($model, "WHERE COB_ID = ? AND NFE_EmissaoAtiva = 1 ORDER BY NFE_ID DESC LIMIT 1", 'busca operacional só retorna emissão ativa');
+nfseAuditNot($model, "WHERE COB_ID = ? AND NFE_Status <> 'cancelada' ORDER BY NFE_ID DESC LIMIT 1", 'busca operacional não usa apenas status diferente de cancelada');
+nfseAuditHas($model, "AND (NFE_EmissaoAtiva = 1 OR NFE_Status = 'cancelada')", 'exibição vigente ignora históricos inativos não cancelados');
+nfseAuditHas($model, 'CASE WHEN NFE_EmissaoAtiva = 1 THEN 0 ELSE 1 END', 'vigente prioriza ativa real sobre cancelada');
 nfseAuditHas($model, 'NFE_ID DESC', 'vigente escolhe registro mais recente dentro da prioridade');
-nfseAuditHas($model, '$existente = $this->buscarPorCobranca($cobrancaId);', 'em concorrência após duplicidade, busca ativa vencedora é retornada');
+nfseAuditHas($model, '$existente = $this->buscarAtivaPorCobranca($cobrancaId);', 'em concorrência após duplicidade, busca ativa vencedora é retornada');
+nfseAuditHas($model, 'function buscarHistoricoPorCobranca', 'model expõe consulta de histórico separada da operacional');
 nfseAuditHas($model, 'Migration de reemissão de NFS-e pendente', 'falha de migration ausente fica explícita');
 nfseAuditHas($model, 'function prepararContextoFiscalAntesDaReserva', 'model possui reparo controlado de contexto antes da reserva');
 nfseAuditHas($model, 'AND NFE_NumDps IS NULL', 'reparo só ocorre sem numDPS');

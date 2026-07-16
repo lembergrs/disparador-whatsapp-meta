@@ -60,20 +60,38 @@ class NfseEmissao
         return 'nfse:cobranca:' . (int) $cobrancaId . ':' . bin2hex(random_bytes(8));
     }
 
+    public function buscarAtivaPorCobranca($cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? AND NFE_EmissaoAtiva = 1 ORDER BY NFE_ID DESC LIMIT 1");
+        $sql->execute([(int) $cobrancaId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function buscarPorCobranca($cobrancaId)
     {
-        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? AND NFE_Status <> 'cancelada' ORDER BY NFE_ID DESC LIMIT 1");
-        $sql->execute([(int) $cobrancaId]);
+        return $this->buscarAtivaPorCobranca($cobrancaId);
+    }
+
+    public function buscarAtivaPorClienteECobranca($clienteId, $cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE CLI_ID = ? AND COB_ID = ? AND NFE_EmissaoAtiva = 1 ORDER BY NFE_ID DESC LIMIT 1");
+        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
     public function buscarPorClienteECobranca($clienteId, $cobrancaId)
     {
-        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE CLI_ID = ? AND COB_ID = ? AND NFE_Status <> 'cancelada' ORDER BY NFE_ID DESC LIMIT 1");
-        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
+        return $this->buscarAtivaPorClienteECobranca($clienteId, $cobrancaId);
+    }
 
-        return $sql->fetch(PDO::FETCH_ASSOC);
+    public function buscarHistoricoPorCobranca($cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? ORDER BY NFE_ID DESC");
+        $sql->execute([(int) $cobrancaId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function criarOuBuscarPorCobranca(array $cobranca, array $opcoes = [])
@@ -85,7 +103,7 @@ class NfseEmissao
             throw new \InvalidArgumentException('Cobrança inválida para reserva de NFS-e.');
         }
 
-        $existente = $this->buscarPorCobranca($cobrancaId);
+        $existente = $this->buscarAtivaPorCobranca($cobrancaId);
 
         if($existente){
             return $existente;
@@ -126,7 +144,7 @@ class NfseEmissao
                 throw $e;
             }
 
-            $existente = $this->buscarPorCobranca($cobrancaId);
+            $existente = $this->buscarAtivaPorCobranca($cobrancaId);
 
             if($existente){
                 return $existente;
@@ -139,7 +157,7 @@ class NfseEmissao
             throw $e;
         }
 
-        return $this->buscarPorCobranca($cobrancaId);
+        return $this->buscarAtivaPorCobranca($cobrancaId);
     }
 
 
@@ -320,9 +338,10 @@ class NfseEmissao
             FROM nfse_emissoes
             WHERE COB_ID IN ({$placeholders})
             {$filtroCliente}
+            AND (NFE_EmissaoAtiva = 1 OR NFE_Status = 'cancelada')
             AND NFE_Status IN ('pendente_dados','pendente','processando','reconciliacao_pendente','emitida','erro_temporario','erro_definitivo','cancelamento_pendente','cancelada')
             ORDER BY COB_ID ASC,
-                     CASE WHEN NFE_Status <> 'cancelada' THEN 0 ELSE 1 END ASC,
+                     CASE WHEN NFE_EmissaoAtiva = 1 THEN 0 ELSE 1 END ASC,
                      NFE_ID DESC
         ");
         $sql->execute($params);

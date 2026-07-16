@@ -129,4 +129,15 @@ $serviceCanceladaProtegida = new NfseEmissionService($emissoesCanceladaProtegida
 $resCanceladaProtegida = $serviceCanceladaProtegida->emitirManual(1, 2, ['nivel' => 'admin']);
 nfseEmissionServiceAssert($resCanceladaProtegida['tipo'] === 'status_bloqueado' && $emissoesCanceladaProtegida->row['NFE_PrestadorCnpj'] === '', 'cancelada não tem contexto reparado nem reativado');
 
+$emissoesErroDefinitivoAtivo = new FakeEmissoes();
+$emissoesErroDefinitivoAtivo->row['NFE_Status'] = NfseEmissao::STATUS_ERRO_DEFINITIVO;
+$emissoesErroDefinitivoAtivo->row['NFE_NumDps'] = '1';
+$emissoesErroDefinitivoAtivo->row['NFE_RequestIdEmissao'] = null;
+$seqErroDefinitivoAtivo = new FakeSeq();
+$clientErroDefinitivoAtivo = new FakeClient();
+$serviceErroDefinitivoAtivo = new NfseEmissionService($emissoesErroDefinitivoAtivo, $clientes, $cobrancas, $aptidao, $seqErroDefinitivoAtivo, $builder, $clientErroDefinitivoAtivo, $mapper);
+$resErroDefinitivoAtivo = $serviceErroDefinitivoAtivo->emitirManual(1, 2, ['nivel' => 'admin']);
+nfseEmissionServiceAssert($resErroDefinitivoAtivo['tipo'] === 'status_bloqueado' && $seqErroDefinitivoAtivo->reservas === 0 && $clientErroDefinitivoAtivo->chamadas === 0, 'emissão ativa em erro definitivo não preparável continua bloqueando sem reservar ou chamar API');
+
+
 echo "NFS-e emission service tests passed\n";
