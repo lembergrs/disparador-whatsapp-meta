@@ -189,6 +189,20 @@ $(document).ready(function(){
             $(this).data('observacoes')
         );
 
+
+        $('[name=cnpj_fiscal]').val($(this).data('cnpj-fiscal'));
+        $('[name=razao_social_fiscal]').val($(this).data('razao-social-fiscal'));
+        $('[name=cep_fiscal]').val($(this).data('cep-fiscal'));
+        $('[name=logradouro_fiscal]').val($(this).data('logradouro-fiscal'));
+        $('[name=numero_fiscal]').val($(this).data('numero-fiscal'));
+        $('[name=complemento_fiscal]').val($(this).data('complemento-fiscal'));
+        $('[name=bairro_fiscal]').val($(this).data('bairro-fiscal'));
+        $('[name=municipio_fiscal]').val($(this).data('municipio-fiscal'));
+        $('[name=uf_fiscal]').val($(this).data('uf-fiscal'));
+        $('[name=codigo_ibge_fiscal]').val($(this).data('codigo-ibge-fiscal'));
+        $('[name=telefone_fiscal]').val($(this).data('telefone-fiscal'));
+        $('[name=email_fiscal]').val($(this).data('email-fiscal'));
+
         $('#senha').val('').prop('required', false).trigger('input');
 
         $('#senha').attr(

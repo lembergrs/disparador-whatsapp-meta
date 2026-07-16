@@ -89,6 +89,24 @@ defined('ASAAS_API_BASE_URL') || define(
     $asaasEnv === 'production' ? $asaasBaseUrlProduction : $asaasBaseUrlSandbox
 );
 
+
+// Configurações locais para futura integração NFS-e RL2.
+// Esta etapa não chama a API e não carrega certificado; apenas referencia variáveis de ambiente.
+defined('NFSE_API_BASE_URL') || define('NFSE_API_BASE_URL', rtrim(env_valor('NFSE_API_BASE_URL', 'https://api.disparador.net'), '/'));
+defined('NFSE_API_AUTH_TOKEN') || define('NFSE_API_AUTH_TOKEN', env_valor('NFSE_API_AUTH_TOKEN', ''));
+defined('NFSE_PRESTADOR_CNPJ') || define('NFSE_PRESTADOR_CNPJ', env_valor('NFSE_PRESTADOR_CNPJ', ''));
+defined('NFSE_PRESTADOR_IM') || define('NFSE_PRESTADOR_IM', env_valor('NFSE_PRESTADOR_IM', ''));
+defined('NFSE_PRESTADOR_OP_SIMPLES') || define('NFSE_PRESTADOR_OP_SIMPLES', env_valor('NFSE_PRESTADOR_OP_SIMPLES', ''));
+defined('NFSE_LOCAL_EMISSAO_IBGE') || define('NFSE_LOCAL_EMISSAO_IBGE', env_valor('NFSE_LOCAL_EMISSAO_IBGE', ''));
+defined('NFSE_DPS_SERIE') || define('NFSE_DPS_SERIE', env_valor('NFSE_DPS_SERIE', '900'));
+defined('NFSE_CODIGO_TRIBUTACAO_NACIONAL') || define('NFSE_CODIGO_TRIBUTACAO_NACIONAL', env_valor('NFSE_CODIGO_TRIBUTACAO_NACIONAL', ''));
+defined('NFSE_DESCRICAO_SERVICO') || define('NFSE_DESCRICAO_SERVICO', env_valor('NFSE_DESCRICAO_SERVICO', ''));
+defined('NFSE_AMBIENTE') || define('NFSE_AMBIENTE', env_valor('NFSE_AMBIENTE', app_env() === 'production' ? 'production' : 'sandbox'));
+defined('NFSE_CERT_PATH') || define('NFSE_CERT_PATH', env_valor('NFSE_CERT_PATH', ''));
+defined('NFSE_CERT_PASSWORD') || define('NFSE_CERT_PASSWORD', env_valor('NFSE_CERT_PASSWORD', ''));
+defined('NFSE_CONNECT_TIMEOUT') || define('NFSE_CONNECT_TIMEOUT', (int) env_valor('NFSE_CONNECT_TIMEOUT', 10));
+defined('NFSE_REQUEST_TIMEOUT') || define('NFSE_REQUEST_TIMEOUT', (int) env_valor('NFSE_REQUEST_TIMEOUT', 30));
+
 // TODO: criar cliente no Asaas.
 // TODO: criar cobrança no Asaas.
 // TODO: salvar asaas_customer_id.
