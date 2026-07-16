@@ -38,7 +38,7 @@ class NfseEmissao
             self::STATUS_RECONCILIACAO_PENDENTE => [self::STATUS_EMITIDA, self::STATUS_ERRO_DEFINITIVO],
             self::STATUS_EMITIDA => [self::STATUS_CANCELAMENTO_PENDENTE],
             self::STATUS_ERRO_TEMPORARIO => [self::STATUS_PENDENTE, self::STATUS_PROCESSANDO, self::STATUS_ERRO_DEFINITIVO],
-            self::STATUS_ERRO_DEFINITIVO => [],
+            self::STATUS_ERRO_DEFINITIVO => [self::STATUS_PROCESSANDO],
             self::STATUS_CANCELAMENTO_PENDENTE => [self::STATUS_CANCELADA, self::STATUS_ERRO_TEMPORARIO, self::STATUS_ERRO_DEFINITIVO],
             self::STATUS_CANCELADA => []
         ];
@@ -57,23 +57,41 @@ class NfseEmissao
 
     public static function chaveIdempotencia($cobrancaId)
     {
-        return 'nfse:cobranca:' . (int) $cobrancaId;
+        return 'nfse:cobranca:' . (int) $cobrancaId . ':' . bin2hex(random_bytes(8));
+    }
+
+    public function buscarAtivaPorCobranca($cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? AND NFE_EmissaoAtiva = 1 ORDER BY NFE_ID DESC LIMIT 1");
+        $sql->execute([(int) $cobrancaId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
     public function buscarPorCobranca($cobrancaId)
     {
-        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? LIMIT 1");
-        $sql->execute([(int) $cobrancaId]);
+        return $this->buscarAtivaPorCobranca($cobrancaId);
+    }
+
+    public function buscarAtivaPorClienteECobranca($clienteId, $cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE CLI_ID = ? AND COB_ID = ? AND NFE_EmissaoAtiva = 1 ORDER BY NFE_ID DESC LIMIT 1");
+        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
     public function buscarPorClienteECobranca($clienteId, $cobrancaId)
     {
-        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE CLI_ID = ? AND COB_ID = ? LIMIT 1");
-        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
+        return $this->buscarAtivaPorClienteECobranca($clienteId, $cobrancaId);
+    }
 
-        return $sql->fetch(PDO::FETCH_ASSOC);
+    public function buscarHistoricoPorCobranca($cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM nfse_emissoes WHERE COB_ID = ? ORDER BY NFE_ID DESC");
+        $sql->execute([(int) $cobrancaId]);
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function criarOuBuscarPorCobranca(array $cobranca, array $opcoes = [])
@@ -85,7 +103,7 @@ class NfseEmissao
             throw new \InvalidArgumentException('Cobrança inválida para reserva de NFS-e.');
         }
 
-        $existente = $this->buscarPorCobranca($cobrancaId);
+        $existente = $this->buscarAtivaPorCobranca($cobrancaId);
 
         if($existente){
             return $existente;
@@ -100,10 +118,10 @@ class NfseEmissao
         $sql = $this->db->prepare("
             INSERT INTO nfse_emissoes (
                 CLI_ID, COB_ID, NFE_ReferenciaPagamento, NFE_Status, NFE_IdempotencyKey,
-                NFE_PrestadorCnpj, NFE_Ambiente, NFE_Competencia, NFE_ValorFiscal, NFE_DescricaoServico, NFE_Serie, NFE_DataReserva
+                NFE_PrestadorCnpj, NFE_Ambiente, NFE_Competencia, NFE_ValorFiscal, NFE_DescricaoServico, NFE_Serie, NFE_EmissaoAtiva, NFE_DataReserva
             ) VALUES (
                 :cliente, :cobranca, :referencia, :status, :idempotency,
-                :prestador_cnpj, :ambiente, :competencia, :valor, :descricao, :serie, NOW()
+                :prestador_cnpj, :ambiente, :competencia, :valor, :descricao, :serie, 1, NOW()
             )
         ");
 
@@ -114,28 +132,32 @@ class NfseEmissao
                 ':referencia' => $cobranca['COB_ProviderPaymentId'] ?? null,
                 ':status' => $status,
                 ':idempotency' => $idempotencyKey,
-                ':prestador_cnpj' => $opcoes['prestador_cnpj'] ?? (defined('NFSE_PRESTADOR_CNPJ') ? preg_replace('/\D/', '', (string) NFSE_PRESTADOR_CNPJ) : null),
-                ':ambiente' => $opcoes['ambiente'] ?? (defined('NFSE_AMBIENTE') ? NFSE_AMBIENTE : 'production'),
+                ':prestador_cnpj' => isset($opcoes['prestador_cnpj']) ? preg_replace('/\D/', '', (string) $opcoes['prestador_cnpj']) : null,
+                ':ambiente' => $opcoes['ambiente'] ?? null,
                 ':competencia' => $opcoes['competencia'] ?? date('Y-m-d'),
                 ':valor' => $opcoes['valor'] ?? ($cobranca['COB_Valor'] ?? 0),
                 ':descricao' => $opcoes['descricao'] ?? null,
-                ':serie' => $opcoes['serie'] ?? (defined('NFSE_DPS_SERIE') ? NFSE_DPS_SERIE : '900')
+                ':serie' => $opcoes['serie'] ?? null
             ]);
         }catch(\PDOException $e){
             if(!$this->erroDuplicidade($e)){
                 throw $e;
             }
 
-            $existente = $this->buscarPorCobranca($cobrancaId);
+            $existente = $this->buscarAtivaPorCobranca($cobrancaId);
 
             if($existente){
                 return $existente;
             }
 
+            if(strpos($e->getMessage(), 'NFE_EmissaoAtiva') !== false){
+                throw new \RuntimeException('Migration de reemissão de NFS-e pendente: NFE_EmissaoAtiva não existe.');
+            }
+
             throw $e;
         }
 
-        return $this->buscarPorCobranca($cobrancaId);
+        return $this->buscarAtivaPorCobranca($cobrancaId);
     }
 
 
@@ -171,6 +193,51 @@ class NfseEmissao
         return $sql->rowCount() >= 0;
     }
 
+
+    public function prepararContextoFiscalAntesDaReserva($nfseId, $prestadorCnpj, $ambiente, $serie)
+    {
+        $prestadorCnpj = preg_replace('/\D/', '', (string) $prestadorCnpj);
+        $ambiente = trim((string) $ambiente);
+        $serie = trim((string) $serie);
+
+        if(strlen($prestadorCnpj) !== 14 || $ambiente === '' || $serie === ''){
+            throw new \InvalidArgumentException('Contexto fiscal atual inválido para preparar reserva de numDPS.');
+        }
+
+        $sql = $this->db->prepare("
+            UPDATE nfse_emissoes
+            SET NFE_PrestadorCnpj = CASE
+                    WHEN NFE_PrestadorCnpj IS NULL OR NFE_PrestadorCnpj = '' OR LENGTH(REPLACE(REPLACE(REPLACE(NFE_PrestadorCnpj, '.', ''), '/', ''), '-', '')) <> 14 THEN :prestador_cnpj
+                    ELSE NFE_PrestadorCnpj
+                END,
+                NFE_Ambiente = CASE
+                    WHEN NFE_Ambiente IS NULL OR NFE_Ambiente = '' OR NFE_Ambiente NOT IN ('production','sandbox','homologation','local') THEN :ambiente
+                    ELSE NFE_Ambiente
+                END,
+                NFE_Serie = CASE
+                    WHEN NFE_Serie IS NULL OR NFE_Serie = '' THEN :serie
+                    ELSE NFE_Serie
+                END,
+                NFE_DataAtualizacao = NOW()
+            WHERE NFE_ID = :id
+            AND NFE_EmissaoAtiva = 1
+            AND NFE_NumDps IS NULL
+            AND NFE_RequestIdEmissao IS NULL
+            AND NFE_Status IN (:pendente_dados, :pendente, :erro_temporario, :erro_definitivo)
+        ");
+
+        return $sql->execute([
+            ':prestador_cnpj' => $prestadorCnpj,
+            ':ambiente' => $ambiente,
+            ':serie' => $serie,
+            ':id' => (int) $nfseId,
+            ':pendente_dados' => self::STATUS_PENDENTE_DADOS,
+            ':pendente' => self::STATUS_PENDENTE,
+            ':erro_temporario' => self::STATUS_ERRO_TEMPORARIO,
+            ':erro_definitivo' => self::STATUS_ERRO_DEFINITIVO
+        ]);
+    }
+
     public function atribuirNumDps($nfseId, $numDps)
     {
         $sql = $this->db->prepare("
@@ -195,7 +262,7 @@ class NfseEmissao
             throw new \InvalidArgumentException('Transição de status de NFS-e não permitida.');
         }
 
-        $whereStatus = $statusAtualEsperado !== null ? ' AND NFE_Status = :status_atual' : '';
+        $whereStatus = $statusAtualEsperado !== null ? ' AND NFE_Status = :status_atual' : " AND NFE_Status <> 'cancelada'";
 
         $sql = $this->db->prepare("\n            UPDATE nfse_emissoes\n            SET NFE_Status = :status,\n                NFE_UltimoErroTipo = :erro_tipo,\n                NFE_UltimoErroCodigo = :erro_codigo,\n                NFE_UltimoErroMensagem = :erro_mensagem,\n                NFE_DataAtualizacao = NOW()\n            WHERE NFE_ID = :id" . $whereStatus . "\n        ");
 
@@ -246,6 +313,57 @@ class NfseEmissao
         $sql->execute($params);
 
         return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+
+    public function buscarVigentesPorCobrancas(array $cobrancaIds, $clienteId = null)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $cobrancaIds), function($id){ return $id > 0; })));
+        if(empty($ids)){
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $params = $ids;
+        $filtroCliente = '';
+
+        if($clienteId !== null){
+            $filtroCliente = ' AND CLI_ID = ?';
+            $params[] = (int) $clienteId;
+        }
+
+        $sql = $this->db->prepare("
+            SELECT NFE_ID, CLI_ID, COB_ID, NFE_Status, NFE_DataEmissao,
+                   NFE_PdfStoragePath, NFE_XmlStoragePath, NFE_EmissaoAtiva
+            FROM nfse_emissoes
+            WHERE COB_ID IN ({$placeholders})
+            {$filtroCliente}
+            AND (NFE_EmissaoAtiva = 1 OR NFE_Status = 'cancelada')
+            AND NFE_Status IN ('pendente_dados','pendente','processando','reconciliacao_pendente','emitida','erro_temporario','erro_definitivo','cancelamento_pendente','cancelada')
+            ORDER BY COB_ID ASC,
+                     CASE WHEN NFE_EmissaoAtiva = 1 THEN 0 ELSE 1 END ASC,
+                     NFE_ID DESC
+        ");
+        $sql->execute($params);
+
+        $vigentes = [];
+        while($row = $sql->fetch(PDO::FETCH_ASSOC)){
+            $cobrancaId = (int) ($row['COB_ID'] ?? 0);
+            if($cobrancaId <= 0 || isset($vigentes[$cobrancaId])){
+                continue;
+            }
+
+            $vigentes[$cobrancaId] = [
+                'NFE_ID' => (int) ($row['NFE_ID'] ?? 0),
+                'COB_ID' => $cobrancaId,
+                'NFE_Status' => (string) ($row['NFE_Status'] ?? ''),
+                'NFE_DataEmissao' => $row['NFE_DataEmissao'] ?? null,
+                'tem_pdf' => !empty($row['NFE_PdfStoragePath']),
+                'tem_xml' => !empty($row['NFE_XmlStoragePath'])
+            ];
+        }
+
+        return $vigentes;
     }
 
     public function prepararProcessamento($nfseId, $statusAtualEsperado)
@@ -327,6 +445,7 @@ class NfseEmissao
                 NFE_UltimoErroMensagem = :erro_mensagem,
                 NFE_DataAtualizacao = NOW()
             WHERE NFE_ID = :id
+            AND NFE_Status <> 'cancelada'
         ");
 
         return $sql->execute([
@@ -341,7 +460,7 @@ class NfseEmissao
     public function persistirRequestConsulta($nfseId, array $resultado, $tipo = 'consulta')
     {
         $campoRequest = $tipo === 'cancelamento' ? 'NFE_RequestIdCancelamento' : 'NFE_RequestIdConsulta';
-        $statusSet = $tipo === 'cancelamento' && !empty($resultado['sucesso']) ? ', NFE_Status = :status_cancelada, NFE_DataCancelamento = NOW()' : '';
+        $statusSet = $tipo === 'cancelamento' && !empty($resultado['sucesso']) ? ', NFE_Status = :status_cancelada, NFE_EmissaoAtiva = NULL, NFE_DataCancelamento = NOW()' : '';
         $sql = $this->db->prepare("
             UPDATE nfse_emissoes
             SET {$campoRequest} = :request_id,
@@ -374,7 +493,7 @@ class NfseEmissao
     {
         $colPath = $tipo === 'pdf' ? 'NFE_PdfStoragePath' : 'NFE_XmlStoragePath';
         $colHash = $tipo === 'pdf' ? 'NFE_PdfSha256' : 'NFE_XmlSha256';
-        $sql = $this->db->prepare("SELECT NFE_ID, CLI_ID, {$colPath} AS path, {$colHash} AS hash FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
+        $sql = $this->db->prepare("SELECT NFE_ID, CLI_ID, COB_ID, {$colPath} AS path, {$colHash} AS hash FROM nfse_emissoes WHERE NFE_ID = ? LIMIT 1");
         $sql->execute([(int) $nfseId]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);

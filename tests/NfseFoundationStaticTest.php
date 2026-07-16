@@ -8,6 +8,7 @@ $clienteModel = file_get_contents($root . '/app/Models/Cliente.php');
 $config = file_get_contents($root . '/config/config.php');
 $docs = file_get_contents($root . '/docs/NFSE_LEVANTAMENTO_TECNICO.md');
 $snapshotMigration = file_get_contents($root . '/database/migrations/20260716_add_nfse_fiscal_snapshot.sql');
+$reemissionMigration = file_get_contents($root . '/database/migrations/20260716_allow_nfse_reemission_after_cancel.sql');
 
 function nfseAssert($condition, $message)
 {
@@ -29,7 +30,9 @@ function nfseNotContains($haystack, $needle, $message)
 
 nfseContains($migration, 'CREATE TABLE nfse_emissoes', 'migration creates nfse_emissoes');
 nfseContains($migration, 'CREATE TABLE nfse_dps_sequencias', 'migration creates nfse_dps_sequencias');
-nfseContains($migration, 'UNIQUE KEY uk_nfse_cobranca (COB_ID)', 'migration guarantees one nfse per cobrança');
+nfseContains($migration, 'UNIQUE KEY uk_nfse_cobranca (COB_ID)', 'migration inicial controla uma nfse por cobrança');
+nfseContains($reemissionMigration, 'NFE_EmissaoAtiva', 'migration de reemissão adiciona emissão ativa');
+nfseContains($reemissionMigration, 'uk_nfse_cobranca_ativa', 'migration de reemissão libera histórico cancelado e mantém uma ativa por cobrança');
 nfseContains($migration, 'UNIQUE KEY uk_nfse_idempotency (NFE_IdempotencyKey)', 'migration has unique idempotency key');
 nfseContains($migration, 'UNIQUE KEY uk_nfse_numdps_contexto (NFE_PrestadorCnpj, NFE_Ambiente, NFE_Serie, NFE_NumDps)', 'migration has contextual unique numDPS');
 nfseContains($migration, 'UNIQUE KEY uk_nfse_dps_contexto (NDS_PrestadorCnpj, NDS_Ambiente, NDS_Serie)', 'sequence separated by prestador/ambiente/série');
@@ -40,12 +43,13 @@ nfseNotContains($migration, 'NFE_API_AUTH_TOKEN', 'migration does not store API 
 nfseNotContains($migration, 'NFE_senhaCert', 'migration does not store senhaCert column');
 nfseNotContains($migration, 'NFE_Authorization', 'migration does not store Authorization column');
 
-nfseContains($model, "return 'nfse:cobranca:' . (int) \$cobrancaId;", 'idempotency key is stable by cobrança');
+nfseContains($model, "return 'nfse:cobranca:' . (int) \$cobrancaId . ':' . bin2hex(random_bytes(8));", 'idempotency key is unique per emissão');
 require_once $root . '/app/Models/NfseEmissao.php';
 $key1 = \Models\NfseEmissao::chaveIdempotencia(10);
 $key2 = \Models\NfseEmissao::chaveIdempotencia(11);
-nfseAssert($key1 === 'nfse:cobranca:10', 'idempotency key has expected format');
+nfseAssert(strpos($key1, 'nfse:cobranca:10:') === 0, 'idempotency key has expected prefix');
 nfseAssert($key1 !== $key2, 'different COB_ID generates different idempotency key');
+nfseAssert($key1 !== \Models\NfseEmissao::chaveIdempotencia(10), 'same COB_ID can generate new idempotency key for reemission');
 nfseAssert(\Models\NfseEmissao::transicaoPermitida(\Models\NfseEmissao::STATUS_EMITIDA, \Models\NfseEmissao::STATUS_PENDENTE) === false, 'emitida does not return to pendente');
 nfseAssert(\Models\NfseEmissao::transicaoPermitida(\Models\NfseEmissao::STATUS_CANCELADA, \Models\NfseEmissao::STATUS_PENDENTE) === false, 'cancelada is not reissued automatically');
 nfseAssert(\Models\NfseEmissao::transicaoPermitida(\Models\NfseEmissao::STATUS_PROCESSANDO, \Models\NfseEmissao::STATUS_RECONCILIACAO_PENDENTE) === true, 'processing can become reconciliation pending');
