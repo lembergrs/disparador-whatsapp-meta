@@ -35,11 +35,13 @@ $controller = file_get_contents(__DIR__ . '/../app/Controllers/ConfiguracaoContr
 $view = file_get_contents(__DIR__ . '/../app/Views/configuracao/meta.php');
 $assert(strpos($controller, 'registrarNumeroWhatsApp') !== false, 'endpoint de registrar número existe');
 $assert(strpos($controller, "preg_match('/^[0-9]{6}$/', \$pin)") !== false, 'backend valida PIN de 6 dígitos');
+$assert(strpos($controller, 'pin_confirmacao') !== false, 'backend exige confirmação do PIN');
 $assert(strpos($controller, 'atualizarStatusNumeroWhatsApp') !== false, 'endpoint de atualizar status sem PIN existe');
 $assert(strpos($view, 'type="password"') !== false, 'UI usa campo password para PIN');
 $assert(strpos($view, 'inputmode="numeric"') !== false, 'UI usa inputmode numeric');
 $assert(strpos($view, 'autocomplete="off"') !== false, 'UI desliga autocomplete do PIN');
 $assert(strpos($view, 'Concluir registro') !== false, 'UI exibe ação de concluir registro');
+$assert(strpos($view, 'name="pin_confirmacao"') !== false, 'UI pede confirmação do PIN');
 $assert(strpos($view, 'Atualizar status') !== false, 'UI exibe ação de atualizar status');
 $assert(strpos($controller, 'pin\'=>') === false, 'código não loga array com chave pin literal');
 $assert(strpos($controller, 'buscarPorCliente($contaId, $clienteId)') !== false, 'endpoint valida vínculo da conta com o cliente autenticado');
@@ -47,6 +49,7 @@ $assert(strpos($controller, 'registrarPhoneNumberMeta') < strpos($controller, 'a
 $assert(strpos($controller, 'logMetaEmbeddedSignup') !== false, 'logs continuam centralizados');
 $assert(strpos($controller, 'request_id') !== false, 'logs incluem requestId');
 $assert(strpos($controller, 'iniciarTrialSePendente') > strpos($controller, "statusConexao === 'conectado'"), 'trial só ocorre após conectado');
+$assert(strpos($controller, "'pendente_registro'") !== false, 'Embedded finalizado fica pendente_registro');
 $assert(strpos($view, 'window.open') === false, 'fluxo FB.login não usa window.open');
 $assert(strpos($view, 'business.facebook.com/messaging/whatsapp/onboard') === false, 'fluxo não usa URL manual');
 $assert(strpos($view, 'FB.login') !== false, 'fluxo existente FB.login permanece');

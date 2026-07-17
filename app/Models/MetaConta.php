@@ -179,6 +179,23 @@ class MetaConta
         );
     }
 
+
+    public function buscarPorIdAdmin($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM meta_contas
+            WHERE MTA_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            (int) $id
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function buscarPorCliente($id, $clienteId)
     {
         $sql = $this->db->prepare("
@@ -620,8 +637,18 @@ class MetaConta
 
     public function atualizarStatusOperacionalEmbeddedSignup($id, $clienteId, array $dados)
     {
-        $sets = ['MTA_Status = ?'];
-        $valores = [$dados['status'] ?? 'requer_acao'];
+        return $this->atualizarEspelhoMeta($id, $clienteId, $dados, $dados['status'] ?? 'requer_acao');
+    }
+
+    public function atualizarEspelhoMeta($id, $clienteId, array $dados, $statusInterno = null)
+    {
+        $sets = [];
+        $valores = [];
+
+        if($statusInterno !== null){
+            $sets[] = 'MTA_Status = ?';
+            $valores[] = $statusInterno;
+        }
 
         foreach([
             'MTA_QualityRating' => 'quality_rating',
@@ -631,13 +658,24 @@ class MetaConta
             'MTA_NumeroTelefone' => 'numero',
             'MTA_DisplayName' => 'display_name'
         ] as $coluna => $chave){
-            if($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true)){
-                if(array_key_exists($chave, $dados)){
-                    $sets[] = $coluna . ' = ?';
-                    $valores[] = $dados[$chave];
-                }
+            if(!($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true))){
+                continue;
             }
+
+            if(!array_key_exists($chave, $dados)){
+                continue;
+            }
+
+            $valor = $dados[$chave];
+            if($valor === null || $valor === ''){
+                continue;
+            }
+
+            $sets[] = $coluna . ' = ?';
+            $valores[] = $valor;
         }
+
+        $sets[] = 'MTA_UltimaVerificacao = NOW()';
 
         $valores[] = $id;
         $valores[] = $clienteId;
@@ -683,6 +721,39 @@ class MetaConta
         return $sql->fetchAll(
             PDO::FETCH_ASSOC
         );
+    }
+
+    public function listarPorUsuario($usuario)
+    {
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+
+        if($clienteId <= 0 || empty($metaIds)){
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($metaIds), '?'));
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM meta_contas\n            WHERE CLI_ID = ?\n            AND MTA_ID IN ($placeholders)\n            AND MTA_Ativo = 'S'\n            ORDER BY MTA_ID DESC\n        ");
+
+        $sql->execute(array_merge([$clienteId], array_map('intval', $metaIds)));
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarPorUsuario($id, $usuario)
+    {
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+
+        if($clienteId <= 0 || empty($metaIds) || !in_array((int) $id, $metaIds, true)){
+            return false;
+        }
+
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM meta_contas\n            WHERE MTA_ID = ?\n            AND CLI_ID = ?\n            AND MTA_Ativo = 'S'\n            LIMIT 1\n        ");
+
+        $sql->execute([(int) $id, $clienteId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
 }

@@ -1,3 +1,37 @@
+<?php
+function metaContaQualityBadge($quality)
+{
+    $quality = strtoupper(trim((string) $quality));
+    if($quality === ''){
+        $quality = 'UNKNOWN';
+    }
+
+    $classes = [
+        'GREEN' => 'success',
+        'YELLOW' => 'warning',
+        'RED' => 'danger',
+        'UNKNOWN' => 'secondary'
+    ];
+
+    $classe = $classes[$quality] ?? 'secondary';
+
+    return '<span class="badge badge-' . $classe . '">' . htmlspecialchars($quality, ENT_QUOTES, 'UTF-8') . '</span>';
+}
+
+function metaContaUltimaSincronizacao($valor)
+{
+    if(empty($valor)){
+        return 'Nunca';
+    }
+
+    $timestamp = strtotime((string) $valor);
+    if(!$timestamp){
+        return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8');
+    }
+
+    return date('d/m/Y H:i', $timestamp);
+}
+?>
 <div class="card">
 
 <div class="card-header">
@@ -46,6 +80,9 @@ Crie as colunas para salvar a configuração de auto resposta.
 <th>Conta</th>
 <th>Número</th>
 <th>Status</th>
+<th>Status Meta</th>
+<th>Quality</th>
+<th>Última sincronização</th>
 <th>Ações</th>
 
 </tr>
@@ -56,23 +93,31 @@ Crie as colunas para salvar a configuração de auto resposta.
 
 <?php foreach($contas as $conta){ ?>
 
-<tr>
+<tr data-meta-id="<?= (int) $conta['MTA_ID']; ?>">
 
 <td><?= (int) $conta['MTA_ID']; ?></td>
 
 <td><?= htmlspecialchars($conta['CLI_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= htmlspecialchars($conta['MTA_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+<td class="js-meta-conta-nome"><?= htmlspecialchars($conta['MTA_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= htmlspecialchars($conta['MTA_NumeroTelefone'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+<td class="js-meta-numero"><?= htmlspecialchars($conta['MTA_NumeroTelefone'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td><?= htmlspecialchars($conta['MTA_Status'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
+<td class="js-meta-status-interno"><?= htmlspecialchars($conta['MTA_Status'] ?? '', ENT_QUOTES, 'UTF-8'); ?></td>
 
-<td>
+<td class="js-meta-operational-status"><?= htmlspecialchars(($conta['MTA_OperationalStatus'] ?? '') !== '' ? $conta['MTA_OperationalStatus'] : '—', ENT_QUOTES, 'UTF-8'); ?></td>
+
+<td class="js-meta-quality-rating"><?= metaContaQualityBadge($conta['MTA_QualityRating'] ?? 'UNKNOWN'); ?></td>
+
+<td class="js-meta-ultima-verificacao"><?= metaContaUltimaSincronizacao($conta['MTA_UltimaVerificacao'] ?? null); ?></td>
+
+<td class="text-nowrap">
 
 <button
 type="button"
 class="btn btn-info btn-sm btnEditarMeta"
+data-toggle="tooltip"
+title="Editar conta Meta"
 
 data-id="<?= (int) $conta['MTA_ID']; ?>"
 
@@ -104,16 +149,30 @@ data-auto-resposta-intervalo="<?= (int) ($conta['MTA_AutoRespostaIntervaloMinuto
 <a
 href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=metaConta/testar&id=<?= (int) $conta['MTA_ID']; ?>"
 class="btn btn-success btn-sm"
+data-toggle="tooltip"
+title="Conectar ou reconectar o número do WhatsApp"
 >
 
 <i class="fas fa-plug"></i>
 
 </a>
 
+<button
+ type="button"
+ class="btn btn-info btn-sm btnSincronizarStatusMeta"
+ data-id="<?= (int) $conta['MTA_ID']; ?>"
+ data-toggle="tooltip"
+ title="Atualizar informações do número diretamente na Meta"
+>
+<i class="fas fa-sync-alt"></i>
+</button>
+
 <a
 href="#"
 data-post-url="<?= BASE_URL; ?>/index.php?url=metaConta/inativar&id=<?= (int) $conta['MTA_ID']; ?>"
 class="btn btn-danger btn-sm"
+data-toggle="tooltip"
+title="Excluir conta Meta"
 data-confirm="Deseja inativar esta conta?"
 >
 
@@ -417,3 +476,88 @@ Salvar
 </div>
 
 </div>
+
+<script>
+(function(){
+    function escapeHtml(valor)
+    {
+        return $('<div>').text(valor === null || valor === undefined || valor === '' ? '—' : valor).html();
+    }
+
+    function qualityBadge(quality)
+    {
+        quality = (quality || 'UNKNOWN').toString().toUpperCase();
+        const classes = {
+            GREEN: 'success',
+            YELLOW: 'warning',
+            RED: 'danger',
+            UNKNOWN: 'secondary'
+        };
+        return '<span class="badge badge-' + (classes[quality] || 'secondary') + '">' + escapeHtml(quality) + '</span>';
+    }
+
+    function formatarDataSincronizacao(valor)
+    {
+        if(!valor){ return 'Nunca'; }
+        const partes = valor.toString().match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);
+        if(!partes){ return escapeHtml(valor); }
+        return partes[3] + '/' + partes[2] + '/' + partes[1] + ' ' + partes[4] + ':' + partes[5];
+    }
+
+    function mensagem(tipo, texto)
+    {
+        if(window.toastr && typeof window.toastr[tipo] === 'function'){
+            window.toastr[tipo](texto);
+            return;
+        }
+        alert(texto);
+    }
+
+    $(function(){
+        $('[data-toggle="tooltip"]').tooltip();
+
+        $(document).on('click', '.btnSincronizarStatusMeta', function(e){
+            e.preventDefault();
+            const botao = $(this);
+            if(botao.prop('disabled')){ return; }
+
+            const linha = botao.closest('tr');
+            const htmlOriginal = botao.html();
+            botao.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+            const form = new FormData();
+            form.append('csrf_token', CSRF_TOKEN || '');
+            form.append('conta_id', botao.data('id') || '');
+
+            fetch(BASE_URL + '/index.php?url=configuracao/atualizarStatusMetaAjax', {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: form
+            }).then(function(response){
+                return response.json().then(function(json){
+                    if(!response.ok || !json.ok){ throw json; }
+                    return json;
+                });
+            }).then(function(json){
+                const dados = json.dados || {};
+                linha.find('.js-meta-operational-status').html(escapeHtml(dados.operational_status || '—'));
+                linha.find('.js-meta-quality-rating').html(qualityBadge(dados.quality_rating || 'UNKNOWN'));
+                linha.find('.js-meta-ultima-verificacao').html(formatarDataSincronizacao(dados.ultima_verificacao));
+                if(dados.numero){ linha.find('.js-meta-numero').text(dados.numero); }
+                if(dados.display_name){ linha.find('.js-meta-conta-nome').text(dados.display_name); }
+
+                if($.fn.DataTable && $.fn.DataTable.isDataTable(linha.closest('table'))){
+                    linha.closest('table').DataTable().row(linha).invalidate('dom').draw(false);
+                }
+
+                mensagem('success', json.mensagem || 'Dados sincronizados com sucesso.');
+            }).catch(function(error){
+                mensagem('error', (error && (error.mensagem || error.message)) || 'Não foi possível consultar a Meta.');
+            }).finally(function(){
+                botao.prop('disabled', false).html(htmlOriginal);
+                botao.tooltip('dispose').tooltip();
+            });
+        });
+    });
+})();
+</script>
