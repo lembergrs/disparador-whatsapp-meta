@@ -25,7 +25,10 @@ class NfseReservaService
             'valor' => $cobranca['COB_Valor'] ?? 0,
             'competencia' => !empty($cobranca['COB_DataPagamento'])
                 ? substr((string) $cobranca['COB_DataPagamento'], 0, 10)
-                : date('Y-m-d')
+                : date('Y-m-d'),
+            'prestador_cnpj' => NfseConfigService::prestadorCnpj(),
+            'ambiente' => NfseConfigService::ambiente(),
+            'serie' => NfseConfigService::dpsSerie()
         ]);
 
         return [

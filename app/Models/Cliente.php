@@ -410,10 +410,42 @@ class Cliente
             UPDATE clientes
             SET CLI_DataLiberacao = NOW()
             WHERE CLI_ID = ?
+            AND CLI_StatusCadastro = 'ativo'
+            AND CLI_StatusPagamento = 'pendente'
             AND (CLI_DataLiberacao IS NULL OR CLI_DataLiberacao = '')
         ");
 
-        return $sql->execute([$id]);
+        $executado = $sql->execute([$id]);
+
+        if($executado && $sql->rowCount() > 0){
+            $this->registrarInicioTrial($id);
+        }
+
+        return $executado;
+    }
+
+
+
+
+    private function registrarInicioTrial($id)
+    {
+        $linha = [
+            'timestamp' => date('c'),
+            'evento' => 'trial_iniciado',
+            'CLI_ID' => (int) $id
+        ];
+
+        $diretorio = __DIR__ . '/../../storage/logs';
+
+        if(!is_dir($diretorio)){
+            @mkdir($diretorio, 0775, true);
+        }
+
+        @file_put_contents(
+            $diretorio . '/trial.log',
+            json_encode($linha, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL,
+            FILE_APPEND
+        );
     }
 
 
