@@ -437,6 +437,11 @@ class Auth
             return true;
         }
 
+        if($controller == 'nfse'){
+            $metodo = $partes[1] ?? 'index';
+            return in_array($metodo, ['pdf', 'xml'], true);
+        }
+
         return (
             $controller == 'configuracao'
             &&

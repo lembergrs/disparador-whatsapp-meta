@@ -26,7 +26,7 @@ nfseFiscalAssert(substr_count($configService, 'codigo_tributacao_nacional') === 
 nfseFiscalHas($builder, 'validarParametrosFiscaisConfigurados', 'PayloadBuilder valida parametrização antes da emissão');
 nfseFiscalHas($builder, "NFE_CodigoTributacaoNacional", 'PayloadBuilder reutiliza snapshot de código quando existir');
 nfseFiscalHas($builder, "NFE_DescricaoServicoSnapshot", 'PayloadBuilder reutiliza snapshot de descrição quando existir');
-nfseFiscalHas($builder, 'TODO(NFS-e): enviar codigoTributacaoNacional', 'PayloadBuilder documenta TODO de contrato futuro');
+nfseFiscalHas($builder, "'codigoTributacaoNacional' => $" . "parametrosFiscais['codigo_tributacao_nacional']", 'PayloadBuilder envia código tributário nacional');
 nfseFiscalHas($builder, "'descServico' => $" . "parametrosFiscais['descricao_servico']", 'PayloadBuilder usa descrição configurada');
 nfseFiscalHas($emission, "prepararSnapshotFiscal", 'EmissionService preserva snapshot antes da primeira chamada');
 nfseFiscalHas($emission, "registrarLogSeguro('bloqueio_configuracao'", 'bloqueio por configuração é logado de forma segura');
