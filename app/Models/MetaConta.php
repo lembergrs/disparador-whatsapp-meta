@@ -620,8 +620,18 @@ class MetaConta
 
     public function atualizarStatusOperacionalEmbeddedSignup($id, $clienteId, array $dados)
     {
-        $sets = ['MTA_Status = ?'];
-        $valores = [$dados['status'] ?? 'requer_acao'];
+        return $this->atualizarEspelhoMeta($id, $clienteId, $dados, $dados['status'] ?? 'requer_acao');
+    }
+
+    public function atualizarEspelhoMeta($id, $clienteId, array $dados, $statusInterno = null)
+    {
+        $sets = [];
+        $valores = [];
+
+        if($statusInterno !== null){
+            $sets[] = 'MTA_Status = ?';
+            $valores[] = $statusInterno;
+        }
 
         foreach([
             'MTA_QualityRating' => 'quality_rating',
@@ -631,13 +641,24 @@ class MetaConta
             'MTA_NumeroTelefone' => 'numero',
             'MTA_DisplayName' => 'display_name'
         ] as $coluna => $chave){
-            if($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true)){
-                if(array_key_exists($chave, $dados)){
-                    $sets[] = $coluna . ' = ?';
-                    $valores[] = $dados[$chave];
-                }
+            if(!($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true))){
+                continue;
             }
+
+            if(!array_key_exists($chave, $dados)){
+                continue;
+            }
+
+            $valor = $dados[$chave];
+            if($valor === null || $valor === ''){
+                continue;
+            }
+
+            $sets[] = $coluna . ' = ?';
+            $valores[] = $valor;
         }
+
+        $sets[] = 'MTA_UltimaVerificacao = NOW()';
 
         $valores[] = $id;
         $valores[] = $clienteId;

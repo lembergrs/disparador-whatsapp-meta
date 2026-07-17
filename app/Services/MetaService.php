@@ -75,6 +75,117 @@ class MetaService
 
 
 
+
+
+    public function consultarDadosNumero()
+    {
+        return self::consultarDadosNumeroConta($this->conta);
+    }
+
+    public static function consultarDadosNumeroConta(array $conta)
+    {
+        if(empty($conta['MTA_Token'])){
+            throw new Exception('A autorização da Meta expirou ou não possui mais acesso ao número.');
+        }
+
+        if(empty($conta['MTA_PhoneNumberId'])){
+            throw new Exception('A conta não possui um Phone Number ID válido.');
+        }
+
+        $phoneNumberId = (string) $conta['MTA_PhoneNumberId'];
+        $telefone = self::graphGetConta(
+            $conta,
+            $phoneNumberId,
+            [
+                'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type'
+            ]
+        );
+
+        $dados = self::normalizarDadosNumeroMeta($telefone, $phoneNumberId);
+
+        if(empty($dados['operational_status']) && !empty($conta['MTA_WabaId'])){
+            try{
+                $waba = self::graphGetConta(
+                    $conta,
+                    (string) $conta['MTA_WabaId'] . '/phone_numbers',
+                    [
+                        'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type'
+                    ]
+                );
+
+                foreach(($waba['data'] ?? []) as $numero){
+                    if((string) ($numero['id'] ?? '') === $phoneNumberId){
+                        $dados = array_merge($dados, array_filter(
+                            self::normalizarDadosNumeroMeta($numero, $phoneNumberId),
+                            function($valor){ return $valor !== null && $valor !== ''; }
+                        ));
+                        break;
+                    }
+                }
+            }catch(Exception $e){
+                // A consulta principal do Phone Number ID já trouxe os dados básicos.
+                // A listagem da WABA é complementar para diagnóstico de suporte.
+            }
+        }
+
+        return $dados;
+    }
+
+    private static function graphGetConta(array $conta, $endpoint, array $params = [])
+    {
+        $base = rtrim((string) $conta['MTA_UrlBase'], '/');
+        $query = $params ? '?' . http_build_query($params) : '';
+        $url = $base . '/' . ltrim((string) $endpoint, '/') . $query;
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $conta['MTA_Token']
+            ],
+            CURLOPT_TIMEOUT => 30
+        ]);
+
+        $response = curl_exec($curl);
+        $curlError = curl_error($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+
+        $json = json_decode((string) $response, true);
+        if($curlError){
+            throw new Exception('Não foi possível consultar a Meta neste momento. Tente novamente.');
+        }
+
+        if($httpCode >= 400 || !is_array($json)){
+            $erro = is_array($json) ? ($json['error'] ?? []) : [];
+            $partes = [
+                'HTTP ' . $httpCode,
+                'code ' . ($erro['code'] ?? ''),
+                'subcode ' . ($erro['error_subcode'] ?? ''),
+                'fbtrace_id ' . ($erro['fbtrace_id'] ?? ''),
+                (string) ($erro['message'] ?? 'Não foi possível atualizar os dados da conta Meta.')
+            ];
+            throw new Exception(trim(implode(' ', array_filter($partes))));
+        }
+
+        return $json;
+    }
+
+    private static function normalizarDadosNumeroMeta(array $telefone, $phoneNumberId)
+    {
+        return [
+            'phone_number_id' => $telefone['id'] ?? $phoneNumberId,
+            'numero' => $telefone['display_phone_number'] ?? null,
+            'display_name' => $telefone['verified_name'] ?? null,
+            'quality_rating' => $telefone['quality_rating'] ?? null,
+            'code_verification_status' => $telefone['code_verification_status'] ?? null,
+            'name_status' => $telefone['name_status'] ?? null,
+            'operational_status' => $telefone['status'] ?? null,
+            'platform_type' => $telefone['platform_type'] ?? null
+        ];
+    }
+
     private function aplicarMensagemAmigavelErroEnvio(array $retorno)
     {
         $erro = $retorno['error'] ?? ($retorno['response']['error'] ?? null);

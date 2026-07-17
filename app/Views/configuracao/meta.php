@@ -45,6 +45,12 @@ $limiteNumeros =
 $podeConectarNumero =
     !empty($limiteNumeros['permitido']);
 
+$idsContasMetaPermitidasConfiguracao =
+    \Core\Auth::idsContasMetaPermitidas($usuario ?? null);
+
+$adminPodeAtualizarStatusMeta =
+    (($usuario['nivel'] ?? null) === 'admin');
+
 ?>
 
 <div class="row">
@@ -174,7 +180,18 @@ $podeConectarNumero =
                                         </td>
 
                                         <td>
-                                            <?= formatarTelefoneConfiguracao($conta['MTA_NumeroTelefone']); ?>
+                                            <span class="js-meta-numero"><?= formatarTelefoneConfiguracao($conta['MTA_NumeroTelefone']); ?></span>
+                                            <?php if($adminPodeAtualizarStatusMeta){ ?>
+                                                <div class="small text-muted mt-1">
+                                                    Meta: <span class="js-meta-operational-status"><?= htmlspecialchars($conta['MTA_OperationalStatus'] ?? ''); ?></span>
+                                                    <?php if(!empty($conta['MTA_QualityRating'])){ ?>
+                                                        · Qualidade: <span class="js-meta-quality-rating"><?= htmlspecialchars($conta['MTA_QualityRating']); ?></span>
+                                                    <?php } ?>
+                                                </div>
+                                                <?php if(!empty($conta['MTA_UltimaVerificacao'])){ ?>
+                                                    <div class="small text-muted">Última atualização: <span class="js-meta-ultima-verificacao"><?= htmlspecialchars($conta['MTA_UltimaVerificacao']); ?></span></div>
+                                                <?php } ?>
+                                            <?php } ?>
                                         </td>
 
                                         <td>
@@ -203,6 +220,23 @@ $podeConectarNumero =
                                                 <i class="fas fa-reply"></i>
                                                 Configurar auto resposta
                                             </button>
+
+                                            <?php if(
+                                                $adminPodeAtualizarStatusMeta
+                                                && in_array((int) $conta['MTA_ID'], $idsContasMetaPermitidasConfiguracao, true)
+                                                && !empty($conta['MTA_PhoneNumberId'])
+                                                && !empty($conta['MTA_Token'])
+                                                && (($conta['MTA_Ativo'] ?? 'N') === 'S')
+                                            ){ ?>
+                                                <button
+                                                type="button"
+                                                class="btn btn-info btn-sm btnAtualizarStatusMetaAdmin"
+                                                data-id="<?= (int) $conta['MTA_ID']; ?>"
+                                                >
+                                                    <i class="fas fa-sync-alt"></i>
+                                                    Atualizar status da Meta
+                                                </button>
+                                            <?php } ?>
 
 
                                             <?php if(in_array(($conta['MTA_Status'] ?? ''), ['pendente_registro', 'erro_registro', 'requer_acao'], true) && !empty($conta['MTA_PhoneNumberId']) && !empty($conta['MTA_Token'])){ ?>
@@ -663,6 +697,33 @@ role="alert"
             botao.disabled = true;
             botao.textContent = 'Concluindo...';
         }
+    });
+
+    document.addEventListener('click', function(e){
+        const botao = e.target.closest('.btnAtualizarStatusMetaAdmin');
+        if(!botao){ return; }
+        e.preventDefault();
+        if(botao.disabled){ return; }
+
+        const textoOriginal = botao.innerHTML;
+        botao.disabled = true;
+        botao.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Atualizando...';
+
+        postForm(BASE_URL + '/index.php?url=configuracao/atualizarStatusMetaAjax', {
+            conta_id: botao.dataset.id || ''
+        }).then(function(resp){
+            if(!resp || resp.status !== 'success'){
+                throw new Error((resp && resp.mensagem) || 'Não foi possível atualizar os dados da Meta.');
+            }
+
+            alert(resp.mensagem || 'Dados da conta atualizados com sucesso.');
+            window.location.reload();
+        }).catch(function(error){
+            alert((error && error.message) || 'Não foi possível atualizar os dados da Meta.');
+        }).finally(function(){
+            botao.disabled = false;
+            botao.innerHTML = textoOriginal;
+        });
     });
 
     document.addEventListener('click', function(e){

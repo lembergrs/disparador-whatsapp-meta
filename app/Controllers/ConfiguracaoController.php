@@ -9,6 +9,7 @@ use Models\MetaConta;
 use Models\Cliente;
 use Models\MetaEmbeddedSignupAttempt;
 use Services\EmbeddedSignupFlowService;
+use Services\MetaService;
 use Services\EmbeddedSignupAttemptCoordinator;
 use Exception;
 
@@ -506,19 +507,60 @@ class ConfiguracaoController extends Controller
 
     private function buscarDadosPhoneNumber($phoneNumberId, $accessToken)
     {
-        $telefone = $this->graphRequest($phoneNumberId, [
-            'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status'
-        ], $accessToken);
-
-        return [
-            'phone_number_id' => $telefone['id'] ?? $phoneNumberId,
-            'numero' => $telefone['display_phone_number'] ?? null,
-            'display_name' => $telefone['verified_name'] ?? null,
-            'quality_rating' => $telefone['quality_rating'] ?? null,
-            'code_verification_status' => $telefone['code_verification_status'] ?? null,
-            'name_status' => $telefone['name_status'] ?? null,
-            'operational_status' => $telefone['status'] ?? null
+        $contaTemporaria = [
+            'MTA_ID' => 0,
+            'CLI_ID' => 0,
+            'MTA_PhoneNumberId' => $phoneNumberId,
+            'MTA_Token' => $accessToken,
+            'MTA_UrlBase' => 'https://graph.facebook.com/' . ltrim((string) META_GRAPH_VERSION, '/') . '/',
+            'MTA_WabaId' => null,
+            'MTA_Status' => 'conectado',
+            'MTA_Ativo' => 'S'
         ];
+
+        return MetaService::consultarDadosNumeroConta($contaTemporaria);
+    }
+
+    private function sincronizarDadosNumeroMeta(array $conta)
+    {
+        $service = new MetaService((int) $conta['MTA_ID'], (int) $conta['CLI_ID']);
+        return $service->consultarDadosNumero();
+    }
+
+    private function registrarFalhaSincronizacaoMeta(array $conta, $requestId, Exception $e, $etapa)
+    {
+        $this->logMetaEmbeddedSignup([
+            'data' => date('Y-m-d H:i:s'),
+            'cliente_id' => $conta['CLI_ID'] ?? null,
+            'conta_id' => $conta['MTA_ID'] ?? null,
+            'waba_id' => $conta['MTA_WabaId'] ?? null,
+            'phone_number_id' => $conta['MTA_PhoneNumberId'] ?? null,
+            'request_id' => $requestId,
+            'etapa' => $etapa,
+            'erro' => $this->sanitizeMetaMessage($e->getMessage()),
+            'resultado' => 'erro_sincronizacao'
+        ]);
+    }
+
+    private function mensagemAmigavelErroMeta($mensagem)
+    {
+        $texto = (string) $mensagem;
+        if(strpos($texto, '133010') !== false || stripos($texto, 'Account not registered') !== false){
+            return 'O número ainda não concluiu o registro no WhatsApp. Informe o PIN de 6 dígitos para finalizar a conexão.';
+        }
+        if(strpos($texto, 'code 100') !== false || strpos($texto, 'subcode 33') !== false || stripos($texto, 'Unsupported post request') !== false){
+            return 'Não foi possível acessar o número vinculado. Refaça a conexão com a Meta ou entre em contato com o suporte.';
+        }
+        if(stripos($texto, 'token') !== false || stripos($texto, 'OAuth') !== false){
+            return 'A autorização da Meta expirou ou não possui mais acesso ao número.';
+        }
+        if(stripos($texto, 'Phone Number ID') !== false){
+            return 'A conta não possui um Phone Number ID válido.';
+        }
+        if(stripos($texto, 'consultar a Meta') !== false || stripos($texto, 'timeout') !== false || stripos($texto, 'HTTP 500') !== false){
+            return 'Não foi possível consultar a Meta neste momento. Tente novamente.';
+        }
+        return 'Não foi possível atualizar os dados da conta Meta.';
     }
 
 
@@ -744,11 +786,18 @@ class ConfiguracaoController extends Controller
         try{
             $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'conta_id'=>$contaId,'phone_number_id'=>$conta['MTA_PhoneNumberId'],'request_id'=>$requestId,'etapa'=>'register_phone_number','resultado'=>'inicio']);
             $this->registrarPhoneNumberMeta($conta['MTA_PhoneNumberId'], $pin, $conta['MTA_Token']);
-            $dadosTelefone = $this->buscarDadosPhoneNumber($conta['MTA_PhoneNumberId'], $conta['MTA_Token']);
+
+            $dadosTelefone = [];
+            try{
+                $dadosTelefone = $this->sincronizarDadosNumeroMeta($conta);
+            }catch(Exception $syncException){
+                $this->registrarFalhaSincronizacaoMeta($conta, $requestId, $syncException, 'sync_after_register');
+            }
+
             $statusConexao = $this->atualizarStatusOperacionalConta($clienteId, $conta, array_merge($dadosTelefone, ['status' => 'conectado']));
 
             $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'conta_id'=>$contaId,'phone_number_id'=>$conta['MTA_PhoneNumberId'],'request_id'=>$requestId,'etapa'=>'register_phone_number','status'=>$statusConexao,'resultado'=>'ok']);
-            Session::flash('success', 'Número registrado e conectado com sucesso.');
+            Session::flash('success', empty($dadosTelefone) ? 'Número registrado e conectado com sucesso. Não foi possível sincronizar os dados da Meta agora.' : 'Número registrado e conectado com sucesso.');
         }catch(Exception $e){
             $this->metaContaModel->atualizarStatusOperacionalEmbeddedSignup($contaId, $clienteId, ['status' => 'erro_registro']);
             $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'conta_id'=>$contaId,'phone_number_id'=>$conta['MTA_PhoneNumberId'] ?? null,'request_id'=>$requestId,'etapa'=>'register_phone_number','erro'=>$this->sanitizeMetaMessage($e->getMessage()),'resultado'=>'erro']);
@@ -756,6 +805,71 @@ class ConfiguracaoController extends Controller
         }
 
         $this->redirect('configuracao/meta');
+    }
+
+    public function atualizarStatusMetaAjax()
+    {
+        \Core\Csrf::exigirPost();
+        $usuario = Auth::usuario();
+
+        if(($usuario['nivel'] ?? null) !== 'admin'){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Acesso negado.'], 403);
+        }
+
+        $contaId = (int) ($_POST['conta_id'] ?? 0);
+        $conta = $this->metaContaModel->buscarPorUsuario($contaId, $usuario);
+
+        if(!$conta || empty($conta['MTA_PhoneNumberId']) || empty($conta['MTA_Token']) || ($conta['MTA_Ativo'] ?? 'N') !== 'S'){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta não encontrada no escopo administrativo permitido.'], 403);
+        }
+
+        $requestId = $this->requestId();
+
+        try{
+            $dadosTelefone = $this->sincronizarDadosNumeroMeta($conta);
+            $this->metaContaModel->atualizarEspelhoMeta((int) $conta['MTA_ID'], (int) $conta['CLI_ID'], $dadosTelefone, null);
+            $contaAtualizada = $this->metaContaModel->buscarPorUsuario($contaId, $usuario) ?: [];
+
+            $this->logMetaEmbeddedSignup([
+                'data' => date('Y-m-d H:i:s'),
+                'cliente_id' => $conta['CLI_ID'],
+                'conta_id' => $conta['MTA_ID'],
+                'waba_id' => $conta['MTA_WabaId'] ?? null,
+                'phone_number_id' => $conta['MTA_PhoneNumberId'],
+                'request_id' => $requestId,
+                'etapa' => 'admin_refresh_meta_status',
+                'resultado' => 'ok'
+            ]);
+
+            $this->jsonResponse([
+                'ok' => true,
+                'status' => 'success',
+                'mensagem' => 'Dados da conta atualizados com sucesso.',
+                'dados' => [
+                    'display_name' => $contaAtualizada['MTA_DisplayName'] ?? ($dadosTelefone['display_name'] ?? null),
+                    'numero' => $contaAtualizada['MTA_NumeroTelefone'] ?? ($dadosTelefone['numero'] ?? null),
+                    'quality_rating' => $contaAtualizada['MTA_QualityRating'] ?? ($dadosTelefone['quality_rating'] ?? null),
+                    'code_verification_status' => $contaAtualizada['MTA_CodeVerificationStatus'] ?? ($dadosTelefone['code_verification_status'] ?? null),
+                    'name_status' => $contaAtualizada['MTA_NameStatus'] ?? ($dadosTelefone['name_status'] ?? null),
+                    'operational_status' => $contaAtualizada['MTA_OperationalStatus'] ?? ($dadosTelefone['operational_status'] ?? null),
+                    'ultima_verificacao' => $contaAtualizada['MTA_UltimaVerificacao'] ?? date('Y-m-d H:i:s')
+                ]
+            ]);
+        }catch(Exception $e){
+            $this->logMetaEmbeddedSignup([
+                'data' => date('Y-m-d H:i:s'),
+                'cliente_id' => $conta['CLI_ID'] ?? null,
+                'conta_id' => $conta['MTA_ID'] ?? null,
+                'waba_id' => $conta['MTA_WabaId'] ?? null,
+                'phone_number_id' => $conta['MTA_PhoneNumberId'] ?? null,
+                'request_id' => $requestId,
+                'etapa' => 'admin_refresh_meta_status',
+                'erro' => $this->sanitizeMetaMessage($e->getMessage()),
+                'resultado' => 'erro'
+            ]);
+
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>$this->mensagemAmigavelErroMeta($e->getMessage())], 400);
+        }
     }
 
     public function atualizarStatusNumeroWhatsApp()
