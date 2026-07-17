@@ -843,7 +843,9 @@ class ConfiguracaoController extends Controller
                     'code_verification_status' => $contaAtualizada['MTA_CodeVerificationStatus'] ?? ($dadosTelefone['code_verification_status'] ?? null),
                     'name_status' => $contaAtualizada['MTA_NameStatus'] ?? ($dadosTelefone['name_status'] ?? null),
                     'operational_status' => $contaAtualizada['MTA_OperationalStatus'] ?? ($dadosTelefone['operational_status'] ?? null),
-                    'ultima_verificacao' => $contaAtualizada['MTA_UltimaVerificacao'] ?? date('Y-m-d H:i:s')
+                    'ultima_verificacao' => $contaAtualizada['MTA_UltimaVerificacao'] ?? date('Y-m-d H:i:s'),
+                    'messaging_limit' => $contaAtualizada['MTA_MessagingLimit'] ?? ($dadosTelefone['messaging_limit'] ?? null),
+                    'messaging_limit_label' => \Services\MetaService::formatarLimiteConversasMeta($contaAtualizada['MTA_MessagingLimit'] ?? ($dadosTelefone['messaging_limit'] ?? null))
                 ]
             ]);
         }catch(Exception $e){

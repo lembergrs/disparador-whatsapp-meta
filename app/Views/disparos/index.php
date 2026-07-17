@@ -1,3 +1,10 @@
+<?php
+$limitePlanoDisparador = isset($clientePlano['PLA_LimiteMensagens']) ? (int) $clientePlano['PLA_LimiteMensagens'] : null;
+$mensagensUsadasDisparador = isset($consumoMes['CMS_Mensagens']) ? (int) $consumoMes['CMS_Mensagens'] : 0;
+$mensagensDisponiveisDisparador = $limitePlanoDisparador !== null ? max(0, $limitePlanoDisparador - $mensagensUsadasDisparador) : null;
+$limiteMetaLabel = \Services\MetaService::formatarLimiteConversasMeta($metaContaLimite['MTA_MessagingLimit'] ?? null);
+$avisoLimiteMeta = \Services\MetaService::avisoDesatualizacaoMeta($metaContaLimite['MTA_UltimaVerificacao'] ?? null);
+?>
 <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between">
     <div class="btn-group mb-2 mb-md-0" role="group" aria-label="Navegação de disparos">
         <a href="<?= BASE_URL; ?>/index.php?url=disparo" class="btn btn-primary">
@@ -6,6 +13,28 @@
         <a href="<?= BASE_URL; ?>/index.php?url=disparo/historico" class="btn btn-outline-primary">
             <i class="fas fa-history"></i> Histórico de Disparos
         </a>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="callout callout-info h-100 mb-0">
+            <h5>Plano Disparador</h5>
+            <?php if($mensagensDisponiveisDisparador !== null){ ?>
+                <p class="mb-1">Você possui <?= number_format($mensagensDisponiveisDisparador, 0, ',', '.'); ?> mensagens disponíveis neste ciclo.</p>
+            <?php }else{ ?>
+                <p class="mb-1">Consulte seu plano no Disparador para acompanhar a franquia comercial de mensagens.</p>
+            <?php } ?>
+            <small class="text-muted">Este limite faz parte do plano contratado no Disparador e considera mensagens processadas pela plataforma.</small>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="callout callout-warning h-100 mb-0">
+            <h5>Limite de conversas da Meta</h5>
+            <p class="mb-1">Limite atualmente informado pela Meta: <?= htmlspecialchars($limiteMetaLabel, ENT_QUOTES, 'UTF-8'); ?></p>
+            <small>Este limite é controlado exclusivamente pela Meta e é diferente da quantidade de mensagens do seu plano.</small>
+            <?php if(!empty($avisoLimiteMeta)){ ?><br><small class="text-muted"><?= htmlspecialchars($avisoLimiteMeta, ENT_QUOTES, 'UTF-8'); ?></small><?php } ?>
+        </div>
     </div>
 </div>
 

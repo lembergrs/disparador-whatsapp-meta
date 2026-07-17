@@ -97,7 +97,7 @@ class MetaService
             $conta,
             $phoneNumberId,
             [
-                'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type'
+                'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type,whatsapp_business_manager_messaging_limit'
             ]
         );
 
@@ -109,7 +109,7 @@ class MetaService
                     $conta,
                     (string) $conta['MTA_WabaId'] . '/phone_numbers',
                     [
-                        'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type'
+                        'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type,whatsapp_business_manager_messaging_limit'
                     ]
                 );
 
@@ -182,8 +182,82 @@ class MetaService
             'code_verification_status' => $telefone['code_verification_status'] ?? null,
             'name_status' => $telefone['name_status'] ?? null,
             'operational_status' => $telefone['status'] ?? null,
-            'platform_type' => $telefone['platform_type'] ?? null
+            'platform_type' => $telefone['platform_type'] ?? null,
+            'messaging_limit' => self::normalizarLimiteConversasMeta(
+                $telefone['messaging_limit_tier']
+                ?? ($telefone['whatsapp_business_manager_messaging_limit'] ?? null)
+            )
         ];
+    }
+
+    public static function normalizarLimiteConversasMeta($valor)
+    {
+        if($valor === null){
+            return null;
+        }
+
+        $raw = trim((string) $valor);
+        if($raw === ''){
+            return null;
+        }
+
+        $upper = strtoupper($raw);
+        $mapa = [
+            'TIER_250' => '250',
+            'TIER_1K' => '1000',
+            'TIER_2K' => '2000',
+            'TIER_10K' => '10000',
+            'TIER_100K' => '100000',
+            'TIER_UNLIMITED' => 'UNLIMITED',
+            'UNLIMITED' => 'UNLIMITED'
+        ];
+
+        if(isset($mapa[$upper])){
+            return $mapa[$upper];
+        }
+
+        return $raw;
+    }
+
+    public static function formatarLimiteConversasMeta($valor, $sufixo = true)
+    {
+        $normalizado = self::normalizarLimiteConversasMeta($valor);
+        if($normalizado === null){
+            return 'Limite da Meta ainda não disponível.';
+        }
+
+        if(strtoupper((string) $normalizado) === 'UNLIMITED'){
+            return 'Ilimitado';
+        }
+
+        if(ctype_digit((string) $normalizado)){
+            $formatado = number_format((int) $normalizado, 0, ',', '.');
+            return $sufixo ? $formatado . ' clientes únicos em 24 horas' : $formatado;
+        }
+
+        return (string) $normalizado;
+    }
+
+    public static function avisoDesatualizacaoMeta($ultimaVerificacao)
+    {
+        if(empty($ultimaVerificacao)){
+            return 'Limite da Meta ainda não disponível. Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.';
+        }
+
+        $timestamp = strtotime((string) $ultimaVerificacao);
+        if(!$timestamp){
+            return '';
+        }
+
+        $horas = (time() - $timestamp) / 3600;
+        if($horas > 72){
+            return 'Informação da Meta possivelmente desatualizada.';
+        }
+        if($horas > 24){
+            return 'Última consulta à Meta em ' . date('d/m/Y H:i', $timestamp) . '.';
+        }
+
+        return '';
     }
 
     private function aplicarMensagemAmigavelErroEnvio(array $retorno)

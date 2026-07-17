@@ -13,6 +13,7 @@ use Models\ConsumoMensal;
 use Models\DisparoManual;
 use Models\ListaContato;
 use Models\ListaContatoItem;
+use Models\Cliente;
 use Services\ControlePlanoService;
 use Services\DisparoManualQueueService;
 
@@ -67,6 +68,10 @@ class DisparoController extends Controller
                 $usuario['CLI_ID']
             );
 
+        $clientePlano = (new Cliente())->buscarComPlano($usuario['CLI_ID']);
+        $consumoMes = (new ConsumoMensal())->buscarMesAtual($usuario['CLI_ID']);
+        $metaContaLimite = $contas[0] ?? null;
+
 
 
 
@@ -81,7 +86,13 @@ class DisparoController extends Controller
 
                 'templates' => $templates,
 
-                'listasContatos' => (new ListaContato())->listarPorCliente($usuario['CLI_ID'])
+                'listasContatos' => (new ListaContato())->listarPorCliente($usuario['CLI_ID']),
+
+                'clientePlano' => $clientePlano,
+
+                'consumoMes' => $consumoMes,
+
+                'metaContaLimite' => $metaContaLimite
 
             ]
         );

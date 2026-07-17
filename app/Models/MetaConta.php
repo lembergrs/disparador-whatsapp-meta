@@ -548,7 +548,8 @@ class MetaConta
             'MTA_QualityRating' => 'quality_rating',
             'MTA_CodeVerificationStatus' => 'code_verification_status',
             'MTA_NameStatus' => 'name_status',
-            'MTA_OperationalStatus' => 'operational_status'
+            'MTA_OperationalStatus' => 'operational_status',
+            'MTA_MessagingLimit' => 'messaging_limit'
         ] as $coluna => $chave){
             if($this->colunaExiste($coluna)){
                 $colunas[] = $coluna;
@@ -614,7 +615,8 @@ class MetaConta
             'MTA_QualityRating' => 'quality_rating',
             'MTA_CodeVerificationStatus' => 'code_verification_status',
             'MTA_NameStatus' => 'name_status',
-            'MTA_OperationalStatus' => 'operational_status'
+            'MTA_OperationalStatus' => 'operational_status',
+            'MTA_MessagingLimit' => 'messaging_limit'
         ] as $coluna => $chave){
             if($this->colunaExiste($coluna)){
                 $sets[] = $coluna . ' = ?';
@@ -655,6 +657,7 @@ class MetaConta
             'MTA_CodeVerificationStatus' => 'code_verification_status',
             'MTA_NameStatus' => 'name_status',
             'MTA_OperationalStatus' => 'operational_status',
+            'MTA_MessagingLimit' => 'messaging_limit',
             'MTA_NumeroTelefone' => 'numero',
             'MTA_DisplayName' => 'display_name'
         ] as $coluna => $chave){

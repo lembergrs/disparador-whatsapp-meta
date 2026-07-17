@@ -15,7 +15,7 @@ $templateModel = file_get_contents($root . '/app/Models/TemplateMeta.php');
 
 metaStatusSyncAssert(strpos($metaService, 'public function consultarDadosNumero()') !== false, 'MetaService centraliza consulta dos dados do número.');
 metaStatusSyncAssert(strpos($metaService, 'GET') === false || strpos($metaService, 'graphGetConta') !== false, 'Consulta Graph fica encapsulada no service.');
-metaStatusSyncAssert(strpos($metaService, "'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type'") !== false, 'Campos esperados do Phone Number ID são solicitados.');
+metaStatusSyncAssert(strpos($metaService, "'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type,whatsapp_business_manager_messaging_limit'") !== false, 'Campos esperados do Phone Number ID são solicitados, incluindo limite Meta.');
 metaStatusSyncAssert(strpos($metaService, "MTA_WabaId'] . '/phone_numbers'") !== false, 'Listagem da WABA complementa status operacional quando necessário.');
 metaStatusSyncAssert(strpos($metaService, 'Authorization: Bearer') !== false, 'Token é usado somente no backend.');
 

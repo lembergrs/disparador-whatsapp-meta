@@ -83,6 +83,7 @@ Crie as colunas para salvar a configuração de auto resposta.
 <th>Status Meta</th>
 <th>Quality</th>
 <th>Última sincronização</th>
+<th>Limite Meta</th>
 <th>Ações</th>
 
 </tr>
@@ -110,6 +111,8 @@ Crie as colunas para salvar a configuração de auto resposta.
 <td class="js-meta-quality-rating"><?= metaContaQualityBadge($conta['MTA_QualityRating'] ?? 'UNKNOWN'); ?></td>
 
 <td class="js-meta-ultima-verificacao"><?= metaContaUltimaSincronizacao($conta['MTA_UltimaVerificacao'] ?? null); ?></td>
+
+<td class="js-meta-messaging-limit" data-toggle="tooltip" title="Limite de conversas iniciadas pela empresa informado e controlado pela Meta."><?= htmlspecialchars(\Services\MetaService::formatarLimiteConversasMeta($conta['MTA_MessagingLimit'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
 
 <td class="text-nowrap">
 
@@ -543,6 +546,7 @@ Salvar
                 linha.find('.js-meta-operational-status').html(escapeHtml(dados.operational_status || '—'));
                 linha.find('.js-meta-quality-rating').html(qualityBadge(dados.quality_rating || 'UNKNOWN'));
                 linha.find('.js-meta-ultima-verificacao').html(formatarDataSincronizacao(dados.ultima_verificacao));
+                linha.find('.js-meta-messaging-limit').html(escapeHtml(dados.messaging_limit_label || 'Limite da Meta ainda não disponível.'));
                 if(dados.numero){ linha.find('.js-meta-numero').text(dados.numero); }
                 if(dados.display_name){ linha.find('.js-meta-conta-nome').text(dados.display_name); }
 
