@@ -154,4 +154,73 @@ class Contato
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+
+
+    public function buscarPorClienteId($clienteId, $contatoId)
+    {
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM contatos\n            WHERE CLI_ID = ?\n            AND CON_ID = ?\n            AND CON_Ativo = 'S'\n            LIMIT 1\n        ");
+
+        $sql->execute([
+            (int) $clienteId,
+            (int) $contatoId
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function pesquisarPorUsuarioMeta($usuario, $metaId, $termo = '', $limite = 20, $pagina = 1)
+    {
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+        $metaId = (int) $metaId;
+
+        if($clienteId <= 0 || empty($metaIds) || !in_array($metaId, $metaIds, true)){
+            return [];
+        }
+
+        $limite = max(1, min((int) $limite, 30));
+        $pagina = max(1, (int) $pagina);
+        $offset = ($pagina - 1) * $limite;
+        $termo = trim((string) $termo);
+        $digitos = preg_replace('/\D/', '', $termo);
+
+        $where = ["CLI_ID = ?", "CON_Ativo = 'S'"];
+        $params = [$clienteId];
+
+        if($termo !== ''){
+            $condicoes = ['CON_Nome LIKE ?'];
+            $params[] = '%' . $termo . '%';
+
+            if($digitos !== ''){
+                $condicoes[] = 'CON_Telefone LIKE ?';
+                $params[] = '%' . $digitos . '%';
+
+                if(substr($digitos, 0, 2) === '55'){
+                    $semDdi = substr($digitos, 2);
+                    if($semDdi !== ''){
+                        $condicoes[] = 'CON_Telefone LIKE ?';
+                        $params[] = '%' . $semDdi . '%';
+                    }
+                }elseif(strlen($digitos) >= 10){
+                    $condicoes[] = 'CON_Telefone LIKE ?';
+                    $params[] = '%55' . $digitos . '%';
+                }
+            }
+
+            $where[] = '(' . implode(' OR ', $condicoes) . ')';
+        }
+
+        $sql = $this->db->prepare("\n            SELECT CON_ID, CON_Nome, CON_Telefone\n            FROM contatos\n            WHERE " . implode(' AND ', $where) . "\n            ORDER BY CON_Nome ASC, CON_ID DESC\n            LIMIT ? OFFSET ?\n        ");
+
+        $pos = 1;
+        foreach($params as $param){
+            $sql->bindValue($pos++, $param);
+        }
+        $sql->bindValue($pos++, $limite, PDO::PARAM_INT);
+        $sql->bindValue($pos, $offset, PDO::PARAM_INT);
+        $sql->execute();
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 }

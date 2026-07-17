@@ -32,8 +32,9 @@ preg_match('/private function processarEmbeddedSignupCode\(.*?\n    }/s', $contr
 $processarEmbedded = $processarMatch[0] ?? '';
 $assert(
     $processarEmbedded !== ''
-    && strpos($processarEmbedded, 'iniciarTrialSePendente') > strpos($processarEmbedded, 'salvarOuAtualizarEmbeddedSignup'),
-    'trial só após persistência no fluxo inicial'
+    && strpos($processarEmbedded, "'pendente_registro'") !== false
+    && strpos($processarEmbedded, 'iniciarTrialSePendente') === false,
+    'fluxo inicial salva pendente_registro e não inicia trial antes do register'
 );
 $assert(strpos($controller, 'access_token') !== false, 'código usa token internamente');
 $assert(strpos($controller, 'unset($dados[\'access_token\']') !== false, 'logs removem access_token');
