@@ -29,7 +29,30 @@ class ConversaTemplateService
 
     public function normalizarTelefone($telefone)
     {
-        return preg_replace('/\D/', '', (string) $telefone);
+        $numero = preg_replace('/\D/', '', (string) $telefone);
+
+        if($numero === ''){
+            throw new Exception('Informe um telefone brasileiro válido com DDD.');
+        }
+
+        if(strlen($numero) === 12 || strlen($numero) === 13){
+            if(substr($numero, 0, 2) !== '55'){
+                throw new Exception('Informe um telefone brasileiro válido com DDD.');
+            }
+        }elseif(strlen($numero) === 10 || strlen($numero) === 11){
+            $numero = '55' . $numero;
+        }else{
+            throw new Exception('Informe um telefone brasileiro válido com DDD.');
+        }
+
+        $nacional = substr($numero, 2);
+        $ddd = substr($nacional, 0, 2);
+
+        if(strlen($nacional) < 10 || strlen($nacional) > 11 || $ddd === '00'){
+            throw new Exception('Informe um telefone brasileiro válido com DDD.');
+        }
+
+        return $numero;
     }
 
     public function enviar(array $usuario, array $dados)
@@ -39,9 +62,10 @@ class ConversaTemplateService
         $telefone = $this->normalizarTelefone($dados['telefone'] ?? '');
         $nome = trim((string) ($dados['nome'] ?? ''));
         $variaveis = $dados['variaveis'] ?? [];
+        $contatoIdSelecionado = (int) ($dados['contato_id'] ?? 0);
 
-        if($metaId <= 0 || $templateId <= 0 || $telefone === ''){
-            throw new Exception('Número remetente, destinatário e template são obrigatórios.');
+        if($metaId <= 0 || $templateId <= 0){
+            throw new Exception('Número remetente e template são obrigatórios.');
         }
 
         $conta = $this->metas->buscarPorUsuario($metaId, $usuario);
@@ -68,18 +92,36 @@ class ConversaTemplateService
         try{
             $this->db->beginTransaction();
 
-            $contato = $this->contatos->buscarPorTelefone((int) $conta['CLI_ID'], $telefone);
-            if(!$contato){
-                $contatoId = $this->contatos->salvar([
-                    'cliente_id' => (int) $conta['CLI_ID'],
-                    'nome' => $nome !== '' ? $nome : $telefone,
-                    'telefone' => $telefone,
-                    'dados_json' => json_encode(['origem' => 'conversa_template'], JSON_UNESCAPED_UNICODE)
-                ]);
-            }else{
+            if($contatoIdSelecionado > 0){
+                $contato = $this->contatos->buscarPorClienteId((int) $conta['CLI_ID'], $contatoIdSelecionado);
+                if(!$contato){
+                    throw new Exception('Contato selecionado não pertence ao escopo permitido.');
+                }
+
+                $telefoneContato = $this->normalizarTelefone($contato['CON_Telefone'] ?? '');
+                if($telefone !== $telefoneContato){
+                    throw new Exception('Telefone informado não corresponde ao contato selecionado.');
+                }
+
+                $telefone = $telefoneContato;
                 $contatoId = (int) $contato['CON_ID'];
                 if($nome === ''){
                     $nome = $contato['CON_Nome'] ?? $telefone;
+                }
+            }else{
+                $contato = $this->contatos->buscarPorTelefone((int) $conta['CLI_ID'], $telefone);
+                if(!$contato){
+                    $contatoId = $this->contatos->salvar([
+                        'cliente_id' => (int) $conta['CLI_ID'],
+                        'nome' => $nome !== '' ? $nome : $telefone,
+                        'telefone' => $telefone,
+                        'dados_json' => json_encode(['origem' => 'conversa_template'], JSON_UNESCAPED_UNICODE)
+                    ]);
+                }else{
+                    $contatoId = (int) $contato['CON_ID'];
+                    if($nome === ''){
+                        $nome = $contato['CON_Nome'] ?? $telefone;
+                    }
                 }
             }
 

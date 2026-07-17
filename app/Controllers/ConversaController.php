@@ -7,6 +7,7 @@ use Core\Auth;
 use Core\Session;
 use Core\Csrf;
 use Models\Conversa;
+use Models\Contato;
 use Models\Usuario;
 use Models\MetaConta;
 use Models\TemplateMeta;
@@ -663,6 +664,66 @@ class ConversaController extends Controller
         ]);
     }
 
+
+    public function buscarContatosAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+        $metaId = (int) ($_GET['meta_id'] ?? 0);
+        $termo = trim((string) ($_GET['q'] ?? ''));
+        $pagina = max(1, (int) ($_GET['page'] ?? 1));
+        $limite = 20;
+
+        if(!(new MetaConta())->buscarPorUsuario($metaId, $usuario)){
+            http_response_code(403);
+            echo json_encode(['sucesso' => false, 'erro' => 'Conta Meta não permitida.']);
+            return;
+        }
+
+        if(mb_strlen($termo, 'UTF-8') < 2){
+            echo json_encode(['sucesso' => true, 'results' => [], 'pagination' => ['more' => false]]);
+            return;
+        }
+
+        $contatos = (new Contato())->pesquisarPorUsuarioMeta($usuario, $metaId, $termo, $limite + 1, $pagina);
+        $temMais = count($contatos) > $limite;
+        $contatos = array_slice($contatos, 0, $limite);
+
+        $results = array_map(function($contato){
+            $telefone = $this->formatarTelefoneContato($contato['CON_Telefone'] ?? '');
+            $nome = $contato['CON_Nome'] ?: $contato['CON_Telefone'];
+            return [
+                'id' => (int) $contato['CON_ID'],
+                'nome' => $contato['CON_Nome'],
+                'telefone' => $contato['CON_Telefone'],
+                'telefone_formatado' => $telefone,
+                'text' => trim($nome . ' — ' . ($telefone ?: ($contato['CON_Telefone'] ?? '')))
+            ];
+        }, $contatos);
+
+        echo json_encode([
+            'sucesso' => true,
+            'results' => $results,
+            'pagination' => ['more' => $temMais]
+        ]);
+    }
+
+    private function formatarTelefoneContato($telefone)
+    {
+        $numero = preg_replace('/\D/', '', (string) $telefone);
+        if(substr($numero, 0, 2) === '55'){
+            $numero = substr($numero, 2);
+        }
+        if(strlen($numero) === 11){
+            return '(' . substr($numero, 0, 2) . ') ' . substr($numero, 2, 5) . '-' . substr($numero, 7);
+        }
+        if(strlen($numero) === 10){
+            return '(' . substr($numero, 0, 2) . ') ' . substr($numero, 2, 4) . '-' . substr($numero, 6);
+        }
+        return $telefone;
+    }
+
     public function iniciarPorTemplateAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -678,7 +739,8 @@ class ConversaController extends Controller
                 'template_id' => $_POST['template_id'] ?? 0,
                 'telefone' => $_POST['telefone'] ?? '',
                 'nome' => $_POST['nome'] ?? '',
-                'variaveis' => $_POST['variaveis'] ?? []
+                'variaveis' => $_POST['variaveis'] ?? [],
+                'contato_id' => $_POST['contato_id'] ?? 0
             ]);
 
             echo json_encode($resultado);

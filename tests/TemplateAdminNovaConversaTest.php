@@ -28,6 +28,9 @@ adminTplAssert(strpos($templateModel, "t.TMP_Status = 'APPROVED'") !== false, 'N
 adminTplAssert(strpos($metaModel, 'buscarPorUsuario') !== false && strpos($metaModel, 'idsContasMetaPermitidas') !== false, 'MetaConta deve validar MTA_ID permitido.');
 adminTplAssert(strpos($layout, 'Templates Meta') !== false && strpos($layout, "usuario['nivel'] == 'admin'") !== false, 'Menu admin deve exibir Templates Meta uma vez no bloco admin.');
 adminTplAssert(strpos($conversaView, 'Nova conversa') !== false && strpos($conversaView, 'modalNovaConversa') !== false, 'Conversas deve exibir modal Nova conversa.');
+adminTplAssert(strpos($conversaView, 'opcoesValidas.length === 1') !== false, 'Nova conversa deve selecionar automaticamente remetente único.');
+adminTplAssert(strpos($conversaView, "$('.telefone-br').unmask().mask") !== false, 'Nova conversa deve aplicar máscara dinâmica sem acumular handlers.');
+adminTplAssert(strpos($service, "if(strlen($" . "numero) === 12 || strlen($" . "numero) === 13)") !== false, 'Normalização deve aceitar DDI 55 informado sem duplicar.');
 adminTplAssert(strpos($conversaController, 'templatesAprovadosAjax') !== false, 'Endpoint AJAX para templates aprovados deve existir.');
 adminTplAssert(strpos($conversaController, 'iniciarPorTemplateAjax') !== false, 'Endpoint AJAX para iniciar conversa por template deve existir.');
 adminTplAssert(strpos($service, 'new MetaService($metaId, (int) $conta[\'CLI_ID\'])') !== false, 'Envio deve usar token/conta Meta validada.');
