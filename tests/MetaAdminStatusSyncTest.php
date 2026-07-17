@@ -9,6 +9,7 @@ $controller = file_get_contents($root . '/app/Controllers/ConfiguracaoController
 $metaService = file_get_contents($root . '/app/Services/MetaService.php');
 $metaModel = file_get_contents($root . '/app/Models/MetaConta.php');
 $view = file_get_contents($root . '/app/Views/configuracao/meta.php');
+$metaContasView = file_get_contents($root . '/app/Views/meta_contas/index.php');
 
 metaStatusSyncAssert(strpos($metaService, 'public function consultarDadosNumero()') !== false, 'MetaService centraliza consulta dos dados do número.');
 metaStatusSyncAssert(strpos($metaService, 'GET') === false || strpos($metaService, 'graphGetConta') !== false, 'Consulta Graph fica encapsulada no service.');
@@ -42,5 +43,19 @@ metaStatusSyncAssert(strpos($view, 'configuracao/atualizarStatusMetaAjax') !== f
 metaStatusSyncAssert(strpos($view, 'fa-sync-alt') !== false, 'Botão usa ícone de sincronização.');
 metaStatusSyncAssert(strpos($view, 'window.location.reload()') !== false, 'Interface atualiza a tela após sucesso.');
 metaStatusSyncAssert(strpos($view, 'MTA_OperationalStatus') !== false && strpos($view, 'MTA_QualityRating') !== false, 'Diagnóstico Meta é exibido para admin.');
+
+
+metaStatusSyncAssert(strpos($metaContasView, 'SincronizarStatusMeta') !== false || strpos($metaContasView, 'btnSincronizarStatusMeta') !== false, 'Painel administrativo de contas Meta exibe botão de sincronização.');
+metaStatusSyncAssert(strpos($metaContasView, 'Status Meta') !== false && strpos($metaContasView, 'MTA_OperationalStatus') !== false, 'Tabela exibe coluna Status Meta baseada em MTA_OperationalStatus.');
+metaStatusSyncAssert(strpos($metaContasView, 'Quality') !== false && strpos($metaContasView, 'MTA_QualityRating') !== false, 'Tabela exibe coluna Quality baseada em MTA_QualityRating.');
+metaStatusSyncAssert(strpos($metaContasView, 'Última sincronização') !== false && strpos($metaContasView, 'MTA_UltimaVerificacao') !== false, 'Tabela exibe última sincronização.');
+metaStatusSyncAssert(strpos($metaContasView, 'title="Editar conta Meta"') !== false, 'Tooltip de editar conta Meta existe.');
+metaStatusSyncAssert(strpos($metaContasView, 'title="Conectar ou reconectar o número do WhatsApp"') !== false, 'Tooltip de conectar/reconectar existe.');
+metaStatusSyncAssert(strpos($metaContasView, 'title="Atualizar informações do número diretamente na Meta"') !== false, 'Tooltip de sincronização existe.');
+metaStatusSyncAssert(strpos($metaContasView, 'title="Excluir conta Meta"') !== false, 'Tooltip de excluir conta Meta existe.');
+metaStatusSyncAssert(strpos($metaContasView, 'configuracao/atualizarStatusMetaAjax') !== false, 'Botão do painel admin reutiliza endpoint de sincronização existente.');
+metaStatusSyncAssert(strpos($metaContasView, '.js-meta-operational-status') !== false && strpos($metaContasView, '.js-meta-quality-rating') !== false && strpos($metaContasView, '.js-meta-ultima-verificacao') !== false, 'AJAX atualiza Status Meta, Quality e Última sincronização na linha.');
+metaStatusSyncAssert(strpos($metaContasView, "row(linha).invalidate('dom').draw(false)") !== false, 'DataTable é invalidado sem resetar paginação após atualização da linha.');
+metaStatusSyncAssert(strpos($metaContasView, 'window.location.reload') === false, 'Painel admin não recarrega a página inteira após sincronizar.');
 
 echo "Meta admin status sync static tests passed\n";
