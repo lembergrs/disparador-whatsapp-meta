@@ -69,8 +69,8 @@ class WorkerOperationalValidatorService
         }
 
         $statusMeta = strtolower((string) ($meta['MTA_Status'] ?? ''));
-        if(in_array($statusMeta, ['erro', 'desconectado', 'requer_acao'], true)){
-            return $this->resultado('bloqueio_temporario', 'meta_status_bloqueado', 'Conta Meta exige ação antes de enviar.');
+        if($statusMeta !== 'conectado'){
+            return $this->resultado('bloqueio_temporario', 'meta_status_bloqueado', 'O número remetente ainda não concluiu o registro no WhatsApp.');
         }
 
         $numeroNormalizado = preg_replace('/\D/', '', $numero);

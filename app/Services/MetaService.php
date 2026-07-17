@@ -73,6 +73,48 @@ class MetaService
 
 
 
+
+
+    private function aplicarMensagemAmigavelErroEnvio(array $retorno)
+    {
+        $erro = $retorno['error'] ?? ($retorno['response']['error'] ?? null);
+        if(!is_array($erro)){
+            return $retorno;
+        }
+
+        $codigo = (string) ($erro['code'] ?? '');
+        $subcodigo = (string) ($erro['error_subcode'] ?? '');
+        $mensagem = (string) ($erro['message'] ?? '');
+
+        if($codigo === '133010' || stripos($mensagem, 'Account not registered') !== false){
+            $erro['message'] = 'O número ainda não concluiu o registro no WhatsApp. Informe o PIN de 6 dígitos para finalizar a conexão.';
+        }elseif($codigo === '100' && $subcodigo === '33'){
+            $erro['message'] = 'Não foi possível acessar o número vinculado. Refaça a conexão com a Meta ou entre em contato com o suporte.';
+        }
+
+        if(isset($retorno['error'])){
+            $retorno['error'] = $erro;
+        }
+        if(isset($retorno['response']['error'])){
+            $retorno['response']['error'] = $erro;
+        }
+
+        return $retorno;
+    }
+
+    private function validarContaProntaParaEnvio()
+    {
+        $status = strtolower((string) ($this->conta['MTA_Status'] ?? ''));
+
+        if($status !== 'conectado'){
+            throw new Exception('O número remetente ainda não concluiu o registro no WhatsApp.');
+        }
+
+        if(empty($this->conta['MTA_Token']) || empty($this->conta['MTA_PhoneNumberId'])){
+            throw new Exception('Conta Meta sem configuração operacional completa.');
+        }
+    }
+
     public function testarConexao()
     {
         $url =
@@ -185,6 +227,8 @@ class MetaService
         $mensagem
     )
     {
+        $this->validarContaProntaParaEnvio();
+
         $url =
 
             rtrim(
@@ -270,7 +314,7 @@ class MetaService
 
 
 
-        return [
+        return $this->aplicarMensagemAmigavelErroEnvio([
 
             'http_code' => $httpCode,
 
@@ -280,7 +324,7 @@ class MetaService
                     true
                 )
 
-        ];
+        ]);
     }
 
 
@@ -913,6 +957,8 @@ class MetaService
         $midiaHeader = null
     )
     {
+        $this->validarContaProntaParaEnvio();
+
         $url =
 
             rtrim(
@@ -1084,7 +1130,7 @@ class MetaService
         $retorno['raw_response'] = $response;
         $retorno['payload'] = $payload;
 
-        return $retorno;
+        return $this->aplicarMensagemAmigavelErroEnvio($retorno);
     }
 
 
