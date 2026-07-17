@@ -58,8 +58,7 @@ class NfsePayloadBuilder
                 'numero' => trim((string) ($cliente['CLI_NFSe_Numero'] ?? '')),
                 'bairro' => trim((string) ($cliente['CLI_NFSe_Bairro'] ?? ''))
             ],
-            // TODO(NFS-e): enviar codigoTributacaoNacional no payload quando a API RL2 aceitar o novo campo.
-            // A descrição já vem do ConfigService para evitar valor fiscal hardcoded no Disparador.
+            'codigoTributacaoNacional' => $parametrosFiscais['codigo_tributacao_nacional'],
             'descServico' => $parametrosFiscais['descricao_servico'],
             'valorNota' => $valor
         ];
@@ -161,8 +160,6 @@ class NfsePayloadBuilder
             throw new \RuntimeException('Configuração fiscal de NFS-e incompleta: ' . implode(', ', $pendencias) . '.');
         }
 
-        // TODO(NFS-e): quando a API RL2 aceitar codigoTributacaoNacional no payload,
-        // incluir $codigo em dadosNota sem alterar a descrição configurada.
         return [
             'codigo_tributacao_nacional' => $codigo,
             'descricao_servico' => $descricao

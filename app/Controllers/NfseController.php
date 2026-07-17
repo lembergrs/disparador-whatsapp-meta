@@ -203,7 +203,7 @@ class NfseController extends Controller
 
     private function download($tipo)
     {
-        Auth::admin();
+        Auth::check();
         $partes = explode('/', $_GET['url'] ?? '');
         $nfseId = (int) ($partes[2] ?? ($_GET['id'] ?? 0));
 
