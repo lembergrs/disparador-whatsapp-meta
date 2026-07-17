@@ -16,7 +16,13 @@ class ConversaController extends Controller
 
     public function __construct()
     {
-        Auth::cliente();
+        Auth::check();
+
+        $usuario = Auth::usuario();
+
+        if(!$this->usuarioPodeAcessarConversas($usuario)){
+            die('Acesso negado');
+        }
 
         $this->conversaModel = new Conversa();
     }
@@ -286,11 +292,24 @@ class ConversaController extends Controller
         return time() <= $limite;
     }
 
+    private function usuarioPodeAcessarConversas($usuario)
+    {
+        if(!$usuario){
+            return false;
+        }
+
+        return (
+            ($usuario['nivel'] ?? null) === 'admin'
+            ||
+            Auth::nivelCliente($usuario['nivel'] ?? null)
+        );
+    }
+
     private function podeGerenciarConversas($usuario)
     {
         return in_array(
             $usuario['nivel'] ?? null,
-            ['cliente_admin', 'cliente'],
+            ['admin', 'cliente_admin', 'cliente'],
             true
         );
     }
@@ -344,7 +363,8 @@ class ConversaController extends Controller
         $dados =
             $this->conversaModel
             ->ultimaAtualizacaoCliente(
-                $usuario['CLI_ID']
+                $usuario['CLI_ID'],
+                $usuario
             );
 
         $ultimaBanco =
@@ -480,7 +500,8 @@ class ConversaController extends Controller
 
         $this->conversaModel->marcarComoLida(
             $id,
-            $usuario['CLI_ID']
+            $usuario['CLI_ID'],
+            $usuario
         );
 
         echo json_encode([
@@ -655,7 +676,8 @@ class ConversaController extends Controller
         $ok =
             $this->conversaModel->marcarComoNaoLida(
                 $id,
-                $usuario['CLI_ID']
+                $usuario['CLI_ID'],
+                $usuario
             );
 
         echo json_encode([
@@ -898,7 +920,8 @@ class ConversaController extends Controller
         $resultado = $this->conversaModel->atribuirResponsavel(
             $conversaId,
             $usuario['CLI_ID'],
-            $responsavelId
+            $responsavelId,
+            $usuario
         );
 
         echo json_encode($resultado);

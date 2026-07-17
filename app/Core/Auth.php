@@ -126,6 +126,46 @@ class Auth
         }
     }
 
+
+    public static function idsContasMetaPermitidas($usuario = null)
+    {
+        $usuario = $usuario ?: self::usuario();
+
+        if(!$usuario){
+            return [];
+        }
+
+        $nivel = $usuario['nivel'] ?? null;
+
+        if($nivel !== 'admin' && !self::nivelCliente($nivel)){
+            return [];
+        }
+
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+
+        if($clienteId <= 0){
+            return [];
+        }
+
+        $db = Database::getInstance();
+
+        $sql = $db->prepare("
+            SELECT MTA_ID
+            FROM meta_contas
+            WHERE CLI_ID = ?
+            AND MTA_Ativo = 'S'
+        ");
+
+        $sql->execute([
+            $clienteId
+        ]);
+
+        return array_map(
+            'intval',
+            $sql->fetchAll(\PDO::FETCH_COLUMN)
+        );
+    }
+
     public static function clienteLiberado()
     {
         $usuario = self::usuario();
