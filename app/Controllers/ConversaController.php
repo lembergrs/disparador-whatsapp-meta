@@ -8,6 +8,9 @@ use Core\Session;
 use Core\Csrf;
 use Models\Conversa;
 use Models\Usuario;
+use Models\MetaConta;
+use Models\TemplateMeta;
+use Services\ConversaTemplateService;
 use Services\MetaService;
 
 class ConversaController extends Controller
@@ -114,7 +117,9 @@ class ConversaController extends Controller
                 'podeAtribuirConversa' => $this->podeGerenciarConversas($usuario),
                 'conversaSelecionada' => $conversaSelecionada,
                 'mensagens' => $mensagens,
-                'janelaAberta' => $janelaAberta
+                'janelaAberta' => $janelaAberta,
+                'podeNovaConversa' => $this->podeIniciarNovaConversa($usuario),
+                'contasNovaConversa' => (new MetaConta())->listarPorUsuario($usuario)
             ]
         );
     }
@@ -636,6 +641,62 @@ class ConversaController extends Controller
             ]);
 
         }
+    }
+
+
+    public function templatesAprovadosAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $usuario = Auth::usuario();
+        $metaId = (int) ($_GET['meta_id'] ?? 0);
+
+        if(!(new MetaConta())->buscarPorUsuario($metaId, $usuario)){
+            http_response_code(403);
+            echo json_encode(['sucesso' => false, 'erro' => 'Conta Meta não permitida.']);
+            return;
+        }
+
+        echo json_encode([
+            'sucesso' => true,
+            'templates' => (new TemplateMeta())->listarAprovadosParaEnvioPorUsuarioConta($usuario, $metaId)
+        ]);
+    }
+
+    public function iniciarPorTemplateAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
+        try{
+            $servico = new ConversaTemplateService();
+            $resultado = $servico->enviar(Auth::usuario(), [
+                'meta_id' => $_POST['meta_id'] ?? 0,
+                'template_id' => $_POST['template_id'] ?? 0,
+                'telefone' => $_POST['telefone'] ?? '',
+                'nome' => $_POST['nome'] ?? '',
+                'variaveis' => $_POST['variaveis'] ?? []
+            ]);
+
+            echo json_encode($resultado);
+        }catch(\Exception $e){
+            echo json_encode([
+                'sucesso' => false,
+                'erro' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function podeIniciarNovaConversa($usuario)
+    {
+        if(!$this->podeGerenciarConversas($usuario)){
+            return false;
+        }
+
+        return !empty(Auth::idsContasMetaPermitidas($usuario));
     }
 
     public function marcarNaoLidaAjax()

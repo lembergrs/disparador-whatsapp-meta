@@ -38,6 +38,11 @@ function formatarNumeroBR($numero)
                     <i class="fas fa-comments"></i>
                     Conversas
                 </strong>
+                <?php if(!empty($podeNovaConversa)){ ?>
+                    <button type="button" class="btn btn-sm btn-success float-right" id="btnNovaConversa">
+                        <i class="fas fa-plus"></i> Nova conversa
+                    </button>
+                <?php } ?>
             </div>
 
             <div class="border-bottom p-2">
@@ -163,6 +168,58 @@ function formatarNumeroBR($numero)
 
 </div>
 
+
+<?php if(!empty($podeNovaConversa)){ ?>
+<div class="modal fade" id="modalNovaConversa" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formNovaConversa">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova conversa por template</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="alert alert-danger d-none" id="erroNovaConversa"></div>
+                    <div class="form-group">
+                        <label>Número remetente</label>
+                        <select name="meta_id" id="novaMetaId" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <?php foreach(($contasNovaConversa ?? []) as $conta){ ?>
+                                <option value="<?= (int) $conta['MTA_ID']; ?>">
+                                    <?= htmlspecialchars(($conta['MTA_Nome'] ?? 'Conta Meta') . ' - ' . ($conta['MTA_NumeroTelefone'] ?? $conta['MTA_PhoneNumberId'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Telefone do destinatário com DDI</label>
+                            <input type="text" name="telefone" class="form-control" placeholder="5599999999999" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Nome do contato</label>
+                            <input type="text" name="nome" class="form-control" placeholder="Nome para novo contato">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Template aprovado</label>
+                        <select name="template_id" id="novaTemplateId" class="form-control" required disabled>
+                            <option value="">Selecione um número remetente...</option>
+                        </select>
+                    </div>
+                    <div id="novaTemplateVariaveis" class="border rounded p-2 bg-light text-muted">Selecione um template para preencher variáveis.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btnEnviarNovaConversa">Enviar template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
 <div id="conversasResizeHandle" class="conversas-resize-handle" title="Arraste para ajustar a altura">
     <span class="conversas-resize-indicator">
         <i class="fas fa-arrows-alt-v"></i>
@@ -264,6 +321,89 @@ document.addEventListener('DOMContentLoaded', function(){
         $('#filtroResponsavel').val() || '';
 
     let timerBusca = null;
+
+
+    function extrairVariaveisComponentes(componentes)
+    {
+        let vars = [];
+        (componentes || []).forEach(function(comp){
+            ['text'].forEach(function(campo){
+                let texto = comp[campo] || '';
+                let match;
+                let regex = /{{\s*([^}]+)\s*}}/g;
+                while((match = regex.exec(texto)) !== null){
+                    if(vars.indexOf(match[1]) === -1){ vars.push(match[1]); }
+                }
+            });
+        });
+        return vars;
+    }
+
+    $('#btnNovaConversa').on('click', function(){
+        $('#erroNovaConversa').addClass('d-none').text('');
+        $('#modalNovaConversa').modal('show');
+    });
+
+    $('#novaMetaId').on('change', function(){
+        let metaId = $(this).val();
+        $('#novaTemplateVariaveis').html('Selecione um template para preencher variáveis.');
+        $('#novaTemplateId').prop('disabled', true).html('<option value="">Carregando...</option>');
+        if(!metaId){ return; }
+        $.getJSON(urlBase + 'conversa/templatesAprovadosAjax', {meta_id: metaId}, function(retorno){
+            if(!retorno.sucesso || !retorno.templates.length){
+                $('#novaTemplateId').html('<option value="">Nenhum template aprovado nesta conta.</option>');
+                return;
+            }
+            $('#novaTemplateId').html('<option value="">Selecione...</option>');
+            retorno.templates.forEach(function(t){
+                $('<option>')
+                    .val(t.TMP_ID)
+                    .text(t.TMP_Nome + ' (' + t.TMP_Idioma + ')')
+                    .attr('data-componentes', btoa(unescape(encodeURIComponent(t.TMP_Componentes || '[]'))))
+                    .appendTo('#novaTemplateId');
+            });
+            $('#novaTemplateId').prop('disabled', false);
+        }).fail(function(){
+            $('#novaTemplateId').html('<option value="">Erro ao carregar templates.</option>');
+        });
+    });
+
+    $('#novaTemplateId').on('change', function(){
+        let option = $(this).find(':selected');
+        let componentes = [];
+        try{ componentes = JSON.parse(decodeURIComponent(escape(atob(option.data('componentes') || 'W10=')))); }catch(e){}
+        let vars = extrairVariaveisComponentes(componentes);
+        if(vars.length === 0){
+            $('#novaTemplateVariaveis').html('<span class="text-muted">Template sem variáveis.</span>');
+            return;
+        }
+        let html = '<label>Variáveis do template</label>';
+        vars.forEach(function(v){
+            html += '<div class="form-group mb-2"><label>{{' + $('<div>').text(v).html() + '}}</label>' +
+                '<input type="text" class="form-control" name="variaveis[' + $('<div>').text(v).html() + ']" required></div>';
+        });
+        $('#novaTemplateVariaveis').html(html);
+    });
+
+    $('#formNovaConversa').on('submit', function(e){
+        e.preventDefault();
+        $('#erroNovaConversa').addClass('d-none').text('');
+        $('#btnEnviarNovaConversa').prop('disabled', true);
+        $.post(urlBase + 'conversa/iniciarPorTemplateAjax', $(this).serialize(), function(retorno){
+            if(retorno.sucesso){
+                $('#modalNovaConversa').modal('hide');
+                conversaAberta = retorno.conversa_id;
+                atualizarListaConversas(true);
+                carregarConversa(retorno.conversa_id);
+                return;
+            }
+            $('#erroNovaConversa').removeClass('d-none').text(retorno.erro || 'Erro ao iniciar conversa.');
+        }, 'json').fail(function(xhr){
+            $('#erroNovaConversa').removeClass('d-none').text(xhr.status == 403 ? 'Permissão negada.' : 'Erro de comunicação.');
+        }).always(function(){
+            $('#btnEnviarNovaConversa').prop('disabled', false);
+        });
+    });
 
     function rolarMensagensParaFinal()
     {
