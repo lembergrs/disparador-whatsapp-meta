@@ -25,6 +25,75 @@ class TemplateMeta
 
 
 
+
+    private function escopoUsuario($usuario)
+    {
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+
+        return [$clienteId, $metaIds];
+    }
+
+    private function whereEscopoUsuario($usuario, $alias = 't')
+    {
+        list($clienteId, $metaIds) = $this->escopoUsuario($usuario);
+
+        if($clienteId <= 0 || empty($metaIds)){
+            return ['1 = 0', []];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($metaIds), '?'));
+
+        return [
+            "m.CLI_ID = ? AND {$alias}.MTA_ID IN ($placeholders)",
+            array_merge([$clienteId], array_map('intval', $metaIds))
+        ];
+    }
+
+    public function listarPorUsuario($usuario)
+    {
+        list($where, $params) = $this->whereEscopoUsuario($usuario, 't');
+        $sql = $this->db->prepare("\n            SELECT t.*, m.MTA_Nome\n            FROM templates_meta t\n            INNER JOIN meta_contas m ON m.MTA_ID = t.MTA_ID\n            WHERE $where\n            AND t.TMP_Ativo = 'S'\n            AND m.MTA_Ativo = 'S'\n            ORDER BY t.TMP_ID DESC\n        ");
+        $sql->execute($params);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function listarAprovadosParaEnvioPorUsuarioConta($usuario, $metaId)
+    {
+        list($where, $params) = $this->whereEscopoUsuario($usuario, 't');
+        $params[] = (int) $metaId;
+        $sql = $this->db->prepare("\n            SELECT t.*, m.MTA_Nome\n            FROM templates_meta t\n            INNER JOIN meta_contas m ON m.MTA_ID = t.MTA_ID\n            WHERE $where\n            AND t.MTA_ID = ?\n            AND t.TMP_Ativo = 'S'\n            AND t.TMP_Status = 'APPROVED'\n            AND m.MTA_Ativo = 'S'\n            ORDER BY t.TMP_Nome ASC, t.TMP_Idioma ASC\n        ");
+        $sql->execute($params);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarPorUsuario($id, $usuario)
+    {
+        list($where, $params) = $this->whereEscopoUsuario($usuario, 't');
+        array_unshift($params, (int) $id);
+        $sql = $this->db->prepare("\n            SELECT t.*\n            FROM templates_meta t\n            INNER JOIN meta_contas m ON m.MTA_ID = t.MTA_ID\n            WHERE t.TMP_ID = ?\n            AND $where\n            AND t.TMP_Ativo = 'S'\n            AND m.MTA_Ativo = 'S'\n            LIMIT 1\n        ");
+        $sql->execute($params);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarAprovadoParaEnvioPorUsuario($id, $usuario, $metaId)
+    {
+        $template = $this->buscarPorUsuario($id, $usuario);
+        if(!$template || (int) $template['MTA_ID'] !== (int) $metaId || ($template['TMP_Status'] ?? '') !== 'APPROVED'){
+            return false;
+        }
+        return $template;
+    }
+
+    public function inativarPorUsuario($id, $usuario)
+    {
+        list($where, $params) = $this->whereEscopoUsuario($usuario, 't');
+        array_unshift($params, (int) $id);
+        $sql = $this->db->prepare("\n            UPDATE templates_meta t\n            INNER JOIN meta_contas m ON m.MTA_ID = t.MTA_ID\n            SET t.TMP_Ativo = 'N'\n            WHERE t.TMP_ID = ?\n            AND $where\n        ");
+        return $sql->execute($params);
+    }
+
+
     private function extrairHeaderMetadados(array $componentes, array $template = [])
     {
         $dados = [

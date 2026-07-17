@@ -37,7 +37,8 @@ assertContainsTrial("CLI_DataLiberacao IS NULL OR CLI_DataLiberacao = ''", $clie
 assertContainsTrial('trial_iniciado', $cliente, 'Início do trial deve ter registro seguro.');
 
 assertContainsTrial("\$statusConexao === 'conectado'", $configuracao, 'Trial só deve iniciar após conexão Meta confirmada.');
-assertContainsTrial('iniciarTrialSePendente($clienteId)', $configuracao, 'Fluxo de Embedded Signup deve iniciar trial após sucesso.');
+assertContainsTrial('iniciarTrialSePendente($clienteId)', $configuracao, 'Registro do número deve iniciar trial após sucesso.');
+assertContainsTrial("'pendente_registro'", $configuracao, 'Embedded Signup deve deixar conta pendente de registro antes do trial.');
 
 $trechoPlano = substr($financeiro, strpos($financeiro, 'public function escolherPlano'));
 assertContainsTrial("CLI_StatusPagamento = 'pendente'", $trechoPlano, 'Seleção de plano deve manter pagamento pendente.');
