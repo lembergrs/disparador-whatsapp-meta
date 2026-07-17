@@ -13,12 +13,12 @@ if(!defined('MAIL_REPLY_TO_NAME')) define('MAIL_REPLY_TO_NAME', 'Suporte Dispara
 if(!defined('MAIL_TIMEOUT')) define('MAIL_TIMEOUT', 10);
 
 require_once __DIR__ . '/../app/Models/NotificacaoTransacional.php';
-require_once __DIR__ . '/../app/Services/EmailTransacionalService.php';
-require_once __DIR__ . '/../app/Services/EmailBoasVindasService.php';
+require_once __DIR__ . '/../app/Services/Email/EmailTransacionalService.php';
+require_once __DIR__ . '/../app/Services/Email/EmailBoasVindasService.php';
 
 use Models\NotificacaoTransacional;
-use Services\EmailBoasVindasService;
-use Services\EmailTransacionalService;
+use Services\Email\EmailBoasVindasService;
+use Services\Email\EmailTransacionalService;
 
 function emailBoasVindasAssert($cond, $msg){ if(!$cond){ fwrite(STDERR, "FAIL: {$msg}\n"); exit(1); } }
 

@@ -7,6 +7,7 @@ use Core\Database;
 use Core\Session;
 use Core\Csrf;
 use PDO;
+use Services\RecuperacaoSenhaService;
 
 class LoginController extends Controller
 {
@@ -129,11 +130,65 @@ class LoginController extends Controller
 
     public function esqueciSenha()
     {
-        $this->view(
-            'auth/esqueci_senha',
-            [],
-            false
+        $this->recuperarSenha();
+    }
+
+    public function recuperarSenha()
+    {
+        $this->view('auth/recuperar_senha', [], false);
+    }
+
+    public function enviarRecuperacao()
+    {
+        Csrf::exigirPost();
+
+        $service = new RecuperacaoSenhaService();
+        $service->solicitar(
+            $_POST['email'] ?? '',
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null
         );
+
+        Session::flash('success', RecuperacaoSenhaService::mensagemPublicaSolicitacao());
+        $this->redirect('login/recuperarSenha');
+    }
+
+    public function redefinirSenha()
+    {
+        $token = $_GET['token'] ?? '';
+        $validacao = (new RecuperacaoSenhaService())->validarToken($token);
+
+        if(empty($validacao['valido'])){
+            $this->view('auth/recuperacao_link_indisponivel', [], false);
+            return;
+        }
+
+        $this->view('auth/redefinir_senha', ['token' => $token], false);
+    }
+
+    public function salvarNovaSenha()
+    {
+        Csrf::exigirPost();
+
+        $service = new RecuperacaoSenhaService();
+        $resultado = $service->redefinir(
+            $_POST['token_recuperacao'] ?? '',
+            $_POST['nova_senha'] ?? '',
+            $_POST['confirmar_senha'] ?? ''
+        );
+
+        if(!empty($resultado['sucesso'])){
+            $this->view('auth/recuperacao_sucesso', [], false);
+            return;
+        }
+
+        if(($resultado['tipo'] ?? '') === 'validacao'){
+            Session::flash('error', $resultado['mensagem'] ?? 'Revise a nova senha informada.');
+            $this->view('auth/redefinir_senha', ['token' => $_POST['token_recuperacao'] ?? ''], false);
+            return;
+        }
+
+        $this->view('auth/recuperacao_link_indisponivel', [], false);
     }
 
     public function sair()

@@ -87,3 +87,38 @@ O envio atual é síncrono controlado após o commit. A estrutura de persistênc
 ## Futuro e-mail de pagamento confirmado
 
 A tabela foi desenhada para suportar outros tipos transacionais (`NOT_Tipo`) e canais, mas esta etapa implementa somente `boas_vindas` por `email`.
+
+## Recuperação de senha por e-mail
+
+Os serviços de e-mail transacional ficam no namespace `Services\Email` e nos arquivos:
+
+- `app/Services/Email/EmailTransacionalService.php`
+- `app/Services/Email/EmailBoasVindasService.php`
+- `app/Services/Email/EmailRecuperacaoSenhaService.php`
+
+O fluxo de recuperação utiliza `Services\RecuperacaoSenhaService`, `Models\RecuperacaoSenha` e a tabela `recuperacoes_senha`.
+
+### Fluxo
+
+1. O usuário acessa `login/recuperarSenha` pelo link “Esqueceu sua senha?”.
+2. O formulário envia o e-mail com CSRF para `login/enviarRecuperacao`.
+3. A resposta pública é sempre neutra, independentemente de o e-mail existir, estar inativo, ser inválido ou sofrer limitação.
+4. Para usuários recuperáveis, o sistema gera `bin2hex(random_bytes(32))`, salva somente `hash('sha256', $token)` e envia o link por e-mail.
+5. O link `login/redefinirSenha&token=...` é válido por 30 minutos e só pode ser usado uma vez.
+6. Ao salvar a nova senha, a operação valida novamente o token em transação, grava `password_hash()`, marca o token como utilizado e invalida outros pendentes.
+
+### Segurança
+
+- O token puro existe apenas no link enviado por e-mail.
+- A tabela `recuperacoes_senha` armazena apenas `RSE_TokenHash`.
+- A notificação transacional usa `NOT_Tipo = email_recuperacao_senha` e chave idempotente por solicitação, sem registrar URL completa com token.
+- O serviço não faz login automático após a redefinição.
+- As views usam CSRF separado do token de recuperação.
+- A mensagem pública não revela existência, estado, bloqueio da conta ou aplicação de limite de solicitações.
+- Há limitação básica por IP e por usuário/e-mail antes da criação de uma nova solicitação efetiva.
+
+### Deploy e rollback
+
+Aplicar a migration `20260717_create_recuperacoes_senha.sql` em janela controlada. Como não há nova dependência nesta etapa além do PHPMailer já declarado para e-mails transacionais, não é necessário alterar `composer.lock`; se a estrutura de autoload estiver cacheada, executar `composer dump-autoload`.
+
+Para rollback, remover as rotas/métodos de recuperação no `LoginController`, manter ou descartar a tabela `recuperacoes_senha` após avaliar histórico/auditoria, e manter intacto o e-mail de boas-vindas.

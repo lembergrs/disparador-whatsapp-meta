@@ -10,7 +10,7 @@ use PDOException;
 use Models\Plano;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
-use Services\EmailBoasVindasService;
+use Services\Email\EmailBoasVindasService;
 
 class SiteController extends Controller
 {

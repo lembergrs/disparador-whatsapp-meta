@@ -4,8 +4,8 @@ $site = file_get_contents($root . '/app/Controllers/SiteController.php');
 $config = file_get_contents($root . '/config/config.php');
 $env = file_get_contents($root . '/.env.example');
 $migration = file_get_contents($root . '/database/migrations/20260717_create_notificacoes_transacionais.sql');
-$boasVindas = file_get_contents($root . '/app/Services/EmailBoasVindasService.php');
-$transacional = file_get_contents($root . '/app/Services/EmailTransacionalService.php');
+$boasVindas = file_get_contents($root . '/app/Services/Email/EmailBoasVindasService.php');
+$transacional = file_get_contents($root . '/app/Services/Email/EmailTransacionalService.php');
 $composer = file_get_contents($root . '/composer.json');
 
 function emailStaticAssert($cond, $msg){ if(!$cond){ fwrite(STDERR, "FAIL: {$msg}\n"); exit(1); } }
