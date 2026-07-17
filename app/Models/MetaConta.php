@@ -685,4 +685,37 @@ class MetaConta
         );
     }
 
+    public function listarPorUsuario($usuario)
+    {
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+
+        if($clienteId <= 0 || empty($metaIds)){
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($metaIds), '?'));
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM meta_contas\n            WHERE CLI_ID = ?\n            AND MTA_ID IN ($placeholders)\n            AND MTA_Ativo = 'S'\n            ORDER BY MTA_ID DESC\n        ");
+
+        $sql->execute(array_merge([$clienteId], array_map('intval', $metaIds)));
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarPorUsuario($id, $usuario)
+    {
+        $metaIds = \Core\Auth::idsContasMetaPermitidas($usuario);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+
+        if($clienteId <= 0 || empty($metaIds) || !in_array((int) $id, $metaIds, true)){
+            return false;
+        }
+
+        $sql = $this->db->prepare("\n            SELECT *\n            FROM meta_contas\n            WHERE MTA_ID = ?\n            AND CLI_ID = ?\n            AND MTA_Ativo = 'S'\n            LIMIT 1\n        ");
+
+        $sql->execute([(int) $id, $clienteId]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
 }
