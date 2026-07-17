@@ -557,26 +557,13 @@ class ConfiguracaoController extends Controller
         if(stripos($texto, 'Phone Number ID') !== false){
             return 'A conta não possui um Phone Number ID válido.';
         }
-        if(stripos($texto, 'consultar a Meta') !== false || stripos($texto, 'timeout') !== false || stripos($texto, 'HTTP 500') !== false){
+        if(stripos($texto, 'consultar a Meta') !== false || stripos($texto, 'timeout') !== false || stripos($texto, 'cURL') !== false || stripos($texto, 'HTTP 500') !== false){
             return 'Não foi possível consultar a Meta neste momento. Tente novamente.';
         }
+        if(stripos($texto, 'pin') !== false || stripos($texto, 'payload') !== false || stripos($texto, 'registro operacional') !== false){
+            return 'Não foi possível concluir o registro com esse PIN. Confira os 6 dígitos e tente novamente.';
+        }
         return 'Não foi possível atualizar os dados da conta Meta.';
-    }
-
-
-    private function mensagemAmigavelErroMeta($mensagem)
-    {
-        $texto = (string) $mensagem;
-        if(strpos($texto, '133010') !== false || stripos($texto, 'Account not registered') !== false){
-            return 'O número ainda não concluiu o registro no WhatsApp. Informe o PIN de 6 dígitos para finalizar a conexão.';
-        }
-        if(strpos($texto, 'code 100') !== false || strpos($texto, 'subcode 33') !== false || stripos($texto, 'Unsupported post request') !== false){
-            return 'Não foi possível acessar o número vinculado. Refaça a conexão com a Meta ou entre em contato com o suporte.';
-        }
-        if(stripos($texto, 'token') !== false || stripos($texto, 'OAuth') !== false){
-            return 'A autorização da Meta expirou ou não possui mais acesso ao número. Será necessário conectar novamente.';
-        }
-        return 'Não foi possível concluir o registro com esse PIN. Confira os 6 dígitos e tente novamente.';
     }
 
     private function registrarPhoneNumberMeta($phoneNumberId, $pin, $accessToken)

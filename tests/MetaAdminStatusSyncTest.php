@@ -32,6 +32,9 @@ metaStatusSyncAssert(strpos($controller, "'MTA_Token'") !== false && strpos($con
 metaStatusSyncAssert(strpos($controller, '$' . "_POST['phone_number_id']") === false, 'Phone Number ID não vem do frontend.');
 metaStatusSyncAssert(strpos($controller, 'mensagemAmigavelErroMeta') !== false && strpos($controller, 'Não foi possível consultar a Meta neste momento') !== false, 'Erros de diagnóstico são tratados amigavelmente.');
 
+metaStatusSyncAssert(substr_count($controller, 'function mensagemAmigavelErroMeta') === 1, 'ConfiguracaoController deve manter uma única declaração de mensagemAmigavelErroMeta.');
+metaStatusSyncAssert(strpos($controller, 'registro operacional') !== false && strpos($controller, 'Não foi possível concluir o registro com esse PIN') !== false, 'Implementação consolidada preserva erro amigável para PIN/payload inválido.');
+
 metaStatusSyncAssert(strpos($view, 'btnAtualizarStatusMetaAdmin') !== false, 'Botão Atualizar status da Meta aparece na view.');
 metaStatusSyncAssert(strpos($view, '($' . "usuario['nivel'] ?? null) === 'admin'") !== false, 'Visibilidade do botão é exclusiva para admin.');
 metaStatusSyncAssert(strpos($view, 'idsContasMetaPermitidas') !== false, 'View usa escopo permitido para exibir botão.');
