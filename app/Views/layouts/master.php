@@ -309,6 +309,21 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
+href="<?= BASE_URL; ?>/index.php?url=template"
+class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
+>
+
+<i class="nav-icon fas fa-file-alt"></i>
+
+<p>Templates Meta</p>
+
+</a>
+
+</li>
+
+<li class="nav-item">
+
+<a
 href="<?= BASE_URL; ?>/index.php?url=conversa"
 class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 >

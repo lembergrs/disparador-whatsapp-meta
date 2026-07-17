@@ -38,6 +38,11 @@ function formatarNumeroBR($numero)
                     <i class="fas fa-comments"></i>
                     Conversas
                 </strong>
+                <?php if(!empty($podeNovaConversa)){ ?>
+                    <button type="button" class="btn btn-sm btn-success float-right" id="btnNovaConversa">
+                        <i class="fas fa-plus"></i> Nova conversa
+                    </button>
+                <?php } ?>
             </div>
 
             <div class="border-bottom p-2">
@@ -163,6 +168,73 @@ function formatarNumeroBR($numero)
 
 </div>
 
+
+<?php if(!empty($podeNovaConversa)){ ?>
+<div class="modal fade" id="modalNovaConversa" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="formNovaConversa">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova conversa por template</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="alert alert-danger d-none" id="erroNovaConversa"></div>
+                    <div class="form-group">
+                        <label>Número remetente</label>
+                        <select name="meta_id" id="novaMetaId" class="form-control" required>
+                            <option value="">Selecione...</option>
+                            <?php foreach(($contasNovaConversa ?? []) as $conta){ ?>
+                                <option value="<?= (int) $conta['MTA_ID']; ?>">
+                                    <?= htmlspecialchars(($conta['MTA_Nome'] ?? 'Conta Meta') . ' - ' . ($conta['MTA_NumeroTelefone'] ?? $conta['MTA_PhoneNumberId'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                </option>
+                            <?php } ?>
+                        </select>
+                    </div>
+                    <div class="form-group position-relative">
+                        <label>Contato cadastrado</label>
+                        <input type="hidden" name="contato_id" id="novaContatoId">
+                        <div class="input-group">
+                            <input type="text" id="novaContatoBusca" class="form-control" placeholder="Pesquisar contato por nome ou telefone" autocomplete="off">
+                            <div class="input-group-append">
+                                <button type="button" class="btn btn-outline-secondary" id="btnLimparContatoNova" title="Limpar contato">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div id="novaContatoResultados" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 1060; max-height: 220px; overflow-y: auto;"></div>
+                        <small class="form-text text-muted">Opcional: selecione um contato existente ou preencha nome e telefone manualmente.</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label>Telefone do destinatário</label>
+                            <input type="text" name="telefone" id="novaTelefoneDestino" class="form-control telefone-br" placeholder="(41) 99999-9999" required>
+                            <small class="form-text text-muted">Informe o telefone com DDD. O código do Brasil (+55) será incluído automaticamente.</small>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>Nome do contato</label>
+                            <input type="text" name="nome" id="novaNomeContato" class="form-control" placeholder="Nome para novo contato">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Template aprovado</label>
+                        <select name="template_id" id="novaTemplateId" class="form-control" required disabled>
+                            <option value="">Selecione um número remetente...</option>
+                        </select>
+                    </div>
+                    <div id="novaTemplateVariaveis" class="border rounded p-2 bg-light text-muted">Selecione um template para preencher variáveis.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btnEnviarNovaConversa">Enviar template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
 <div id="conversasResizeHandle" class="conversas-resize-handle" title="Arraste para ajustar a altura">
     <span class="conversas-resize-indicator">
         <i class="fas fa-arrows-alt-v"></i>
@@ -264,6 +336,289 @@ document.addEventListener('DOMContentLoaded', function(){
         $('#filtroResponsavel').val() || '';
 
     let timerBusca = null;
+    let ultimoMetaTemplatesCarregado = '';
+    let requisicaoTemplatesNovaConversa = null;
+    let timerBuscaContatoNova = null;
+    let requisicaoContatosNovaConversa = null;
+    let contatoSelecionadoTelefone = '';
+    let contatoSelecionadoNome = '';
+
+
+    function extrairVariaveisComponentes(componentes)
+    {
+        let vars = [];
+        (componentes || []).forEach(function(comp){
+            ['text'].forEach(function(campo){
+                let texto = comp[campo] || '';
+                let match;
+                let regex = /{{\s*([^}]+)\s*}}/g;
+                while((match = regex.exec(texto)) !== null){
+                    if(vars.indexOf(match[1]) === -1){ vars.push(match[1]); }
+                }
+            });
+        });
+        return vars;
+    }
+
+    function telefoneSemDdiBrasil(valor)
+    {
+        const digitos = (valor || '').replace(/\D/g, '');
+        return digitos.indexOf('55') === 0 && digitos.length > 11 ? digitos.substring(2) : digitos;
+    }
+
+    function aplicarMascaraTelefoneBrasileiro()
+    {
+        const comportamento = function(valor){
+            const semDdi = telefoneSemDdiBrasil(valor);
+            return semDdi.length > 10 ? '(00) 00000-0000' : '(00) 0000-00009';
+        };
+        const opcoes = {
+            onKeyPress: function(valor, evento, campo, opcoes){
+                campo.mask(comportamento.apply({}, arguments), opcoes);
+            }
+        };
+        $('.telefone-br').unmask().mask(comportamento, opcoes);
+    }
+
+    $(document).off('input.novaConversaTelefone', '.telefone-br').on('input.novaConversaTelefone', '.telefone-br', function(){
+        const digitos = ($(this).val() || '').replace(/\D/g, '');
+        if((digitos.length === 12 || digitos.length === 13) && digitos.indexOf('55') === 0){
+            $(this).val(digitos.substring(2)).trigger('input');
+        }
+    });
+
+    function telefoneBrasileiroValido(valor)
+    {
+        const digitos = (valor || '').replace(/\D/g, '');
+        return (digitos.length === 10 || digitos.length === 11 || ((digitos.length === 12 || digitos.length === 13) && digitos.indexOf('55') === 0));
+    }
+
+
+    function limparContatoNovaConversa(limparCampos)
+    {
+        $('#novaContatoId').val('');
+        contatoSelecionadoTelefone = '';
+        contatoSelecionadoNome = '';
+        $('#novaContatoBusca').val('');
+        $('#novaContatoResultados').addClass('d-none').empty();
+
+        if(limparCampos){
+            $('#novaNomeContato').val('');
+            $('#novaTelefoneDestino').val('').trigger('input');
+        }
+    }
+
+    function resetarModalNovaConversa()
+    {
+        $('#formNovaConversa')[0].reset();
+        limparContatoNovaConversa(true);
+        ultimoMetaTemplatesCarregado = '';
+        $('#novaTemplateId').prop('disabled', true).html('<option value="">Selecione um número remetente...</option>');
+        $('#novaTemplateVariaveis').html('Selecione um template para preencher variáveis.');
+        aplicarMascaraTelefoneBrasileiro();
+    }
+
+    function buscarContatosNovaConversa(termo)
+    {
+        const metaId = $('#novaMetaId').val();
+        const resultados = $('#novaContatoResultados');
+        termo = (termo || '').trim();
+
+        if(!metaId || termo.length < 2){
+            resultados.addClass('d-none').empty();
+            return;
+        }
+
+        if(requisicaoContatosNovaConversa){
+            requisicaoContatosNovaConversa.abort();
+        }
+
+        resultados.removeClass('d-none').html('<div class="list-group-item text-muted">Pesquisando...</div>');
+
+        requisicaoContatosNovaConversa = $.getJSON(urlBase + 'conversa/buscarContatosAjax', {
+            meta_id: metaId,
+            q: termo,
+            page: 1
+        }, function(retorno){
+            resultados.empty();
+            if(!retorno.sucesso || !retorno.results || retorno.results.length === 0){
+                resultados.html('<div class="list-group-item text-muted">Nenhum contato encontrado.</div>');
+                return;
+            }
+
+            retorno.results.forEach(function(contato){
+                $('<button type="button" class="list-group-item list-group-item-action item-contato-nova"></button>')
+                    .attr('data-id', contato.id)
+                    .attr('data-nome', contato.nome || '')
+                    .attr('data-telefone', contato.telefone || '')
+                    .html('<strong>' + $('<div>').text(contato.nome || 'Sem nome').html() + '</strong><br><small>' + $('<div>').text(contato.telefone_formatado || contato.telefone || '').html() + '</small>')
+                    .appendTo(resultados);
+            });
+        }).fail(function(xhr){
+            if(xhr.statusText === 'abort'){
+                return;
+            }
+            resultados.html('<div class="list-group-item text-danger">Erro ao pesquisar contatos.</div>');
+        }).always(function(){
+            requisicaoContatosNovaConversa = null;
+        });
+    }
+
+    function selecionarRemetenteUnico()
+    {
+        const select = $('#novaMetaId');
+        const opcoesValidas = select.find('option').filter(function(){ return $(this).val() !== ''; });
+
+        if(opcoesValidas.length === 1){
+            const valorUnico = opcoesValidas.first().val();
+            if(select.val() !== valorUnico){
+                select.val(valorUnico).trigger('change');
+            }else{
+                carregarTemplatesNovaConversa(valorUnico);
+            }
+        }
+    }
+
+    $('#btnNovaConversa').on('click', function(){
+        $('#erroNovaConversa').addClass('d-none').text('');
+        resetarModalNovaConversa();
+        selecionarRemetenteUnico();
+        $('#modalNovaConversa').modal('show');
+    });
+
+    $('#modalNovaConversa').on('shown.bs.modal', function(){
+        aplicarMascaraTelefoneBrasileiro();
+        selecionarRemetenteUnico();
+    });
+
+    function carregarTemplatesNovaConversa(metaId)
+    {
+        $('#novaTemplateVariaveis').html('Selecione um template para preencher variáveis.');
+
+        if(!metaId){
+            ultimoMetaTemplatesCarregado = '';
+            $('#novaTemplateId').prop('disabled', true).html('<option value="">Selecione um número remetente...</option>');
+            return;
+        }
+
+        if(ultimoMetaTemplatesCarregado === String(metaId)){
+            if(requisicaoTemplatesNovaConversa || $('#novaTemplateId option').length > 1){
+                return;
+            }
+        }
+
+        ultimoMetaTemplatesCarregado = String(metaId);
+        $('#novaTemplateId').prop('disabled', true).html('<option value="">Carregando...</option>');
+
+        if(requisicaoTemplatesNovaConversa){
+            requisicaoTemplatesNovaConversa.abort();
+        }
+
+        requisicaoTemplatesNovaConversa = $.getJSON(urlBase + 'conversa/templatesAprovadosAjax', {meta_id: metaId}, function(retorno){
+            if(!retorno.sucesso || !retorno.templates.length){
+                $('#novaTemplateId').html('<option value="">Nenhum template aprovado nesta conta.</option>');
+                return;
+            }
+            $('#novaTemplateId').html('<option value="">Selecione...</option>');
+            retorno.templates.forEach(function(t){
+                $('<option>')
+                    .val(t.TMP_ID)
+                    .text(t.TMP_Nome + ' (' + t.TMP_Idioma + ')')
+                    .attr('data-componentes', btoa(unescape(encodeURIComponent(t.TMP_Componentes || '[]'))))
+                    .appendTo('#novaTemplateId');
+            });
+            $('#novaTemplateId').prop('disabled', false);
+        }).fail(function(xhr){
+            if(xhr.statusText === 'abort'){
+                return;
+            }
+            $('#novaTemplateId').html('<option value="">Erro ao carregar templates.</option>');
+        }).always(function(){
+            requisicaoTemplatesNovaConversa = null;
+        });
+    }
+
+    $('#novaMetaId').on('change', function(){
+        limparContatoNovaConversa(true);
+        carregarTemplatesNovaConversa($(this).val());
+    });
+
+    $(document).off('input.novaConversaContato', '#novaContatoBusca').on('input.novaConversaContato', '#novaContatoBusca', function(){
+        clearTimeout(timerBuscaContatoNova);
+        const termo = $(this).val();
+        timerBuscaContatoNova = setTimeout(function(){
+            buscarContatosNovaConversa(termo);
+        }, 300);
+    });
+
+    $(document).off('click.novaConversaContato', '.item-contato-nova').on('click.novaConversaContato', '.item-contato-nova', function(){
+        const id = $(this).data('id');
+        const nome = $(this).data('nome') || '';
+        const telefone = $(this).data('telefone') || '';
+
+        $('#novaContatoId').val(id);
+        $('#novaContatoBusca').val($(this).find('strong').text() + ' — ' + $(this).find('small').text());
+        $('#novaNomeContato').val(nome);
+        $('#novaTelefoneDestino').val(telefone).trigger('input');
+        aplicarMascaraTelefoneBrasileiro();
+        contatoSelecionadoTelefone = telefoneSemDdiBrasil(telefone);
+        contatoSelecionadoNome = nome;
+        $('#novaContatoResultados').addClass('d-none').empty();
+    });
+
+    $('#btnLimparContatoNova').off('click.novaConversaContato').on('click.novaConversaContato', function(){
+        limparContatoNovaConversa(true);
+    });
+
+    $('#novaTelefoneDestino').off('input.novaConversaContatoTelefone').on('input.novaConversaContatoTelefone', function(){
+        if(contatoSelecionadoTelefone !== '' && telefoneSemDdiBrasil($(this).val()) !== contatoSelecionadoTelefone){
+            limparContatoNovaConversa(false);
+        }
+    });
+
+    $('#novaTemplateId').on('change', function(){
+        let option = $(this).find(':selected');
+        let componentes = [];
+        try{ componentes = JSON.parse(decodeURIComponent(escape(atob(option.data('componentes') || 'W10=')))); }catch(e){}
+        let vars = extrairVariaveisComponentes(componentes);
+        if(vars.length === 0){
+            $('#novaTemplateVariaveis').html('<span class="text-muted">Template sem variáveis.</span>');
+            return;
+        }
+        let html = '<label>Variáveis do template</label>';
+        vars.forEach(function(v){
+            html += '<div class="form-group mb-2"><label>{{' + $('<div>').text(v).html() + '}}</label>' +
+                '<input type="text" class="form-control" name="variaveis[' + $('<div>').text(v).html() + ']" required></div>';
+        });
+        $('#novaTemplateVariaveis').html(html);
+    });
+
+    $('#formNovaConversa').on('submit', function(e){
+        e.preventDefault();
+        $('#erroNovaConversa').addClass('d-none').text('');
+
+        if(!telefoneBrasileiroValido($('#novaTelefoneDestino').val())){
+            $('#erroNovaConversa').removeClass('d-none').text('Informe um telefone brasileiro válido com DDD.');
+            return;
+        }
+
+        $('#btnEnviarNovaConversa').prop('disabled', true);
+        $.post(urlBase + 'conversa/iniciarPorTemplateAjax', $(this).serialize(), function(retorno){
+            if(retorno.sucesso){
+                $('#modalNovaConversa').modal('hide');
+                resetarModalNovaConversa();
+                conversaAberta = retorno.conversa_id;
+                atualizarListaConversas(true);
+                carregarConversa(retorno.conversa_id);
+                return;
+            }
+            $('#erroNovaConversa').removeClass('d-none').text(retorno.erro || 'Erro ao iniciar conversa.');
+        }, 'json').fail(function(xhr){
+            $('#erroNovaConversa').removeClass('d-none').text(xhr.status == 403 ? 'Permissão negada.' : 'Erro de comunicação.');
+        }).always(function(){
+            $('#btnEnviarNovaConversa').prop('disabled', false);
+        });
+    });
 
     function rolarMensagensParaFinal()
     {
