@@ -172,6 +172,35 @@ function formatarDataDashboard($data)
 
 <?php }else{ ?>
 
+<?php
+$clienteEmPreTrialDashboard = \Core\Auth::clienteEmPreTrial();
+$avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
+?>
+
+<?php if($clienteEmPreTrialDashboard){ ?>
+<div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap">
+    <div class="mr-3">
+        <strong>Comece seu período de avaliação.</strong><br>
+        Conecte seu número do WhatsApp para iniciar seu período de avaliação de 7 dias ou até 200 mensagens.
+    </div>
+    <a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="btn btn-primary btn-sm mt-2 mt-md-0">
+        <i class="fab fa-whatsapp mr-1"></i> Conectar WhatsApp
+    </a>
+</div>
+<?php }elseif(!empty($avaliacaoDashboard['ativo'])){ ?>
+<div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap">
+    <div class="mr-3">
+        <strong>Período de avaliação ativo.</strong><br>
+        Início: <?= htmlspecialchars(formatarDataDashboard($avaliacaoDashboard['inicio'] ?? null)); ?> ·
+        Restam <?= (int)($avaliacaoDashboard['dias_restantes'] ?? 0); ?> dia(s) e
+        <?= number_format((int)($avaliacaoDashboard['mensagens_restantes'] ?? 0), 0, ',', '.'); ?> mensagem(ns) do trial.
+    </div>
+    <a href="<?= BASE_URL; ?>/index.php?url=financeiro" class="btn btn-outline-light btn-sm mt-2 mt-md-0">
+        Contratar ou regularizar plano
+    </a>
+</div>
+<?php } ?>
+
 <div class="row">
 
     <div class="col-lg-3 col-6">

@@ -33,6 +33,18 @@ if ($host === 'disparador.test') {
 defined('RECAPTCHA_SITE_KEY') || define('RECAPTCHA_SITE_KEY', env_valor('RECAPTCHA_SITE_KEY', ''));
 defined('RECAPTCHA_SECRET_KEY') || define('RECAPTCHA_SECRET_KEY', env_valor('RECAPTCHA_SECRET_KEY', ''));
 
+// Configurações de e-mail transacional (SMTP). Credenciais reais devem ficar apenas no ambiente/.env.
+defined('MAIL_HOST') || define('MAIL_HOST', env_valor('MAIL_HOST', ''));
+defined('MAIL_PORT') || define('MAIL_PORT', (int) env_valor('MAIL_PORT', 587));
+defined('MAIL_USERNAME') || define('MAIL_USERNAME', env_valor('MAIL_USERNAME', ''));
+defined('MAIL_PASSWORD') || define('MAIL_PASSWORD', env_valor('MAIL_PASSWORD', ''));
+defined('MAIL_ENCRYPTION') || define('MAIL_ENCRYPTION', env_valor('MAIL_ENCRYPTION', 'tls'));
+defined('MAIL_FROM_ADDRESS') || define('MAIL_FROM_ADDRESS', env_valor('MAIL_FROM_ADDRESS', ''));
+defined('MAIL_FROM_NAME') || define('MAIL_FROM_NAME', env_valor('MAIL_FROM_NAME', 'Disparador.net'));
+defined('MAIL_REPLY_TO_ADDRESS') || define('MAIL_REPLY_TO_ADDRESS', env_valor('MAIL_REPLY_TO_ADDRESS', ''));
+defined('MAIL_REPLY_TO_NAME') || define('MAIL_REPLY_TO_NAME', env_valor('MAIL_REPLY_TO_NAME', 'Suporte Disparador.net'));
+defined('MAIL_TIMEOUT') || define('MAIL_TIMEOUT', (int) env_valor('MAIL_TIMEOUT', 10));
+
 // Taxa segura inicial de disparos para WhatsApp Cloud API.
 // Ajuste conforme qualidade, limites e aprovação da conta na Meta.
 defined('WHATSAPP_ENVIOS_POR_SEGUNDO') || define('WHATSAPP_ENVIOS_POR_SEGUNDO', 5);

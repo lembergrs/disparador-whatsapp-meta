@@ -149,10 +149,10 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
                 <div class="text-center mt-3">
 
                     <a
-                    href="<?= BASE_URL; ?>/index.php?url=login/esqueciSenha"
+                    href="<?= BASE_URL; ?>/index.php?url=login/recuperarSenha"
                     class="text-muted"
                     >
-                        Esqueci minha senha
+                        Esqueceu sua senha?
                     </a>
 
                 </div>

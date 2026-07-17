@@ -10,6 +10,7 @@ use PDOException;
 use Models\Plano;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
+use Services\Email\EmailBoasVindasService;
 
 class SiteController extends Controller
 {
@@ -239,11 +240,27 @@ class SiteController extends Controller
                 ':senha' => password_hash($senha, PASSWORD_DEFAULT)
             ]);
 
+            $usuarioId = $db->lastInsertId();
+
             $db->commit();
+
+            $resultadoBoasVindas = $this->enviarEmailBoasVindasCadastro([
+                'CLI_ID' => $clienteId,
+                'CLI_Nome' => $nome,
+                'CLI_RazaoSocial' => $razaoSocial,
+                'CLI_NomeFantasia' => $nomeFantasia ?: $nome,
+                'CLI_Email' => $email
+            ], [
+                'USU_ID' => $usuarioId,
+                'USU_Nome' => $nome,
+                'USU_Email' => $email
+            ]);
 
             Session::flash(
                 'success',
-                'Cadastro realizado com sucesso. Você já pode acessar sua conta.'
+                !empty($resultadoBoasVindas['sucesso'])
+                    ? 'Cadastro realizado com sucesso. Enviamos para seu e-mail os próximos passos para conectar seu WhatsApp e começar a utilizar o Disparador.net.'
+                    : 'Cadastro realizado com sucesso. Você já pode acessar sua conta.'
             );
 
             header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=login');
@@ -261,6 +278,29 @@ class SiteController extends Controller
         }
     }
 
+
+    private function enviarEmailBoasVindasCadastro(array $cliente, array $usuario)
+    {
+        try{
+            return (new EmailBoasVindasService())->enviarParaCadastro($cliente, $usuario);
+        }catch(\Throwable $e){
+            $logDir = dirname(__DIR__, 2) . '/storage/logs';
+            if(!is_dir($logDir)){
+                mkdir($logDir, 0770, true);
+            }
+
+            error_log(json_encode([
+                'timestamp' => date('c'),
+                'tipo' => 'boas_vindas',
+                'CLI_ID' => (int) ($cliente['CLI_ID'] ?? 0),
+                'USU_ID' => (int) ($usuario['USU_ID'] ?? 0),
+                'status' => 'erro_temporario',
+                'codigo' => 'falha_controlada_service'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $logDir . '/email-transacional.log');
+
+            return ['sucesso' => false, 'status' => 'erro_temporario', 'error_code' => 'falha_controlada_service'];
+        }
+    }
 
     private function voltarCadastroComDados($dados, $mensagem)
     {

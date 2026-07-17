@@ -1,10 +1,21 @@
 <?php
 
 use Core\Auth;
+use Models\Conversa;
 
 $usuario = Auth::usuario();
 
 $url = $_GET['url'] ?? 'dashboard';
+
+$totalConversasNaoLidas = 0;
+
+if($usuario && (($usuario['nivel'] ?? null) === 'admin' || Auth::nivelCliente($usuario['nivel'] ?? null))){
+    try{
+        $totalConversasNaoLidas = (new Conversa())->totalConversasNaoLidasPorUsuario($usuario);
+    }catch(\Throwable $e){
+        $totalConversasNaoLidas = 0;
+    }
+}
 
 ?>
 
@@ -295,6 +306,28 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 </li>
 
+<li class="nav-item">
+
+<a
+href="<?= BASE_URL; ?>/index.php?url=conversa"
+class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
+>
+
+<i class="nav-icon fas fa-comments"></i>
+
+<p>
+    Conversas
+    <?php if($totalConversasNaoLidas > 0){ ?>
+        <span class="badge badge-danger right">
+            <?= $totalConversasNaoLidas > 99 ? '99+' : (int) $totalConversasNaoLidas; ?>
+        </span>
+    <?php } ?>
+</p>
+
+</a>
+
+</li>
+
 <?php } ?>
 
 <?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){
@@ -436,7 +469,14 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 
 <i class="nav-icon fas fa-comments"></i>
 
-<p>Conversas</p>
+<p>
+Conversas
+<?php if($totalConversasNaoLidas > 0){ ?>
+    <span class="badge badge-danger right">
+        <?= $totalConversasNaoLidas > 99 ? '99+' : (int) $totalConversasNaoLidas; ?>
+    </span>
+<?php } ?>
+</p>
 
 </a>
 

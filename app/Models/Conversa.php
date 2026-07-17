@@ -3,6 +3,7 @@
 namespace Models;
 
 use Core\Database;
+use Core\Auth;
 use PDO;
 
 class Conversa
@@ -12,6 +13,58 @@ class Conversa
     public function __construct()
     {
         $this->db = Database::getInstance();
+    }
+
+    private function escopoUsuario($usuario)
+    {
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
+        $metaIds = Auth::idsContasMetaPermitidas($usuario);
+
+        return [
+            'cliente_id' => $clienteId,
+            'meta_ids' => $metaIds
+        ];
+    }
+
+    private function aplicarEscopoUsuario(array &$where, array &$params, $usuario, $alias = 'c')
+    {
+        $escopo = $this->escopoUsuario($usuario);
+
+        if($escopo['cliente_id'] <= 0 || empty($escopo['meta_ids'])){
+            $where[] = '1 = 0';
+            return;
+        }
+
+        $where[] = $alias . '.CLI_ID = ?';
+        $params[] = $escopo['cliente_id'];
+
+        $placeholders = implode(', ', array_fill(0, count($escopo['meta_ids']), '?'));
+        $where[] = $alias . '.MTA_ID IN (' . $placeholders . ')';
+
+        foreach($escopo['meta_ids'] as $metaId){
+            $params[] = (int) $metaId;
+        }
+    }
+
+    public function totalConversasNaoLidasPorUsuario($usuario)
+    {
+        $where = [
+            "c.CVS_Ativo = 'S'",
+            "c.CVS_NaoLida = 'S'"
+        ];
+        $params = [];
+
+        $this->aplicarEscopoUsuario($where, $params, $usuario, 'c');
+
+        $sql = $this->db->prepare("
+            SELECT COUNT(DISTINCT c.CVS_ID)
+            FROM conversas c
+            WHERE " . implode(' AND ', $where) . "
+        " );
+
+        $sql->execute($params);
+
+        return (int) $sql->fetchColumn();
     }
 
     public function buscarOuCriar($clienteId, $metaId, $numero, $nome = null)
@@ -157,10 +210,14 @@ class Conversa
         $where = [];
         $params = [];
 
-        $where[] = "c.CLI_ID = ?";
-        $params[] = $clienteId;
-
         $where[] = "c.CVS_Ativo = 'S'";
+
+        if($usuario){
+            $this->aplicarEscopoUsuario($where, $params, $usuario, 'c');
+        }else{
+            $where[] = "c.CLI_ID = ?";
+            $params[] = $clienteId;
+        }
 
         $busca = trim($busca);
         $status = trim($status);
@@ -311,8 +368,22 @@ class Conversa
         return array_reverse($mensagens);
     }
 
-    public function buscar($conversaId, $clienteId)
+    public function buscar($conversaId, $clienteId, $usuario = null)
     {
+        $where = [
+            'c.CVS_ID = ?'
+        ];
+        $params = [
+            $conversaId
+        ];
+
+        if($usuario){
+            $this->aplicarEscopoUsuario($where, $params, $usuario, 'c');
+        }else{
+            $where[] = 'c.CLI_ID = ?';
+            $params[] = $clienteId;
+        }
+
         $sql = $this->db->prepare("
             SELECT
                 c.*,
@@ -322,22 +393,18 @@ class Conversa
             LEFT JOIN usuarios r
                 ON r.USU_ID = c.CON_Responsavel_USU_ID
                 AND r.CLI_ID = c.CLI_ID
-            WHERE c.CVS_ID = ?
-            AND c.CLI_ID = ?
+            WHERE " . implode(' AND ', $where) . "
             LIMIT 1
         ");
 
-        $sql->execute([
-            $conversaId,
-            $clienteId
-        ]);
+        $sql->execute($params);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
     public function buscarAcessivel($conversaId, $clienteId, $usuario)
     {
-        $conversa = $this->buscar($conversaId, $clienteId);
+        $conversa = $this->buscar($conversaId, $clienteId, $usuario);
 
         if(
             !$conversa
@@ -372,9 +439,9 @@ class Conversa
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function atribuirResponsavel($conversaId, $clienteId, $usuarioId = null)
+    public function atribuirResponsavel($conversaId, $clienteId, $usuarioId = null, $usuario = null)
     {
-        $conversa = $this->buscar($conversaId, $clienteId);
+        $conversa = $this->buscar($conversaId, $clienteId, $usuario);
 
         if(!$conversa){
             return [
@@ -439,45 +506,87 @@ class Conversa
         ];
     }
 
-    public function marcarComoLida($conversaId, $clienteId)
+    public function marcarComoLida($conversaId, $clienteId, $usuario = null)
     {
-        $sql = $this->db->prepare("
+        $where = [
+            'CVS_ID = ?'
+        ];
+        $params = [
+            $conversaId
+        ];
 
+        if($usuario){
+            $escopo = $this->escopoUsuario($usuario);
+
+            if($escopo['cliente_id'] <= 0 || empty($escopo['meta_ids'])){
+                return false;
+            }
+
+            $where[] = 'CLI_ID = ?';
+            $params[] = $escopo['cliente_id'];
+            $where[] = 'MTA_ID IN (' . implode(', ', array_fill(0, count($escopo['meta_ids']), '?')) . ')';
+
+            foreach($escopo['meta_ids'] as $metaId){
+                $params[] = (int) $metaId;
+            }
+        }else{
+            $where[] = 'CLI_ID = ?';
+            $params[] = $clienteId;
+        }
+
+        $sql = $this->db->prepare("
             UPDATE conversas
             SET
                 CVS_NaoLida = 'N',
                 CVS_QtdeNaoLidas = 0,
                 CVS_DataAtualizacao = NOW()
-            WHERE CVS_ID = ?
-            AND CLI_ID = ?
-
+            WHERE " . implode(' AND ', $where) . "
         ");
 
-        return $sql->execute([
-            $conversaId,
-            $clienteId
-        ]);
+        return $sql->execute($params);
     }
 
-    public function marcarComoNaoLida($conversaId, $clienteId)
+    public function marcarComoNaoLida($conversaId, $clienteId, $usuario = null)
     {
+        $where = [
+            'CVS_ID = ?'
+        ];
+        $params = [
+            $conversaId
+        ];
+
+        if($usuario){
+            $escopo = $this->escopoUsuario($usuario);
+
+            if($escopo['cliente_id'] <= 0 || empty($escopo['meta_ids'])){
+                return false;
+            }
+
+            $where[] = 'CLI_ID = ?';
+            $params[] = $escopo['cliente_id'];
+            $where[] = 'MTA_ID IN (' . implode(', ', array_fill(0, count($escopo['meta_ids']), '?')) . ')';
+
+            foreach($escopo['meta_ids'] as $metaId){
+                $params[] = (int) $metaId;
+            }
+        }else{
+            $where[] = 'CLI_ID = ?';
+            $params[] = $clienteId;
+        }
+
         $sql = $this->db->prepare("
             UPDATE conversas
-            SET 
+            SET
                 CVS_NaoLida = 'S',
-                CVS_QtdeNaoLidas = CASE 
-                    WHEN CVS_QtdeNaoLidas <= 0 THEN 1 
-                    ELSE CVS_QtdeNaoLidas 
+                CVS_QtdeNaoLidas = CASE
+                    WHEN CVS_QtdeNaoLidas <= 0 THEN 1
+                    ELSE CVS_QtdeNaoLidas
                 END,
                 CVS_DataAtualizacao = NOW()
-            WHERE CVS_ID = ?
-            AND CLI_ID = ?
+            WHERE " . implode(' AND ', $where) . "
         ");
 
-        return $sql->execute([
-            $conversaId,
-            $clienteId
-        ]);
+        return $sql->execute($params);
     }
 
     public function ultimaMensagemRecebida($conversaId)
@@ -504,22 +613,27 @@ class Conversa
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function ultimaAtualizacaoCliente($clienteId)
+    public function ultimaAtualizacaoCliente($clienteId, $usuario = null)
     {
+        $where = [
+            "CVS_Ativo = 'S'"
+        ];
+        $params = [];
+
+        if($usuario){
+            $this->aplicarEscopoUsuario($where, $params, $usuario, 'conversas');
+        }else{
+            $where[] = 'CLI_ID = ?';
+            $params[] = $clienteId;
+        }
+
         $sql = $this->db->prepare("
-
             SELECT MAX(COALESCE(CVS_DataAtualizacao, CVS_DataUltimaMensagem)) AS ultima
-
             FROM conversas
-
-            WHERE CLI_ID = ?
-            AND CVS_Ativo = 'S'
-
+            WHERE " . implode(' AND ', $where) . "
         ");
 
-        $sql->execute([
-            $clienteId
-        ]);
+        $sql->execute($params);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
