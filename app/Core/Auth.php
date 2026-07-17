@@ -158,13 +158,56 @@ class Auth
             return false;
         }
 
-        if(self::clienteEmToleranciaFinanceira($usuario['CLI_ID'] ?? null)){
-            return true;
+        $avaliacao = self::dadosAvaliacaoCliente(false);
+
+        return $avaliacao['ativo'];
+    }
+
+    public static function clienteEmPreTrial()
+    {
+        $usuario = self::usuario();
+
+        if(
+            !$usuario
+            ||
+            !self::nivelCliente($usuario['nivel'] ?? null)
+        ){
+            return false;
+        }
+
+        self::atualizarStatusCliente();
+        $usuario = self::usuario();
+
+        return (
+            ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
+            &&
+            ($usuario['CLI_StatusPagamento'] ?? null) == 'pendente'
+            &&
+            empty($usuario['CLI_DataLiberacao'])
+        );
+    }
+
+    public static function trialEncerradoCliente()
+    {
+        $usuario = self::usuario();
+
+        if(
+            !$usuario
+            ||
+            !self::nivelCliente($usuario['nivel'] ?? null)
+            ||
+            ($usuario['CLI_StatusPagamento'] ?? null) != 'pendente'
+            ||
+            ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
+            ||
+            empty($usuario['CLI_DataLiberacao'])
+        ){
+            return false;
         }
 
         $avaliacao = self::dadosAvaliacaoCliente(false);
 
-        return $avaliacao['ativo'];
+        return !$avaliacao['ativo'];
     }
 
 
@@ -298,13 +341,7 @@ class Auth
 
         $usuario = self::usuario();
 
-        return (
-            ($usuario['CLI_StatusPagamento'] ?? null) == 'pendente'
-            &&
-            ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
-            &&
-            empty($usuario['CLI_DataLiberacao'])
-        );
+        return self::clienteEmPreTrial();
     }
 
     public static function validarBloqueioFinanceiro()
@@ -331,7 +368,9 @@ class Auth
 
         Session::flash(
             'error',
-            'Regularize seu financeiro para acessar esta funcionalidade.'
+            self::trialEncerradoCliente()
+                ? 'Seu período de avaliação terminou. Escolha ou regularize um plano para continuar utilizando a plataforma.'
+                : 'Conecte seu número do WhatsApp para iniciar seu período de avaliação ou regularize seu financeiro.'
         );
 
         header(
@@ -442,10 +481,10 @@ class Auth
             return in_array($metodo, ['pdf', 'xml'], true);
         }
 
-        return (
-            $controller == 'configuracao'
-            &&
-            self::clientePodeConectarMeta()
-        );
+        if($controller == 'configuracao'){
+            return self::clientePodeConectarMeta();
+        }
+
+        return false;
     }
 }
