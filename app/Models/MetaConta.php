@@ -179,6 +179,23 @@ class MetaConta
         );
     }
 
+
+    public function buscarPorIdAdmin($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM meta_contas
+            WHERE MTA_ID = ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            (int) $id
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function buscarPorCliente($id, $clienteId)
     {
         $sql = $this->db->prepare("

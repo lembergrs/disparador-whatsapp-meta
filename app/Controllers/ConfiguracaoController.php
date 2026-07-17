@@ -804,10 +804,14 @@ class ConfiguracaoController extends Controller
         }
 
         $contaId = (int) ($_POST['conta_id'] ?? 0);
-        $conta = $this->metaContaModel->buscarPorUsuario($contaId, $usuario);
+        $conta = $this->metaContaModel->buscarPorIdAdmin($contaId);
 
-        if(!$conta || empty($conta['MTA_PhoneNumberId']) || empty($conta['MTA_Token']) || ($conta['MTA_Ativo'] ?? 'N') !== 'S'){
-            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta não encontrada no escopo administrativo permitido.'], 403);
+        if(!$conta || ($conta['MTA_Ativo'] ?? 'N') !== 'S'){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta não encontrada ou inativa.'], 404);
+        }
+
+        if(empty($conta['MTA_PhoneNumberId']) || empty($conta['MTA_Token'])){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta sem token ou Phone Number ID para sincronização.'], 422);
         }
 
         $requestId = $this->requestId();
@@ -815,7 +819,7 @@ class ConfiguracaoController extends Controller
         try{
             $dadosTelefone = $this->sincronizarDadosNumeroMeta($conta);
             $this->metaContaModel->atualizarEspelhoMeta((int) $conta['MTA_ID'], (int) $conta['CLI_ID'], $dadosTelefone, null);
-            $contaAtualizada = $this->metaContaModel->buscarPorUsuario($contaId, $usuario) ?: [];
+            $contaAtualizada = $this->metaContaModel->buscarPorIdAdmin($contaId) ?: [];
 
             $this->logMetaEmbeddedSignup([
                 'data' => date('Y-m-d H:i:s'),
