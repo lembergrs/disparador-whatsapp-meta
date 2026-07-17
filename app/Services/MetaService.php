@@ -73,6 +73,233 @@ class MetaService
 
 
 
+
+
+
+
+    public function consultarDadosNumero()
+    {
+        return self::consultarDadosNumeroConta($this->conta);
+    }
+
+    public static function consultarDadosNumeroConta(array $conta)
+    {
+        if(empty($conta['MTA_Token'])){
+            throw new Exception('A autorização da Meta expirou ou não possui mais acesso ao número.');
+        }
+
+        if(empty($conta['MTA_PhoneNumberId'])){
+            throw new Exception('A conta não possui um Phone Number ID válido.');
+        }
+
+        $phoneNumberId = (string) $conta['MTA_PhoneNumberId'];
+        $telefone = self::graphGetConta(
+            $conta,
+            $phoneNumberId,
+            [
+                'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type,whatsapp_business_manager_messaging_limit'
+            ]
+        );
+
+        $dados = self::normalizarDadosNumeroMeta($telefone, $phoneNumberId);
+
+        if(empty($dados['operational_status']) && !empty($conta['MTA_WabaId'])){
+            try{
+                $waba = self::graphGetConta(
+                    $conta,
+                    (string) $conta['MTA_WabaId'] . '/phone_numbers',
+                    [
+                        'fields' => 'id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type,whatsapp_business_manager_messaging_limit'
+                    ]
+                );
+
+                foreach(($waba['data'] ?? []) as $numero){
+                    if((string) ($numero['id'] ?? '') === $phoneNumberId){
+                        $dados = array_merge($dados, array_filter(
+                            self::normalizarDadosNumeroMeta($numero, $phoneNumberId),
+                            function($valor){ return $valor !== null && $valor !== ''; }
+                        ));
+                        break;
+                    }
+                }
+            }catch(Exception $e){
+                // A consulta principal do Phone Number ID já trouxe os dados básicos.
+                // A listagem da WABA é complementar para diagnóstico de suporte.
+            }
+        }
+
+        return $dados;
+    }
+
+    private static function graphGetConta(array $conta, $endpoint, array $params = [])
+    {
+        $base = rtrim((string) $conta['MTA_UrlBase'], '/');
+        $query = $params ? '?' . http_build_query($params) : '';
+        $url = $base . '/' . ltrim((string) $endpoint, '/') . $query;
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $conta['MTA_Token']
+            ],
+            CURLOPT_TIMEOUT => 30
+        ]);
+
+        $response = curl_exec($curl);
+        $curlError = curl_error($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+
+        $json = json_decode((string) $response, true);
+        if($curlError){
+            throw new Exception('Não foi possível consultar a Meta neste momento. Tente novamente.');
+        }
+
+        if($httpCode >= 400 || !is_array($json)){
+            $erro = is_array($json) ? ($json['error'] ?? []) : [];
+            $partes = [
+                'HTTP ' . $httpCode,
+                'code ' . ($erro['code'] ?? ''),
+                'subcode ' . ($erro['error_subcode'] ?? ''),
+                'fbtrace_id ' . ($erro['fbtrace_id'] ?? ''),
+                (string) ($erro['message'] ?? 'Não foi possível atualizar os dados da conta Meta.')
+            ];
+            throw new Exception(trim(implode(' ', array_filter($partes))));
+        }
+
+        return $json;
+    }
+
+    private static function normalizarDadosNumeroMeta(array $telefone, $phoneNumberId)
+    {
+        return [
+            'phone_number_id' => $telefone['id'] ?? $phoneNumberId,
+            'numero' => $telefone['display_phone_number'] ?? null,
+            'display_name' => $telefone['verified_name'] ?? null,
+            'quality_rating' => $telefone['quality_rating'] ?? null,
+            'code_verification_status' => $telefone['code_verification_status'] ?? null,
+            'name_status' => $telefone['name_status'] ?? null,
+            'operational_status' => $telefone['status'] ?? null,
+            'platform_type' => $telefone['platform_type'] ?? null,
+            'messaging_limit' => self::normalizarLimiteConversasMeta(
+                $telefone['messaging_limit_tier']
+                ?? ($telefone['whatsapp_business_manager_messaging_limit'] ?? null)
+            )
+        ];
+    }
+
+    public static function normalizarLimiteConversasMeta($valor)
+    {
+        if($valor === null){
+            return null;
+        }
+
+        $raw = trim((string) $valor);
+        if($raw === ''){
+            return null;
+        }
+
+        $upper = strtoupper($raw);
+        $mapa = [
+            'TIER_250' => '250',
+            'TIER_1K' => '1000',
+            'TIER_2K' => '2000',
+            'TIER_10K' => '10000',
+            'TIER_100K' => '100000',
+            'TIER_UNLIMITED' => 'UNLIMITED',
+            'UNLIMITED' => 'UNLIMITED'
+        ];
+
+        if(isset($mapa[$upper])){
+            return $mapa[$upper];
+        }
+
+        return $raw;
+    }
+
+    public static function formatarLimiteConversasMeta($valor, $sufixo = true)
+    {
+        $normalizado = self::normalizarLimiteConversasMeta($valor);
+        if($normalizado === null){
+            return 'Limite da Meta ainda não disponível.';
+        }
+
+        if(strtoupper((string) $normalizado) === 'UNLIMITED'){
+            return 'Ilimitado';
+        }
+
+        if(ctype_digit((string) $normalizado)){
+            $formatado = number_format((int) $normalizado, 0, ',', '.');
+            return $sufixo ? $formatado . ' clientes únicos em 24 horas' : $formatado;
+        }
+
+        return (string) $normalizado;
+    }
+
+    public static function avisoDesatualizacaoMeta($ultimaVerificacao)
+    {
+        if(empty($ultimaVerificacao)){
+            return 'Limite da Meta ainda não disponível. Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.';
+        }
+
+        $timestamp = strtotime((string) $ultimaVerificacao);
+        if(!$timestamp){
+            return '';
+        }
+
+        $horas = (time() - $timestamp) / 3600;
+        if($horas > 72){
+            return 'Informação da Meta possivelmente desatualizada.';
+        }
+        if($horas > 24){
+            return 'Última consulta à Meta em ' . date('d/m/Y H:i', $timestamp) . '.';
+        }
+
+        return '';
+    }
+
+    private function aplicarMensagemAmigavelErroEnvio(array $retorno)
+    {
+        $erro = $retorno['error'] ?? ($retorno['response']['error'] ?? null);
+        if(!is_array($erro)){
+            return $retorno;
+        }
+
+        $codigo = (string) ($erro['code'] ?? '');
+        $subcodigo = (string) ($erro['error_subcode'] ?? '');
+        $mensagem = (string) ($erro['message'] ?? '');
+
+        if($codigo === '133010' || stripos($mensagem, 'Account not registered') !== false){
+            $erro['message'] = 'O número ainda não concluiu o registro no WhatsApp. Informe o PIN de 6 dígitos para finalizar a conexão.';
+        }elseif($codigo === '100' && $subcodigo === '33'){
+            $erro['message'] = 'Não foi possível acessar o número vinculado. Refaça a conexão com a Meta ou entre em contato com o suporte.';
+        }
+
+        if(isset($retorno['error'])){
+            $retorno['error'] = $erro;
+        }
+        if(isset($retorno['response']['error'])){
+            $retorno['response']['error'] = $erro;
+        }
+
+        return $retorno;
+    }
+
+    private function validarContaProntaParaEnvio()
+    {
+        $status = strtolower((string) ($this->conta['MTA_Status'] ?? ''));
+
+        if($status !== 'conectado'){
+            throw new Exception('O número remetente ainda não concluiu o registro no WhatsApp.');
+        }
+
+        if(empty($this->conta['MTA_Token']) || empty($this->conta['MTA_PhoneNumberId'])){
+            throw new Exception('Conta Meta sem configuração operacional completa.');
+        }
+    }
+
     public function testarConexao()
     {
         $url =
@@ -185,6 +412,8 @@ class MetaService
         $mensagem
     )
     {
+        $this->validarContaProntaParaEnvio();
+
         $url =
 
             rtrim(
@@ -270,7 +499,7 @@ class MetaService
 
 
 
-        return [
+        return $this->aplicarMensagemAmigavelErroEnvio([
 
             'http_code' => $httpCode,
 
@@ -280,7 +509,7 @@ class MetaService
                     true
                 )
 
-        ];
+        ]);
     }
 
 
@@ -913,6 +1142,8 @@ class MetaService
         $midiaHeader = null
     )
     {
+        $this->validarContaProntaParaEnvio();
+
         $url =
 
             rtrim(
@@ -1084,7 +1315,7 @@ class MetaService
         $retorno['raw_response'] = $response;
         $retorno['payload'] = $payload;
 
-        return $retorno;
+        return $this->aplicarMensagemAmigavelErroEnvio($retorno);
     }
 
 

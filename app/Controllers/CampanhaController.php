@@ -13,6 +13,9 @@ use Models\CampanhaVariavel;
 use Services\MetaService;
 use Models\ListaContato;
 use Models\ListaContatoItem;
+use Models\MetaConta;
+use Models\Cliente;
+use Models\ConsumoMensal;
 
 class CampanhaController extends Controller
 {
@@ -63,6 +66,11 @@ class CampanhaController extends Controller
                 $usuario['cliente_id']
             );
 
+        $clientePlano = (new Cliente())->buscarComPlano($usuario['CLI_ID']);
+        $consumoMes = (new ConsumoMensal())->buscarMesAtual($usuario['CLI_ID']);
+        $contasMeta = (new MetaConta())->listarPorCliente($usuario['CLI_ID']);
+        $metaContaLimite = $contasMeta[0] ?? null;
+
         $this->view(
             'campanhas/index',
             [
@@ -70,7 +78,10 @@ class CampanhaController extends Controller
                 'campanhas' => $campanhas,
                 'templates' => $templates,
                 'camposContato' => $camposContato,
-                'listas' => $listas
+                'listas' => $listas,
+                'clientePlano' => $clientePlano,
+                'consumoMes' => $consumoMes,
+                'metaContaLimite' => $metaContaLimite
             ]
         );
     }

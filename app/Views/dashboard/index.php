@@ -34,6 +34,11 @@ function formatarDataDashboard($data)
     return date('d/m/Y H:i', strtotime($data));
 }
 
+function avisoMetaDashboard($metaConta)
+{
+    return \Services\MetaService::avisoDesatualizacaoMeta($metaConta['MTA_UltimaVerificacao'] ?? null);
+}
+
 ?>
 
 <?php if($usuario['nivel'] == 'admin'){ ?>
@@ -199,6 +204,63 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
         Contratar ou regularizar plano
     </a>
 </div>
+<?php } ?>
+
+<?php if($usuario['nivel'] != 'admin'){ ?>
+<div class="row mb-3">
+    <div class="col-md-6 mb-3">
+        <div class="card card-outline card-primary h-100">
+            <div class="card-header"><h3 class="card-title">Seu plano no Disparador</h3></div>
+            <div class="card-body">
+                <p class="mb-1"><strong>Plano:</strong> <?= htmlspecialchars($cliente['PLA_Nome'] ?? 'Não informado'); ?></p>
+                <?php if(isset($cliente['PLA_LimiteMensagens'])){ ?>
+                    <p class="mb-1"><strong>Mensagens incluídas:</strong> <?= number_format((int) $cliente['PLA_LimiteMensagens'], 0, ',', '.'); ?></p>
+                <?php } ?>
+                <?php if($consumo){ ?>
+                    <p class="mb-1"><strong>Mensagens utilizadas:</strong> <?= number_format((int) ($consumo['CMS_Mensagens'] ?? 0), 0, ',', '.'); ?></p>
+                <?php } ?>
+                <p class="text-muted mb-0">Este limite faz parte do plano contratado no Disparador e considera as mensagens processadas pela plataforma.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="card card-outline card-info h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Limite de conversas da Meta</h3>
+                <button type="button" class="btn btn-tool text-info" data-toggle="modal" data-target="#modalEntendaLimites">Entenda os limites</button>
+            </div>
+            <div class="card-body">
+                <?php if($metaConta && !empty($metaConta['MTA_MessagingLimit'])){ ?>
+                    <p class="mb-1"><strong>Limite atual informado pela Meta:</strong><br><?= htmlspecialchars(\Services\MetaService::formatarLimiteConversasMeta($metaConta['MTA_MessagingLimit'])); ?></p>
+                <?php }else{ ?>
+                    <p class="mb-1"><strong>Limite atual informado pela Meta:</strong><br>Limite da Meta ainda não disponível.</p>
+                    <p class="text-muted">Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.</p>
+                <?php } ?>
+                <p class="mb-1"><strong>Qualidade:</strong> <?= htmlspecialchars($metaConta['MTA_QualityRating'] ?? 'Não informado'); ?></p>
+                <p class="mb-1"><strong>Status Meta:</strong> <?= htmlspecialchars($metaConta['MTA_OperationalStatus'] ?? 'Não informado'); ?></p>
+                <p class="mb-1"><strong>Última consulta à Meta:</strong> <?= !empty($metaConta['MTA_UltimaVerificacao']) ? date('d/m/Y \à\s H:i', strtotime($metaConta['MTA_UltimaVerificacao'])) : 'Nunca'; ?></p>
+                <?php $avisoMeta = $metaConta ? \Services\MetaService::avisoDesatualizacaoMeta($metaConta['MTA_UltimaVerificacao'] ?? null) : 'Limite da Meta ainda não disponível. Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.'; ?>
+                <?php if($avisoMeta){ ?><div class="alert alert-warning py-2"><?= htmlspecialchars($avisoMeta); ?></div><?php } ?>
+                <p class="text-muted mb-1">Este limite é definido e controlado exclusivamente pela Meta. O Disparador não consegue aumentá-lo, alterá-lo ou garantir quando ele será ampliado.</p>
+                <p class="text-muted mb-0">A Meta pode alterar esse limite conforme seus próprios critérios, como situação da empresa, qualidade das conversas e histórico de uso.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEntendaLimites" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Entenda os limites do Disparador e da Meta</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+        <div class="modal-body">
+            <p>O limite do plano Disparador corresponde à quantidade de mensagens incluídas no plano contratado e processadas pela plataforma.</p>
+            <p>O limite de conversas da Meta corresponde à quantidade de clientes únicos com os quais a empresa pode iniciar novas conversas dentro de uma janela contínua de 24 horas, conforme as regras e informações fornecidas pela própria Meta.</p>
+            <p>O Disparador apenas consulta e exibe esse dado. A definição, atualização e ampliação do limite são de responsabilidade exclusiva da Meta.</p>
+            <p>Ter mensagens disponíveis no plano Disparador não garante que a Meta permitirá iniciar novas conversas acima do limite definido por ela.</p>
+            <div class="row"><div class="col-md-6"><h6>Limite do plano Disparador</h6><ul><li>definido pelo plano contratado;</li><li>baseado em mensagens;</li><li>controlado pelo Disparador;</li><li>ciclo comercial do plano.</li></ul></div><div class="col-md-6"><h6>Limite de conversas da Meta</h6><ul><li>definido pela Meta;</li><li>relacionado a clientes únicos;</li><li>janela contínua de 24 horas;</li><li>não pode ser alterado pelo Disparador.</li></ul></div></div>
+        </div>
+    </div></div>
+</div>
+
 <?php } ?>
 
 <div class="row">

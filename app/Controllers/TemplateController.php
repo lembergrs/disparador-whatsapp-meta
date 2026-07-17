@@ -23,7 +23,7 @@ class TemplateController extends Controller
 
     public function __construct()
     {
-        Auth::cliente();
+        Auth::clienteAdmin();
 
         $this->templateModel =
             new TemplateMeta();
@@ -42,15 +42,11 @@ class TemplateController extends Controller
 
         $templates =
             $this->templateModel
-            ->listarPorCliente(
-                $usuario['CLI_ID']
-            );
+            ->listarPorUsuario($usuario);
 
         $contas =
             $this->metaModel
-            ->listarPorCliente(
-                $usuario['CLI_ID']
-            );
+            ->listarPorUsuario($usuario);
 
         $this->view(
             'templates/index',
@@ -75,7 +71,7 @@ class TemplateController extends Controller
         $metaId =
             (int) ($_POST['meta'] ?? 0);
 
-        if(!$this->metaModel->buscarPorCliente($metaId, $usuario['CLI_ID'])){
+        if(!$this->metaModel->buscarPorUsuario($metaId, $usuario)){
             Session::flash('error', 'Conta Meta inválida.');
             $this->redirect('template');
         }
@@ -172,7 +168,7 @@ class TemplateController extends Controller
         $usuario = Auth::usuario();
         $id = (int) ($_POST['id'] ?? 0);
 
-        $template = $this->templateModel->buscarPorCliente($id, $usuario['CLI_ID']);
+        $template = $this->templateModel->buscarPorUsuario($id, $usuario);
 
         if(!$template){
             Session::flash('error', 'Template inválido.');
@@ -197,7 +193,7 @@ class TemplateController extends Controller
 
         $metaId = (int) ($_POST['meta'] ?? 0);
 
-        if(!$this->metaModel->buscarPorCliente($metaId, $usuario['CLI_ID'])){
+        if(!$this->metaModel->buscarPorUsuario($metaId, $usuario)){
             Session::flash('error', 'Conta Meta inválida.');
             $this->redirect('template');
         }
@@ -283,9 +279,9 @@ class TemplateController extends Controller
             $this->redirect('template');
         }
 
-        $this->templateModel->inativar(
+        $this->templateModel->inativarPorUsuario(
             $id,
-            $usuario['CLI_ID']
+            $usuario
         );
 
         Session::flash(
