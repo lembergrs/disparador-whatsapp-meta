@@ -3,17 +3,21 @@
 namespace Services;
 
 use Models\Notificacao;
+use Models\NotificacaoConfiguracao;
 
 class NotificacaoService
 {
     private $config;
     private $canais;
     private $model;
+    private $configuracaoModel;
 
-    public function __construct(array $canais = [], $model = null, array $config = null)
+    public function __construct(array $canais = [], $model = null, array $config = null, $configuracaoModel = null)
     {
         $this->config = $config ?: (require __DIR__ . '/../../config/notificacoes.php');
         $this->model = $model ?: new Notificacao();
+        $this->configuracaoModel = $configuracaoModel ?: new NotificacaoConfiguracao();
+        $this->config['eventos'] = $this->configuracaoModel->canaisEfetivos($this->config);
         $this->canais = $canais ?: [CanalNotificacao::EMAIL => new EmailService()];
     }
 
@@ -42,6 +46,24 @@ class NotificacaoService
             $resultados[$canal] = $resultado + ['notificacao_id' => $notificacaoId];
         }
         return ['evento' => $evento, 'resultados' => $resultados];
+    }
+
+    public function reenviarEmailAdmin(array $notificacao)
+    {
+        if(($notificacao['NOT_Canal'] ?? '') !== CanalNotificacao::EMAIL){
+            return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'canal_indisponivel','mensagem'=>'Canal ainda não disponível para reenvio.'];
+        }
+        $contexto = $this->contexto($notificacao, []);
+        $contexto['cliente_id'] = $notificacao['CLI_ID'] ?? null;
+        $contexto['nome'] = $notificacao['CLI_Nome'] ?? $notificacao['CLI_NomeFantasia'] ?? 'cliente';
+        $contexto['empresa'] = $notificacao['CLI_NomeFantasia'] ?? $notificacao['CLI_RazaoSocial'] ?? '';
+        $contexto['email'] = $notificacao['NOT_Destino'] ?? $notificacao['CLI_Email'] ?? '';
+        if(empty($contexto['cliente_id'])) return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'cliente_indisponivel','mensagem'=>'Cliente não disponível para reenvio.'];
+        if(!filter_var($contexto['email'], FILTER_VALIDATE_EMAIL)) return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'destino_invalido','mensagem'=>'Destino inválido para reenvio.'];
+        if(!in_array(CanalNotificacao::EMAIL, $this->config['eventos'][$notificacao['NOT_Tipo']] ?? [], true)){
+            return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'canal_desativado','mensagem'=>'E-mail desativado para este evento.'];
+        }
+        return $this->canais[CanalNotificacao::EMAIL]->enviarEvento($notificacao['NOT_Tipo'], $contexto);
     }
 
     private function contexto(array $cliente, array $dados)

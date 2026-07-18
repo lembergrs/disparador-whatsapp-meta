@@ -3,6 +3,7 @@
 namespace Models;
 
 use Core\Database;
+use PDO;
 
 class Notificacao
 {
@@ -43,6 +44,105 @@ class Notificacao
             ':ok' => $sucesso ? 1 : 0,
             ':id' => (int) $id,
         ]);
+    }
+
+
+    public function listarAdmin(array $filtros = [], $limite = 25, $offset = 0)
+    {
+        [$where, $params] = $this->whereAdmin($filtros);
+        $limite = max(1, min(100, (int) $limite));
+        $offset = max(0, (int) $offset);
+
+        $sql = $this->db->prepare("
+            SELECT n.*, c.CLI_Nome, c.CLI_NomeFantasia, c.CLI_RazaoSocial, c.CLI_Email
+            FROM notificacoes n
+            LEFT JOIN clientes c ON c.CLI_ID = n.CLI_ID
+            {$where}
+            ORDER BY n.NOT_CriadoEm DESC, n.NOT_ID DESC
+            LIMIT {$limite} OFFSET {$offset}
+        ");
+        $sql->execute($params);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function contarAdmin(array $filtros = [])
+    {
+        [$where, $params] = $this->whereAdmin($filtros);
+        $sql = $this->db->prepare("SELECT COUNT(*) FROM notificacoes n LEFT JOIN clientes c ON c.CLI_ID = n.CLI_ID {$where}");
+        $sql->execute($params);
+        return (int) $sql->fetchColumn();
+    }
+
+    public function resumoAdmin()
+    {
+        $sql = $this->db->query("
+            SELECT
+                COUNT(*) total,
+                SUM(CASE WHEN NOT_Status IN ('enviada','enviado') THEN 1 ELSE 0 END) enviadas,
+                SUM(CASE WHEN NOT_Status IN ('pendente','processando') THEN 1 ELSE 0 END) pendentes,
+                SUM(CASE WHEN NOT_Status LIKE 'erro%' THEN 1 ELSE 0 END) erros,
+                SUM(CASE WHEN NOT_Status IN ('enviada','enviado') AND DATE(NOT_DataEnvio) = CURDATE() THEN 1 ELSE 0 END) enviadas_hoje
+            FROM notificacoes
+        ");
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: ['total'=>0,'enviadas'=>0,'pendentes'=>0,'erros'=>0,'enviadas_hoje'=>0];
+    }
+
+    public function buscarAdmin($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT n.*, c.CLI_Nome, c.CLI_NomeFantasia, c.CLI_RazaoSocial, c.CLI_Email
+            FROM notificacoes n
+            LEFT JOIN clientes c ON c.CLI_ID = n.CLI_ID
+            WHERE n.NOT_ID = ?
+            LIMIT 1
+        ");
+        $sql->execute([(int) $id]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function marcarReenvioProcessando($id)
+    {
+        $sql = $this->db->prepare("
+            UPDATE notificacoes
+            SET NOT_Status = 'processando', NOT_Tentativas = NOT_Tentativas + 1, NOT_Erro = NULL
+            WHERE NOT_ID = ?
+            AND NOT_Canal = 'email'
+            AND NOT_Status IN ('pendente','erro_temporario','erro_definitivo')
+        ");
+        $sql->execute([(int) $id]);
+        return $sql->rowCount() === 1;
+    }
+
+    public function finalizarReenvio($id, array $resultado)
+    {
+        $sucesso = !empty($resultado['sucesso']);
+        $status = $sucesso ? 'enviada' : ($resultado['status'] ?? 'erro_temporario');
+        if(!in_array($status, ['enviada','erro_temporario','erro_definitivo'], true)){
+            $status = 'erro_temporario';
+        }
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status = :status, NOT_Erro = :erro, NOT_DataEnvio = CASE WHEN :ok = 1 THEN NOW() ELSE NOT_DataEnvio END WHERE NOT_ID = :id");
+        return $sql->execute([':status'=>$status, ':erro'=>$this->sanitizar($resultado['mensagem'] ?? $resultado['error_code'] ?? null), ':ok'=>$sucesso ? 1 : 0, ':id'=>(int)$id]);
+    }
+
+    private function whereAdmin(array $filtros)
+    {
+        $where = [];
+        $params = [];
+        if(!empty($filtros['cliente_id'])){ $where[] = 'n.CLI_ID = ?'; $params[] = (int) $filtros['cliente_id']; }
+        if(!empty($filtros['evento'])){ $where[] = 'n.NOT_Tipo = ?'; $params[] = (string) $filtros['evento']; }
+        if(!empty($filtros['canal'])){ $where[] = 'n.NOT_Canal = ?'; $params[] = (string) $filtros['canal']; }
+        if(!empty($filtros['status'])){
+            if($filtros['status'] === 'erro'){ $where[] = "n.NOT_Status LIKE 'erro%'"; }
+            else { $where[] = 'n.NOT_Status = ?'; $params[] = (string) $filtros['status']; }
+        }
+        if(!empty($filtros['data_inicial'])){ $where[] = 'DATE(n.NOT_CriadoEm) >= ?'; $params[] = (string) $filtros['data_inicial']; }
+        if(!empty($filtros['data_final'])){ $where[] = 'DATE(n.NOT_CriadoEm) <= ?'; $params[] = (string) $filtros['data_final']; }
+        if(!empty($filtros['destino'])){ $where[] = 'n.NOT_Destino LIKE ?'; $params[] = '%' . $filtros['destino'] . '%'; }
+        if(!empty($filtros['q'])){
+            $where[] = '(n.NOT_Assunto LIKE ? OR n.NOT_Destino LIKE ? OR n.NOT_Erro LIKE ? OR c.CLI_Nome LIKE ? OR c.CLI_NomeFantasia LIKE ?)';
+            for($i = 0; $i < 5; $i++) $params[] = '%' . $filtros['q'] . '%';
+        }
+        return [$where ? 'WHERE ' . implode(' AND ', $where) : '', $params];
     }
 
     private function sanitizar($mensagem)
