@@ -10,7 +10,8 @@ use PDOException;
 use Models\Plano;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
-use Services\Email\EmailBoasVindasService;
+use Services\EventoNotificacao;
+use Services\NotificacaoService;
 
 class SiteController extends Controller
 {
@@ -282,7 +283,7 @@ class SiteController extends Controller
     private function enviarEmailBoasVindasCadastro(array $cliente, array $usuario)
     {
         try{
-            return (new EmailBoasVindasService())->enviarParaCadastro($cliente, $usuario);
+            return (new NotificacaoService())->disparar(EventoNotificacao::BOAS_VINDAS, array_merge($cliente, $usuario));
         }catch(\Throwable $e){
             $logDir = dirname(__DIR__, 2) . '/storage/logs';
             if(!is_dir($logDir)){
@@ -291,7 +292,7 @@ class SiteController extends Controller
 
             error_log(json_encode([
                 'timestamp' => date('c'),
-                'tipo' => 'boas_vindas',
+                'tipo' => EventoNotificacao::BOAS_VINDAS,
                 'CLI_ID' => (int) ($cliente['CLI_ID'] ?? 0),
                 'USU_ID' => (int) ($usuario['USU_ID'] ?? 0),
                 'status' => 'erro_temporario',

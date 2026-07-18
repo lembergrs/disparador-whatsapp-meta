@@ -206,6 +206,28 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
 </div>
 <?php } ?>
 
+<?php if($usuario['nivel'] != 'admin' && !empty($onboardingChecklist) && empty($onboardingChecklist['concluido'])){ ?>
+<div class="card card-outline card-success mb-3">
+    <div class="card-header"><h3 class="card-title">Primeiros passos</h3></div>
+    <div class="card-body">
+        <div class="progress mb-3" style="height: 10px;">
+            <div class="progress-bar bg-success" style="width: <?= (int) $onboardingChecklist['percentual']; ?>%;"></div>
+        </div>
+        <p class="text-muted mb-3"><?= (int) $onboardingChecklist['concluidos']; ?> de <?= (int) $onboardingChecklist['total']; ?> etapas concluídas.</p>
+        <div class="row">
+            <?php foreach($onboardingChecklist['itens'] as $item){ ?>
+                <div class="col-md-6 mb-2">
+                    <a class="d-flex align-items-center text-decoration-none <?= !empty($item['done']) ? 'text-success' : 'text-dark'; ?>" href="<?= BASE_URL; ?>/index.php?url=<?= htmlspecialchars($item['url']); ?>">
+                        <i class="<?= !empty($item['done']) ? 'fas fa-check-circle' : 'far fa-circle'; ?> mr-2"></i>
+                        <span><?= htmlspecialchars($item['label']); ?></span>
+                    </a>
+                </div>
+            <?php } ?>
+        </div>
+    </div>
+</div>
+<?php } ?>
+
 <?php if($usuario['nivel'] != 'admin'){ ?>
 <div class="row mb-3">
     <div class="col-md-6 mb-3">
