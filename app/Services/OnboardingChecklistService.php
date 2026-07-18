@@ -25,8 +25,12 @@ class OnboardingChecklistService
 
     private function existe($db, $tabela, $where, array $params)
     {
-        $sql = $db->prepare("SELECT 1 FROM {$tabela} WHERE {$where} LIMIT 1");
-        $sql->execute($params);
-        return (bool) $sql->fetchColumn();
+        try {
+            $sql = $db->prepare("SELECT 1 FROM {$tabela} WHERE {$where} LIMIT 1");
+            $sql->execute($params);
+            return (bool) $sql->fetchColumn();
+        } catch (\PDOException $e) {
+            die("Erro na tabela {$tabela}: " . $e->getMessage());
+        }
     }
 }
