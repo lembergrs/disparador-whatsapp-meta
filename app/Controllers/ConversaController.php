@@ -125,6 +125,33 @@ class ConversaController extends Controller
         );
     }
 
+
+    public function duplicadas()
+    {
+        Auth::admin();
+        $this->jsonResponse(['ok'=>true, 'duplicadas'=>$this->conversaModel->listarDuplicadasNormalizadas()]);
+    }
+
+    public function unificarDuplicadas()
+    {
+        Auth::admin();
+        Csrf::exigirPost();
+        $resultado = $this->conversaModel->unificarDuplicadas(
+            (int) ($_POST['cliente_id'] ?? 0),
+            (int) ($_POST['meta_id'] ?? 0),
+            (string) ($_POST['numero'] ?? '')
+        );
+        $this->jsonResponse(['ok'=>!empty($resultado['sucesso']), 'message'=>$resultado['mensagem'] ?? 'Processado.']);
+    }
+
+    private function jsonResponse(array $payload, $status = 200)
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     public function enviar()
     {
         $usuario = Auth::usuario();

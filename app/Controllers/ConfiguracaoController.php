@@ -11,6 +11,8 @@ use Models\MetaEmbeddedSignupAttempt;
 use Services\EmbeddedSignupFlowService;
 use Services\MetaService;
 use Services\EmbeddedSignupAttemptCoordinator;
+use Services\EventoNotificacao;
+use Services\NotificacaoService;
 use Exception;
 
 class ConfiguracaoController extends Controller
@@ -634,11 +636,27 @@ class ConfiguracaoController extends Controller
             'status' => $statusConexao
         ]);
 
+        $this->dispararMetaConectada($clienteId);
+
         return [
             'conta_id' => $contaId,
             'status' => $statusConexao,
             'request_id' => $tentativa['request_id'] ?? null
         ];
+    }
+
+    private function dispararMetaConectada($clienteId)
+    {
+        try{
+            $cliente = $this->clienteModel->buscar($clienteId);
+            if($cliente){
+                (new NotificacaoService())->disparar(EventoNotificacao::META_CONECTADA, $cliente, [
+                    'link' => rtrim(BASE_URL, '/') . '/index.php?url=configuracao/meta'
+                ]);
+            }
+        }catch(\Throwable $e){
+            $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'etapa'=>'notificacao_meta_conectada','erro'=>$this->sanitizeMetaMessage($e->getMessage())]);
+        }
     }
 
     public function finalizarEmbeddedSignup()

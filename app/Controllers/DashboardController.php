@@ -33,6 +33,7 @@ class DashboardController extends Controller
         $cliente = null;
         $consumo = null;
         $excedente = null;
+        $onboardingChecklist = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -221,6 +222,8 @@ class DashboardController extends Controller
             ");
             $sql->execute([$cliId]);
             $ultimasConversas = $sql->fetchAll();
+
+            $onboardingChecklist = (new \Services\OnboardingChecklistService())->calcular($cliId);
         }
 
         $this->view(
@@ -245,7 +248,8 @@ class DashboardController extends Controller
                 'assinaturasAtivas' => $assinaturasAtivas,
                 'assinaturasPendentes' => $assinaturasPendentes,
                 'assinaturasVencidas' => $assinaturasVencidas,
-                'assinaturasCanceladas' => $assinaturasCanceladas
+                'assinaturasCanceladas' => $assinaturasCanceladas,
+                'onboardingChecklist' => $onboardingChecklist
             ]
         );
     }
