@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\TelefoneService;
 
 class Contato
 {
@@ -31,14 +32,19 @@ class Contato
 
     public function salvar($dados)
     {
+        $normalizado = TelefoneService::normalizar($dados['telefone']);
+        $existente = $this->buscarPorTelefone($dados['cliente_id'], $dados['telefone']);
+        if($existente){ return $existente['CON_ID']; }
+
         $sql = $this->db->prepare("
             INSERT INTO contatos (
                 CLI_ID,
                 CON_Nome,
                 CON_Telefone,
+                CON_TelefoneNormalizado,
                 CON_DadosJson
             ) VALUES (
-                ?, ?, ?, ?
+                ?, ?, ?, ?, ?
             )
         ");
 
@@ -46,6 +52,7 @@ class Contato
             $dados['cliente_id'],
             $dados['nome'],
             $dados['telefone'],
+            $normalizado,
             $dados['dados_json']
         ]);
 
@@ -56,19 +63,18 @@ class Contato
         $clienteID,
         $telefone
     ){
+        $variantes = TelefoneService::variantes($telefone);
+        $placeholders = implode(',', array_fill(0, count($variantes), '?'));
 
         $sql = $this->db->prepare("
             SELECT CON_ID
             FROM contatos
             WHERE CLI_ID = ?
-            AND CON_Telefone = ?
+            AND (CON_TelefoneNormalizado IN ({$placeholders}) OR CON_Telefone IN ({$placeholders}))
             LIMIT 1
         ");
 
-        $sql->execute([
-            $clienteID,
-            $telefone
-        ]);
+        $sql->execute(array_merge([(int)$clienteID], $variantes, $variantes));
 
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
@@ -138,19 +144,17 @@ class Contato
 
     public function buscarPorTelefone($clienteId, $telefone)
     {
+        $variantes = TelefoneService::variantes($telefone);
+        $placeholders = implode(',', array_fill(0, count($variantes), '?'));
         $sql = $this->db->prepare("
             SELECT *
             FROM contatos
             WHERE CLI_ID = ?
-            AND CON_Telefone = ?
+            AND (CON_TelefoneNormalizado IN ({$placeholders}) OR CON_Telefone IN ({$placeholders}))
             LIMIT 1
         ");
 
-        $sql->execute([
-            $clienteId,
-            $telefone
-        ]);
-
+        $sql->execute(array_merge([(int) $clienteId], $variantes, $variantes));
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -192,8 +196,12 @@ class Contato
             $params[] = '%' . $termo . '%';
 
             if($digitos !== ''){
-                $condicoes[] = 'CON_Telefone LIKE ?';
-                $params[] = '%' . $digitos . '%';
+                foreach(TelefoneService::variantes($digitos) as $variante){
+                    $condicoes[] = 'CON_TelefoneNormalizado = ?';
+                    $params[] = $variante;
+                    $condicoes[] = 'CON_Telefone LIKE ?';
+                    $params[] = '%' . $variante . '%';
+                }
 
                 if(substr($digitos, 0, 2) === '55'){
                     $semDdi = substr($digitos, 2);

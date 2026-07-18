@@ -14,7 +14,8 @@ function emailStaticNot($h, $n, $m){ emailStaticAssert(strpos($h, $n) === false,
 
 emailStaticHas($site, '$db->commit();', 'cadastro confirma transação antes do envio');
 emailStaticHas($site, 'enviarEmailBoasVindasCadastro', 'controller chama serviço de boas-vindas após cadastro');
-emailStaticHas($site, 'EmailBoasVindasService', 'controller não monta HTML nem SMTP diretamente');
+emailStaticHas($site, 'NotificacaoService', 'controller usa infraestrutura central de notificações');
+emailStaticHas($site, 'EventoNotificacao::BOAS_VINDAS', 'controller dispara evento de boas-vindas');
 emailStaticNot($site, 'isSMTP(', 'controller não configura PHPMailer');
 emailStaticNot($site, 'MAIL_PASSWORD', 'controller não conhece senha SMTP');
 emailStaticHas($site, 'Cadastro realizado com sucesso. Você já pode acessar sua conta.', 'falha de e-mail mantém mensagem neutra');

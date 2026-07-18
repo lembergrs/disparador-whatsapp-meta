@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\TelefoneService;
 
 class DisparoManual
 {
@@ -52,7 +53,7 @@ class DisparoManual
         return $sql->execute([
             $loteId,
             $clienteId,
-            $numero,
+            TelefoneService::normalizar($numero),
             json_encode($variaveis, JSON_UNESCAPED_UNICODE)
         ]);
     }

@@ -27,6 +27,18 @@ function formatarNumeroBR($numero)
 
 ?>
 
+
+<?php if(($usuario['nivel'] ?? null) == 'admin'){ ?>
+<div class="card card-outline card-warning mb-3">
+    <div class="card-header"><h3 class="card-title">Localizar conversas duplicadas</h3></div>
+    <div class="card-body">
+        <p class="text-muted">Identifica duplicidades por Conta Meta + telefone normalizado. A unificação não é automática.</p>
+        <button type="button" class="btn btn-warning btn-sm" id="btnLocalizarDuplicadas">Localizar conversas duplicadas</button>
+        <div class="table-responsive mt-3"><table class="table table-sm table-bordered d-none" id="tabelaDuplicadas"><thead><tr><th>Cliente</th><th>Conta Meta</th><th>Telefone</th><th>Conversas</th><th>Não lidas</th><th>Última mensagem</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
+    </div>
+</div>
+<?php } ?>
+
 <div class="row" id="conversasContainer">
 
     <div class="col-md-4">
@@ -1296,4 +1308,26 @@ document.addEventListener('DOMContentLoaded', function(){
 
 });
 
+</script>
+
+
+<script>
+$(function(){
+    $('#btnLocalizarDuplicadas').on('click', function(){
+        $.get(BASE_URL + '/index.php?url=conversa/duplicadas', function(resp){
+            const tabela = $('#tabelaDuplicadas'); const tbody = tabela.find('tbody'); tbody.empty();
+            (resp.duplicadas || []).forEach(function(item){
+                tbody.append('<tr><td>'+item.CLI_ID+'</td><td>'+item.MTA_ID+'</td><td>'+item.numero_normalizado+'</td><td>'+item.total_conversas+'</td><td>'+item.nao_lidas+'</td><td>'+(item.ultima_mensagem || '-')+'</td><td><button class="btn btn-sm btn-danger js-unificar-duplicada" data-cliente="'+item.CLI_ID+'" data-meta="'+item.MTA_ID+'" data-numero="'+item.numero_normalizado+'">Unificar</button></td></tr>');
+            });
+            if(!(resp.duplicadas || []).length){ tbody.append('<tr><td colspan="7" class="text-muted text-center">Nenhuma duplicidade encontrada.</td></tr>'); }
+            tabela.removeClass('d-none');
+        }, 'json');
+    });
+    $('#tabelaDuplicadas').on('click', '.js-unificar-duplicada', function(){
+        if(!confirm('Esta ação moverá mensagens e etiquetas para uma conversa principal e inativará duplicadas. Deseja continuar?')) return;
+        const btn = $(this).prop('disabled', true);
+        $.post(BASE_URL + '/index.php?url=conversa/unificarDuplicadas', {cliente_id:btn.data('cliente'), meta_id:btn.data('meta'), numero:btn.data('numero'), csrf_token:CSRF_TOKEN}, function(resp){ alert(resp.message || 'Processado.'); $('#btnLocalizarDuplicadas').click(); }, 'json')
+            .always(function(){ btn.prop('disabled', false); });
+    });
+});
 </script>

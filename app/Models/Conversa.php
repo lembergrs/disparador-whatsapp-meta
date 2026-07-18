@@ -5,6 +5,7 @@ namespace Models;
 use Core\Database;
 use Core\Auth;
 use PDO;
+use Services\TelefoneService;
 
 class Conversa
 {
@@ -69,24 +70,35 @@ class Conversa
 
     public function buscarOuCriar($clienteId, $metaId, $numero, $nome = null)
     {
+        $normalizado = TelefoneService::normalizar($numero);
+        try{
+            (new Contato())->salvar([
+                'cliente_id' => $clienteId,
+                'nome' => $nome ?: $numero,
+                'telefone' => $numero,
+                'dados_json' => json_encode([]),
+            ]);
+        }catch(\Throwable $e){}
+
+        $variantes = TelefoneService::variantes($numero);
+        $placeholders = implode(',', array_fill(0, count($variantes), '?'));
         $sql = $this->db->prepare("
             SELECT *
             FROM conversas
             WHERE CLI_ID = ?
             AND MTA_ID = ?
-            AND CVS_Numero = ?
+            AND (CVS_NumeroNormalizado IN ({$placeholders}) OR CVS_Numero IN ({$placeholders}))
+            AND CVS_Ativo = 'S'
+            ORDER BY CVS_DataUltimaMensagem DESC, CVS_ID DESC
             LIMIT 1
         ");
 
-        $sql->execute([
-            $clienteId,
-            $metaId,
-            $numero
-        ]);
+        $sql->execute(array_merge([$clienteId, $metaId], $variantes, $variantes));
 
         $conversa = $sql->fetch(PDO::FETCH_ASSOC);
 
         if($conversa){
+            if(empty($conversa['CVS_NumeroNormalizado'])){ $this->atualizarNumeroNormalizado($conversa['CVS_ID'], $normalizado); }
             return $conversa['CVS_ID'];
         }
 
@@ -96,13 +108,14 @@ class Conversa
                 CLI_ID,
                 MTA_ID,
                 CVS_Numero,
+                CVS_NumeroNormalizado,
                 CVS_Nome,
                 CVS_DataUltimaMensagem,
                 CVS_DataAtualizacao
             )
             VALUES
             (
-                ?, ?, ?, ?, NOW(), NOW()
+                ?, ?, ?, ?, ?, NOW(), NOW()
             )
         ");
 
@@ -110,6 +123,7 @@ class Conversa
             $clienteId,
             $metaId,
             $numero,
+            $normalizado,
             $nome
         ]);
 
@@ -231,18 +245,19 @@ class Conversa
                 preg_replace('/\D/', '', $busca);
 
             if($buscaNumerica != ''){
+                $variantesBusca = TelefoneService::variantes($buscaNumerica);
 
                 $where[] = "
                     (
                         c.CVS_Nome LIKE ?
                         OR c.CVS_Numero LIKE ?
-                        OR c.CVS_Numero LIKE ?
+                        OR c.CVS_NumeroNormalizado IN (" . implode(',', array_fill(0, count($variantesBusca), '?')) . ")
                     )
                 ";
 
                 $params[] = '%' . $busca . '%';
-                $params[] = '%' . $busca . '%';
                 $params[] = '%' . $buscaNumerica . '%';
+                foreach($variantesBusca as $variante){ $params[] = $variante; }
 
             }else{
 
@@ -746,6 +761,81 @@ class Conversa
         $this->tocarAtualizacao($conversaId, $clienteId);
 
         return true;
+    }
+
+
+    public function atualizarNumeroNormalizado($conversaId, $normalizado)
+    {
+        $sql = $this->db->prepare("UPDATE conversas SET CVS_NumeroNormalizado = ?, CVS_DataAtualizacao = NOW() WHERE CVS_ID = ?");
+        return $sql->execute([(string)$normalizado, (int)$conversaId]);
+    }
+
+    public function listarDuplicadasNormalizadas()
+    {
+        $sql = $this->db->query("
+            SELECT CVS_ID, CLI_ID, MTA_ID, CVS_Numero, CVS_NumeroNormalizado, CVS_QtdeNaoLidas, CVS_DataUltimaMensagem
+            FROM conversas
+            WHERE CVS_Ativo = 'S'
+            ORDER BY CVS_DataUltimaMensagem DESC, CVS_ID DESC
+            LIMIT 5000
+        ");
+
+        $grupos = [];
+        foreach($sql->fetchAll(PDO::FETCH_ASSOC) as $linha){
+            $normalizado = TelefoneService::normalizar($linha['CVS_NumeroNormalizado'] ?: $linha['CVS_Numero']);
+            if($normalizado === ''){ continue; }
+            $chave = $linha['CLI_ID'] . '|' . $linha['MTA_ID'] . '|' . $normalizado;
+            if(!isset($grupos[$chave])){
+                $grupos[$chave] = [
+                    'CLI_ID' => $linha['CLI_ID'],
+                    'MTA_ID' => $linha['MTA_ID'],
+                    'numero_normalizado' => $normalizado,
+                    'total_conversas' => 0,
+                    'nao_lidas' => 0,
+                    'ultima_mensagem' => $linha['CVS_DataUltimaMensagem'],
+                ];
+            }
+            $grupos[$chave]['total_conversas']++;
+            $grupos[$chave]['nao_lidas'] += (int)($linha['CVS_QtdeNaoLidas'] ?? 0);
+            if(strtotime($linha['CVS_DataUltimaMensagem'] ?? '1970-01-01') > strtotime($grupos[$chave]['ultima_mensagem'] ?? '1970-01-01')){
+                $grupos[$chave]['ultima_mensagem'] = $linha['CVS_DataUltimaMensagem'];
+            }
+        }
+
+        $duplicadas = array_values(array_filter($grupos, function($grupo){ return $grupo['total_conversas'] > 1; }));
+        usort($duplicadas, function($a, $b){
+            return [$b['total_conversas'], strtotime($b['ultima_mensagem'] ?? '1970-01-01')] <=> [$a['total_conversas'], strtotime($a['ultima_mensagem'] ?? '1970-01-01')];
+        });
+
+        return array_slice($duplicadas, 0, 100);
+    }
+
+    public function unificarDuplicadas($clienteId, $metaId, $numeroNormalizado)
+    {
+        $variantes = TelefoneService::variantes($numeroNormalizado);
+        $placeholders = implode(',', array_fill(0, count($variantes), '?'));
+        $sql = $this->db->prepare("SELECT * FROM conversas WHERE CLI_ID = ? AND MTA_ID = ? AND CVS_Ativo = 'S' AND (CVS_NumeroNormalizado IN ({$placeholders}) OR CVS_Numero IN ({$placeholders})) ORDER BY CVS_DataUltimaMensagem DESC, CVS_ID DESC");
+        $sql->execute(array_merge([(int)$clienteId, (int)$metaId], $variantes, $variantes));
+        $conversas = $sql->fetchAll(PDO::FETCH_ASSOC);
+        if(count($conversas) < 2){ return ['sucesso'=>false, 'mensagem'=>'Nenhuma duplicidade encontrada.']; }
+        $principal = array_shift($conversas);
+        $principalId = (int)$principal['CVS_ID'];
+        $this->db->beginTransaction();
+        try{
+            foreach($conversas as $dup){
+                $dupId = (int)$dup['CVS_ID'];
+                $this->db->prepare('UPDATE conversa_mensagens SET CVS_ID = ? WHERE CVS_ID = ?')->execute([$principalId, $dupId]);
+                $this->db->prepare('INSERT IGNORE INTO conversa_etiqueta_vinculos (CVS_ID, ETQ_ID) SELECT ?, ETQ_ID FROM conversa_etiqueta_vinculos WHERE CVS_ID = ?')->execute([$principalId, $dupId]);
+                if(!empty($dup['CON_Responsavel_USU_ID']) && strtotime($dup['CVS_DataAtualizacao'] ?? '1970-01-01') >= strtotime($principal['CVS_DataAtualizacao'] ?? '1970-01-01')){
+                    $this->db->prepare('UPDATE conversas SET CON_Responsavel_USU_ID = ? WHERE CVS_ID = ?')->execute([(int)$dup['CON_Responsavel_USU_ID'], $principalId]);
+                }
+                $this->db->prepare("UPDATE conversas SET CVS_Ativo = 'N', CVS_DataAtualizacao = NOW() WHERE CVS_ID = ?")->execute([$dupId]);
+            }
+            $naoLidas = (int)$this->db->query("SELECT COUNT(*) FROM conversa_mensagens WHERE CVS_ID = {$principalId} AND MSG_Direcao = 'recebida' AND MSG_Status = 'recebida'")->fetchColumn();
+            $this->db->prepare("UPDATE conversas SET CVS_NumeroNormalizado = ?, CVS_QtdeNaoLidas = ?, CVS_NaoLida = CASE WHEN ? > 0 THEN 'S' ELSE 'N' END, CVS_DataAtualizacao = NOW() WHERE CVS_ID = ?")->execute([$numeroNormalizado, $naoLidas, $naoLidas, $principalId]);
+            $this->db->commit();
+            return ['sucesso'=>true, 'mensagem'=>'Conversas unificadas com segurança.', 'principal_id'=>$principalId];
+        }catch(\Throwable $e){ $this->db->rollBack(); return ['sucesso'=>false, 'mensagem'=>'Falha ao unificar conversas.']; }
     }
 
     private function tocarAtualizacao($conversaId, $clienteId)

@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\TelefoneService;
 
 class Disparo
 {
@@ -57,7 +58,7 @@ class Disparo
             $dados['cliente'],
             $dados['meta'],
             $dados['template_id'],
-            $dados['numero'],
+            TelefoneService::normalizar($dados['numero']),
             $dados['template'],
             json_encode(
                 $dados['variaveis']
