@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS notificacoes_modelos (
+    NOM_ID INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    NOM_Evento VARCHAR(60) NOT NULL,
+    NOM_Canal VARCHAR(30) NOT NULL,
+    NOM_Assunto VARCHAR(190) NOT NULL,
+    NOM_Titulo VARCHAR(190) NOT NULL,
+    NOM_Corpo TEXT NOT NULL,
+    NOM_TextoBotao VARCHAR(80) NULL,
+    NOM_LinkBotao VARCHAR(255) NULL,
+    NOM_Ativo ENUM('S','N') NOT NULL DEFAULT 'S',
+    NOM_CriadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    NOM_AtualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (NOM_ID),
+    UNIQUE KEY uk_notificacoes_modelos_evento_canal (NOM_Evento, NOM_Canal),
+    KEY idx_notificacoes_modelos_ativo (NOM_Ativo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

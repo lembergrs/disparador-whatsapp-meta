@@ -47,7 +47,7 @@
         <form id="formConfiguracaoNotificacoes" method="post">
             <div class="table-responsive">
                 <table class="table table-bordered table-sm">
-                    <thead><tr><th>Evento</th><?php foreach($canais as $canal){ ?><th><?= htmlspecialchars(NotificacaoFormatador::canal($canal)); ?></th><?php } ?></tr></thead>
+                    <thead><tr><th>Evento</th><?php foreach($canais as $canal){ ?><th><?= htmlspecialchars(NotificacaoFormatador::canal($canal)); ?></th><?php } ?><th>Modelo</th><th>Ações</th></tr></thead>
                     <tbody>
                         <?php foreach($matrizConfiguracao as $linha){ ?>
                         <tr>
@@ -61,6 +61,8 @@
                                     <?php } ?>
                                 </td>
                             <?php } ?>
+                            <td><span class="badge badge-<?= !empty($modelosPersonalizados[$linha['evento']]) ? 'info' : 'light'; ?>"><?= !empty($modelosPersonalizados[$linha['evento']]) ? 'Personalizado' : 'Modelo padrão'; ?></span></td>
+                            <td><button type="button" class="btn btn-sm btn-outline-primary js-editar-modelo" data-evento="<?= htmlspecialchars($linha['evento']); ?>" data-canal="email" title="Editar modelo da notificação"><i class="fas fa-edit"></i> Editar</button></td>
                         </tr>
                         <?php } ?>
                     </tbody>
@@ -75,6 +77,28 @@
     <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
         <div class="modal-header"><h5 class="modal-title">Detalhes da notificação</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
         <div class="modal-body" id="conteudoDetalheNotificacao"><p class="text-muted">Carregando...</p></div>
+    </div></div>
+</div>
+
+
+
+<div class="modal fade" id="modalModeloNotificacao" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-xl" role="document"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title">Editar modelo da notificação</h5><button type="button" class="close" data-dismiss="modal">&times;</button></div>
+        <div class="modal-body">
+            <form id="formModeloNotificacao">
+                <input type="hidden" name="evento" id="modeloEvento"><input type="hidden" name="canal" id="modeloCanal" value="email">
+                <p><strong>Evento:</strong> <span id="modeloEventoLabel"></span> · <strong>Canal:</strong> <span id="modeloCanalLabel"></span></p>
+                <p><strong>Modelo atual:</strong> <span id="modeloEstado" class="badge badge-light">Padrão do sistema</span></p>
+                <div class="form-group"><label>Assunto</label><input name="assunto" id="modeloAssunto" class="form-control" maxlength="190" required></div>
+                <div class="form-group"><label>Título</label><input name="titulo" id="modeloTitulo" class="form-control" maxlength="190" required></div>
+                <div class="form-group"><label>Corpo da mensagem</label><textarea name="corpo" id="modeloCorpo" class="form-control" rows="8" maxlength="8000" required></textarea><small class="form-text text-muted">Permitido: parágrafos, quebras, negrito, itálico, listas e links. Scripts, iframes e eventos HTML serão removidos.</small></div>
+                <div class="row"><div class="col-md-6"><div class="form-group"><label>Texto do botão</label><input name="botao" id="modeloBotao" class="form-control" maxlength="80"></div></div><div class="col-md-6"><div class="form-group"><label>Link do botão</label><input name="link" id="modeloLink" class="form-control" maxlength="255"></div></div></div>
+                <div class="form-group"><label>Variáveis disponíveis</label><div id="modeloVariaveis" class="border rounded p-2 bg-light"></div></div>
+            </form>
+            <div id="modeloPreview" class="border rounded p-2 d-none"><h6>Pré-visualização</h6><p><strong>Assunto:</strong> <span id="previewAssunto"></span></p><iframe id="previewFrame" sandbox="" style="width:100%;min-height:420px;border:1px solid #ddd"></iframe></div>
+        </div>
+        <div class="modal-footer"><button type="button" id="btnRestaurarModelo" class="btn btn-outline-danger d-none">Restaurar padrão</button><button type="button" id="btnPreviewModelo" class="btn btn-info">Visualizar</button><button type="button" id="btnSalvarModelo" class="btn btn-primary">Salvar</button></div>
     </div></div>
 </div>
 
@@ -113,6 +137,26 @@ $(function(){
             .fail(function(xhr){ alert((xhr.responseJSON && xhr.responseJSON.message) || 'Não foi possível reenviar.'); })
             .always(function(){ btn.prop('disabled', false).text('Reenviar'); });
     });
+
+    let modeloPersonalizadoAtual = false;
+    function dadosModelo(){ return $('#formModeloNotificacao').serialize() + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN); }
+    $('#formModeloNotificacao').on('click', '.js-var', function(){ const campo = $('#modeloCorpo'); campo.val(campo.val() + ' ' + $(this).data('var')); campo.focus(); });
+    $('#formConfiguracaoNotificacoes').on('click', '.js-editar-modelo', function(){
+        const evento = $(this).data('evento');
+        $.get(BASE_URL + '/index.php?url=notificacao/modelo', {evento: evento, canal: 'email'}, function(resp){
+            const m = resp.modelo; modeloPersonalizadoAtual = !!m.personalizado;
+            $('#modeloEvento').val(m.evento); $('#modeloCanal').val(m.canal); $('#modeloEventoLabel').text(m.evento_label); $('#modeloCanalLabel').text(m.canal_label);
+            $('#modeloAssunto').val(m.assunto); $('#modeloTitulo').val(m.titulo); $('#modeloCorpo').val(m.corpo); $('#modeloBotao').val(m.botao); $('#modeloLink').val(m.link);
+            $('#modeloEstado').text(m.estado).toggleClass('badge-info', modeloPersonalizadoAtual).toggleClass('badge-light', !modeloPersonalizadoAtual);
+            $('#btnRestaurarModelo').toggleClass('d-none', !modeloPersonalizadoAtual); $('#modeloPreview').addClass('d-none');
+            let html = ''; Object.keys(m.variaveis || {}).forEach(function(v){ html += '<button type="button" class="btn btn-xs btn-outline-secondary mr-1 mb-1 js-var" data-var="'+v+'"><code>'+v+'</code> '+m.variaveis[v]+'</button>'; });
+            $('#modeloVariaveis').html(html || '<span class="text-muted">Nenhuma variável configurada.</span>'); $('#modalModeloNotificacao').modal('show');
+        }, 'json');
+    });
+    $('#btnPreviewModelo').on('click', function(){ $.post(BASE_URL + '/index.php?url=notificacao/previewModelo', dadosModelo(), function(resp){ $('#previewAssunto').text(resp.assunto); document.getElementById('previewFrame').srcdoc = resp.html; $('#modeloPreview').removeClass('d-none'); }, 'json').fail(function(xhr){ alert((xhr.responseJSON && xhr.responseJSON.message) || 'Não foi possível gerar prévia.'); }); });
+    $('#btnSalvarModelo').on('click', function(){ $.post(BASE_URL + '/index.php?url=notificacao/salvarModelo', dadosModelo(), function(resp){ alert(resp.message || 'Modelo salvo.'); location.reload(); }, 'json').fail(function(xhr){ alert((xhr.responseJSON && xhr.responseJSON.message) || 'Não foi possível salvar modelo.'); }); });
+    $('#btnRestaurarModelo').on('click', function(){ if(!confirm('Esta ação removerá a personalização e o sistema voltará a utilizar o modelo padrão. Deseja continuar?')) return; $.post(BASE_URL + '/index.php?url=notificacao/restaurarModelo', {evento: $('#modeloEvento').val(), canal: 'email', csrf_token: CSRF_TOKEN}, function(resp){ alert(resp.message || 'Modelo restaurado.'); location.reload(); }, 'json'); });
+
     $('#formConfiguracaoNotificacoes').on('submit', function(e){
         e.preventDefault();
         $.post(BASE_URL + '/index.php?url=notificacao/salvarConfiguracao', $(this).serialize() + '&csrf_token=' + encodeURIComponent(CSRF_TOKEN), function(resp){ alert(resp.message || 'Configuração salva.'); }, 'json')

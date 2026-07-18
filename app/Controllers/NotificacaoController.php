@@ -7,21 +7,25 @@ use Core\Controller;
 use Core\Csrf;
 use Models\Notificacao;
 use Models\NotificacaoConfiguracao;
+use Models\NotificacaoModelo;
 use Services\CanalNotificacao;
 use Services\EventoNotificacao;
 use Services\NotificacaoFormatador;
 use Services\NotificacaoService;
+use Services\EmailService;
 
 class NotificacaoController extends Controller
 {
     private $notificacoes;
     private $configuracoes;
+    private $modelos;
 
     public function __construct()
     {
         Auth::admin();
         $this->notificacoes = new Notificacao();
         $this->configuracoes = new NotificacaoConfiguracao();
+        $this->modelos = new NotificacaoModelo();
     }
 
     public function index()
@@ -33,6 +37,7 @@ class NotificacaoController extends Controller
             'eventos' => EventoNotificacao::todos(),
             'canais' => $this->configuracoes->canaisConhecidos(),
             'matrizConfiguracao' => $this->configuracoes->matriz($configPadrao),
+            'modelosPersonalizados' => $this->modelos->personalizadosMapa(),
         ]);
     }
 
@@ -78,12 +83,99 @@ class NotificacaoController extends Controller
         $this->json(['ok'=>!empty($resultado['sucesso']), 'message'=>!empty($resultado['sucesso']) ? 'Notificação reenviada com sucesso.' : NotificacaoFormatador::sanitizarTexto($resultado['mensagem'] ?? 'Não foi possível reenviar.'), 'row'=>$this->linhaDataTable($final)]);
     }
 
+
+
+    public function modelo()
+    {
+        $evento = (string) ($_GET['evento'] ?? '');
+        $canal = (string) ($_GET['canal'] ?? CanalNotificacao::EMAIL);
+        if(!$this->eventoValido($evento) || $canal !== CanalNotificacao::EMAIL){ $this->json(['ok'=>false,'message'=>'Evento ou canal inválido.'], 422); }
+        $email = new EmailService();
+        $modelo = $email->modelo($evento);
+        if(!$modelo){ $this->json(['ok'=>false,'message'=>'Modelo inexistente.'], 404); }
+        $personalizado = $this->modelos->buscarAtivo($evento, $canal);
+        $this->json(['ok'=>true, 'modelo'=>[
+            'evento'=>$evento, 'evento_label'=>NotificacaoFormatador::evento($evento), 'canal'=>$canal, 'canal_label'=>NotificacaoFormatador::canal($canal),
+            'assunto'=>$modelo['assunto'] ?? '', 'titulo'=>$modelo['titulo'] ?? '', 'corpo'=>$modelo['mensagem'] ?? '', 'botao'=>$modelo['botao'] ?? '', 'link'=>$modelo['link'] ?? rtrim(BASE_URL, '/') . '/index.php?url=dashboard',
+            'personalizado'=>(bool)$personalizado, 'estado'=>$personalizado ? 'Personalizado' : 'Padrão do sistema', 'variaveis'=>EmailService::variaveisPorEvento($evento)
+        ]]);
+    }
+
+    public function previewModelo()
+    {
+        Csrf::exigirPost();
+        [$evento, $rascunho] = $this->validarModeloPost(false);
+        $preview = (new EmailService())->preview($evento, $rascunho);
+        $this->json(['ok'=>true, 'assunto'=>$preview['assunto'], 'html'=>$preview['html']]);
+    }
+
+    public function salvarModelo()
+    {
+        Csrf::exigirPost();
+        [$evento, $rascunho] = $this->validarModeloPost(true);
+        $this->modelos->salvar(['evento'=>$evento, 'canal'=>CanalNotificacao::EMAIL, 'assunto'=>$rascunho['assunto'], 'titulo'=>$rascunho['titulo'], 'corpo'=>$rascunho['mensagem'], 'botao'=>$rascunho['botao'], 'link'=>$rascunho['link']]);
+        $this->json(['ok'=>true, 'message'=>'Modelo personalizado salvo com sucesso.']);
+    }
+
+    public function restaurarModelo()
+    {
+        Csrf::exigirPost();
+        $evento = (string) ($_POST['evento'] ?? '');
+        $canal = (string) ($_POST['canal'] ?? CanalNotificacao::EMAIL);
+        if(!$this->eventoValido($evento) || $canal !== CanalNotificacao::EMAIL){ $this->json(['ok'=>false,'message'=>'Evento ou canal inválido.'], 422); }
+        $this->modelos->restaurar($evento, $canal);
+        $this->json(['ok'=>true, 'message'=>'Modelo padrão restaurado com sucesso.']);
+    }
+
     public function salvarConfiguracao()
     {
         Csrf::exigirPost();
         $eventosEmail = array_values(array_intersect($_POST['email'] ?? [], EventoNotificacao::todos()));
         $this->configuracoes->salvarEmailPorEvento($eventosEmail);
         $this->json(['ok'=>true, 'message'=>'Configuração de canais atualizada com sucesso.']);
+    }
+
+
+
+    private function validarModeloPost($persistir)
+    {
+        $evento = (string) ($_POST['evento'] ?? '');
+        $canal = (string) ($_POST['canal'] ?? CanalNotificacao::EMAIL);
+        if(!$this->eventoValido($evento) || $canal !== CanalNotificacao::EMAIL){ $this->json(['ok'=>false,'message'=>'Evento ou canal inválido.'], 422); }
+        $rascunho = [
+            'assunto'=>$this->limparCampo($_POST['assunto'] ?? '', 190, false),
+            'titulo'=>$this->limparCampo($_POST['titulo'] ?? '', 190, false),
+            'mensagem'=>$this->sanitizarHtml($_POST['corpo'] ?? ''),
+            'botao'=>$this->limparCampo($_POST['botao'] ?? '', 80, true),
+            'link'=>$this->limparCampo($_POST['link'] ?? '', 255, true),
+            'complemento'=>'',
+        ];
+        if($rascunho['assunto'] === '' || $rascunho['titulo'] === '' || trim(strip_tags($rascunho['mensagem'])) === ''){
+            $this->json(['ok'=>false,'message'=>'Informe assunto, título e corpo.'], 422);
+        }
+        $invalidos = EmailService::placeholdersInvalidos($evento, [$rascunho['assunto'], $rascunho['titulo'], $rascunho['mensagem'], $rascunho['botao'], $rascunho['link']]);
+        if($invalidos){ $this->json(['ok'=>false,'message'=>'Variáveis inválidas: ' . implode(', ', $invalidos)], 422); }
+        return [$evento, $rascunho];
+    }
+
+    private function eventoValido($evento){ return in_array($evento, EventoNotificacao::todos(), true); }
+
+    private function limparCampo($valor, $limite, $opcional)
+    {
+        $valor = trim(strip_tags((string)$valor));
+        $valor = NotificacaoFormatador::sanitizarTexto($valor);
+        $valor = mb_substr($valor, 0, $limite, 'UTF-8');
+        return $opcional ? $valor : trim($valor);
+    }
+
+    private function sanitizarHtml($html)
+    {
+        $html = mb_substr((string)$html, 0, 8000, 'UTF-8');
+        $html = preg_replace('/<\s*(script|iframe|object|embed|form)[^>]*>.*?<\s*\/\s*(script|iframe|object|embed|form)\s*>/is', '', $html);
+        $html = preg_replace("/\s+on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)/i", '', $html);
+        $html = preg_replace('/javascript\s*:/i', '', $html);
+        $permitidas = '<p><br><strong><b><em><i><ul><ol><li><a>';
+        return trim(strip_tags($html, $permitidas));
     }
 
     private function filtrosRequest()

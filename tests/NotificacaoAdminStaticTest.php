@@ -9,6 +9,9 @@ $service = file_get_contents($root . '/app/Services/NotificacaoService.php');
 $formatador = file_get_contents($root . '/app/Services/NotificacaoFormatador.php');
 $menu = file_get_contents($root . '/app/Views/layouts/master.php');
 $migration = file_get_contents($root . '/database/migrations/20260718_create_notificacoes_configuracoes.sql');
+$modelo = file_get_contents($root . '/app/Models/NotificacaoModelo.php');
+$modeloMigration = file_get_contents($root . '/database/migrations/20260718_create_notificacoes_modelos.sql');
+$email = file_get_contents($root . '/app/Services/EmailService.php');
 
 function notifAdminAssert($cond, $msg){ if(!$cond){ fwrite(STDERR, "FAIL: {$msg}\n"); exit(1); } }
 
@@ -31,5 +34,18 @@ notifAdminAssert(strpos($configModel, 'canalImplementado($canal){ return $canal 
 notifAdminAssert(strpos($service, 'canaisEfetivos') !== false, 'NotificacaoService lê configuração efetiva central');
 notifAdminAssert(strpos($migration, 'UNIQUE KEY uk_notificacoes_config_evento_canal') !== false, 'chave evento + canal é única');
 notifAdminAssert(strpos($menu, 'url=notificacao') !== false && strpos($menu, "usuario['nivel'] == 'admin'") !== false, 'menu Notificações fica no bloco admin');
+
+notifAdminAssert(strpos($controller, 'public function modelo()') !== false && strpos($controller, 'previewModelo') !== false && strpos($controller, 'salvarModelo') !== false && strpos($controller, 'restaurarModelo') !== false, 'controller possui rotas administrativas de modelos');
+notifAdminAssert(strpos($controller, 'validarModeloPost') !== false && strpos($controller, 'placeholdersInvalidos') !== false, 'salvamento valida placeholders');
+notifAdminAssert(strpos($controller, 'sanitizarHtml') !== false && strpos($controller, 'script|iframe|object|embed|form') !== false, 'backend sanitiza HTML perigoso');
+notifAdminAssert(strpos($view, 'Editar modelo da notificação') !== false && strpos($view, 'js-editar-modelo') !== false, 'view possui ícone/modal de edição');
+notifAdminAssert(strpos($view, 'Visualizar') !== false && strpos($view, 'previewFrame') !== false && strpos($view, 'sandbox=""') !== false, 'prévia usa iframe seguro sem enviar e-mail');
+notifAdminAssert(strpos($view, 'Restaurar padrão') !== false && strpos($view, 'Esta ação removerá a personalização') !== false, 'restauração exige confirmação');
+notifAdminAssert(strpos($view, 'Personalizado') !== false && strpos($view, 'Modelo padrão') !== false, 'indicador de modelo aparece');
+notifAdminAssert(strpos($modeloMigration, 'CREATE TABLE IF NOT EXISTS notificacoes_modelos') !== false && strpos($modeloMigration, 'UNIQUE KEY uk_notificacoes_modelos_evento_canal') !== false, 'migration de modelos cria unique evento canal');
+notifAdminAssert(strpos($modelo, 'ON DUPLICATE KEY UPDATE') !== false && strpos($modelo, 'NOM_Ativo') !== false, 'model persiste e restaura personalizações');
+notifAdminAssert(strpos($email, 'buscarAtivo($evento, CanalNotificacao::EMAIL)') !== false && strpos($email, 'self::TEMPLATES[$evento] ?? null') !== false, 'EmailService usa modelo ativo com fallback');
+notifAdminAssert(strpos($email, 'variaveisPorEvento') !== false && strpos($email, 'placeholdersInvalidos') !== false && strpos($email, 'dadosPreview') !== false, 'EmailService centraliza variáveis, validação e preview');
+
 
 echo "NotificacaoAdminStaticTest OK\n";

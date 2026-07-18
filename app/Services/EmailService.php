@@ -3,13 +3,15 @@
 namespace Services;
 
 use PHPMailer\PHPMailer\PHPMailer;
+use Models\NotificacaoModelo;
 
 class EmailService
 {
     private $mailerFactory;
     private $config;
+    private $modeloRepository;
 
-    private const TEMPLATES = [
+    public const TEMPLATES = [
         EventoNotificacao::BOAS_VINDAS => ['assunto' => 'Bem-vindo ao Disparador.net', 'titulo' => 'Bem-vindo ao Disparador.net', 'mensagem' => 'Olá, {{NOME}}! Seu cadastro foi concluído. Agora conecte sua conta Meta para começar.', 'botao' => 'Acessar minha conta', 'complemento' => 'O trial começa após a conexão do número do WhatsApp.'],
         EventoNotificacao::META_CONECTADA => ['assunto' => 'Conta Meta conectada', 'titulo' => 'Conta Meta conectada', 'mensagem' => 'Sua conta Meta foi vinculada ao Disparador. Próximo passo: registrar o número e preparar templates.', 'botao' => 'Abrir configurações', 'complemento' => 'Quando novos canais forem ativados, este evento poderá notificá-los sem alteração nos controllers.'],
         EventoNotificacao::TRIAL_3_DIAS => ['assunto' => 'Seu trial termina em 3 dias', 'titulo' => 'Faltam 3 dias de trial', 'mensagem' => 'Seu período de avaliação termina em {{DIAS}} dias. Revise seu plano para continuar usando o Disparador.', 'botao' => 'Ver planos', 'complemento' => 'Mensagens restantes: {{MENSAGENS}}.'],
@@ -20,21 +22,23 @@ class EmailService
         EventoNotificacao::CONTA_REATIVADA => ['assunto' => 'Conta reativada', 'titulo' => 'Conta reativada', 'mensagem' => 'Sua conta foi reativada com sucesso.', 'botao' => 'Acessar Disparador', 'complemento' => 'Você já pode retomar suas operações.'],
     ];
 
-    public function __construct(callable $mailerFactory = null, array $config = null)
+    public function __construct(callable $mailerFactory = null, array $config = null, $modeloRepository = null)
     {
         $this->mailerFactory = $mailerFactory;
         $this->config = $config ?: (file_exists(__DIR__ . '/../../config/mail.php') ? require __DIR__ . '/../../config/mail.php' : []);
+        $this->modeloRepository = $modeloRepository ?: new NotificacaoModelo();
     }
 
     public function preparar($evento, array $contexto)
     {
-        if(empty(self::TEMPLATES[$evento])){
-            return ['sucesso' => false, 'status' => 'erro_definitivo', 'error_code' => 'template_inexistente', 'mensagem' => 'Template inexistente.'];
+        $tpl = $this->modelo($evento);
+        if(!$tpl){
+            return ['sucesso' => false, 'status' => 'erro_definitivo', 'error_code' => 'modelo_inexistente', 'mensagem' => 'Modelo inexistente.'];
         }
-        $tpl = self::TEMPLATES[$evento];
         $vars = $this->variaveis($contexto);
-        $html = $this->renderizarLayout($tpl['titulo'], $tpl['mensagem'], $tpl['botao'], $tpl['complemento'], $vars);
-        return ['assunto' => $this->substituir($tpl['assunto'], $vars), 'html' => $html, 'texto' => strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $html))];
+        $html = $this->renderizarLayout($tpl['titulo'], $tpl['mensagem'], $tpl['botao'], $tpl['complemento'] ?? '', $vars);
+        return ['assunto' => $this->substituir($tpl['assunto'], $vars), 'html' => $html, 'texto' => strip_tags(str_replace(['<br>', '<br/>', '<br />'], "
+", $html))];
     }
 
     public function enviarEvento($evento, array $contexto)
@@ -52,6 +56,59 @@ class EmailService
     }
 
     public function substituir($texto, array $vars) { return strtr((string) $texto, $vars); }
+
+    public function modelo($evento, array $rascunho = null)
+    {
+        if($rascunho) return $rascunho;
+        $personalizado = $this->modeloRepository ? $this->modeloRepository->buscarAtivo($evento, CanalNotificacao::EMAIL) : null;
+        if($personalizado){
+            return [
+                'assunto' => $personalizado['NOM_Assunto'],
+                'titulo' => $personalizado['NOM_Titulo'],
+                'mensagem' => $personalizado['NOM_Corpo'],
+                'botao' => $personalizado['NOM_TextoBotao'] ?: 'Abrir Disparador',
+                'complemento' => '',
+                'link' => $personalizado['NOM_LinkBotao'] ?: null,
+                'personalizado' => true,
+            ];
+        }
+        return self::TEMPLATES[$evento] ?? null;
+    }
+
+    public function preview($evento, array $rascunho)
+    {
+        $tpl = $this->modelo($evento, $rascunho);
+        $vars = $this->variaveis($this->dadosPreview());
+        $html = $this->renderizarLayout($tpl['titulo'], $tpl['mensagem'], $tpl['botao'], '', $vars);
+        return ['assunto'=>$this->substituir($tpl['assunto'], $vars), 'html'=>$html];
+    }
+
+    public static function variaveisPorEvento($evento)
+    {
+        $map = [
+            EventoNotificacao::BOAS_VINDAS => ['{{NOME}}'=>'Nome do cliente','{{EMPRESA}}'=>'Nome da empresa','{{EMAIL}}'=>'E-mail do cliente','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::META_CONECTADA => ['{{NOME}}'=>'Nome do cliente','{{EMPRESA}}'=>'Nome da empresa','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::TRIAL_3_DIAS => ['{{NOME}}'=>'Nome do cliente','{{DIAS}}'=>'Dias restantes','{{MENSAGENS}}'=>'Mensagens restantes','{{PLANO}}'=>'Plano do cliente','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::TRIAL_ULTIMO_DIA => ['{{NOME}}'=>'Nome do cliente','{{PLANO}}'=>'Plano do cliente','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::TRIAL_ENCERRADO => ['{{NOME}}'=>'Nome do cliente','{{DATA}}'=>'Data do encerramento','{{PLANO}}'=>'Plano do cliente','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::PAGAMENTO_APROVADO => ['{{NOME}}'=>'Nome do cliente','{{PLANO}}'=>'Plano do cliente','{{DATA}}'=>'Data do pagamento','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::PAGAMENTO_PENDENTE => ['{{NOME}}'=>'Nome do cliente','{{PLANO}}'=>'Plano do cliente','{{DATA}}'=>'Data da pendência','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::CONTA_REATIVADA => ['{{NOME}}'=>'Nome do cliente','{{EMPRESA}}'=>'Nome da empresa','{{LINK}}'=>'Link principal da ação'],
+        ];
+        return $map[$evento] ?? [];
+    }
+
+    public static function placeholdersInvalidos($evento, array $campos)
+    {
+        preg_match_all('/{{\s*[A-Z0-9_]+\s*}}/', implode(' ', $campos), $m);
+        $usados = array_unique(array_map(function($v){ return preg_replace('/\s+/', '', $v); }, $m[0] ?? []));
+        return array_values(array_diff($usados, array_keys(self::variaveisPorEvento($evento))));
+    }
+
+    private function dadosPreview()
+    {
+        return ['nome'=>'Rodrigo','empresa'=>'Empresa Exemplo','email'=>'contato@exemplo.com','link'=>'https://disparador.net','plano'=>'Plano Exemplo','data'=>date('d/m/Y'),'dias'=>3,'mensagens'=>200];
+    }
 
     private function variaveis(array $c)
     {
