@@ -28,34 +28,82 @@ function formatarNumeroBR($numero)
 ?>
 
 
-<?php if(($usuario['nivel'] ?? null) == 'admin'){ ?>
-<div class="card card-outline card-warning mb-3">
-    <div class="card-header"><h3 class="card-title">Localizar conversas duplicadas</h3></div>
-    <div class="card-body">
-        <p class="text-muted">Identifica duplicidades por Conta Meta + telefone normalizado. A unificação não é automática.</p>
-        <button type="button" class="btn btn-warning btn-sm" id="btnLocalizarDuplicadas">Localizar conversas duplicadas</button>
-        <div class="table-responsive mt-3"><table class="table table-sm table-bordered d-none" id="tabelaDuplicadas"><thead><tr><th>Cliente</th><th>Conta Meta</th><th>Telefone</th><th>Conversas</th><th>Não lidas</th><th>Última mensagem</th><th>Ações</th></tr></thead><tbody></tbody></table></div>
-    </div>
-</div>
-<?php } ?>
-
 <div class="row" id="conversasContainer">
 
     <div class="col-md-4">
 
         <div class="card conversas-resizable-card">
 
-            <div class="card-header bg-light">
-                <strong>
+            <div class="card-header bg-light d-flex flex-wrap align-items-center justify-content-between">
+                <strong class="mr-2 mb-2 mb-sm-0">
                     <i class="fas fa-comments"></i>
                     Conversas
                 </strong>
-                <?php if(!empty($podeNovaConversa)){ ?>
-                    <button type="button" class="btn btn-sm btn-success float-right" id="btnNovaConversa">
-                        <i class="fas fa-plus"></i> Nova conversa
-                    </button>
-                <?php } ?>
+
+                <div class="d-flex flex-wrap align-items-center ml-sm-auto">
+                    <?php if(($usuario['nivel'] ?? null) == 'admin'){ ?>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary mr-2 mb-2 mb-sm-0"
+                            id="btnFerramentasConversas"
+                            data-toggle="collapse"
+                            data-target="#collapseFerramentasConversas"
+                            aria-expanded="false"
+                            aria-controls="collapseFerramentasConversas"
+                        >
+                            <i class="fas fa-tools"></i> Ferramentas
+                        </button>
+                    <?php } ?>
+
+                    <?php if(!empty($podeNovaConversa)){ ?>
+                        <button type="button" class="btn btn-sm btn-success mb-2 mb-sm-0" id="btnNovaConversa">
+                            <i class="fas fa-plus"></i> Nova conversa
+                        </button>
+                    <?php } ?>
+                </div>
             </div>
+
+            <?php if(($usuario['nivel'] ?? null) == 'admin'){ ?>
+                <div class="collapse" id="collapseFerramentasConversas">
+                    <div class="card card-outline card-warning m-2 mb-0">
+                        <div class="card-header">
+                            <h3 class="card-title">Manutenção de conversas</h3>
+                            <div class="card-tools">
+                                <button
+                                    type="button"
+                                    class="btn btn-tool"
+                                    data-toggle="collapse"
+                                    data-target="#collapseFerramentasConversas"
+                                    aria-label="Fechar ferramentas"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Identifica duplicidades por Conta Meta + telefone normalizado.</p>
+                            <p class="text-warning mb-3"><i class="fas fa-exclamation-triangle"></i> A unificação não é automática e exige confirmação antes da execução.</p>
+                            <button type="button" class="btn btn-warning btn-sm" id="btnLocalizarDuplicadas">Localizar conversas duplicadas</button>
+                            <div class="table-responsive mt-3">
+                                <table class="table table-sm table-bordered d-none" id="tabelaDuplicadas">
+                                    <thead>
+                                        <tr>
+                                            <th>Cliente</th>
+                                            <th>Conta Meta</th>
+                                            <th>Telefone</th>
+                                            <th>Conversas</th>
+                                            <th>Não lidas</th>
+                                            <th>Última mensagem</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php } ?>
 
             <div class="border-bottom p-2">
 
@@ -1313,6 +1361,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <script>
 $(function(){
+    $('#collapseFerramentasConversas').on('shown.bs.collapse', function(){
+        $('#btnFerramentasConversas').addClass('active').attr('aria-expanded', 'true');
+    }).on('hidden.bs.collapse', function(){
+        $('#btnFerramentasConversas').removeClass('active').attr('aria-expanded', 'false');
+    });
+
     $('#btnLocalizarDuplicadas').on('click', function(){
         $.get(BASE_URL + '/index.php?url=conversa/duplicadas', function(resp){
             const tabela = $('#tabelaDuplicadas'); const tbody = tabela.find('tbody'); tbody.empty();
