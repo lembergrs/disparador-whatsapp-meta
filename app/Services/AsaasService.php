@@ -136,7 +136,7 @@ class AsaasService
         return $this->request('POST', '/customers', $payload);
     }
 
-    public function criarCobranca($cliente, $cobranca)
+    public function criarCobranca($cliente, $cobranca, $externalReference = null)
     {
         $payload = [
             'customer' => $cliente['CLI_ProviderCustomerId'],
@@ -144,7 +144,7 @@ class AsaasService
             'dueDate' => $cobranca['COB_DataVencimento'],
             'value' => (float) $cobranca['COB_Valor'],
             'description' => $cobranca['descricao'] ?? 'Mensalidade Disparador.net',
-            'externalReference' => 'cobranca_' . $cobranca['COB_ID']
+            'externalReference' => $externalReference ?: 'cobranca_' . $cobranca['COB_ID']
         ];
 
         return $this->request('POST', '/payments', $payload);

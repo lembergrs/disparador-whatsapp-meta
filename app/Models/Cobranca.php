@@ -247,6 +247,13 @@ class Cobranca
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarPorCompetencia($assinaturaId, $vencimento, $tipo = 'mensalidade')
+    {
+        $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE ASS_ID = ? AND COB_DataVencimento = ? AND COB_Tipo = ? LIMIT 1");
+        $sql->execute([$assinaturaId, $vencimento, $tipo]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function criarRecorrenteIdempotente(array $dados)
     {
         try{
@@ -256,18 +263,30 @@ class Cobranca
                 throw $e;
             }
 
-            $existente = $this->buscarRecorrente(
-                $dados['cliente'],
-                $dados['plano'],
+            $existente = $this->buscarPorCompetencia(
+                $dados['assinatura'],
                 $dados['vencimento'],
-                $dados['tipo'] ?? 'mensalidade',
-                $dados['assinatura'] ?? null
+                $dados['tipo'] ?? 'mensalidade'
             );
             if(!$existente){
                 throw $e;
             }
             return ['id' => (int) $existente['COB_ID'], 'criada' => false];
         }
+    }
+
+    public function prepararReprocessamento($id, $tentativa)
+    {
+        $sets = ["COB_Status = 'pendente'"];
+        foreach(['COB_ProviderPaymentId','COB_LinkPagamento','COB_PixCopiaCola','COB_QrCode','COB_LinhaDigitavel'] as $coluna){
+            if($this->colunaExiste('cobrancas', $coluna)){ $sets[] = $coluna . ' = NULL'; }
+        }
+        if($this->colunaExiste('cobrancas', 'COB_ProviderStatus')){
+            $status = (int) $tentativa <= 1 ? 'reprocessamento_base' : 'reprocessamento_tentativa_' . (int) $tentativa;
+            $sets[] = "COB_ProviderStatus = " . $this->db->quote($status);
+        }
+        $sql = $this->db->prepare('UPDATE cobrancas SET ' . implode(', ', $sets) . ' WHERE COB_ID = ?');
+        return $sql->execute([$id]);
     }
 
     public function comLockIntegracao($id, callable $operacao)

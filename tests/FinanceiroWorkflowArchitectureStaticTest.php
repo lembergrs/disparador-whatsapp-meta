@@ -38,7 +38,9 @@ arquiteturaAssert(strpos(file_get_contents($root . '/app/Controllers/AsaasContro
 arquiteturaAssert(strpos($migration, 'uk_cobrancas_assinatura_competencia_tipo') !== false, 'recorrência possui constraint única');
 arquiteturaAssert(strpos($migration, 'uk_cobranca_eventos_provider_evento') !== false, 'webhook possui constraint única');
 arquiteturaAssert(strpos($cobranca, "getCode() === '23000'") !== false, 'model trata disputa de chave única');
+arquiteturaAssert(preg_match("/catch\(PDOException.*?buscarPorCompetencia\(/s", $cobranca), 'violação 23000 busca pela chave completa inclusive canceladas');
 arquiteturaAssert(strpos($asaas, 'buscarCobrancaPorReferenciaExterna') !== false, 'Asaas permite reconciliação por referência');
+arquiteturaAssert(strpos($workflow, '_tentativa_') !== false, 'reprocessamento externo cancelado usa referência versionada determinística');
 arquiteturaAssert(strpos($workflow, 'cancelarAssinatura') !== false && strpos($workflow, 'cancelarContratoPorAssinatura') === false, 'cancelamento pontual é separado do contrato');
 
 echo "FinanceiroWorkflowArchitectureStaticTest OK\n";
