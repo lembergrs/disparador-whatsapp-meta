@@ -7,11 +7,8 @@ use Core\Auth;
 use Core\Session;
 use Models\Plano;
 use Models\Cobranca;
-use Core\Database;
 use Models\Cliente;
-use Models\MetaConta;
-use Models\Assinatura;
-use Services\FinanceiroRecorrenciaService;
+use Services\FinanceiroWorkflowService;
 
 class FinanceiroAdminController extends Controller
 {
@@ -169,107 +166,22 @@ class FinanceiroAdminController extends Controller
     public function marcarPago()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
-        $id = (int) ($_GET['id'] ?? 0);
-
-        if(!$id){
-            $this->redirect('financeiroAdmin#tabCobrancas');
-        }
-
-        $cobrancaModel = new Cobranca();
-
-        $cobranca =
-            $cobrancaModel->buscar($id);
-
-        if(!$cobranca){
-            $this->redirect('financeiroAdmin#tabCobrancas');
-        }
-
-        $statusCobranca = strtolower(trim((string) ($cobranca['COB_Status'] ?? '')));
-
-        if(!in_array($statusCobranca, ['pendente', 'vencido'], true)){
-            Session::flash(
-                'error',
-                'Não foi possível lançar o pagamento.'
-            );
-
-            $this->redirect('financeiroAdmin#tabCobrancas');
-        }
-
-        $db = Database::getInstance();
-
-        $db->beginTransaction();
-
         try{
-
-            $cobrancaModel->marcarPago($id);
-
-            $sql = $db->prepare("
-                UPDATE clientes
-                SET
-                    CLI_StatusPagamento = 'pago',
-                    CLI_StatusCadastro = 'ativo',
-                    CLI_DataLiberacao = COALESCE(CLI_DataLiberacao, NOW())
-                WHERE CLI_ID = ?
-            ");
-
-            $sql->execute([
-                $cobranca['CLI_ID']
-            ]);
-
-            $assinaturaModel = new Assinatura();
-            $assinatura = $assinaturaModel->buscarParaPagamento(
-                $cobranca['CLI_ID'],
-                $cobranca['PLA_ID']
-            );
-
-            if($assinatura){
-                $assinaturaModel->ativar($assinatura['ASS_ID']);
-            }
-
-            $db->commit();
-
-            Session::flash(
-                'success',
-                'Pagamento lançado com sucesso.'
-            );
-
-        }catch(\Exception $e){
-
-            $db->rollBack();
-
-            Session::flash(
-                'error',
-                'Não foi possível lançar o pagamento.'
-            );
+            (new FinanceiroWorkflowService())->confirmarPagamentoManual((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Pagamento lançado com sucesso.');
+        }catch(\Throwable $e){
+            Session::flash('error', $e instanceof \DomainException ? $e->getMessage() : 'Não foi possível lançar o pagamento.');
         }
-
-        $this->redirect('financeiroAdmin');
+        $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
     public function cancelarCobranca()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
-        $id = (int) ($_GET['id'] ?? 0);
-
-        if(!$id){
-            $this->redirect('financeiroAdmin');
-        }
-
-        $cobrancaModel = new Cobranca();
-
-        $cobrancaModel->cancelar($id);
-
-        Session::flash(
-            'success',
-            'Cobrança cancelada.'
-        );
-
+        (new FinanceiroWorkflowService())->cancelarCobranca((int) ($_GET['id'] ?? 0));
+        Session::flash('success', 'Cobrança cancelada.');
         $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
@@ -277,29 +189,11 @@ class FinanceiroAdminController extends Controller
     public function processarVencimentos()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
         try{
-            $service = new FinanceiroRecorrenciaService();
-            $resultado = $service->processarVencimentos();
-
-            Session::flash(
-                'success',
-                'Vencimentos processados com sucesso. Cobranças vencidas: ' .
-                $resultado['cobrancas_vencidas'] .
-                ' | Assinaturas vencidas: ' .
-                $resultado['assinaturas_vencidas'] .
-                ' | Clientes atualizados: ' .
-                $resultado['clientes_atualizados'] . '.'
-            );
-        }catch(\Exception $e){
-            Session::flash(
-                'error',
-                'Erro ao processar vencimentos financeiros.'
-            );
-        }
-
+            $resultado = (new FinanceiroWorkflowService())->processarVencimentos();
+            Session::flash('success', 'Vencimentos processados com sucesso. Cobranças vencidas: ' . $resultado['cobrancas_vencidas'] . ' | Assinaturas vencidas: ' . $resultado['assinaturas_vencidas'] . ' | Clientes atualizados: ' . $resultado['clientes_atualizados'] . '.');
+        }catch(\Throwable $e){ Session::flash('error', 'Erro ao processar vencimentos financeiros.'); }
         $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
@@ -307,218 +201,41 @@ class FinanceiroAdminController extends Controller
     public function gerarCobrancasRecorrentes()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
         try{
-            $service = new FinanceiroRecorrenciaService();
-            $resultado = $service->gerarCobrancasRecorrentes();
-
-            Session::flash(
-                'success',
-                'Cobranças recorrentes processadas. Geradas: ' .
-                $resultado['cobrancas_geradas'] .
-                ' | Assinaturas processadas: ' .
-                $resultado['assinaturas_processadas'] .
-                ' | Ignoradas por duplicidade: ' .
-                $resultado['cobrancas_ignoradas_duplicidade'] .
-                ' | Erros: ' .
-                $resultado['erros'] . '.'
-            );
-        }catch(\Exception $e){
-            Session::flash(
-                'error',
-                'Erro ao gerar cobranças recorrentes.'
-            );
-        }
-
+            $resultado = (new FinanceiroWorkflowService())->gerarCobrancasRecorrentes();
+            Session::flash('success', 'Cobranças recorrentes processadas. Geradas: ' . $resultado['cobrancas_geradas'] . ' | Assinaturas processadas: ' . $resultado['assinaturas_processadas'] . ' | Ignoradas por duplicidade: ' . $resultado['cobrancas_ignoradas_duplicidade'] . ' | Erros: ' . $resultado['erros'] . '.');
+        }catch(\Throwable $e){ Session::flash('error', 'Erro ao gerar cobranças recorrentes.'); }
         $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
     public function alterarPlanoCliente()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
-        if($_SERVER['REQUEST_METHOD'] != 'POST'){
-            $this->redirect('financeiroAdmin');
-        }
-
-        $clienteId = (int) ($_POST['cliente_id'] ?? 0);
-        $planoId = (int) ($_POST['plano_id'] ?? 0);
-        $ciclo = $_POST['ciclo'] ?? 'mensal';
-
-        if(!$clienteId || !$planoId || !Plano::cicloValido($ciclo)){
-
-            Session::flash(
-                'error',
-                'Cliente ou plano inválido.'
-            );
-
-            $this->redirect('financeiroAdmin');
-        }
-
-        $planoModel = new Plano();
-        $plano =
-            $planoModel->buscar(
-                $planoId
-            );
-
-        if(!$plano){
-
-            Session::flash(
-                'error',
-                'Plano inválido.'
-            );
-
-            $this->redirect('financeiroAdmin#tabClientes');
-        }
-
-        $metaContaModel = new MetaConta();
-        $validacaoNumeros =
-            $metaContaModel->validarLimiteNumerosPlano(
-                $clienteId,
-                $plano['PLA_LimiteNumeros']
-            );
-
-        if(!$validacaoNumeros['permitido']){
-
-            Session::flash(
-                'error',
-                $validacaoNumeros['mensagem']
-            );
-
-            $this->redirect('financeiroAdmin#tabClientes');
-        }
-
-        $valorCiclo = Plano::valorPorCiclo($plano, $ciclo);
-        $proximaCobranca = date(
-            'Y-m-d',
-            strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months')
-        );
-
-        $db = Database::getInstance();
-
-        $db->beginTransaction();
-
         try{
-
-            $sql = $db->prepare("
-                UPDATE clientes
-                SET CLI_Plano_DR = ?
-                WHERE CLI_ID = ?
-            ");
-
-            $sql->execute([
-                $planoId,
-                $clienteId
-            ]);
-
-            $assinaturaModel = new Assinatura();
-            $assinaturaModel->criarOuAtualizarPorCliente(
-                $clienteId,
-                $plano,
-                'ativa',
-                [
-                    'ciclo' => $ciclo,
-                    'valor' => $valorCiclo,
-                    'proxima_cobranca' => $proximaCobranca
-                ]
-            );
-
-            $db->commit();
-
-            Session::flash(
-                'success',
-                'Plano do cliente atualizado.'
-            );
-
-        }catch(\Exception $e){
-
-            $db->rollBack();
-
-            Session::flash(
-                'error',
-                'Erro ao atualizar plano do cliente.'
-            );
-        }
-
+            (new FinanceiroWorkflowService())->alterarPlanoCliente((int) ($_POST['cliente_id'] ?? 0), (int) ($_POST['plano_id'] ?? 0), (string) ($_POST['ciclo'] ?? 'mensal'));
+            Session::flash('success', 'Plano do cliente atualizado.');
+        }catch(\Throwable $e){ Session::flash('error', $e instanceof \DomainException ? $e->getMessage() : 'Erro ao atualizar plano do cliente.'); }
         $this->redirect('financeiroAdmin#tabClientes');
     }
 
     public function suspenderCliente()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
-        $clienteId = (int) ($_GET['id'] ?? 0);
-
-        if(!$clienteId){
-
-            Session::flash(
-                'error',
-                'Cliente inválido.'
-            );
-
-            $this->redirect('financeiroAdmin#tabClientes');
-        }
-
-        $db = Database::getInstance();
-
-        $sql = $db->prepare("
-            UPDATE clientes
-            SET CLI_StatusCadastro = 'suspenso'
-            WHERE CLI_ID = ?
-        ");
-
-        $sql->execute([
-            $clienteId
-        ]);
-
-        Session::flash(
-            'success',
-            'Cliente suspenso.'
-        );
-
+        (new FinanceiroWorkflowService())->suspenderCliente((int) ($_GET['id'] ?? 0));
+        Session::flash('success', 'Cliente suspenso.');
         $this->redirect('financeiroAdmin#tabClientes');
     }
     public function reativarCliente()
     {
         $this->validarCsrfPost();
-
         Auth::admin();
-
-        $clienteId = (int) ($_GET['id'] ?? 0);
-
-        if(!$clienteId){
-
-            Session::flash(
-                'error',
-                'Cliente inválido.'
-            );
-
-            $this->redirect('financeiroAdmin#tabClientes');
-        }
-
-        $db = Database::getInstance();
-
-        $sql = $db->prepare("
-            UPDATE clientes
-            SET CLI_StatusCadastro = 'ativo'
-            WHERE CLI_ID = ?
-        ");
-
-        $sql->execute([
-            $clienteId
-        ]);
-
-        Session::flash(
-            'success',
-            'Cliente reativado.'
-        );
-
+        try{
+            (new FinanceiroWorkflowService())->reativarContrato((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Cliente reativado e nova cobrança gerada.');
+        }catch(\Throwable $e){ Session::flash('error', $e instanceof \DomainException ? $e->getMessage() : 'Não foi possível reativar o contrato.'); }
         $this->redirect('financeiroAdmin#tabClientes');
     }
 

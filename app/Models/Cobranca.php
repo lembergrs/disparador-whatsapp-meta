@@ -203,6 +203,41 @@ class Cobranca
         return $sql->execute([$id]);
     }
 
+    public function cancelarPendentesPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("UPDATE cobrancas SET COB_Status = 'cancelado' WHERE CLI_ID = ? AND COB_Status = 'pendente'");
+        $sql->execute([$clienteId]);
+        return $sql->rowCount();
+    }
+
+    public function buscarUltimaPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE CLI_ID = ? ORDER BY COB_ID DESC LIMIT 1");
+        $sql->execute([$clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function listarPendentesVencidas()
+    {
+        $sql = $this->db->query("SELECT * FROM cobrancas WHERE COB_Status = 'pendente' AND COB_DataVencimento < CURDATE() ORDER BY COB_DataVencimento ASC, COB_ID ASC");
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function existeRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade')
+    {
+        return (bool) $this->buscarRecorrente($clienteId, $planoId, $vencimento, $tipo);
+    }
+
+    public function buscarRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade')
+    {
+        $params = [$clienteId, $planoId, $vencimento];
+        $filtro = '';
+        if($this->colunaExiste('cobrancas', 'COB_Tipo')){ $filtro = ' AND COB_Tipo = ?'; $params[] = $tipo; }
+        $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE CLI_ID = ? AND PLA_ID = ? AND COB_DataVencimento = ? AND COB_Status <> 'cancelado' {$filtro} ORDER BY COB_ID DESC LIMIT 1");
+        $sql->execute($params);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function atualizarIntegracaoProvider($id, $dados)
     {
         $sets = [];

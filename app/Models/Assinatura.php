@@ -71,6 +71,36 @@ class Assinatura
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarUltimaPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM assinaturas WHERE CLI_ID = ? ORDER BY ASS_ID DESC LIMIT 1");
+        $sql->execute([$clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function cancelarVigentesPorCliente($clienteId)
+    {
+        return $this->encerrarVigentesDoCliente($clienteId);
+    }
+
+    public function buscarVigentePorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM assinaturas WHERE CLI_ID = ? AND ASS_Status IN ('ativa','pendente') ORDER BY CASE ASS_Status WHEN 'ativa' THEN 1 ELSE 2 END, ASS_ID DESC LIMIT 1");
+        $sql->execute([$clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function listarParaRecorrencia()
+    {
+        $sql = $this->db->query("SELECT a.* FROM assinaturas a INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID WHERE a.ASS_Status = 'ativa' AND a.ASS_DataProximaCobranca IS NOT NULL AND a.ASS_DataProximaCobranca <= CURDATE() AND a.PLA_ID IS NOT NULL AND c.CLI_StatusCadastro = 'ativo' ORDER BY a.ASS_DataProximaCobranca ASC, a.ASS_ID ASC");
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function atualizarProximaCobranca($id, $data)
+    {
+        return $this->db->prepare("UPDATE assinaturas SET ASS_DataProximaCobranca = ?, ASS_DataAtualizacao = NOW() WHERE ASS_ID = ? AND ASS_Status = 'ativa'")->execute([$data, $id]);
+    }
+
     public function listar()
     {
         $sql = $this->db->query("\n            SELECT a.*, c.CLI_Nome, p.PLA_Nome\n            FROM assinaturas a\n            INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID\n            INNER JOIN planos p ON p.PLA_ID = a.PLA_ID\n            ORDER BY a.ASS_ID DESC\n        ");

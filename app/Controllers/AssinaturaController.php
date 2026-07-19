@@ -8,6 +8,7 @@ use Core\Session;
 use Models\Assinatura;
 use Models\Cliente;
 use Models\Plano;
+use Services\FinanceiroWorkflowService;
 
 class AssinaturaController extends Controller
 {
@@ -40,17 +41,10 @@ class AssinaturaController extends Controller
             $this->redirect('assinatura');
         }
 
-        $assinaturaModel = new Assinatura();
-
         $dados = $this->normalizarDadosFormulario($_POST);
-
-        if(!empty($_POST['assinatura_id'])){
-            $assinaturaModel->atualizar((int) $_POST['assinatura_id'], $dados);
-            Session::flash('success', 'Assinatura atualizada.');
-        }else{
-            $assinaturaModel->criar($dados);
-            Session::flash('success', 'Assinatura criada.');
-        }
+        $id = !empty($_POST['assinatura_id']) ? (int) $_POST['assinatura_id'] : null;
+        (new FinanceiroWorkflowService())->salvarAssinaturaAdministrativa($id, $dados);
+        Session::flash('success', $id ? 'Assinatura atualizada.' : 'Assinatura criada.');
 
         $this->redirect('assinatura');
     }
@@ -60,7 +54,7 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->cancelar((int) ($_GET['id'] ?? 0));
+        (new FinanceiroWorkflowService())->cancelarContratoPorAssinatura((int) ($_GET['id'] ?? 0));
         Session::flash('success', 'Assinatura cancelada.');
         $this->redirect('assinatura');
     }
@@ -70,7 +64,7 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->ativar((int) ($_GET['id'] ?? 0));
+        (new FinanceiroWorkflowService())->alterarStatusAssinatura((int) ($_GET['id'] ?? 0), 'ativa');
         Session::flash('success', 'Assinatura ativada.');
         $this->redirect('assinatura');
     }
@@ -80,7 +74,7 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->marcarVencida((int) ($_GET['id'] ?? 0));
+        (new FinanceiroWorkflowService())->alterarStatusAssinatura((int) ($_GET['id'] ?? 0), 'vencida');
         Session::flash('success', 'Assinatura marcada como vencida.');
         $this->redirect('assinatura');
     }

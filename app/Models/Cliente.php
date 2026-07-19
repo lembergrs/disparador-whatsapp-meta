@@ -563,6 +563,46 @@ class Cliente
         return $sql->execute([$id]);
     }
 
+    public function atualizarEstadoFinanceiro($id, array $dados)
+    {
+        $permitidos = [
+            'CLI_StatusPagamento' => 'status_pagamento',
+            'CLI_StatusCadastro' => 'status_cadastro',
+            'CLI_Ativo' => 'ativo',
+            'CLI_Plano_DR' => 'plano',
+            'CLI_DataLiberacao' => 'data_liberacao'
+        ];
+        $sets = [];
+        $params = [':id' => $id];
+
+        foreach($permitidos as $coluna => $chave){
+            if(array_key_exists($chave, $dados)){
+                $param = ':' . $chave;
+                $sets[] = $coluna . ' = ' . $param;
+                $params[$param] = $dados[$chave];
+            }
+        }
+
+        if(!empty($dados['liberar_se_vazio'])){
+            $sets[] = 'CLI_DataLiberacao = COALESCE(CLI_DataLiberacao, NOW())';
+        }
+
+        if(empty($sets)){
+            return false;
+        }
+
+        $sql = $this->db->prepare("UPDATE clientes SET " . implode(', ', $sets) . " WHERE CLI_ID = :id");
+        return $sql->execute($params);
+    }
+
+    public function atualizarAtivacaoComUsuarios($id, $ativo, $statusCadastro)
+    {
+        $this->db->prepare("UPDATE clientes SET CLI_Ativo = ?, CLI_StatusCadastro = ? WHERE CLI_ID = ?")
+            ->execute([$ativo, $statusCadastro, $id]);
+        return $this->db->prepare("UPDATE usuarios SET USU_Ativo = ? WHERE CLI_ID = ?")
+            ->execute([$ativo, $id]);
+    }
+
     private function colunaExiste($tabela, $coluna)
     {
         static $cache = [];

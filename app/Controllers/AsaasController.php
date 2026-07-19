@@ -3,9 +3,7 @@
 namespace Controllers;
 
 use Core\Controller;
-use Models\Cliente;
-use Models\Cobranca;
-use Models\Assinatura;
+use Services\FinanceiroWorkflowService;
 
 class AsaasController extends Controller
 {
@@ -29,152 +27,11 @@ class AsaasController extends Controller
             $this->responderJson(['sucesso' => false, 'erro' => 'Token inválido'], 403);
         }
 
-        $this->processarEventoPagamento($payload);
+        (new FinanceiroWorkflowService())->processarPagamentoWebhook($payload);
 
         $this->responderJson(['sucesso' => true], 200);
     }
 
-
-    private function processarEventoPagamento($payload)
-    {
-        $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : [];
-        $providerPaymentId = trim((string) ($payment['id'] ?? ''));
-
-        if($providerPaymentId === ''){
-            return;
-        }
-
-        $evento = trim((string) ($payload['event'] ?? ''));
-        $providerStatus = trim((string) ($payment['status'] ?? ''));
-        $cobrancaModel = new Cobranca();
-        $cobranca = $cobrancaModel->buscarPorProviderPaymentId('asaas', $providerPaymentId);
-
-        if(!$cobranca){
-            return;
-        }
-
-        $providerEventId = $this->obterProviderEventId($payload, $providerPaymentId, $evento, $providerStatus);
-        $payloadSeguro = $this->payloadProviderSeguro($payload);
-
-        $registroEvento = $cobrancaModel->registrarEventoProvider(
-            $cobranca['COB_ID'],
-            'asaas',
-            $providerEventId,
-            $evento,
-            $providerStatus,
-            $payloadSeguro
-        );
-
-        if($registroEvento === 'duplicado'){
-            if($this->eventoPagamentoConfirmado($evento)){
-                $this->ativarAssinaturaDaCobranca($cobranca, $cobrancaModel);
-            }
-
-            return;
-        }
-
-        $statusLocal = $this->mapearStatusCobranca($evento);
-        $dadosAtualizacao = [
-            'provider_status' => $providerStatus,
-            'provider_payload' => $payloadSeguro
-        ];
-
-        if($statusLocal !== null){
-            $dadosAtualizacao['status'] = $statusLocal;
-        }
-
-        if($this->eventoPagamentoConfirmado($evento)){
-            $dadosAtualizacao['data_pagamento'] = date('Y-m-d H:i:s');
-        }
-
-        $cobrancaModel->atualizarIntegracaoProvider($cobranca['COB_ID'], $dadosAtualizacao);
-
-        if($this->eventoPagamentoConfirmado($evento)){
-            $clienteModel = new Cliente();
-            $clienteModel->marcarPagamentoProviderConfirmado($cobranca['CLI_ID']);
-            $this->ativarAssinaturaDaCobranca($cobranca, $cobrancaModel);
-        }
-    }
-
-    private function eventoPagamentoConfirmado($evento)
-    {
-        return in_array($evento, ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'], true);
-    }
-
-    private function ativarAssinaturaDaCobranca($cobranca, Cobranca $cobrancaModel)
-    {
-        $assinaturaId = (int) ($cobranca['ASS_ID'] ?? 0);
-        $assinaturaModel = new Assinatura();
-
-        if($assinaturaId <= 0){
-            $assinatura = $assinaturaModel->buscarPendenteMaisRecente(
-                $cobranca['CLI_ID'],
-                $cobranca['PLA_ID']
-            );
-
-            if(!$assinatura){
-                return;
-            }
-
-            $assinaturaId = (int) $assinatura['ASS_ID'];
-            $cobrancaModel->vincularAssinatura($cobranca['COB_ID'], $assinaturaId);
-        }
-
-        $assinaturaModel->ativar($assinaturaId);
-    }
-
-    private function mapearStatusCobranca($evento)
-    {
-        $mapa = [
-            'PAYMENT_RECEIVED' => 'pago',
-            'PAYMENT_CONFIRMED' => 'pago',
-            'PAYMENT_OVERDUE' => 'vencido',
-            'PAYMENT_DELETED' => 'cancelado',
-            'PAYMENT_REFUNDED' => 'cancelado'
-        ];
-
-        return $mapa[$evento] ?? null;
-    }
-
-    private function obterProviderEventId($payload, $paymentId, $evento, $status)
-    {
-        $eventId = trim((string) ($payload['id'] ?? $payload['eventId'] ?? ''));
-
-        if($eventId !== ''){
-            return $eventId;
-        }
-
-        $dataEvento = trim((string) ($payload['dateCreated'] ?? $payload['payment']['dateCreated'] ?? date('Y-m-d H:i:s')));
-
-        return hash('sha256', implode('|', ['asaas', $paymentId, $evento, $status, $dataEvento]));
-    }
-
-    private function payloadProviderSeguro($payload)
-    {
-        $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : [];
-
-        $seguro = [
-            'event' => $payload['event'] ?? null,
-            'id' => $payload['id'] ?? null,
-            'payment' => [
-                'id' => $payment['id'] ?? null,
-                'customer' => $payment['customer'] ?? null,
-                'status' => $payment['status'] ?? null,
-                'value' => $payment['value'] ?? null,
-                'netValue' => $payment['netValue'] ?? null,
-                'billingType' => $payment['billingType'] ?? null,
-                'dueDate' => $payment['dueDate'] ?? null,
-                'paymentDate' => $payment['paymentDate'] ?? null,
-                'clientPaymentDate' => $payment['clientPaymentDate'] ?? null,
-                'confirmedDate' => $payment['confirmedDate'] ?? null,
-                'invoiceUrl' => $payment['invoiceUrl'] ?? null,
-                'bankSlipUrl' => $payment['bankSlipUrl'] ?? null,
-                'externalReference' => $payment['externalReference'] ?? null
-            ]
-        ];
-
-        return json_encode($seguro, JSON_UNESCAPED_UNICODE);
-    }
 
     private function validarTokenWebhook()
     {
