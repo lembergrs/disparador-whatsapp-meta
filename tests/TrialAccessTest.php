@@ -18,6 +18,7 @@ $auth = file_get_contents(__DIR__ . '/../app/Core/Auth.php');
 $cliente = file_get_contents(__DIR__ . '/../app/Models/Cliente.php');
 $configuracao = file_get_contents(__DIR__ . '/../app/Controllers/ConfiguracaoController.php');
 $financeiro = file_get_contents(__DIR__ . '/../app/Controllers/FinanceiroController.php');
+$financeiroWorkflow = file_get_contents(__DIR__ . '/../app/Services/FinanceiroWorkflowService.php');
 $dashboard = file_get_contents(__DIR__ . '/../app/Views/dashboard/index.php');
 $menu = file_get_contents(__DIR__ . '/../app/Views/layouts/master.php');
 
@@ -40,10 +41,10 @@ assertContainsTrial("\$statusConexao === 'conectado'", $configuracao, 'Trial só
 assertContainsTrial('iniciarTrialSePendente($clienteId)', $configuracao, 'Registro do número deve iniciar trial após sucesso.');
 assertContainsTrial("'pendente_registro'", $configuracao, 'Embedded Signup deve deixar conta pendente de registro antes do trial.');
 
-$trechoPlano = substr($financeiro, strpos($financeiro, 'public function escolherPlano'));
-assertContainsTrial("CLI_StatusPagamento = 'pendente'", $trechoPlano, 'Seleção de plano deve manter pagamento pendente.');
+$trechoPlano = substr($financeiroWorkflow, strpos($financeiroWorkflow, 'public function contratarPlano'));
+assertContainsTrial("'status_pagamento'=>'pendente'", $trechoPlano, 'Seleção de plano deve manter pagamento pendente.');
 assertNotContainsTrial('CLI_DataLiberacao', $trechoPlano, 'Seleção de plano não deve iniciar trial.');
-assertNotContainsTrial("CLI_StatusPagamento = 'pago'", $trechoPlano, 'Seleção de plano não deve marcar cliente como pago.');
+assertNotContainsTrial("'status_pagamento'=>'pago'", substr($trechoPlano, 0, strpos($trechoPlano, 'public function confirmarPagamentoManual')), 'Seleção de plano não deve marcar cliente como pago.');
 
 assertContainsTrial('Conecte seu número do WhatsApp para iniciar seu período de avaliação de 7 dias ou até 200 mensagens.', $dashboard, 'Dashboard deve orientar pre-trial.');
 assertContainsTrial('Período de avaliação ativo.', $dashboard, 'Dashboard deve indicar trial ativo.');

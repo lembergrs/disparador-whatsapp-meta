@@ -156,9 +156,7 @@ class ClienteController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
-                $clienteId =
-                    $this->clienteModel
-                    ->salvar($_POST);
+                $clienteId = $this->clienteModel->salvar($_POST);
 
 
 
@@ -251,160 +249,30 @@ class ClienteController extends Controller
     public function inativar()
     {
         $this->validarCsrfPost();
-
-        if(empty($_GET['id'])){
-
-            Session::flash(
-                'error',
-                'Cliente não informado.'
-            );
-
-            $this->redirect('cliente');
-            return;
-        }
-
-        $id = (int) $_GET['id'];
-
-        $db = Database::getInstance();
-
-        $sql = "
-            UPDATE clientes
-            SET 
-                CLI_Ativo = 'N',
-                CLI_StatusCadastro = 'inativo'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        $sql = "
-            UPDATE usuarios
-            SET USU_Ativo = 'N'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        Session::flash(
-            'success',
-            'Cliente inativado com sucesso.'
-        );
-
+        $id = (int) ($_GET['id'] ?? 0);
+        if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'N', 'inativo');
+        Session::flash('success', 'Cliente inativado com sucesso.');
         $this->redirect('cliente');
     }
 
     public function reativar()
     {
         $this->validarCsrfPost();
-
-        if(empty($_GET['id'])){
-
-            Session::flash(
-                'error',
-                'Cliente não informado.'
-            );
-
-            $this->redirect('cliente');
-            return;
-        }
-
-        $id = (int) $_GET['id'];
-
-        $db = Database::getInstance();
-
-        $sql = "
-            UPDATE clientes
-            SET 
-                CLI_Ativo = 'S',
-                CLI_StatusCadastro = 'ativo'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        $sql = "
-            UPDATE usuarios
-            SET USU_Ativo = 'S'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        Session::flash(
-            'success',
-            'Cliente reativado com sucesso.'
-        );
-
+        $id = (int) ($_GET['id'] ?? 0);
+        if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'S', 'ativo');
+        Session::flash('success', 'Cliente reativado com sucesso.');
         $this->redirect('cliente/index/inativo');
     }
 
     public function aprovar()
     {
         $this->validarCsrfPost();
-
-        if (empty($_GET['id'])) {
-
-            Session::flash(
-                'error',
-                'Cliente não informado.'
-            );
-
-            $this->redirect('cliente');
-
-            return;
-        }
-
-        $id = (int) $_GET['id'];
-
-        $db = Database::getInstance();
-
-        $sql = "
-            UPDATE clientes
-            SET 
-                CLI_Ativo = 'S',
-                CLI_StatusCadastro = 'ativo'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        $sql = "
-            UPDATE usuarios
-            SET USU_Ativo = 'S'
-            WHERE CLI_ID = :id
-        ";
-
-        $stmt = $db->prepare($sql);
-
-        $stmt->execute([
-            ':id' => $id
-        ]);
-
-        Session::flash(
-            'success',
-            'Cliente aprovado com sucesso.'
-        );
-
+        $id = (int) ($_GET['id'] ?? 0);
+        if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'S', 'ativo');
+        Session::flash('success', 'Cliente aprovado com sucesso.');
         $this->redirect('cliente');
     }
 

@@ -8,6 +8,7 @@ use Core\Session;
 use Models\Assinatura;
 use Models\Cliente;
 use Models\Plano;
+use Services\FinanceiroWorkflowService;
 
 class AssinaturaController extends Controller
 {
@@ -40,16 +41,15 @@ class AssinaturaController extends Controller
             $this->redirect('assinatura');
         }
 
-        $assinaturaModel = new Assinatura();
-
         $dados = $this->normalizarDadosFormulario($_POST);
-
-        if(!empty($_POST['assinatura_id'])){
-            $assinaturaModel->atualizar((int) $_POST['assinatura_id'], $dados);
-            Session::flash('success', 'Assinatura atualizada.');
-        }else{
-            $assinaturaModel->criar($dados);
-            Session::flash('success', 'Assinatura criada.');
+        $id = !empty($_POST['assinatura_id']) ? (int) $_POST['assinatura_id'] : null;
+        try{
+            $assinaturas = new Assinatura();
+            $id ? $assinaturas->atualizar($id, $dados) : $assinaturas->criar($dados);
+            Session::flash('success', $id ? 'Assinatura atualizada.' : 'Assinatura criada.');
+        }catch(\Throwable $e){
+            error_log('Erro ao salvar assinatura: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível salvar a assinatura.');
         }
 
         $this->redirect('assinatura');
@@ -60,8 +60,13 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->cancelar((int) ($_GET['id'] ?? 0));
-        Session::flash('success', 'Assinatura cancelada.');
+        try{
+            (new FinanceiroWorkflowService())->cancelarAssinatura((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Assinatura cancelada.');
+        }catch(\Throwable $e){
+            error_log('Erro ao cancelar assinatura: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível cancelar a assinatura.');
+        }
         $this->redirect('assinatura');
     }
 
@@ -70,8 +75,13 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->ativar((int) ($_GET['id'] ?? 0));
-        Session::flash('success', 'Assinatura ativada.');
+        try{
+            (new Assinatura())->ativar((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Assinatura ativada.');
+        }catch(\Throwable $e){
+            error_log('Erro ao ativar assinatura: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível ativar a assinatura.');
+        }
         $this->redirect('assinatura');
     }
 
@@ -80,8 +90,13 @@ class AssinaturaController extends Controller
         $this->validarCsrfPost();
 
         Auth::admin();
-        (new Assinatura())->marcarVencida((int) ($_GET['id'] ?? 0));
-        Session::flash('success', 'Assinatura marcada como vencida.');
+        try{
+            (new Assinatura())->marcarVencida((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Assinatura marcada como vencida.');
+        }catch(\Throwable $e){
+            error_log('Erro ao vencer assinatura: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível atualizar a assinatura.');
+        }
         $this->redirect('assinatura');
     }
 
