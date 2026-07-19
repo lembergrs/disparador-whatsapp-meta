@@ -10,7 +10,6 @@ use Core\Session;
 use PDOException;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
-use Services\FinanceiroWorkflowService;
 
 class ClienteController extends Controller
 {
@@ -95,7 +94,7 @@ class ClienteController extends Controller
 
             if(!empty($_POST['id'])){
 
-                (new FinanceiroWorkflowService())->atualizarClienteAdministrativo(
+                $this->clienteModel->atualizar(
                     $_POST['id'],
                     $_POST
                 );
@@ -157,7 +156,7 @@ class ClienteController extends Controller
                 |--------------------------------------------------------------------------
                 */
 
-                $clienteId = (new FinanceiroWorkflowService())->salvarClienteAdministrativo($_POST);
+                $clienteId = $this->clienteModel->salvar($_POST);
 
 
 
@@ -252,7 +251,7 @@ class ClienteController extends Controller
         $this->validarCsrfPost();
         $id = (int) ($_GET['id'] ?? 0);
         if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
-        (new FinanceiroWorkflowService())->inativarCadastro($id);
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'N', 'inativo');
         Session::flash('success', 'Cliente inativado com sucesso.');
         $this->redirect('cliente');
     }
@@ -262,7 +261,7 @@ class ClienteController extends Controller
         $this->validarCsrfPost();
         $id = (int) ($_GET['id'] ?? 0);
         if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
-        (new FinanceiroWorkflowService())->reativarCadastro($id);
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'S', 'ativo');
         Session::flash('success', 'Cliente reativado com sucesso.');
         $this->redirect('cliente/index/inativo');
     }
@@ -272,7 +271,7 @@ class ClienteController extends Controller
         $this->validarCsrfPost();
         $id = (int) ($_GET['id'] ?? 0);
         if(!$id){ Session::flash('error', 'Cliente não informado.'); $this->redirect('cliente'); }
-        (new FinanceiroWorkflowService())->aprovarCadastro($id);
+        $this->clienteModel->atualizarAtivacaoComUsuarios($id, 'S', 'ativo');
         Session::flash('success', 'Cliente aprovado com sucesso.');
         $this->redirect('cliente');
     }

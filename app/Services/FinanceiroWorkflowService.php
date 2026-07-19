@@ -37,9 +37,6 @@ class FinanceiroWorkflowService
         if(!Plano::cicloValido($ciclo)){
             throw new \DomainException('Ciclo de cobrança inválido.');
         }
-        if($this->cobrancas->buscarPendentePorCliente($clienteId)){
-            throw new \DomainException('Já existe uma cobrança pendente para este cliente.');
-        }
         $plano = $this->planos->buscar($planoId);
         if(!$plano){
             throw new \DomainException('Plano inválido.');
@@ -47,6 +44,14 @@ class FinanceiroWorkflowService
         $limite = $this->metas->validarLimiteNumerosPlano($clienteId, $plano['PLA_LimiteNumeros']);
         if(empty($limite['permitido'])){
             throw new \DomainException($limite['mensagem']);
+        }
+        $pendente = $this->cobrancas->buscarPendentePorCliente($clienteId);
+        if($pendente){
+            if((int) $pendente['PLA_ID'] !== $planoId){
+                throw new \DomainException('Já existe uma cobrança pendente para este cliente.');
+            }
+            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano);
+            return array_merge($integracao, ['cobranca_id'=>(int) $pendente['COB_ID'], 'plano'=>$plano]);
         }
 
         $valor = Plano::valorPorCiclo($plano, $ciclo);
@@ -98,27 +103,35 @@ class FinanceiroWorkflowService
             $data = trim((string) ($payload['dateCreated'] ?? $payment['dateCreated'] ?? 'sem_data'));
             $eventId = hash('sha256', implode('|', ['asaas',$paymentId,$evento,$providerStatus,$data]));
         }
-        $payloadSeguro = $this->payloadProviderSeguro($payload);
         $status = $this->statusCobrancaPorEvento($evento);
 
-        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payloadSeguro, $status){
+        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $status){
+            $atualizada = $this->cobrancas->buscarParaAtualizacao($cobranca['COB_ID']);
+            if(!$atualizada){ throw new \RuntimeException('Cobrança não encontrada durante o processamento.'); }
+            $transicao = $this->resolverTransicaoWebhook(strtolower((string) $atualizada['COB_Status']), $evento, $status);
+            $payloadSeguro = $this->payloadProviderSeguro($payload, $transicao);
             $registro = $this->cobrancas->registrarEventoProvider($cobranca['COB_ID'], 'asaas', $eventId, $evento, $providerStatus, $payloadSeguro);
             if($registro === 'duplicado'){
                 return ['processado'=>false, 'duplicado'=>true];
             }
+            if(!$transicao['aplicar']){
+                return ['processado'=>true, 'ignorado'=>true, 'motivo'=>$transicao['motivo'], 'status'=>$transicao['atual']];
+            }
+            $status = $transicao['novo'];
             $dados = ['provider_status'=>$providerStatus, 'provider_payload'=>$payloadSeguro];
             if($status !== null){ $dados['status'] = $status; }
             if($status === 'pago'){ $dados['data_pagamento'] = date('Y-m-d H:i:s'); }
             $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], $dados);
 
             if($status === 'pago'){
-                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago']);
+                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
                 $this->ativarAssinaturaDaCobranca($cobranca);
-            }elseif(in_array($status, ['vencido','cancelado'], true)){
+            }elseif($status === 'vencido'){
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
-                if($status === 'cancelado'){
-                    $this->assinaturas->cancelarVigentesPorCliente($cobranca['CLI_ID']);
-                }
+            }elseif($evento === 'PAYMENT_REFUNDED'){
+                // Reembolso afeta a cobrança e a situação financeira, mas a decisão
+                // contratual permanece separada e não cancela assinaturas em massa.
+                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }
             $this->log('webhook_asaas', ['cobranca_id'=>$cobranca['COB_ID'], 'evento'=>$evento, 'status'=>$status]);
             return ['processado'=>true, 'status'=>$status];
@@ -131,26 +144,30 @@ class FinanceiroWorkflowService
         foreach($this->assinaturas->listarParaRecorrencia() as $assinatura){
             $resultado['assinaturas_processadas']++;
             $vencimento = $assinatura['ASS_DataProximaCobranca'] ?: date('Y-m-d');
-            $existente = $this->cobrancas->buscarRecorrente($assinatura['CLI_ID'], $assinatura['PLA_ID'], $vencimento);
+            $existente = $this->cobrancas->buscarRecorrente($assinatura['CLI_ID'], $assinatura['PLA_ID'], $vencimento, 'mensalidade', $assinatura['ASS_ID']);
             if($existente && !empty($existente['COB_ProviderPaymentId'])){
+                $this->reconciliarProximaCobranca($assinatura, $vencimento);
                 $resultado['cobrancas_ignoradas_duplicidade']++;
                 continue;
             }
             try{
-                $cobrancaId = $existente['COB_ID'] ?? $this->transacao->executar(function() use ($assinatura, $vencimento){
-                    return $this->cobrancas->criar([
+                $reserva = $existente
+                    ? ['id'=>(int) $existente['COB_ID'], 'criada'=>false]
+                    : $this->transacao->executar(function() use ($assinatura, $vencimento){
+                    return $this->cobrancas->criarRecorrenteIdempotente([
                         'cliente'=>$assinatura['CLI_ID'], 'plano'=>$assinatura['PLA_ID'], 'assinatura'=>$assinatura['ASS_ID'],
                         'valor'=>$assinatura['ASS_Valor'], 'vencimento'=>$vencimento, 'tipo'=>'mensalidade',
                         'provider'=>'asaas', 'provider_status'=>'local_pendente'
                     ]);
                 });
+                $cobrancaId = $reserva['id'];
                 $plano = $this->planos->buscar($assinatura['PLA_ID']);
                 $integracao = $this->integrarCobrancaAsaas($assinatura['CLI_ID'], (int) $cobrancaId, $plano ?: []);
                 if(!$integracao['sucesso']){
                     $resultado['erros']++;
                     continue;
                 }
-                $this->assinaturas->atualizarProximaCobranca($assinatura['ASS_ID'], $this->recorrencia->calcularProximaData($assinatura['ASS_Ciclo'], $vencimento));
+                $this->reconciliarProximaCobranca($assinatura, $vencimento);
                 $resultado['cobrancas_geradas']++;
                 $this->log('recorrencia', ['assinatura_id'=>$assinatura['ASS_ID'], 'cobranca_id'=>$cobrancaId, 'integrada'=>$integracao['sucesso']]);
             }catch(\Throwable $e){
@@ -219,15 +236,17 @@ class FinanceiroWorkflowService
         if(!$plano){ throw new \DomainException('Plano da assinatura não está disponível.'); }
         $ciclo = $assinatura['ASS_Ciclo'] ?: $plano['PLA_Periodicidade'];
         $valor = $assinatura['ASS_Valor'] ?: Plano::valorPorCiclo($plano, $ciclo);
+        $pendente = $this->cobrancas->buscarPendentePorCliente($clienteId);
+        if($pendente && (int) $pendente['PLA_ID'] === (int) $plano['PLA_ID']){
+            $this->clientes->atualizarEstadoFinanceiro($clienteId, ['ativo'=>'S','status_cadastro'=>'suspenso','status_pagamento'=>'pendente','plano'=>$plano['PLA_ID']]);
+            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano);
+            return array_merge($integracao, ['cobranca_id'=>(int) $pendente['COB_ID']]);
+        }
         $cobrancaId = $this->transacao->executar(function() use ($clienteId, $assinatura, $plano, $ciclo, $valor){
             $this->cobrancas->cancelarPendentesPorCliente($clienteId);
-            if(in_array($assinatura['ASS_Status'], ['pendente','ativa'], true)){
-                $this->assinaturas->ativar($assinatura['ASS_ID']);
-            }else{
-                $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'pendente', ['ciclo'=>$ciclo,'valor'=>$valor,'proxima_cobranca'=>date('Y-m-d', strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months'))]);
-            }
+            $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'pendente', ['ciclo'=>$ciclo,'valor'=>$valor,'proxima_cobranca'=>date('Y-m-d', strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months'))]);
             $atual = $this->assinaturas->buscarParaPagamento($clienteId, $plano['PLA_ID']);
-            $this->clientes->atualizarEstadoFinanceiro($clienteId, ['ativo'=>'S','status_cadastro'=>'ativo','status_pagamento'=>'pendente','plano'=>$plano['PLA_ID']]);
+            $this->clientes->atualizarEstadoFinanceiro($clienteId, ['ativo'=>'S','status_cadastro'=>'suspenso','status_pagamento'=>'pendente','plano'=>$plano['PLA_ID']]);
             return $this->cobrancas->criar(['cliente'=>$clienteId,'plano'=>$plano['PLA_ID'],'assinatura'=>$atual['ASS_ID'] ?? null,'valor'=>$valor,'vencimento'=>date('Y-m-d', strtotime('+3 days')),'tipo'=>'mensalidade','provider'=>'asaas','provider_status'=>'local_pendente']);
         });
         $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano);
@@ -235,61 +254,75 @@ class FinanceiroWorkflowService
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId]);
     }
 
-    public function suspenderCliente(int $clienteId){ return $this->clientes->atualizarEstadoFinanceiro($clienteId, ['status_cadastro'=>'suspenso']); }
-    public function reativarCadastro(int $clienteId){ return $this->clientes->atualizarAtivacaoComUsuarios($clienteId, 'S', 'ativo'); }
-    public function inativarCadastro(int $clienteId){ return $this->clientes->atualizarAtivacaoComUsuarios($clienteId, 'N', 'inativo'); }
-    public function aprovarCadastro(int $clienteId){ return $this->reativarCadastro($clienteId); }
-    public function cancelarCobranca(int $id){ return $this->cobrancas->cancelar($id); }
-    public function alterarStatusAssinatura(int $id, string $status){
-        if($status === 'ativa'){ return $this->assinaturas->ativar($id); }
-        if($status === 'vencida'){ return $this->assinaturas->marcarVencida($id); }
-        if($status === 'cancelada'){ return $this->assinaturas->cancelar($id); }
-        throw new \DomainException('Status de assinatura inválido.');
-    }
-
-    public function cancelarContratoPorAssinatura(int $assinaturaId, string $motivo = 'cancelamento_administrativo'): array
+    public function cancelarAssinatura(int $assinaturaId, ?string $motivo = null): array
     {
         $assinatura = $this->assinaturas->buscarPorId($assinaturaId);
         if(!$assinatura){ throw new \DomainException('Assinatura não encontrada.'); }
-        return $this->cancelarContrato((int) $assinatura['CLI_ID'], $motivo);
+        $this->assinaturas->cancelar($assinaturaId);
+        $this->log('cancelamento_assinatura', ['assinatura_id'=>$assinaturaId, 'motivo'=>$motivo]);
+        return ['sucesso'=>true];
     }
-
-    public function salvarAssinaturaAdministrativa(?int $id, array $dados)
-    {
-        if($id){ return $this->assinaturas->atualizar($id, $dados); }
-        return $this->assinaturas->criar($dados);
-    }
-
-    public function salvarClienteAdministrativo(array $dados){ return $this->clientes->salvar($dados); }
-    public function atualizarClienteAdministrativo(int $id, array $dados){ return $this->clientes->atualizar($id, $dados); }
 
     private function integrarCobrancaAsaas(int $clienteId, int $cobrancaId, array $plano): array
     {
-        $cliente = $this->clientes->buscar($clienteId);
-        $cobranca = $this->cobrancas->buscar($cobrancaId);
-        if(!$cliente || !$cobranca){ throw new \RuntimeException('Cliente ou cobrança não encontrada.'); }
-        $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
-        if($customerId === ''){
-            $respostaCliente = $this->asaas->criarOuAtualizarCliente($cliente);
-            if(empty($respostaCliente['sucesso']) || empty($respostaCliente['response']['id'])){
-                $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_status'=>'erro_cliente','provider_payload'=>$this->payloadProviderSeguro($respostaCliente['response'] ?? [])]);
-                return ['sucesso'=>false,'mensagem'=>'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'];
+        return $this->cobrancas->comLockIntegracao($cobrancaId, function() use ($clienteId, $cobrancaId, $plano){
+            $cliente = $this->clientes->buscar($clienteId);
+            $cobranca = $this->cobrancas->buscar($cobrancaId);
+            if(!$cliente || !$cobranca){ throw new \RuntimeException('Cliente ou cobrança não encontrada.'); }
+            if(!empty($cobranca['COB_ProviderPaymentId'])){
+                return ['sucesso'=>true,'reconciliada'=>true,'mensagem'=>'Cobrança já integrada.'];
             }
-            $customerId = $respostaCliente['response']['id'];
-            $this->clientes->atualizarProviderPagamento($clienteId, 'asaas', $customerId);
-            $cliente['CLI_ProviderCustomerId'] = $customerId;
+
+            $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
+            if($customerId === ''){
+                $respostaCliente = $this->asaas->criarOuAtualizarCliente($cliente);
+                if(empty($respostaCliente['sucesso']) || empty($respostaCliente['response']['id'])){
+                    $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_status'=>'erro_cliente','provider_payload'=>$this->payloadProviderSeguro($respostaCliente['response'] ?? [])]);
+                    return ['sucesso'=>false,'mensagem'=>'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'];
+                }
+                $customerId = $respostaCliente['response']['id'];
+                $this->clientes->atualizarProviderPagamento($clienteId, 'asaas', $customerId);
+                $cliente['CLI_ProviderCustomerId'] = $customerId;
+            }
+
+            $referencia = 'cobranca_' . $cobrancaId;
+            $consulta = $this->asaas->buscarCobrancaPorReferenciaExterna($referencia);
+            if(empty($consulta['sucesso'])){
+                $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_reconciliacao','provider_payload'=>$this->payloadProviderSeguro($consulta['response'] ?? [])]);
+                return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança no Asaas. Tente novamente em instantes.'];
+            }
+            $pagamento = $this->primeiraCobrancaEncontrada($consulta);
+            $reconciliada = (bool) $pagamento;
+            if(!$pagamento){
+                $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
+                $resposta = $this->asaas->criarCobranca($cliente, $cobranca);
+                if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
+                    $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_cobranca','provider_payload'=>$this->payloadProviderSeguro($resposta['response'] ?? [])]);
+                    return ['sucesso'=>false,'mensagem'=>'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'];
+                }
+                $pagamento = $resposta['response'];
+            }
+
+            $pix = $this->asaas->buscarPixQrCode($pagamento['id']);
+            $pixDados = !empty($pix['sucesso']) && is_array($pix['response']) ? $pix['response'] : [];
+            $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_payment_id'=>$pagamento['id'],'provider_status'=>$pagamento['status'] ?? null,'provider_payload'=>$this->payloadProviderSeguro($pagamento),'link_pagamento'=>$pagamento['invoiceUrl'] ?? ($pagamento['bankSlipUrl'] ?? null),'pix_copia_cola'=>$pixDados['payload'] ?? null,'qr_code'=>$pixDados['encodedImage'] ?? null,'linha_digitavel'=>$pagamento['identificationField'] ?? null,'status'=>'pendente']);
+            return ['sucesso'=>true,'reconciliada'=>$reconciliada,'mensagem'=>'Plano selecionado. A cobrança foi criada e o link de pagamento está disponível.'];
+        });
+    }
+
+    private function primeiraCobrancaEncontrada(array $resposta): ?array
+    {
+        if(empty($resposta['sucesso']) || !is_array($resposta['response'] ?? null)){
+            return null;
         }
-        $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
-        $resposta = $this->asaas->criarCobranca($cliente, $cobranca);
-        if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
-            $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_cobranca','provider_payload'=>$this->payloadProviderSeguro($resposta['response'] ?? [])]);
-            return ['sucesso'=>false,'mensagem'=>'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'];
-        }
-        $pagamento = $resposta['response'];
-        $pix = $this->asaas->buscarPixQrCode($pagamento['id']);
-        $pixDados = !empty($pix['sucesso']) && is_array($pix['response']) ? $pix['response'] : [];
-        $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_payment_id'=>$pagamento['id'],'provider_status'=>$pagamento['status'] ?? null,'provider_payload'=>$this->payloadProviderSeguro($pagamento),'link_pagamento'=>$pagamento['invoiceUrl'] ?? ($pagamento['bankSlipUrl'] ?? null),'pix_copia_cola'=>$pixDados['payload'] ?? null,'qr_code'=>$pixDados['encodedImage'] ?? null,'linha_digitavel'=>$pagamento['identificationField'] ?? null,'status'=>'pendente']);
-        return ['sucesso'=>true,'mensagem'=>'Plano selecionado. A cobrança foi criada e o link de pagamento está disponível.'];
+        $dados = $resposta['response']['data'] ?? [];
+        return is_array($dados) && isset($dados[0]) && is_array($dados[0]) ? $dados[0] : null;
+    }
+
+    private function reconciliarProximaCobranca(array $assinatura, string $cicloProcessado): void
+    {
+        $proxima = $this->recorrencia->calcularProximaData($assinatura['ASS_Ciclo'], $cicloProcessado);
+        $this->assinaturas->avancarProximaCobrancaSeCiclo($assinatura['ASS_ID'], $cicloProcessado, $proxima);
     }
 
     private function ativarAssinaturaDaCobranca(array $cobranca): void
@@ -309,10 +342,29 @@ class FinanceiroWorkflowService
         return ['PAYMENT_RECEIVED'=>'pago','PAYMENT_CONFIRMED'=>'pago','PAYMENT_OVERDUE'=>'vencido','PAYMENT_DELETED'=>'cancelado','PAYMENT_REFUNDED'=>'cancelado'][$evento] ?? null;
     }
 
-    private function payloadProviderSeguro(array $payload): string
+    private function resolverTransicaoWebhook(string $atual, string $evento, ?string $novo): array
+    {
+        if($novo === null){ return ['aplicar'=>false,'atual'=>$atual,'novo'=>$atual,'motivo'=>'evento_desconhecido']; }
+        if($atual === $novo){ return ['aplicar'=>false,'atual'=>$atual,'novo'=>$atual,'motivo'=>'estado_ja_aplicado']; }
+        if($atual === 'pago' && $evento !== 'PAYMENT_REFUNDED'){
+            return ['aplicar'=>false,'atual'=>$atual,'novo'=>$atual,'motivo'=>'transicao_regressiva'];
+        }
+        if($atual === 'cancelado'){
+            return ['aplicar'=>false,'atual'=>$atual,'novo'=>$atual,'motivo'=>'estado_terminal'];
+        }
+        $permitidas = [
+            'pendente'=>['pago','vencido','cancelado'],
+            'vencido'=>['pago','cancelado'],
+            'pago'=>['cancelado']
+        ];
+        $aplicar = in_array($novo, $permitidas[$atual] ?? [], true);
+        return ['aplicar'=>$aplicar,'atual'=>$atual,'novo'=>$aplicar ? $novo : $atual,'motivo'=>$aplicar ? 'aplicado' : 'transicao_invalida'];
+    }
+
+    private function payloadProviderSeguro(array $payload, ?array $decisao = null): string
     {
         $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : $payload;
-        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
+        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
     }
 
     private function log(string $evento, array $dados): void

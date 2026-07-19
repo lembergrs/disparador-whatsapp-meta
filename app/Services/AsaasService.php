@@ -150,6 +150,14 @@ class AsaasService
         return $this->request('POST', '/payments', $payload);
     }
 
+    public function buscarCobrancaPorReferenciaExterna($externalReference)
+    {
+        return $this->request(
+            'GET',
+            '/payments?externalReference=' . rawurlencode((string) $externalReference) . '&limit=1'
+        );
+    }
+
     public function consultarCobranca($providerPaymentId)
     {
         return $this->request('GET', '/payments/' . rawurlencode($providerPaymentId));

@@ -101,6 +101,13 @@ class Assinatura
         return $this->db->prepare("UPDATE assinaturas SET ASS_DataProximaCobranca = ?, ASS_DataAtualizacao = NOW() WHERE ASS_ID = ? AND ASS_Status = 'ativa'")->execute([$data, $id]);
     }
 
+    public function avancarProximaCobrancaSeCiclo($id, $cicloAtual, $proximaData)
+    {
+        $sql = $this->db->prepare("UPDATE assinaturas SET ASS_DataProximaCobranca = ?, ASS_DataAtualizacao = NOW() WHERE ASS_ID = ? AND ASS_Status = 'ativa' AND ASS_DataProximaCobranca = ?");
+        $sql->execute([$proximaData, $id, $cicloAtual]);
+        return $sql->rowCount() > 0;
+    }
+
     public function listar()
     {
         $sql = $this->db->query("\n            SELECT a.*, c.CLI_Nome, p.PLA_Nome\n            FROM assinaturas a\n            INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID\n            INNER JOIN planos p ON p.PLA_ID = a.PLA_ID\n            ORDER BY a.ASS_ID DESC\n        ");

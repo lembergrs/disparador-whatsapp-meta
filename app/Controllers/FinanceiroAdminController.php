@@ -180,8 +180,13 @@ class FinanceiroAdminController extends Controller
     {
         $this->validarCsrfPost();
         Auth::admin();
-        (new FinanceiroWorkflowService())->cancelarCobranca((int) ($_GET['id'] ?? 0));
-        Session::flash('success', 'Cobrança cancelada.');
+        try{
+            (new Cobranca())->cancelar((int) ($_GET['id'] ?? 0));
+            Session::flash('success', 'Cobrança cancelada.');
+        }catch(\Throwable $e){
+            error_log('Erro ao cancelar cobrança: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível cancelar a cobrança.');
+        }
         $this->redirect('financeiroAdmin#tabCobrancas');
     }
 
@@ -224,8 +229,13 @@ class FinanceiroAdminController extends Controller
     {
         $this->validarCsrfPost();
         Auth::admin();
-        (new FinanceiroWorkflowService())->suspenderCliente((int) ($_GET['id'] ?? 0));
-        Session::flash('success', 'Cliente suspenso.');
+        try{
+            (new Cliente())->atualizarEstadoFinanceiro((int) ($_GET['id'] ?? 0), ['status_cadastro'=>'suspenso']);
+            Session::flash('success', 'Cliente suspenso.');
+        }catch(\Throwable $e){
+            error_log('Erro ao suspender cliente: ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível suspender o cliente.');
+        }
         $this->redirect('financeiroAdmin#tabClientes');
     }
     public function reativarCliente()

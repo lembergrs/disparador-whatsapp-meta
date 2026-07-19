@@ -27,7 +27,12 @@ class AsaasController extends Controller
             $this->responderJson(['sucesso' => false, 'erro' => 'Token inválido'], 403);
         }
 
-        (new FinanceiroWorkflowService())->processarPagamentoWebhook($payload);
+        try{
+            (new FinanceiroWorkflowService())->processarPagamentoWebhook($payload);
+        }catch(\Throwable $e){
+            error_log('Erro ao processar webhook Asaas: ' . $e->getMessage());
+            $this->responderJson(['sucesso' => false, 'erro' => 'Não foi possível processar o evento.'], 500);
+        }
 
         $this->responderJson(['sucesso' => true], 200);
     }

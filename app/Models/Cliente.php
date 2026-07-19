@@ -9,10 +9,9 @@ class Cliente
 {
     private $db;
 
-    public function __construct()
+    public function __construct($db = null)
     {
-        $this->db =
-            Database::getInstance();
+        $this->db = $db ?: Database::getInstance();
     }
 
 
@@ -597,10 +596,19 @@ class Cliente
 
     public function atualizarAtivacaoComUsuarios($id, $ativo, $statusCadastro)
     {
-        $this->db->prepare("UPDATE clientes SET CLI_Ativo = ?, CLI_StatusCadastro = ? WHERE CLI_ID = ?")
-            ->execute([$ativo, $statusCadastro, $id]);
-        return $this->db->prepare("UPDATE usuarios SET USU_Ativo = ? WHERE CLI_ID = ?")
-            ->execute([$ativo, $id]);
+        $iniciadaAqui = !$this->db->inTransaction();
+        if($iniciadaAqui){ $this->db->beginTransaction(); }
+        try{
+            $this->db->prepare("UPDATE clientes SET CLI_Ativo = ?, CLI_StatusCadastro = ? WHERE CLI_ID = ?")
+                ->execute([$ativo, $statusCadastro, $id]);
+            $resultado = $this->db->prepare("UPDATE usuarios SET USU_Ativo = ? WHERE CLI_ID = ?")
+                ->execute([$ativo, $id]);
+            if($iniciadaAqui){ $this->db->commit(); }
+            return $resultado;
+        }catch(\Throwable $e){
+            if($iniciadaAqui && $this->db->inTransaction()){ $this->db->rollBack(); }
+            throw $e;
+        }
     }
 
     private function colunaExiste($tabela, $coluna)

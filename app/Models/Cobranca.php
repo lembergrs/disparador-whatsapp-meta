@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use PDOException;
 
 class Cobranca
 {
@@ -192,6 +193,13 @@ class Cobranca
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarParaAtualizacao($id)
+    {
+        $sql = $this->db->prepare('SELECT * FROM cobrancas WHERE COB_ID = ? FOR UPDATE');
+        $sql->execute([$id]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function cancelar($id)
     {
         $sql = $this->db->prepare("
@@ -223,19 +231,60 @@ class Cobranca
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function existeRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade')
+    public function existeRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade', $assinaturaId = null)
     {
-        return (bool) $this->buscarRecorrente($clienteId, $planoId, $vencimento, $tipo);
+        return (bool) $this->buscarRecorrente($clienteId, $planoId, $vencimento, $tipo, $assinaturaId);
     }
 
-    public function buscarRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade')
+    public function buscarRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade', $assinaturaId = null)
     {
         $params = [$clienteId, $planoId, $vencimento];
         $filtro = '';
         if($this->colunaExiste('cobrancas', 'COB_Tipo')){ $filtro = ' AND COB_Tipo = ?'; $params[] = $tipo; }
+        if($assinaturaId !== null && $this->colunaExiste('cobrancas', 'ASS_ID')){ $filtro .= ' AND ASS_ID = ?'; $params[] = $assinaturaId; }
         $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE CLI_ID = ? AND PLA_ID = ? AND COB_DataVencimento = ? AND COB_Status <> 'cancelado' {$filtro} ORDER BY COB_ID DESC LIMIT 1");
         $sql->execute($params);
         return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function criarRecorrenteIdempotente(array $dados)
+    {
+        try{
+            return ['id' => (int) $this->criar($dados), 'criada' => true];
+        }catch(PDOException $e){
+            if((string) $e->getCode() !== '23000'){
+                throw $e;
+            }
+
+            $existente = $this->buscarRecorrente(
+                $dados['cliente'],
+                $dados['plano'],
+                $dados['vencimento'],
+                $dados['tipo'] ?? 'mensalidade',
+                $dados['assinatura'] ?? null
+            );
+            if(!$existente){
+                throw $e;
+            }
+            return ['id' => (int) $existente['COB_ID'], 'criada' => false];
+        }
+    }
+
+    public function comLockIntegracao($id, callable $operacao)
+    {
+        $nome = 'financeiro_cobranca_' . (int) $id;
+        $stmt = $this->db->prepare('SELECT GET_LOCK(?, 30)');
+        $stmt->execute([$nome]);
+        if((int) $stmt->fetchColumn() !== 1){
+            throw new \RuntimeException('Não foi possível obter o bloqueio da cobrança.');
+        }
+
+        try{
+            return $operacao();
+        }finally{
+            $liberar = $this->db->prepare('SELECT RELEASE_LOCK(?)');
+            $liberar->execute([$nome]);
+        }
     }
 
     public function atualizarIntegracaoProvider($id, $dados)
@@ -309,10 +358,6 @@ class Cobranca
             return false;
         }
 
-        if($providerEventId !== '' && $this->eventoProviderExiste($provider, $providerEventId)){
-            return 'duplicado';
-        }
-
         $campos = [];
         $valores = [];
         $params = [];
@@ -348,7 +393,14 @@ class Cobranca
 
         $sql = $this->db->prepare("\n            INSERT INTO cobranca_eventos (" . implode(', ', $campos) . ")\n            VALUES (" . implode(', ', $valores) . ")\n        ");
 
-        return $sql->execute($params);
+        try{
+            return $sql->execute($params);
+        }catch(PDOException $e){
+            if((string) $e->getCode() === '23000'){
+                return 'duplicado';
+            }
+            throw $e;
+        }
     }
 
     private function eventoProviderExiste($provider, $providerEventId)

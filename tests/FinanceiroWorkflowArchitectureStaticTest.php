@@ -3,6 +3,9 @@
 $root = dirname(__DIR__);
 $workflow = file_get_contents($root . '/app/Services/FinanceiroWorkflowService.php');
 $recorrencia = file_get_contents($root . '/app/Services/FinanceiroRecorrenciaService.php');
+$cobranca = file_get_contents($root . '/app/Models/Cobranca.php');
+$asaas = file_get_contents($root . '/app/Services/AsaasService.php');
+$migration = file_get_contents($root . '/database/migrations/20260719_add_financeiro_idempotency_indexes.sql');
 $controllers = [
     'FinanceiroController.php',
     'FinanceiroAdminController.php',
@@ -32,5 +35,10 @@ foreach($controllers as $controller){
 arquiteturaAssert(substr_count($conteudoControllers, 'FinanceiroWorkflowService') >= 5, 'fluxos financeiros delegam ao workflow');
 arquiteturaAssert(!preg_match('/UPDATE\s+(clientes|assinaturas|cobrancas)/i', $conteudoControllers), 'controllers não alteram estados financeiros por SQL');
 arquiteturaAssert(strpos(file_get_contents($root . '/app/Controllers/AsaasController.php'), 'processarPagamentoWebhook') !== false, 'webhook delega ao workflow');
+arquiteturaAssert(strpos($migration, 'uk_cobrancas_assinatura_competencia_tipo') !== false, 'recorrência possui constraint única');
+arquiteturaAssert(strpos($migration, 'uk_cobranca_eventos_provider_evento') !== false, 'webhook possui constraint única');
+arquiteturaAssert(strpos($cobranca, "getCode() === '23000'") !== false, 'model trata disputa de chave única');
+arquiteturaAssert(strpos($asaas, 'buscarCobrancaPorReferenciaExterna') !== false, 'Asaas permite reconciliação por referência');
+arquiteturaAssert(strpos($workflow, 'cancelarAssinatura') !== false && strpos($workflow, 'cancelarContratoPorAssinatura') === false, 'cancelamento pontual é separado do contrato');
 
 echo "FinanceiroWorkflowArchitectureStaticTest OK\n";
