@@ -154,6 +154,32 @@ class ConfiguracaoController extends Controller
         return 'es_' . bin2hex(random_bytes(12));
     }
 
+    private function avaliarPermissaoConexao($clienteId)
+    {
+        $numerosAtivos = $this->metaContaModel->contarAtivasPorCliente($clienteId);
+        $preTrialElegivel = Auth::podeConectarPrimeiroNumero(
+            $clienteId,
+            $numerosAtivos
+        );
+
+        return $this->metaContaModel->avaliarLimiteNumerosPorCliente(
+            $clienteId,
+            null,
+            $preTrialElegivel
+        );
+    }
+
+    private function exigirPermissaoConexao($clienteId)
+    {
+        $limite = $this->avaliarPermissaoConexao($clienteId);
+
+        if(empty($limite['permitido'])){
+            throw new Exception($limite['mensagem'] ?? 'Limite de números do plano atingido.');
+        }
+
+        return $limite;
+    }
+
     private function validarConfiguracaoEmbeddedSignup()
     {
         $required = [
@@ -255,10 +281,7 @@ class ConfiguracaoController extends Controller
 
         try{
             $this->validarConfiguracaoEmbeddedSignup();
-            $limite = $this->metaContaModel->avaliarLimiteNumerosPorCliente($clienteId);
-            if(empty($limite['permitido'])){
-                throw new Exception($limite['mensagem'] ?? 'Limite de números do plano atingido.');
-            }
+            $this->exigirPermissaoConexao($clienteId);
 
             $state = bin2hex(random_bytes(32));
             $tentativa = [
@@ -597,6 +620,7 @@ class ConfiguracaoController extends Controller
 
     private function processarEmbeddedSignupCode($clienteId, $state, $code, $usarRedirectUri = false)
     {
+        $this->exigirPermissaoConexao($clienteId);
         $tentativa = $this->aguardarTentativaEmbeddedParaCallback($state, $clienteId);
         $tentativa = $this->marcarTentativaEmbeddedUsada($state, $tentativa, $clienteId);
         $accessToken = $this->trocarCodePorToken((string) $code, $usarRedirectUri);
@@ -604,7 +628,7 @@ class ConfiguracaoController extends Controller
         $this->assinarAppNaWaba($dadosWhatsApp['waba_id'], $accessToken);
         $statusConexao = 'pendente_registro';
 
-        $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignup([
+        $dadosPersistencia = [
             'cliente' => $clienteId,
             'nome' => $dadosWhatsApp['display_name'] ?: ($dadosWhatsApp['waba_name'] ?: 'WhatsApp Cloud API'),
             'phone_number_id' => $dadosWhatsApp['phone_number_id'],
@@ -620,7 +644,14 @@ class ConfiguracaoController extends Controller
             'code_verification_status' => $dadosWhatsApp['code_verification_status'] ?? null,
             'name_status' => $dadosWhatsApp['name_status'] ?? null,
             'operational_status' => $dadosWhatsApp['operational_status'] ?? null
-        ]);
+        ];
+
+        $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignupComBloqueio(
+            $dadosPersistencia,
+            function() use ($clienteId){
+                $this->exigirPermissaoConexao($clienteId);
+            }
+        );
 
         if(!$contaId){
             throw new Exception('Falha ao salvar conta Meta no banco.');
@@ -922,8 +953,7 @@ class ConfiguracaoController extends Controller
             );
 
         $limiteNumeros =
-            $this->metaContaModel
-            ->avaliarLimiteNumerosPorCliente(
+            $this->avaliarPermissaoConexao(
                 $usuario['CLI_ID']
             );
 
