@@ -93,7 +93,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
     <link
     rel="stylesheet"
-    href="<?= ASSET_URL; ?>/css/style.css?v=11"
+    href="<?= ASSET_URL; ?>/css/style.css?v=12"
     >
 
     <style>
@@ -1001,6 +1001,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
     </div>
 
 </footer>
+
+<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
 
 <script>
 

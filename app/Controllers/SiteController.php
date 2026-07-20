@@ -8,6 +8,8 @@ use Core\Session;
 use PDO;
 use PDOException;
 use Models\Plano;
+use Models\Cliente;
+use Models\ConfiguracaoSite;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
@@ -15,6 +17,11 @@ use Services\NotificacaoService;
 
 class SiteController extends Controller
 {
+    private function dadosWhatsappSite()
+    {
+        return (new ConfiguracaoSite())->obterConfiguracaoWhatsappSite();
+    }
+
     public function index()
     {
         $planoModel = new Plano();
@@ -23,14 +30,17 @@ class SiteController extends Controller
 
         $this->view('site/home', [
             'titulo' => 'Disparador.net WhatsApp',
-            'planos' => $planos
+            'planos' => $planos,
+            'whatsappSite' => $this->dadosWhatsappSite()
         ], false);
     }
 
     public function cadastro()
     {
         $this->view('site/cadastro', [
-            'titulo' => 'Cadastro'
+            'titulo' => 'Cadastro',
+            'origensCadastro' => Cliente::ORIGENS_CADASTRO,
+            'whatsappSite' => $this->dadosWhatsappSite()
         ], false);
     }
 
@@ -55,6 +65,8 @@ class SiteController extends Controller
         $telefone = preg_replace('/\D/', '', $_POST['telefone'] ?? '');
         $senha = $_POST['senha'] ?? '';
         $confirmarSenha = $_POST['confirmar_senha'] ?? '';
+        $origemCadastro = $_POST['origem_cadastro'] ?? '';
+        $origemCadastroOutro = $_POST['origem_cadastro_outro'] ?? '';
         $dadosCadastro = [
             'tipo_pessoa' => $tipoPessoa,
             'cpf_cnpj' => $_POST['cpf_cnpj'] ?? '',
@@ -63,8 +75,19 @@ class SiteController extends Controller
             'nome_fantasia' => $nomeFantasia,
             'email' => $email,
             'telefone' => $_POST['telefone'] ?? '',
+            'origem_cadastro' => $origemCadastro,
+            'origem_cadastro_outro' => $origemCadastroOutro,
             'aceiteTermos' => $_POST['aceiteTermos'] ?? null
         ];
+
+        try{
+            $origemValidada = Cliente::validarOrigemCadastro(
+                $origemCadastro,
+                $origemCadastroOutro
+            );
+        }catch(\InvalidArgumentException $e){
+            $this->voltarCadastroComDados($dadosCadastro, $e->getMessage());
+        }
 
 
         if (
@@ -186,6 +209,8 @@ class SiteController extends Controller
                     CLI_StatusPagamento,
                     CLI_StatusCadastro,
                     CLI_Observacoes,
+                    CLI_OrigemCadastro,
+                    CLI_OrigemCadastroOutro,
                     CLI_Ativo
                 ) VALUES (
                     :tipo_pessoa,
@@ -199,6 +224,8 @@ class SiteController extends Controller
                     'pendente',
                     'ativo',
                     :observacoes,
+                    :origem_cadastro,
+                    :origem_cadastro_outro,
                     'S'
                 )
             ");
@@ -211,7 +238,9 @@ class SiteController extends Controller
                 ':nome_fantasia' => $nomeFantasia ?: $nome,
                 ':email' => $email,
                 ':telefone' => $telefone,
-                ':observacoes' => 'Cadastro realizado pelo site público. Conta ativada automaticamente.'
+                ':observacoes' => 'Cadastro realizado pelo site público. Conta ativada automaticamente.',
+                ':origem_cadastro' => $origemValidada['origem'],
+                ':origem_cadastro_outro' => $origemValidada['outro']
             ]);
 
             $clienteId = $db->lastInsertId();
@@ -323,7 +352,8 @@ class SiteController extends Controller
         $this->view(
             'site/politica_privacidade',
             [
-                'titulo' => 'Política de Privacidade'
+                'titulo' => 'Política de Privacidade',
+                'whatsappSite' => $this->dadosWhatsappSite()
             ],
             false
         );
@@ -334,7 +364,8 @@ class SiteController extends Controller
         $this->view(
             'site/termos_uso',
             [
-                'titulo' => 'Termos de Uso'
+                'titulo' => 'Termos de Uso',
+                'whatsappSite' => $this->dadosWhatsappSite()
             ],
             false
         );
@@ -345,7 +376,8 @@ class SiteController extends Controller
         $this->view(
             'site/politica_cancelamento',
             [
-                'titulo' => 'Política de Cancelamento e Reembolso'
+                'titulo' => 'Política de Cancelamento e Reembolso',
+                'whatsappSite' => $this->dadosWhatsappSite()
             ],
             false
         );
