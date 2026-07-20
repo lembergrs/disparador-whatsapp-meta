@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+Disallow: /app/
+Disallow: /vendor/
+Disallow: /storage/
+Disallow: /logs/
+Disallow: /tests/
+Disallow: /config/
+Disallow: /cron/
+Disallow: /worker/
+Disallow: /public/webhook/
+
+Sitemap: https://disparador.net/sitemap.xml

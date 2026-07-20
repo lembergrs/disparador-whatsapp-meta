@@ -412,6 +412,34 @@ body.login-custom-page {
     margin-bottom: 18px;
 }
 
+.site-section-lead{
+    max-width: 820px;
+}
+
+.site-meta-tiers{
+    background: var(--disp-bg);
+}
+
+.site-meta-tiers-table{
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15,23,42,.07);
+}
+
+.site-meta-tiers-table th,
+.site-meta-tiers-table td{
+    min-width: 135px;
+    vertical-align: middle;
+}
+
+.site-navbar a:focus-visible,
+.site-hero-v2 a:focus-visible,
+.site-final-cta a:focus-visible,
+footer a:focus-visible{
+    box-shadow: 0 0 0 3px rgba(8,166,63,.35);
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
 .site-final-cta{
     background:
         linear-gradient(
@@ -610,6 +638,10 @@ body.login-custom-page {
 
     .site-plan-card.featured{
         transform: none;
+    }
+
+    .site-meta-tiers-table table{
+        min-width: 720px;
     }
 }
 

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Política de Privacidade | Disparador.net RL2 Net</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://disparador.net/site/politicaPrivacidade">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 </head>
