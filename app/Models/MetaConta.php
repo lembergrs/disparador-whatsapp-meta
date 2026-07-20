@@ -256,7 +256,8 @@ class MetaConta
 
     public function avaliarLimiteNumerosPorCliente(
         $clienteId,
-        $ignorarContaId = null
+        $ignorarContaId = null,
+        $preTrialElegivel = false
     )
     {
         $sql = $this->db->prepare("
@@ -295,6 +296,18 @@ class MetaConta
 
         $mensagemLimite =
             'Você atingiu o limite de números do seu plano. Faça upgrade para conectar mais números.';
+
+        if($preTrialElegivel && $utilizados === 0){
+            return [
+                'permitido' => true,
+                'sem_plano' => empty($cliente['CLI_Plano_DR']),
+                'pre_trial_primeiro_numero' => true,
+                'utilizados' => 0,
+                'limite' => 1,
+                'disponiveis' => 1,
+                'mensagem' => null
+            ];
+        }
 
         if(
             !$cliente
@@ -492,6 +505,37 @@ class MetaConta
         }
 
         return $this->salvarEmbeddedSignup($dados);
+    }
+
+    public function salvarOuAtualizarEmbeddedSignupComBloqueio(array $dados, callable $autorizar)
+    {
+        $this->db->beginTransaction();
+
+        try{
+            $bloqueio = $this->db->prepare("
+                SELECT CLI_ID
+                FROM clientes
+                WHERE CLI_ID = ?
+                FOR UPDATE
+            ");
+            $bloqueio->execute([(int) $dados['cliente']]);
+
+            if(!$bloqueio->fetchColumn()){
+                throw new \RuntimeException('Cliente não encontrado para conectar o número.');
+            }
+
+            $autorizar();
+            $contaId = $this->salvarOuAtualizarEmbeddedSignup($dados);
+            $this->db->commit();
+
+            return $contaId;
+        }catch(\Throwable $e){
+            if($this->db->inTransaction()){
+                $this->db->rollBack();
+            }
+
+            throw $e;
+        }
     }
 
     private function salvarEmbeddedSignup(array $dados)

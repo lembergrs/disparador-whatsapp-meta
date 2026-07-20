@@ -7,11 +7,60 @@ use PDO;
 
 class Cliente
 {
+    public const ORIGENS_CADASTRO = [
+        'indicacao' => 'Indicação de amigo ou conhecido',
+        'google' => 'Google',
+        'instagram' => 'Instagram',
+        'facebook' => 'Facebook',
+        'linkedin' => 'LinkedIn',
+        'youtube' => 'YouTube',
+        'anuncio_internet' => 'Anúncio na internet',
+        'evento' => 'Evento, feira ou palestra',
+        'cliente_parceiro' => 'Cliente ou parceiro comercial',
+        'contato_equipe' => 'Contato da equipe do Disparador.net',
+        'whatsapp' => 'WhatsApp',
+        'outro' => 'Outro'
+    ];
+
     private $db;
 
     public function __construct($db = null)
     {
         $this->db = $db ?: Database::getInstance();
+    }
+
+    public static function validarOrigemCadastro($origem, $outro = '')
+    {
+        $origem = trim((string) $origem);
+        $outro = trim(strip_tags((string) $outro));
+
+        if(!array_key_exists($origem, self::ORIGENS_CADASTRO)){
+            throw new \InvalidArgumentException('Selecione como você conheceu o Disparador.net.');
+        }
+
+        if($origem === 'outro'){
+            if($outro === ''){
+                throw new \InvalidArgumentException('Conte como você conheceu o Disparador.net.');
+            }
+            if(mb_strlen($outro) > 150){
+                throw new \InvalidArgumentException('A descrição da origem deve possuir no máximo 150 caracteres.');
+            }
+        }else{
+            $outro = null;
+        }
+
+        return ['origem' => $origem, 'outro' => $outro];
+    }
+
+    public static function formatarOrigemCadastro($origem, $outro = null)
+    {
+        if(empty($origem) || !isset(self::ORIGENS_CADASTRO[$origem])){
+            return 'Não informado';
+        }
+
+        return $origem === 'outro' && trim((string) $outro) !== ''
+            ? 'Outro — ' . trim((string) $outro)
+            : self::ORIGENS_CADASTRO[$origem];
     }
 
 

@@ -214,6 +214,7 @@ data-vencimento="<?= escClienteAttr($cliente['CLI_Vencimento']); ?>"
 data-status="<?= escClienteAttr($cliente['CLI_StatusPagamento']); ?>"
 
 data-observacoes="<?= escClienteAttr($cliente['CLI_Observacoes']); ?>"
+data-origem-cadastro="<?= escClienteAttr(\Models\Cliente::formatarOrigemCadastro($cliente['CLI_OrigemCadastro'] ?? null, $cliente['CLI_OrigemCadastroOutro'] ?? null)); ?>"
 data-cnpj-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CNPJ'] ?? ''); ?>"
 data-razao-social-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_RazaoSocial'] ?? ''); ?>"
 data-cep-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CEP'] ?? ''); ?>"
@@ -615,6 +616,20 @@ Gerar
 
 
 
+
+<div class="form-group">
+
+<label>Como conheceu o Disparador.net</label>
+
+<input
+type="text"
+name="origem_cadastro_visualizacao"
+class="form-control"
+value="Não informado"
+readonly
+>
+
+</div>
 
 <div class="form-group">
 

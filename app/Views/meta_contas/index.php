@@ -33,6 +33,51 @@ function metaContaUltimaSincronizacao($valor)
 }
 ?>
 <div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Atendimento pelo WhatsApp no site</h3>
+    </div>
+    <div class="card-body">
+        <?php if(empty($configuracaoWhatsappSiteDisponivel)){ ?>
+            <div class="alert alert-warning mb-0">A configuração estará disponível após aplicar a migration do botão público de WhatsApp.</div>
+        <?php }else{ ?>
+            <form action="<?= BASE_URL; ?>/index.php?url=metaConta/salvarWhatsappSite" method="post">
+                <?= \Core\Csrf::input(); ?>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="whatsappSiteAtivo">Exibir botão no site</label>
+                            <select class="form-control" id="whatsappSiteAtivo" name="whatsapp_site_ativo">
+                                <option value="N" <?= ($configuracaoWhatsappSite['CWS_Ativo'] ?? 'N') === 'N' ? 'selected' : ''; ?>>Não</option>
+                                <option value="S" <?= ($configuracaoWhatsappSite['CWS_Ativo'] ?? 'N') === 'S' ? 'selected' : ''; ?>>Sim</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="form-group">
+                            <label for="whatsappSiteConta">Número de atendimento</label>
+                            <select class="form-control" id="whatsappSiteConta" name="meta_conta_id">
+                                <option value="">Selecione um número conectado</option>
+                                <?php foreach(($contasWhatsappSite ?? []) as $contaWhatsappSite){ ?>
+                                    <option value="<?= (int) $contaWhatsappSite['MTA_ID']; ?>" <?= (int) ($configuracaoWhatsappSite['MTA_ID'] ?? 0) === (int) $contaWhatsappSite['MTA_ID'] ? 'selected' : ''; ?>>
+                                        <?= htmlspecialchars(($contaWhatsappSite['CLI_Nome'] ?? '') . ' — ' . ($contaWhatsappSite['MTA_Nome'] ?? '') . ' — ' . ($contaWhatsappSite['MTA_NumeroTelefone'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+                                    </option>
+                                <?php } ?>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="whatsappSiteMensagem">Mensagem inicial</label>
+                    <textarea class="form-control" id="whatsappSiteMensagem" name="mensagem_inicial" maxlength="500" rows="3"><?= htmlspecialchars($configuracaoWhatsappSite['CWS_Mensagem'] ?? \Models\ConfiguracaoSite::MENSAGEM_PADRAO, ENT_QUOTES, 'UTF-8'); ?></textarea>
+                    <small class="form-text text-muted">Até 500 caracteres. Quebras de linha, acentos e pontuação são preservados.</small>
+                </div>
+                <button type="submit" class="btn btn-success">Salvar configuração do site</button>
+            </form>
+        <?php } ?>
+    </div>
+</div>
+
+<div class="card">
 
 <div class="card-header">
 

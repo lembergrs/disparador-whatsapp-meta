@@ -384,6 +384,23 @@ class Auth
         return self::clienteEmPreTrial();
     }
 
+    public static function podeConectarPrimeiroNumero($clienteId, $numerosAtivos)
+    {
+        $usuario = self::usuario();
+
+        if(
+            !$usuario
+            ||
+            (int) ($usuario['CLI_ID'] ?? 0) !== (int) $clienteId
+            ||
+            (int) $numerosAtivos !== 0
+        ){
+            return false;
+        }
+
+        return self::clienteEmPreTrial();
+    }
+
     public static function validarBloqueioFinanceiro()
     {
         $usuario = self::usuario();

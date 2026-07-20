@@ -7,6 +7,7 @@ use Core\Auth;
 use Core\Session;
 use Models\MetaConta;
 use Models\Cliente;
+use Models\ConfiguracaoSite;
 use Services\MetaService;
 
 class MetaContaController extends Controller
@@ -14,6 +15,8 @@ class MetaContaController extends Controller
     private $metaModel;
 
     private $clienteModel;
+
+    private $configuracaoSiteModel;
 
 
 
@@ -28,6 +31,9 @@ class MetaContaController extends Controller
 
         $this->clienteModel =
             new Cliente();
+
+        $this->configuracaoSiteModel =
+            new ConfiguracaoSite();
     }
 
 
@@ -102,6 +108,21 @@ class MetaContaController extends Controller
         $colunaWebhookVerifyTokenExiste =
             $this->metaModel->colunaWebhookVerifyTokenExiste();
 
+        try{
+            $configuracaoWhatsappSite = $this->configuracaoSiteModel->buscar();
+            $formWhatsappSite = Session::get('whatsapp_site_form');
+            Session::remove('whatsapp_site_form');
+            if(is_array($formWhatsappSite)){
+                $configuracaoWhatsappSite = array_merge($configuracaoWhatsappSite, $formWhatsappSite);
+            }
+            $contasWhatsappSite = $this->configuracaoSiteModel->contasElegiveis();
+            $configuracaoWhatsappSiteDisponivel = true;
+        }catch(\Throwable $e){
+            $configuracaoWhatsappSite = null;
+            $contasWhatsappSite = [];
+            $configuracaoWhatsappSiteDisponivel = false;
+        }
+
 
 
 
@@ -118,10 +139,55 @@ class MetaContaController extends Controller
 
                 'colunaWebhookVerifyTokenExiste' => $colunaWebhookVerifyTokenExiste,
 
-                'colunasAutoRespostaExistem' => $this->metaModel->colunasAutoRespostaExistem()
+                'colunasAutoRespostaExistem' => $this->metaModel->colunasAutoRespostaExistem(),
+                'configuracaoWhatsappSite' => $configuracaoWhatsappSite,
+                'contasWhatsappSite' => $contasWhatsappSite,
+                'configuracaoWhatsappSiteDisponivel' => $configuracaoWhatsappSiteDisponivel
 
             ]
         );
+    }
+
+    public function salvarWhatsappSite()
+    {
+        $this->validarCsrfPost();
+
+        $ativo = ($_POST['whatsapp_site_ativo'] ?? 'N') === 'S' ? 'S' : 'N';
+        $metaContaId = (int) ($_POST['meta_conta_id'] ?? 0);
+        $mensagem = trim(strip_tags((string) ($_POST['mensagem_inicial'] ?? '')));
+
+        if(mb_strlen($mensagem) > 500){
+            $this->preservarFormularioWhatsappSite($ativo, $metaContaId, $mensagem);
+            Session::flash('error', 'A mensagem inicial deve possuir no máximo 500 caracteres.');
+            $this->redirect('metaConta');
+        }
+
+        if($ativo === 'S'){
+            $conta = $this->configuracaoSiteModel->contaElegivel($metaContaId);
+            if(!$conta || !ConfiguracaoSite::normalizarTelefone($conta['MTA_NumeroTelefone'] ?? '')){
+                $this->preservarFormularioWhatsappSite($ativo, $metaContaId, $mensagem);
+                Session::flash('error', 'Selecione um número Meta ativo, conectado e com telefone internacional válido.');
+                $this->redirect('metaConta');
+            }
+            if($mensagem === ''){
+                $this->preservarFormularioWhatsappSite($ativo, $metaContaId, $mensagem);
+                Session::flash('error', 'Informe a mensagem inicial do botão de WhatsApp.');
+                $this->redirect('metaConta');
+            }
+        }
+
+        $this->configuracaoSiteModel->salvar($ativo, $metaContaId, $mensagem);
+        Session::flash('success', 'Atendimento pelo WhatsApp no site atualizado com sucesso.');
+        $this->redirect('metaConta');
+    }
+
+    private function preservarFormularioWhatsappSite($ativo, $metaContaId, $mensagem)
+    {
+        Session::set('whatsapp_site_form', [
+            'CWS_Ativo' => $ativo,
+            'MTA_ID' => $metaContaId,
+            'CWS_Mensagem' => $mensagem
+        ]);
     }
 
 
