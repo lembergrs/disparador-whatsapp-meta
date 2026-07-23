@@ -851,7 +851,15 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <p class="text-center text-muted mt-3 mb-0">
             Valores e limites podem ser ajustados conforme a necessidade da operação.
         </p>
-
+        <div class="row justify-content-center">
+            <div class="col-lg-9 text-center">
+                <p class="text-center text-muted mt-3 mb-0">
+                    <h2 class="site-section-title">Seu negócio nunca para</h2>
+                    Todos os planos incluem uma franquia de mensagens.<br />
+                    Caso ela seja ultrapassada, o envio continua normalmente e apenas as mensagens excedentes são cobradas conforme o consumo.
+                </p>
+            </div>
+        </div>
     </div>
 
 </section>
