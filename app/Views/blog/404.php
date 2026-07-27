@@ -1,0 +1,1 @@
+<section class="py-5"><div class="container text-center"><h1>Artigo não encontrado</h1><p class="text-muted">O conteúdo não existe ou não está publicado.</p><a class="btn btn-success" href="<?= BASE_URL; ?>/blog">Voltar ao blog</a></div></section>

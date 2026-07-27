@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Database;
 use Core\Session;
 use Core\Csrf;
+use Core\Auth;
 use PDO;
 use Services\RecuperacaoSenhaService;
 
@@ -91,7 +92,14 @@ class LoginController extends Controller
             )
         ){
 
+            if(Auth::isImpersonating()){
+                Auth::logout('outro');
+                session_start();
+            }
+
             session_regenerate_id(true);
+
+            unset($_SESSION['impersonacao']);
 
             $_SESSION['usuario'] = [
 
@@ -169,6 +177,7 @@ class LoginController extends Controller
     public function salvarNovaSenha()
     {
         Csrf::exigirPost();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         $service = new RecuperacaoSenhaService();
         $resultado = $service->redefinir(
@@ -200,7 +209,7 @@ class LoginController extends Controller
 
         Csrf::exigirPost();
 
-        session_destroy();
+        Auth::logout();
 
         session_start();
 

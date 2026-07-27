@@ -32,6 +32,16 @@ class Controller
         Csrf::exigirPost();
     }
 
+    protected function viewComLayout($view, $layout, array $dados = [])
+    {
+        extract($dados);
+        $viewPath = __DIR__ . "/../Views/{$view}.php";
+        ob_start();
+        require $viewPath;
+        $conteudo = ob_get_clean();
+        require __DIR__ . "/../Views/{$layout}.php";
+    }
+
     protected function redirect($url)
     {
         header(

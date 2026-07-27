@@ -31,11 +31,14 @@ class Router
             new $controllerClass();
 
         if(
-            !method_exists(
-                $controller,
-                $method
-            )
+            $controllerClass === 'Controllers\\BlogController'
+            && !in_array($method, ['index', 'categoria'], true)
         ){
+            $controller->artigo($method);
+            return;
+        }
+
+        if(!method_exists($controller, $method)){
             die('Método não encontrado');
         }
 

@@ -1,5 +1,8 @@
 RewriteEngine On
 
+# Sitemap dinâmico: inclui apenas artigos publicados.
+RewriteRule ^sitemap\.xml$ index.php?url=sitemap [QSA,L]
+
 # Não redireciona arquivos e pastas reais
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

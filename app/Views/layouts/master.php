@@ -30,6 +30,8 @@ if($usuario && (($usuario['nivel'] ?? null) === 'admin' || Auth::nivelCliente($u
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<meta name="robots" content="noindex, nofollow">
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -230,6 +232,15 @@ class="nav-link <?= ($url == 'dashboard') ? 'active' : ''; ?>"
 </li>
 
 <?php if($usuario['nivel'] == 'admin'){ ?>
+
+<li class="nav-item has-treeview <?= str_contains($url, 'artigoAdmin') ? 'menu-open' : ''; ?>">
+    <a href="#" class="nav-link <?= str_contains($url, 'artigoAdmin') ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-pen-nib"></i><p>Conteúdo<i class="right fas fa-angle-left"></i></p>
+    </a>
+    <ul class="nav nav-treeview">
+        <li class="nav-item"><a href="<?= BASE_URL; ?>/index.php?url=artigoAdmin" class="nav-link <?= str_contains($url, 'artigoAdmin') ? 'active' : ''; ?>"><i class="far fa-circle nav-icon"></i><p>Artigos</p></a></li>
+    </ul>
+</li>
 
 <li class="nav-item">
 
@@ -541,6 +552,8 @@ Conversas
 <div class="container-fluid">
 
 <?php require __DIR__ . '/../components/flash.php'; ?>
+
+<?php require __DIR__ . '/../components/support_mode_banner.php'; ?>
 
 <?php require $viewPath; ?>
 

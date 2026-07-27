@@ -75,7 +75,9 @@ $adminPodeAtualizarStatusMeta =
                         id="btnConectarWhatsApp"
                         >
                             <i class="fab fa-whatsapp"></i>
-                            Conectar novo número
+                            <?= !empty($limiteNumeros['pre_trial_primeiro_numero'])
+                                ? 'Conectar WhatsApp'
+                                : 'Conectar novo número'; ?>
                         </button>
 
                     <?php }else{ ?>
@@ -103,6 +105,11 @@ $adminPodeAtualizarStatusMeta =
                         <?= (int) $limiteNumeros['limite']; ?>
                         números conectados
                     </strong>
+                    <?php if(!empty($limiteNumeros['pre_trial_primeiro_numero'])){ ?>
+                        <div class="small mt-1">
+                            A conexão do primeiro número inicia seu período de avaliação de 7 dias ou até 200 mensagens.
+                        </div>
+                    <?php } ?>
                 </div>
 
                 <?php if(!$podeConectarNumero){ ?>

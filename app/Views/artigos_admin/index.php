@@ -1,0 +1,30 @@
+<div class="card"><div class="card-header d-flex justify-content-between"><h3 class="card-title">Artigos</h3><a class="btn btn-success" href="<?= BASE_URL; ?>/index.php?url=artigoAdmin/formulario"><i class="fas fa-plus"></i> Novo artigo</a></div>
+<div class="card-body">
+<form method="get" action="<?= BASE_URL; ?>/index.php" class="row mb-4"><input type="hidden" name="url" value="artigoAdmin">
+<div class="col-md-4"><label for="filtroTitulo">Título</label><input id="filtroTitulo" class="form-control" name="titulo" value="<?= htmlspecialchars($filtros['titulo'] ?? ''); ?>"></div>
+<div class="col-md-3"><label for="filtroStatus">Status</label><select id="filtroStatus" class="form-control" name="status"><option value="">Todos</option><option value="rascunho" <?= ($filtros['status']??'')==='rascunho'?'selected':''; ?>>Rascunho</option><option value="publicado" <?= ($filtros['status']??'')==='publicado'?'selected':''; ?>>Publicado</option></select></div>
+<div class="col-md-3"><label for="filtroCategoria">Categoria</label><select id="filtroCategoria" class="form-control" name="categoria"><option value="">Todas</option><?php foreach($categorias as $cat){ ?><option value="<?= (int)$cat['ACG_ID']; ?>" <?= (int)($filtros['categoria']??0)===(int)$cat['ACG_ID']?'selected':''; ?>><?= htmlspecialchars($cat['ACG_Nome']); ?></option><?php } ?></select></div>
+<div class="col-md-2 d-flex align-items-end"><button class="btn btn-primary btn-block">Filtrar</button></div></form>
+<div class="table-responsive"><table class="table table-bordered table-hover"><thead><tr><th>Título</th><th>Categoria</th><th>Status</th><th>Destaque</th><th>Autor</th><th>Publicação</th><th>Ações</th></tr></thead><tbody>
+<?php foreach($artigos as $item){ ?><tr><td><?= htmlspecialchars($item['ART_Titulo']); ?></td><td><?= htmlspecialchars($item['ACG_Nome']); ?></td><td><span class="badge badge-<?= $item['ART_Status']==='publicado'?'success':'secondary'; ?>"><?= htmlspecialchars($item['ART_Status']); ?></span></td><td><?= $item['ART_Destaque']==='S'?'Sim':'Não'; ?></td><td><?= htmlspecialchars($item['AutorNome']); ?></td><td><?= $item['ART_DataPublicacao']?date('d/m/Y H:i',strtotime($item['ART_DataPublicacao'])):'—'; ?></td><td class="text-nowrap">
+<a class="btn btn-sm btn-info" href="<?= BASE_URL; ?>/index.php?url=artigoAdmin/formulario&id=<?= (int)$item['ART_ID']; ?>" title="Editar"><i class="fas fa-edit"></i></a>
+<a class="btn btn-sm btn-secondary" target="_blank" rel="noopener" href="<?= BASE_URL; ?>/index.php?url=artigoAdmin/preview&id=<?= (int)$item['ART_ID']; ?>" title="Visualizar prévia"><i class="fas fa-eye"></i></a>
+<?php if($item['ART_Status']==='publicado'){ ?><a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=artigoAdmin/despublicar&id=<?= (int)$item['ART_ID']; ?>" class="btn btn-sm btn-warning" data-confirm="Despublicar este artigo?" title="Despublicar"><i class="fas fa-pause"></i></a><?php }else{ ?><a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=artigoAdmin/publicar&id=<?= (int)$item['ART_ID']; ?>" class="btn btn-sm btn-success" data-confirm="Publicar este artigo agora?" title="Publicar"><i class="fas fa-upload"></i></a><?php } ?>
+<a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=artigoAdmin/excluir&id=<?= (int)$item['ART_ID']; ?>" class="btn btn-sm btn-danger" data-confirm="Excluir logicamente este artigo?" title="Excluir"><i class="fas fa-trash"></i></a>
+</td></tr><?php } ?>
+</tbody></table></div></div></div>
+
+<div class="row">
+<div class="col-md-6"><div class="card"><div class="card-header"><h3 class="card-title">Categorias</h3></div><div class="card-body">
+<form method="post" action="<?= BASE_URL; ?>/index.php?url=artigoAdmin/salvarCategoria" class="input-group mb-3"><input name="nome" maxlength="120" class="form-control" required placeholder="Nova categoria"><div class="input-group-append"><button class="btn btn-primary">Adicionar</button></div></form>
+<?php foreach($categorias as $cat){ ?>
+<form method="post" action="<?= BASE_URL; ?>/index.php?url=artigoAdmin/salvarCategoria" class="input-group input-group-sm border-top py-2"><input type="hidden" name="id" value="<?= (int)$cat['ACG_ID']; ?>"><input name="nome" maxlength="120" class="form-control" value="<?= htmlspecialchars($cat['ACG_Nome'],ENT_QUOTES,'UTF-8'); ?>" <?= $cat['ACG_Ativo']==='N'?'disabled':''; ?>><div class="input-group-append"><?php if($cat['ACG_Ativo']==='S'){ ?><button class="btn btn-outline-primary">Salvar</button><a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=artigoAdmin/excluirCategoria&id=<?= (int)$cat['ACG_ID']; ?>" data-confirm="Desativar categoria?" class="btn btn-outline-danger">Desativar</a><?php }else{ ?><span class="input-group-text">Inativa</span><?php } ?></div></form>
+<?php } ?>
+</div></div></div>
+<div class="col-md-6"><div class="card"><div class="card-header"><h3 class="card-title">Tags</h3></div><div class="card-body">
+<form method="post" action="<?= BASE_URL; ?>/index.php?url=artigoAdmin/salvarTag" class="input-group mb-3"><input name="nome" maxlength="80" class="form-control" required placeholder="Nova tag"><div class="input-group-append"><button class="btn btn-primary">Adicionar</button></div></form>
+<?php foreach($tags as $tag){ ?>
+<form method="post" action="<?= BASE_URL; ?>/index.php?url=artigoAdmin/salvarTag" class="input-group input-group-sm border-top py-2"><input type="hidden" name="id" value="<?= (int)$tag['ATG_ID']; ?>"><input name="nome" maxlength="80" class="form-control" value="<?= htmlspecialchars($tag['ATG_Nome'],ENT_QUOTES,'UTF-8'); ?>" <?= $tag['ATG_Ativo']==='N'?'disabled':''; ?>><div class="input-group-append"><?php if($tag['ATG_Ativo']==='S'){ ?><button class="btn btn-outline-primary">Salvar</button><a href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=artigoAdmin/excluirTag&id=<?= (int)$tag['ATG_ID']; ?>" data-confirm="Desativar tag?" class="btn btn-outline-danger">Desativar</a><?php }else{ ?><span class="input-group-text">Inativa</span><?php } ?></div></form>
+<?php } ?>
+</div></div></div>
+</div>

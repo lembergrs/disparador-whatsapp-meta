@@ -214,6 +214,7 @@ data-vencimento="<?= escClienteAttr($cliente['CLI_Vencimento']); ?>"
 data-status="<?= escClienteAttr($cliente['CLI_StatusPagamento']); ?>"
 
 data-observacoes="<?= escClienteAttr($cliente['CLI_Observacoes']); ?>"
+data-origem-cadastro="<?= escClienteAttr(\Models\Cliente::formatarOrigemCadastro($cliente['CLI_OrigemCadastro'] ?? null, $cliente['CLI_OrigemCadastroOutro'] ?? null)); ?>"
 data-cnpj-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CNPJ'] ?? ''); ?>"
 data-razao-social-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_RazaoSocial'] ?? ''); ?>"
 data-cep-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_CEP'] ?? ''); ?>"
@@ -233,6 +234,25 @@ data-email-fiscal="<?= escClienteAttr($cliente['CLI_NFSe_Email'] ?? ''); ?>"
 </button>
 
 </a>
+
+<?php if(
+    ($usuario['nivel'] ?? null) === 'admin'
+    && ($cliente['CLI_Ativo'] ?? 'N') === 'S'
+    && ($cliente['CLI_StatusCadastro'] ?? '') === 'ativo'
+){ ?>
+<a
+href="#"
+data-post-url="<?= BASE_URL; ?>/index.php?url=suporte/iniciar"
+data-field-cliente_id="<?= (int) $cliente['CLI_ID']; ?>"
+data-confirm="Deseja acessar a conta de &quot;<?= escClienteAttr($cliente['CLI_Nome']); ?>&quot;? Você visualizará o sistema exatamente como o cliente o vê."
+class="btn btn-warning btn-sm"
+title="Acessar como cliente"
+data-toggle="tooltip"
+>
+    <i class="fas fa-user-secret" aria-hidden="true"></i>
+    <span class="sr-only">Acessar como cliente</span>
+</a>
+<?php } ?>
 
 <?php if($cliente['CLI_StatusCadastro'] != 'inativo'){ ?>
 
@@ -615,6 +635,20 @@ Gerar
 
 
 
+
+<div class="form-group">
+
+<label>Como conheceu o Disparador.net</label>
+
+<input
+type="text"
+name="origem_cadastro_visualizacao"
+class="form-control"
+value="Não informado"
+readonly
+>
+
+</div>
 
 <div class="form-group">
 

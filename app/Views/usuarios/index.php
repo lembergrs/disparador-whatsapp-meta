@@ -7,12 +7,16 @@
     </div>
 
     <div class="card-body">
+        <?php if(\Core\Auth::isImpersonating()){ ?>
+            <div class="alert alert-warning">Alterações de usuários não estão disponíveis durante o modo suporte.</div>
+        <?php } ?>
         <?php if($limiteAtingido){ ?>
             <div class="alert alert-warning">
                 Você atingiu o limite de usuários do seu plano. Faça upgrade para adicionar mais usuários.
             </div>
         <?php } ?>
 
+        <?php if(!\Core\Auth::isImpersonating()){ ?>
         <form method="post" action="<?= BASE_URL; ?>/index.php?url=usuario/salvar" class="mb-4">
             <?php if($adminInterno){ ?>
                 <input type="hidden" name="cliente_id" value="<?= (int) $clienteSelecionadoId; ?>">
@@ -36,6 +40,7 @@
                 </div>
             </div>
         </form>
+        <?php } ?>
 
         <div class="table-responsive">
             <table class="table table-bordered table-striped">
@@ -56,6 +61,7 @@
                             <td><?= htmlspecialchars($u['USU_Nivel']); ?></td>
                             <td><?= $u['USU_Ativo'] == 'S' ? 'Ativo' : 'Inativo'; ?></td>
                             <td>
+                                <?php if(!\Core\Auth::isImpersonating()){ ?>
                                 <button type="button" class="btn btn-sm btn-secondary btn-editar"
                                     data-id="<?= (int) $u['USU_ID']; ?>"
                                     data-nome="<?= htmlspecialchars($u['USU_Nome']); ?>"
@@ -75,6 +81,9 @@
                                     <input type="password" name="senha" class="form-control form-control-sm d-inline-block" style="width: 105px" placeholder="Nova senha" minlength="6" required>
                                     <button type="submit" class="btn btn-sm btn-info">Alterar senha</button>
                                 </form>
+                                <?php }else{ ?>
+                                    <span class="text-muted">Somente visualização</span>
+                                <?php } ?>
                             </td>
                         </tr>
                     <?php } ?>
