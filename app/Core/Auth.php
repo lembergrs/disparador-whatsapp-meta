@@ -50,7 +50,7 @@ class Auth
         $ativo = $sql->fetchColumn();
 
         if($ativo !== 'S'){
-            session_destroy();
+            self::logout('sessao_expirada');
             session_start();
 
             header(
@@ -80,9 +80,110 @@ class Auth
         return $_SESSION['usuario'] ?? null;
     }
 
-    public static function logout()
+    public static function logout($motivo = 'logout')
     {
+        if(self::isImpersonating()){
+            $impersonacao = self::impersonacao();
+            try{
+                (new \Models\SuporteAcesso())->encerrar(
+                    (int) ($impersonacao['auditoria_id'] ?? 0),
+                    $motivo
+                );
+            }catch(\Throwable $e){
+                error_log('Erro ao encerrar auditoria no logout do modo suporte: ' . $e->getMessage());
+            }
+        }
+
+        unset($_SESSION['impersonacao'], $_SESSION['usuario']);
         session_destroy();
+    }
+
+    public static function isImpersonating()
+    {
+        return !empty($_SESSION['impersonacao'])
+            && !empty($_SESSION['impersonacao']['admin'])
+            && !empty($_SESSION['impersonacao']['auditoria_id']);
+    }
+
+    public static function impersonacao()
+    {
+        return self::isImpersonating() ? $_SESSION['impersonacao'] : null;
+    }
+
+    public static function getOriginalAdmin()
+    {
+        $impersonacao = self::impersonacao();
+        return $impersonacao['admin'] ?? null;
+    }
+
+    public static function startImpersonation(array $identidade, $auditoriaId)
+    {
+        $admin = self::usuario();
+
+        if(
+            self::isImpersonating()
+            || !$admin
+            || ($admin['nivel'] ?? null) !== 'admin'
+            || (int) $auditoriaId <= 0
+            || empty($identidade['USU_ID'])
+            || empty($identidade['CLI_ID'])
+            || !in_array($identidade['USU_Nivel'] ?? null, ['cliente_admin', 'cliente'], true)
+        ){
+            throw new \RuntimeException('Impersonação inválida.');
+        }
+
+        $_SESSION['impersonacao'] = [
+            'admin' => $admin,
+            'cliente_id' => (int) $identidade['CLI_ID'],
+            'cliente_nome' => (string) ($identidade['CLI_Nome'] ?? ''),
+            'usuario_cliente_id' => (int) $identidade['USU_ID'],
+            'auditoria_id' => (int) $auditoriaId,
+            'inicio' => date('c')
+        ];
+
+        $_SESSION['usuario'] = [
+            'id' => (int) $identidade['USU_ID'],
+            'nome' => (string) $identidade['USU_Nome'],
+            'cliente_id' => (int) $identidade['CLI_ID'],
+            'nivel' => (string) $identidade['USU_Nivel'],
+            'CLI_ID' => (int) $identidade['CLI_ID'],
+            'CLI_StatusPagamento' => $identidade['CLI_StatusPagamento'] ?? null,
+            'CLI_StatusCadastro' => $identidade['CLI_StatusCadastro'] ?? null,
+            'CLI_DataLiberacao' => $identidade['CLI_DataLiberacao'] ?? null,
+            'CLI_DataCadastro' => $identidade['CLI_DataCadastro'] ?? null,
+            'CLI_Plano_DR' => $identidade['CLI_Plano_DR'] ?? null,
+            'CMS_MensagensMesAtual' => (int) ($identidade['CMS_MensagensMesAtual'] ?? 0)
+        ];
+
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_regenerate_id(true);
+        }
+    }
+
+    public static function stopImpersonation()
+    {
+        $admin = self::getOriginalAdmin();
+        if(!$admin || ($admin['nivel'] ?? null) !== 'admin'){
+            throw new \RuntimeException('Sessão administrativa original inválida.');
+        }
+
+        unset($_SESSION['impersonacao']);
+        $_SESSION['usuario'] = $admin;
+
+        if(session_status() === PHP_SESSION_ACTIVE){
+            session_regenerate_id(true);
+        }
+    }
+
+    public static function bloquearAcaoSensivelEmImpersonacao()
+    {
+        if(!self::isImpersonating()){
+            return;
+        }
+
+        Session::flash('error', 'Esta ação não está disponível durante o modo suporte.');
+        header('Location: ' . BASE_URL . '/index.php?url=dashboard');
+        exit;
     }
 
     public static function nivelCliente($nivel = null)

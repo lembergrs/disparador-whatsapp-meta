@@ -157,6 +157,7 @@ $mensagemSuporte = 'Para alterar estas informações entre em contato com o supo
     </div>
 
     <div class="col-lg-4">
+        <?php if(!\Core\Auth::isImpersonating()){ ?>
         <div class="card card-warning card-outline" id="seguranca">
             <div class="card-header">
                 <h3 class="card-title">Segurança</h3>
@@ -185,5 +186,8 @@ $mensagemSuporte = 'Para alterar estas informações entre em contato com o supo
                 </div>
             </form>
         </div>
+        <?php }else{ ?>
+            <div class="alert alert-warning">Alteração de senha indisponível durante o modo suporte.</div>
+        <?php } ?>
     </div>
 </div>

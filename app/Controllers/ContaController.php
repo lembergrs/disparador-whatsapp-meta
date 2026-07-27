@@ -76,6 +76,7 @@ class ContaController extends Controller
     {
         $this->validarCsrfPost();
         Auth::cliente();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         $usuarioSessao = Auth::usuario();
         $usuarioId = (int) ($usuarioSessao['id'] ?? 0);

@@ -544,6 +544,8 @@ Conversas
 
 <?php require __DIR__ . '/../components/flash.php'; ?>
 
+<?php require __DIR__ . '/../components/support_mode_banner.php'; ?>
+
 <?php require $viewPath; ?>
 
 </div>
