@@ -18,11 +18,14 @@ Session::remove('cadastro_dados');
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://disparador.net/site/cadastro">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-    <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=11">
+    <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=12">
 
     <?php if(defined('RECAPTCHA_SITE_KEY') && RECAPTCHA_SITE_KEY != ''){ ?>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
@@ -198,6 +201,41 @@ Session::remove('cadastro_dados');
                             value="<?= htmlspecialchars($dadosCadastro['nome'] ?? ''); ?>"
                             required
                             >
+
+                        </div>
+
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="origemCadastro">Como você conheceu o Disparador.net? <span aria-hidden="true">*</span></label>
+                                    <select name="origem_cadastro" id="origemCadastro" class="form-control" required aria-describedby="erroOrigemCadastro">
+                                        <option value="">Selecione uma opção</option>
+                                        <?php foreach(($origensCadastro ?? []) as $codigoOrigem => $rotuloOrigem){ ?>
+                                            <option value="<?= htmlspecialchars($codigoOrigem, ENT_QUOTES, 'UTF-8'); ?>" <?= ($dadosCadastro['origem_cadastro'] ?? '') === $codigoOrigem ? 'selected' : ''; ?>>
+                                                <?= htmlspecialchars($rotuloOrigem, ENT_QUOTES, 'UTF-8'); ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                                    <div id="erroOrigemCadastro" class="invalid-feedback">Selecione uma opção válida.</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6" id="grupoOrigemCadastroOutro" hidden>
+                                <div class="form-group">
+                                    <label for="origemCadastroOutro">Conte como conheceu o Disparador.net</label>
+                                    <input
+                                    type="text"
+                                    name="origem_cadastro_outro"
+                                    id="origemCadastroOutro"
+                                    class="form-control"
+                                    maxlength="150"
+                                    value="<?= htmlspecialchars($dadosCadastro['origem_cadastro_outro'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                    aria-describedby="erroOrigemCadastroOutro"
+                                    >
+                                    <div id="erroOrigemCadastroOutro" class="invalid-feedback">Informe uma descrição com até 150 caracteres.</div>
+                                </div>
+                            </div>
 
                         </div>
 
@@ -426,6 +464,8 @@ Session::remove('cadastro_dados');
 
 </div>
 
+<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js"></script>
@@ -435,6 +475,23 @@ Session::remove('cadastro_dados');
 <script>
 
 $(function(){
+
+    function atualizarOrigemCadastroOutro()
+    {
+        const outroSelecionado = $('#origemCadastro').val() === 'outro';
+        const grupo = $('#grupoOrigemCadastroOutro');
+        const campo = $('#origemCadastroOutro');
+
+        grupo.prop('hidden', !outroSelecionado);
+        campo.prop('required', outroSelecionado);
+
+        if(!outroSelecionado){
+            campo.val('').removeClass('is-invalid');
+        }
+    }
+
+    $('#origemCadastro').on('change', atualizarOrigemCadastroOutro);
+    atualizarOrigemCadastroOutro();
 
     $('.telefone').inputmask(
         '(99) 99999-9999'

@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <title>Termos de Uso | Disparador.net RL2 Net</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://disparador.net/site/termosUso">
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@3.2/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=12">
 </head>
 
 <body>
@@ -131,6 +135,8 @@
     </div>
 
 </div>
+
+<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
 
 </body>
 </html>

@@ -1,29 +1,85 @@
+<?php
+$perguntasFrequentes = [
+    'O Disparador.net utiliza a API Oficial do WhatsApp?' => 'Sim. A integração utiliza a WhatsApp Business Platform, e a conta e o número passam pelos processos de conexão e validação da Meta.',
+    'Quando começa o período de avaliação?' => 'O período de avaliação começa somente após a validação da primeira conexão do WhatsApp Business.',
+    'Preciso contratar um plano antes de conectar o primeiro número?' => 'Não. O cliente elegível ao pré-trial pode conectar o primeiro número para iniciar a avaliação.',
+    'Quem define os limites de envio?' => 'Os limites de envio são definidos e administrados pela Meta conforme os critérios aplicáveis à conta e ao número.',
+    'O plano do Disparador aumenta automaticamente meu limite na Meta?' => 'Não. O limite do plano do Disparador.net e as faixas administradas pela Meta são capacidades diferentes.',
+    'A Meta cobra pelas mensagens?' => 'Podem existir tarifas da Meta por mensagens entregues, conforme a categoria da mensagem e o mercado do destinatário.',
+    'Posso usar qualquer mensagem em uma campanha?' => 'Mensagens iniciadas pela empresa normalmente dependem de templates aprovados e do cumprimento das políticas aplicáveis da Meta.',
+    'O teste grátis possui limite?' => 'Sim. O teste grátis é de até 7 dias ou 200 mensagens, o que ocorrer primeiro.'
+];
+
+$faqSchema = [];
+foreach($perguntasFrequentes as $pergunta => $resposta){
+    $faqSchema[] = [
+        '@type' => 'Question',
+        'name' => $pergunta,
+        'acceptedAnswer' => [
+            '@type' => 'Answer',
+            'text' => $resposta
+        ]
+    ];
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
 
-    <title>Disparador.net | Plataforma Oficial para WhatsApp Business</title>
+    <title>Disparador.net | Plataforma Oficial de WhatsApp Business da Meta</title>
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="icon" type="image/x-icon" href="<?= ASSET_URL ?>/img/favicon.ico?v=1">
     <link rel="icon" type="image/png" sizes="32x32" href="<?= ASSET_URL ?>/img/favicon.png">
     <link rel="icon" type="image/png" sizes="16x16" href="<?= ASSET_URL ?>/img/favicon.png">
-    <meta name="theme-color" content="#28A745">
+    <meta name="theme-color" content="#08a63f">
 
     <meta
     name="description"
-    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    content="Envie campanhas, notificações e mensagens pela API Oficial do WhatsApp Business da Meta. Gerencie contatos, templates, campanhas e conversas no Disparador.net."
     >
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="author" content="Disparador.net">
+    <meta name="application-name" content="Disparador.net">
+    <link rel="canonical" href="https://disparador.net/">
 
-    <meta property="og:title" content="Disparador.net | Plataforma Oficial para WhatsApp Business">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Disparador.net">
+    <meta property="og:title" content="Disparador.net | Plataforma Oficial de WhatsApp Business da Meta">
     <meta
     property="og:description"
-    content="Envie campanhas oficiais pelo WhatsApp, organize contatos e centralize o atendimento da sua empresa utilizando a API Oficial da Meta."
+    content="Campanhas, notificações, templates e atendimento pela API Oficial do WhatsApp Business da Meta."
     >
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="<?= BASE_URL; ?>/index.php?url=site">
+    <meta property="og:url" content="https://disparador.net/">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Disparador.net | Plataforma Oficial de WhatsApp Business da Meta">
+    <meta name="twitter:description" content="Campanhas, notificações, templates e atendimento pela API Oficial do WhatsApp Business da Meta.">
+
+    <script type="application/ld+json"><?= json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => 'Disparador.net',
+        'url' => 'https://disparador.net/',
+        'logo' => 'https://disparador.net/public/assets/img/logo-disparador.png'
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+    <script type="application/ld+json"><?= json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'SoftwareApplication',
+        'name' => 'Disparador.net',
+        'applicationCategory' => 'BusinessApplication',
+        'operatingSystem' => 'Web',
+        'url' => 'https://disparador.net/',
+        'description' => 'Plataforma web para campanhas, notificações e atendimento pela API Oficial do WhatsApp Business.'
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
+    <script type="application/ld+json"><?= json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'FAQPage',
+        'mainEntity' => $faqSchema
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
 
     <link
     rel="stylesheet"
@@ -37,7 +93,7 @@
 
     <link
     rel="stylesheet"
-    href="<?= ASSET_URL; ?>/css/style.css?v=10"
+    href="<?= ASSET_URL; ?>/css/style.css?v=12"
     >
 
     <style>
@@ -103,6 +159,8 @@
             <img
             src="<?= ASSET_URL; ?>/img/logo-disparador.png"
             alt="Disparador.net"
+            width="1136"
+            height="247"
             class="site-logo"
             >
         </a>
@@ -112,6 +170,9 @@
         type="button"
         data-toggle="collapse"
         data-target="#menuSite"
+        aria-controls="menuSite"
+        aria-expanded="false"
+        aria-label="Abrir menu de navegação"
         >
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -126,6 +187,10 @@
 
                 <li class="nav-item">
                     <a class="nav-link" href="#como-funciona">Ver como funciona</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="#faixas-meta">Faixas da Meta</a>
                 </li>
 
                 <li class="nav-item">
@@ -150,7 +215,7 @@
                     class="btn btn-success ml-lg-2 site-btn-main"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
-                        Solicitar acesso
+                        Começar teste grátis
                     </a>
                 </li>
 
@@ -171,15 +236,15 @@
             <div class="col-lg-6">
 
                 <span class="badge badge-success mb-3">
-                    Plataforma Oficial do WhatsApp Business
+                    Integração com a WhatsApp Business Platform
                 </span>
 
                 <h1 class="site-hero-title">
-                    Campanhas oficiais e atendimento centralizado pelo WhatsApp.
+                    Envie mensagens pela API Oficial do WhatsApp Business da Meta
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    Use a API Oficial da Meta para enviar campanhas, organizar contatos e atender clientes em uma única plataforma.
+                    Use a API Oficial da Meta para criar campanhas segmentadas, organizar listas, templates e agendamentos, acompanhar mensagens e atender clientes em uma única plataforma.
                 </p>
 
                 <div class="mt-4">
@@ -188,7 +253,7 @@
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
                     >
-                        Solicitar acesso
+                        Começar teste grátis
                     </a>
 
                     <a
@@ -371,6 +436,9 @@
                                 <img
                                 src="<?= ASSET_URL; ?>/img/whatsapp-business.png"
                                 alt="WhatsApp Business"
+                                width="60"
+                                height="60"
+                                loading="lazy"
                                 style="height:60px;"
                                 >
 
@@ -389,6 +457,9 @@
                                 <img
                                 src="<?= ASSET_URL; ?>/img/meta-logo.png"
                                 alt="Meta"
+                                width="109"
+                                height="60"
+                                loading="lazy"
                                 style="height:60px;"
                                 >
 
@@ -604,6 +675,58 @@
 
 </section>
 
+<section id="faixas-meta" class="py-5 site-meta-tiers">
+
+    <div class="container">
+
+        <div class="text-center mb-5">
+            <span class="badge badge-success mb-3">Capacidade de envio</span>
+            <h2 class="site-section-title">Faixas de envio da Meta</h2>
+            <p class="text-muted mx-auto site-section-lead">
+                A Meta define quantas conversas iniciadas pela empresa cada número pode abrir em uma janela móvel de 24 horas. Conforme o uso e a qualidade do número evoluem, o limite pode aumentar.
+            </p>
+        </div>
+
+        <div class="table-responsive site-meta-tiers-table">
+            <table class="table table-bordered bg-white mb-0">
+                <caption class="sr-only">Faixas de conversas iniciadas pela empresa em uma janela móvel de 24 horas</caption>
+                <thead class="thead-light">
+                    <tr>
+                        <th scope="col">Faixa</th>
+                        <th scope="col">Limite em 24 horas</th>
+                        <th scope="col">Explicação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><th scope="row">Inicial</th><td>250</td><td>Limite inicial que pode ser aplicado a números ou empresas que ainda não atingiram os requisitos para níveis superiores.</td></tr>
+                    <tr><th scope="row">Nível 1</th><td>1.000</td><td>Primeiro nível ampliado para envio de mensagens iniciadas pela empresa.</td></tr>
+                    <tr><th scope="row">Nível 2</th><td>10.000</td><td>Faixa destinada a operações com maior histórico de utilização e qualidade.</td></tr>
+                    <tr><th scope="row">Nível 3</th><td>100.000</td><td>Faixa de alto volume para números elegíveis.</td></tr>
+                    <tr><th scope="row">Nível máximo</th><td>Ilimitado</td><td>Maior capacidade disponível, condicionada às regras e à avaliação da Meta.</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="alert alert-light border mt-4" role="note">
+            <p><strong>Os limites são definidos e administrados pela Meta</strong> e podem variar conforme a situação da conta, verificação da empresa, qualidade do número, histórico de uso e políticas vigentes. O Disparador.net não controla nem garante a concessão ou o aumento dessas faixas.</p>
+            <p>A evolução não depende apenas da contratação de um plano. A Meta considera fatores como a qualidade do número, o status da conexão, a verificação da empresa e o volume de uso elegível.</p>
+            <p class="mb-0"><strong>Os limites de envio da Meta são diferentes da quantidade de mensagens incluída no plano contratado no Disparador.net.</strong></p>
+        </div>
+
+        <p class="text-muted small">
+            As faixas acima representam limites de envio e não preços. A cobrança da WhatsApp Business Platform segue as tarifas da Meta por mensagem entregue, considerando a categoria da mensagem — Marketing, Utilidade, Autenticação ou Serviço — e o país do destinatário. Os valores podem mudar conforme as políticas vigentes.
+        </p>
+
+        <div class="row mt-4">
+            <div class="col-md-4 mb-4"><div class="card h-100 site-card-feature"><div class="card-body"><h3 class="h5 font-weight-bold">Qualidade do número</h3><p class="text-muted mb-0">Bloqueios, denúncias e baixo engajamento podem afetar a qualidade do número e sua capacidade de envio.</p></div></div></div>
+            <div class="col-md-4 mb-4"><div class="card h-100 site-card-feature"><div class="card-body"><h3 class="h5 font-weight-bold">Evolução administrada pela Meta</h3><p class="text-muted mb-0">A Meta avalia os requisitos da conta e do número para disponibilizar níveis superiores.</p></div></div></div>
+            <div class="col-md-4 mb-4"><div class="card h-100 site-card-feature"><div class="card-body"><h3 class="h5 font-weight-bold">API Oficial</h3><p class="text-muted mb-0">O Disparador.net realiza a integração por meio da API Oficial do WhatsApp Business, respeitando templates, webhooks e políticas da plataforma.</p></div></div></div>
+        </div>
+
+    </div>
+
+</section>
+
 <section id="planos" class="py-5">
 
     <div class="container">
@@ -704,7 +827,7 @@
                                 href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                                 class="btn btn-outline-success btn-block"
                                 >
-                                    Solicitar acesso
+                        Começar teste grátis
                                 </a>
 
                             </div>
@@ -733,90 +856,21 @@
 
 </section>
 
-<section class="py-5 bg-light">
+<section class="py-5 bg-light" id="custos-meta">
 
     <div class="container">
 
-        <div class="row align-items-center">
+        <div class="row justify-content-center">
 
-            <div class="col-md-6">
-
-                <span class="badge badge-success mb-3">
-                    Simulador de custos
-                </span>
-
-                <h2 class="site-section-title">
-                    Simule o custo estimado das mensagens da Meta
-                </h2>
-
+            <div class="col-lg-9 text-center">
+                <span class="badge badge-success mb-3">Tarifas da plataforma</span>
+                <h2 class="site-section-title">Limites de envio e cobrança são diferentes</h2>
                 <p class="text-muted">
-                    Informe o tipo de mensagem e a quantidade estimada para planejar o custo aproximado que a Meta pode cobrar conforme categoria, país e regras vigentes.
+                    As faixas tratam da capacidade de iniciar conversas. A cobrança da WhatsApp Business Platform segue a política de preços da Meta por mensagem entregue, conforme a categoria — Marketing, Utilidade, Autenticação ou Serviço — e o mercado do destinatário.
                 </p>
-
-                <p class="text-muted small">
-                    A mensalidade do Disparador.net é separada e não está incluída nesta simulação.
+                <p class="text-muted small mb-0">
+                    As tarifas podem mudar e eventuais cobranças da Meta são separadas da mensalidade do Disparador.net. Consulte sempre as condições vigentes da Meta.
                 </p>
-
-            </div>
-
-            <div class="col-md-6">
-
-                <div class="card site-card-feature">
-
-                    <div class="card-body p-4">
-
-                        <div class="form-group">
-
-                            <label>Tipo de mensagem</label>
-
-                            <select
-                            id="simuladorTipoMensagem"
-                            class="form-control"
-                            >
-                                <option value="marketing">
-                                    Marketing
-                                </option>
-
-                                <option value="utility">
-                                    Utilidade
-                                </option>
-
-                                <option value="authentication">
-                                    Autenticação
-                                </option>
-                            </select>
-
-                        </div>
-
-                        <div class="form-group">
-
-                            <label>Quantidade estimada de mensagens</label>
-
-                            <input
-                            type="number"
-                            id="simuladorMensagens"
-                            class="form-control"
-                            value="1000"
-                            min="0"
-                            >
-
-                        </div>
-
-                        <div
-                        class="alert alert-success mt-3"
-                        id="resultadoSimulador"
-                        >
-                            Informe os dados para calcular.
-                        </div>
-
-                        <small class="text-muted">
-                            Esta é apenas uma estimativa, não um valor final garantido. A cobrança real pode variar conforme categoria, país do destinatário, moeda, regras vigentes e mensagens efetivamente entregues.
-                        </small>
-
-                    </div>
-
-                </div>
-
             </div>
 
         </div>
@@ -841,22 +895,10 @@
 
             <div class="col-md-8">
 
-                <?php
-                $perguntasFrequentes = [
-                    'O Disparador.net usa WhatsApp Web?' => 'Não. A plataforma opera com a API Oficial do WhatsApp Business da Meta.',
-                    'Preciso deixar o celular ligado?' => 'Não. A operação acontece pela infraestrutura oficial da Meta, sem depender de sessão aberta em navegador.',
-                    'Posso usar meu número atual?' => 'Sim, desde que o número atenda aos requisitos da Meta para conexão com a API Oficial do WhatsApp Business.',
-                    'Posso importar contatos?' => 'Sim. Você pode importar contatos, criar listas e organizar públicos para campanhas.',
-                    'Posso ter mais de um atendente?' => 'Sim. Os planos permitem diferentes quantidades de usuários para atendimento.',
-                    'Posso ter mais de um número WhatsApp?' => 'Sim. A plataforma permite múltiplos números conforme o plano contratado.',
-                    'A Meta cobra pelas mensagens?' => 'A Meta pode cobrar pelas mensagens conforme categoria, país e regras vigentes. O Disparador.net mostra uma estimativa para ajudar no planejamento.',
-                    'Como solicito acesso?' => 'Preencha o cadastro para que a equipe avalie a configuração necessária e oriente os próximos passos de ativação.',
-                ];
-                ?>
 
                 <?php foreach($perguntasFrequentes as $pergunta => $resposta){ ?>
                     <div class="site-faq-item">
-                        <h5><?= htmlspecialchars($pergunta); ?></h5>
+                        <h3 class="h5"><?= htmlspecialchars($pergunta); ?></h3>
                         <p class="text-muted">
                             <?= htmlspecialchars($resposta); ?>
                         </p>
@@ -909,14 +951,14 @@
         </h2>
 
         <p class="lead">
-            Cadastre sua empresa e comece a organizar campanhas, contatos e conversas em uma plataforma oficial.
+            Cadastre sua empresa e comece a organizar campanhas, contatos e conversas pela API Oficial do WhatsApp Business. O teste começa após a conexão válida do primeiro número e dura até 7 dias ou 200 mensagens, o que ocorrer primeiro.
         </p>
 
         <a
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
         >
-            Solicitar acesso
+            Começar teste grátis
         </a>
 
     </div>
@@ -933,7 +975,8 @@
 
                 © 2026 RL2 Net - Todos os direitos reservados.<br>
                 Disparador.net é uma plataforma da RL2 Net.<br>
-                Contato: contato@disparador.net
+                Contato: contato@disparador.net<br>
+                <small>WhatsApp e Meta são marcas comerciais de seus respectivos proprietários. O Disparador.net é uma plataforma independente que utiliza a API oficial do WhatsApp Business.</small>
 
             </div>
 
@@ -958,6 +1001,8 @@
     </div>
 
 </footer>
+
+<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
 
 <script>
 
@@ -1038,77 +1083,6 @@ document.addEventListener('DOMContentLoaded', function(){
     window.addEventListener('resize', atualizarControlesPlanosSite);
     atualizarControlesPlanosSite();
 
-    const campoQuantidade =
-        document.getElementById('simuladorMensagens');
-
-    const campoTipo =
-        document.getElementById('simuladorTipoMensagem');
-
-    const resultado =
-        document.getElementById('resultadoSimulador');
-
-    const precosMetaBrasil = {
-        marketing: 0.0625,
-        utility: 0.0068,
-        authentication: 0.0068
-    };
-
-    const nomesTipos = {
-        marketing: 'Marketing',
-        utility: 'Utilidade',
-        authentication: 'Autenticação'
-    };
-
-    function formatarDolar(valor)
-    {
-        return valor.toLocaleString(
-            'en-US',
-            {
-                style: 'currency',
-                currency: 'USD'
-            }
-        );
-    }
-
-    function atualizarSimulador()
-    {
-        const quantidade =
-            parseInt(campoQuantidade.value || 0);
-
-        const tipo =
-            campoTipo.value;
-
-        const precoUnitario =
-            precosMetaBrasil[tipo] || 0;
-
-        const total =
-            quantidade * precoUnitario;
-
-        resultado.innerHTML =
-            '<strong>Estimativa Meta:</strong> ' +
-            formatarDolar(total) +
-            '<br>' +
-            '<small>' +
-            quantidade.toLocaleString('pt-BR') +
-            ' mensagens de ' +
-            nomesTipos[tipo] +
-            ' × ' +
-            formatarDolar(precoUnitario) +
-            ' por mensagem.' +
-            '</small>';
-    }
-
-    campoQuantidade.addEventListener(
-        'input',
-        atualizarSimulador
-    );
-
-    campoTipo.addEventListener(
-        'change',
-        atualizarSimulador
-    );
-
-    atualizarSimulador();
 
 });
 

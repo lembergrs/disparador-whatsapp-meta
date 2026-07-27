@@ -189,6 +189,10 @@ $(document).ready(function(){
             $(this).data('observacoes')
         );
 
+        $('[name=origem_cadastro_visualizacao]').val(
+            $(this).data('origem-cadastro') || 'Não informado'
+        );
+
 
         $('[name=cnpj_fiscal]').val($(this).data('cnpj-fiscal'));
         $('[name=razao_social_fiscal]').val($(this).data('razao-social-fiscal'));

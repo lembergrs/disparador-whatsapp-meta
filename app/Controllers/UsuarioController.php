@@ -43,6 +43,7 @@ class UsuarioController extends Controller
     public function salvar()
     {
         $this->validarCsrfPost();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){
             $this->redirect('usuario');
@@ -103,6 +104,7 @@ class UsuarioController extends Controller
     public function senha()
     {
         $this->validarCsrfPost();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         if($_SERVER['REQUEST_METHOD'] !== 'POST'){
             $this->redirect('usuario');
@@ -130,6 +132,7 @@ class UsuarioController extends Controller
     public function inativar()
     {
         $this->validarCsrfPost();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         $this->alterarStatus('N', 'Usuário inativado.');
     }
@@ -137,6 +140,7 @@ class UsuarioController extends Controller
     public function ativar()
     {
         $this->validarCsrfPost();
+        Auth::bloquearAcaoSensivelEmImpersonacao();
 
         $clienteId = $this->clienteIdPermitido();
         $id = (int) ($_GET['id'] ?? 0);
