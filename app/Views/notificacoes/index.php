@@ -1,4 +1,4 @@
-<?php use Services\NotificacaoFormatador; use Services\CanalNotificacao; ?>
+<?php use Services\NotificacaoFormatador; use Services\CanalNotificacao; use Services\WhatsAppInstitucionalService; ?>
 
 <div class="row">
     <?php foreach([
@@ -47,20 +47,21 @@
         <form id="formConfiguracaoNotificacoes" method="post">
             <div class="table-responsive">
                 <table class="table table-bordered table-sm">
-                    <thead><tr><th>Evento</th><?php foreach($canais as $canal){ ?><th><?= htmlspecialchars(NotificacaoFormatador::canal($canal)); ?></th><?php } ?><th>Modelo</th><th>Ações</th></tr></thead>
+                    <thead><tr><th>Evento</th><?php foreach($canais as $canal){ ?><th><?= htmlspecialchars(NotificacaoFormatador::canal($canal)); ?></th><?php } ?><th>Template WhatsApp</th><th>Modelo de e-mail</th><th>Ações</th></tr></thead>
                     <tbody>
                         <?php foreach($matrizConfiguracao as $linha){ ?>
                         <tr>
                             <td><?= htmlspecialchars(NotificacaoFormatador::evento($linha['evento'])); ?></td>
                             <?php foreach($linha['canais'] as $canal => $cfg){ ?>
                                 <td>
-                                    <?php if($canal === CanalNotificacao::EMAIL){ ?>
-                                        <label class="mb-0"><input type="checkbox" name="email[]" value="<?= htmlspecialchars($linha['evento']); ?>" <?= !empty($cfg['ativo']) ? 'checked' : ''; ?>> Ativo</label>
+                                    <?php if(!empty($cfg['implementado']) && in_array($canal, [CanalNotificacao::EMAIL, CanalNotificacao::WHATSAPP], true)){ ?>
+                                        <label class="mb-0"><input type="checkbox" name="<?= htmlspecialchars($canal); ?>[]" value="<?= htmlspecialchars($linha['evento']); ?>" <?= !empty($cfg['ativo']) ? 'checked' : ''; ?>> Ativo</label>
                                     <?php }else{ ?>
                                         <span class="badge badge-secondary">Em breve</span>
                                     <?php } ?>
                                 </td>
                             <?php } ?>
+                            <td><code><?= htmlspecialchars(WhatsAppInstitucionalService::template($linha['evento']) ?: '-'); ?></code></td>
                             <td><span class="badge badge-<?= !empty($modelosPersonalizados[$linha['evento']]) ? 'info' : 'light'; ?>"><?= !empty($modelosPersonalizados[$linha['evento']]) ? 'Personalizado' : 'Modelo padrão'; ?></span></td>
                             <td><button type="button" class="btn btn-sm btn-outline-primary js-editar-modelo" data-evento="<?= htmlspecialchars($linha['evento']); ?>" data-canal="email" title="Editar modelo da notificação"><i class="fas fa-edit"></i> Editar</button></td>
                         </tr>

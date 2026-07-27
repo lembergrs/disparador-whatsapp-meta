@@ -13,6 +13,7 @@ use Services\EventoNotificacao;
 use Services\NotificacaoFormatador;
 use Services\NotificacaoService;
 use Services\EmailService;
+use Services\WhatsAppInstitucionalService;
 
 class NotificacaoController extends Controller
 {
@@ -131,7 +132,9 @@ class NotificacaoController extends Controller
     {
         Csrf::exigirPost();
         $eventosEmail = array_values(array_intersect($_POST['email'] ?? [], EventoNotificacao::todos()));
-        $this->configuracoes->salvarEmailPorEvento($eventosEmail);
+        $suportadosWhatsapp = array_values(array_filter(EventoNotificacao::todos(), [WhatsAppInstitucionalService::class, 'suporta']));
+        $eventosWhatsapp = array_values(array_intersect($_POST['whatsapp'] ?? [], $suportadosWhatsapp));
+        $this->configuracoes->salvarCanaisSuportados($eventosEmail, $eventosWhatsapp);
         $this->json(['ok'=>true, 'message'=>'Configuração de canais atualizada com sucesso.']);
     }
 
@@ -201,7 +204,7 @@ class NotificacaoController extends Controller
             'cliente' => htmlspecialchars($this->cliente($n), ENT_QUOTES, 'UTF-8'),
             'evento' => htmlspecialchars(NotificacaoFormatador::evento($n['NOT_Tipo'] ?? ''), ENT_QUOTES, 'UTF-8'),
             'canal' => htmlspecialchars(NotificacaoFormatador::canal($n['NOT_Canal'] ?? ''), ENT_QUOTES, 'UTF-8'),
-            'destino' => htmlspecialchars($n['NOT_Destino'] ?? '-', ENT_QUOTES, 'UTF-8'),
+            'destino' => htmlspecialchars(($n['NOT_Canal'] ?? '') === CanalNotificacao::WHATSAPP ? WhatsAppInstitucionalService::mascararTelefone($n['NOT_Destino'] ?? '') : ($n['NOT_Destino'] ?? '-'), ENT_QUOTES, 'UTF-8'),
             'assunto' => htmlspecialchars($n['NOT_Assunto'] ?? '-', ENT_QUOTES, 'UTF-8'),
             'status' => '<span class="badge badge-' . NotificacaoFormatador::badgeStatus($status) . '">' . htmlspecialchars(NotificacaoFormatador::status($status), ENT_QUOTES, 'UTF-8') . '</span>',
             'tentativas' => (int) ($n['NOT_Tentativas'] ?? 0),
@@ -221,7 +224,10 @@ class NotificacaoController extends Controller
             <dt class="col-sm-4">Evento</dt><dd class="col-sm-8"><?= htmlspecialchars(NotificacaoFormatador::evento($n['NOT_Tipo'] ?? '')); ?></dd>
             <dt class="col-sm-4">Canal</dt><dd class="col-sm-8"><?= htmlspecialchars(NotificacaoFormatador::canal($n['NOT_Canal'] ?? '')); ?></dd>
             <dt class="col-sm-4">Assunto</dt><dd class="col-sm-8"><?= htmlspecialchars($n['NOT_Assunto'] ?? '-'); ?></dd>
-            <dt class="col-sm-4">Destino</dt><dd class="col-sm-8"><?= htmlspecialchars($n['NOT_Destino'] ?? '-'); ?></dd>
+            <dt class="col-sm-4">Destino</dt><dd class="col-sm-8"><?= htmlspecialchars(($n['NOT_Canal'] ?? '') === CanalNotificacao::WHATSAPP ? WhatsAppInstitucionalService::mascararTelefone($n['NOT_Destino'] ?? '') : ($n['NOT_Destino'] ?? '-')); ?></dd>
+            <dt class="col-sm-4">Template</dt><dd class="col-sm-8"><?= htmlspecialchars($n['NOT_Template'] ?? '-'); ?></dd>
+            <dt class="col-sm-4">ID da Meta</dt><dd class="col-sm-8"><code><?= htmlspecialchars($n['NOT_ProviderMessageId'] ?? '-'); ?></code></dd>
+            <dt class="col-sm-4">Código do erro</dt><dd class="col-sm-8"><code><?= htmlspecialchars($n['NOT_CodigoErro'] ?? '-'); ?></code></dd>
             <dt class="col-sm-4">Status</dt><dd class="col-sm-8"><?= htmlspecialchars(NotificacaoFormatador::status($n['NOT_Status'] ?? '')); ?></dd>
             <dt class="col-sm-4">Tentativas</dt><dd class="col-sm-8"><?= (int) ($n['NOT_Tentativas'] ?? 0); ?></dd>
             <dt class="col-sm-4">Criação</dt><dd class="col-sm-8"><?= $this->data($n['NOT_CriadoEm'] ?? null); ?></dd>

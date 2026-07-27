@@ -13,6 +13,7 @@ use Services\MetaService;
 use Services\EmbeddedSignupAttemptCoordinator;
 use Services\AnalyticsService;
 use Services\EventoNotificacao;
+use Services\CanalNotificacao;
 use Services\NotificacaoService;
 use Exception;
 
@@ -615,6 +616,7 @@ class ConfiguracaoController extends Controller
                 AnalyticsService::registrar('meta_connection_completed');
             }
             $this->clienteModel->iniciarTrialSePendente($clienteId);
+            $this->dispararMetaConectada($clienteId, CanalNotificacao::WHATSAPP);
         }
 
         return $statusConexao;
@@ -674,7 +676,7 @@ class ConfiguracaoController extends Controller
             'status' => $statusConexao
         ]);
 
-        $this->dispararMetaConectada($clienteId);
+        $this->dispararMetaConectada($clienteId, CanalNotificacao::EMAIL);
 
         return [
             'conta_id' => $contaId,
@@ -683,12 +685,12 @@ class ConfiguracaoController extends Controller
         ];
     }
 
-    private function dispararMetaConectada($clienteId)
+    private function dispararMetaConectada($clienteId, $canal)
     {
         try{
             $cliente = $this->clienteModel->buscar($clienteId);
             if($cliente){
-                (new NotificacaoService())->disparar(EventoNotificacao::META_CONECTADA, $cliente, [
+                (new NotificacaoService())->dispararCanal(EventoNotificacao::META_CONECTADA, $canal, $cliente, [
                     'link' => rtrim(BASE_URL, '/') . '/index.php?url=configuracao/meta'
                 ]);
             }

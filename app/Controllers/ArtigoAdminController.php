@@ -115,7 +115,12 @@ class ArtigoAdminController extends Controller
         if(!$artigo){ http_response_code(404); exit('Artigo não encontrado'); }
         $preparado = ArtigoConteudoService::prepararSumario($artigo['ART_Conteudo']);
         $artigo['ART_Conteudo'] = $preparado['conteudo'];
-        $this->viewComLayout('blog/artigo', 'blog/layout', ['artigo'=>$artigo, 'sumario'=>$preparado['sumario'], 'relacionados'=>[], 'preview'=>true, 'whatsappSite'=>null]);
+        $artigo['tempoLeitura'] = ArtigoConteudoService::tempoLeitura($artigo['ART_Conteudo']);
+        $artigo['autorExibicao'] = trim((string) ($artigo['AutorNome'] ?? '')) ?: 'Equipe Disparador.net';
+        $artigo['dataPublicacaoExibicao'] = ArtigoConteudoService::formatarDataPtBr($artigo['ART_DataPublicacao']);
+        $artigo['dataAtualizacaoExibicao'] = ArtigoConteudoService::foiAtualizadoDepoisDaPublicacao($artigo['ART_DataPublicacao'], $artigo['ART_AtualizadoEm']) ? ArtigoConteudoService::formatarDataPtBr($artigo['ART_AtualizadoEm']) : '';
+        $artigo['urlCanonicaExibicao'] = ArtigoConteudoService::urlCanonica($artigo, BASE_URL);
+        $this->viewComLayout('blog/artigo', 'blog/layout', ['artigo'=>$artigo, 'sumario'=>$preparado['sumario'], 'navegacao'=>[], 'relacionados'=>[], 'preview'=>true, 'whatsappSite'=>null]);
     }
 
     public function uploadImagemConteudo()

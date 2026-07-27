@@ -94,7 +94,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
     <link
     rel="stylesheet"
-    href="<?= ASSET_URL; ?>/css/style.css?v=12"
+    href="<?= ASSET_URL; ?>/css/style.css?v=13"
     >
 
     <style>
@@ -181,18 +181,25 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
         <div class="collapse navbar-collapse" id="menuSite">
 
-            <ul class="navbar-nav ml-auto align-items-lg-center">
+            <ul class="navbar-nav ml-auto align-items-lg-center site-main-nav">
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#recursos">Recursos</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuProduto" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Produto</a>
+                    <div class="dropdown-menu site-nav-dropdown" aria-labelledby="menuProduto">
+                        <a class="dropdown-item" href="#como-funciona">Como funciona</a>
+                        <a class="dropdown-item" href="#recursos">Campanhas pelo WhatsApp</a>
+                        <a class="dropdown-item" href="#recursos">Gestão de contatos</a>
+                        <a class="dropdown-item" href="#recursos">Atendimento e Conversas</a>
+                        <a class="dropdown-item" href="#como-funciona">API Oficial do WhatsApp</a>
+                    </div>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link" href="#como-funciona">Ver como funciona</a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link" href="#faixas-meta">Faixas da Meta</a>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="menuRecursos" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Recursos</a>
+                    <div class="dropdown-menu site-nav-dropdown" aria-labelledby="menuRecursos">
+                        <a class="dropdown-item" href="#faixas-meta">Faixas da Meta</a>
+                        <a class="dropdown-item" href="#faq">FAQ</a>
+                    </div>
                 </li>
 
                 <li class="nav-item">
@@ -200,23 +207,19 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link" href="#faq">FAQ</a>
-                </li>
-
-                <li class="nav-item">
                     <a class="nav-link" href="<?= BASE_URL; ?>/blog">Blog</a>
                 </li>
 
-                <li class="nav-item">
+                <li class="nav-item site-nav-action">
                     <a
-                    class="btn btn-outline-success ml-lg-3"
+                    class="btn btn-outline-success site-nav-button"
                     href="<?= BASE_URL; ?>/index.php?url=login"
                     >
                         Entrar
                     </a>
                 </li>
 
-                <li class="nav-item">
+                <li class="nav-item site-nav-action">
                     <a
                     class="btn btn-success ml-lg-2 site-btn-main"
                     data-analytics-event="click_start_trial"

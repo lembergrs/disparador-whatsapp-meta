@@ -56,10 +56,23 @@ class Artigo
         $sql->execute($params); return ['itens'=>$sql->fetchAll(PDO::FETCH_ASSOC), 'total'=>$total];
     }
 
-    public function relacionados(array $artigo, $limite = 3)
+    public function navegacaoPublicados(array $artigo)
     {
-        $sql = $this->db->prepare("SELECT ART_Titulo, ART_Slug, ART_Resumo, ART_ImagemDestaque, ART_DataPublicacao FROM artigos WHERE ART_ID <> ? AND ACG_ID = ? AND ART_Ativo = 'S' AND ART_Status = 'publicado' AND ART_DataPublicacao <= NOW() ORDER BY ART_DataPublicacao DESC LIMIT " . (int) $limite);
-        $sql->execute([(int) $artigo['ART_ID'], (int) $artigo['ACG_ID']]); return $sql->fetchAll(PDO::FETCH_ASSOC);
+        $elegivel = "a.ART_Ativo = 'S' AND a.ART_Status = 'publicado' AND a.ART_DataPublicacao <= NOW() AND c.ACG_Ativo = 'S'";
+        $sql = $this->db->prepare("(SELECT 'anterior' AS Direcao, a.ART_ID, a.ART_Titulo, a.ART_Slug, a.ART_DataPublicacao FROM artigos a INNER JOIN artigos_categorias c ON c.ACG_ID = a.ACG_ID WHERE {$elegivel} AND (a.ART_DataPublicacao < ? OR (a.ART_DataPublicacao = ? AND a.ART_ID < ?)) ORDER BY a.ART_DataPublicacao DESC, a.ART_ID DESC LIMIT 1) UNION ALL (SELECT 'proximo' AS Direcao, a.ART_ID, a.ART_Titulo, a.ART_Slug, a.ART_DataPublicacao FROM artigos a INNER JOIN artigos_categorias c ON c.ACG_ID = a.ACG_ID WHERE {$elegivel} AND (a.ART_DataPublicacao > ? OR (a.ART_DataPublicacao = ? AND a.ART_ID > ?)) ORDER BY a.ART_DataPublicacao ASC, a.ART_ID ASC LIMIT 1)");
+        $params = [$artigo['ART_DataPublicacao'], $artigo['ART_DataPublicacao'], (int) $artigo['ART_ID'], $artigo['ART_DataPublicacao'], $artigo['ART_DataPublicacao'], (int) $artigo['ART_ID']];
+        $sql->execute($params); $navegacao = ['anterior'=>null, 'proximo'=>null];
+        foreach($sql->fetchAll(PDO::FETCH_ASSOC) as $item){ $navegacao[$item['Direcao']] = $item; }
+        return $navegacao;
+    }
+
+    public function relacionados(array $artigo, $limite = 3, array $excluirIds = [])
+    {
+        $limite = max(1, min(3, (int) $limite));
+        $ids = array_values(array_unique(array_filter(array_map('intval', array_merge([(int) $artigo['ART_ID']], $excluirIds)))));
+        $marcadores = implode(',', array_fill(0, count($ids), '?'));
+        $sql = $this->db->prepare("SELECT a.ART_ID, a.ART_Titulo, a.ART_Slug, a.ART_Resumo, a.ART_ImagemDestaque, a.ART_DataPublicacao FROM artigos a INNER JOIN artigos_categorias c ON c.ACG_ID = a.ACG_ID AND c.ACG_Ativo = 'S' WHERE a.ART_ID NOT IN ({$marcadores}) AND a.ART_Ativo = 'S' AND a.ART_Status = 'publicado' AND a.ART_DataPublicacao <= NOW() ORDER BY (a.ACG_ID = ?) DESC, a.ART_DataPublicacao DESC LIMIT {$limite}");
+        $sql->execute(array_merge($ids, [(int) $artigo['ACG_ID']])); return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function salvar(array $dados, array $tagIds)

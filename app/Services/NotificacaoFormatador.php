@@ -7,6 +7,7 @@ class NotificacaoFormatador
     private const EVENTOS = [
         EventoNotificacao::BOAS_VINDAS => 'Boas-vindas',
         EventoNotificacao::META_CONECTADA => 'Conta Meta conectada',
+        EventoNotificacao::CADASTRO_PENDENTE_CONEXAO => 'Cadastro pendente de conexão',
         EventoNotificacao::TRIAL_3_DIAS => 'Trial termina em 3 dias',
         EventoNotificacao::TRIAL_ULTIMO_DIA => 'Último dia do trial',
         EventoNotificacao::TRIAL_ENCERRADO => 'Trial encerrado',

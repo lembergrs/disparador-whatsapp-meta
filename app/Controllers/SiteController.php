@@ -282,7 +282,8 @@ class SiteController extends Controller
                 'CLI_Nome' => $nome,
                 'CLI_RazaoSocial' => $razaoSocial,
                 'CLI_NomeFantasia' => $nomeFantasia ?: $nome,
-                'CLI_Email' => $email
+                'CLI_Email' => $email,
+                'CLI_Telefone' => $telefone
             ], [
                 'USU_ID' => $usuarioId,
                 'USU_Nome' => $nome,
