@@ -46,8 +46,16 @@ class BlogController extends Controller
         if(!$artigo){ http_response_code(404); $this->viewComLayout('blog/404', 'blog/layout', ['whatsappSite'=>null]); return; }
         $preparado = ArtigoConteudoService::prepararSumario($artigo['ART_Conteudo']);
         $artigo['ART_Conteudo'] = $preparado['conteudo'];
+        $artigo['tempoLeitura'] = ArtigoConteudoService::tempoLeitura($artigo['ART_Conteudo']);
+        $artigo['autorExibicao'] = trim((string) ($artigo['AutorNome'] ?? '')) ?: 'Equipe Disparador.net';
+        $artigo['dataPublicacaoExibicao'] = ArtigoConteudoService::formatarDataPtBr($artigo['ART_DataPublicacao']);
+        $artigo['dataAtualizacaoExibicao'] = ArtigoConteudoService::foiAtualizadoDepoisDaPublicacao($artigo['ART_DataPublicacao'], $artigo['ART_AtualizadoEm']) ? ArtigoConteudoService::formatarDataPtBr($artigo['ART_AtualizadoEm']) : '';
+        $artigo['urlCanonicaExibicao'] = ArtigoConteudoService::urlCanonica($artigo, BASE_URL);
+        $navegacao = $this->artigos->navegacaoPublicados($artigo);
+        $excluirRelacionados = array_filter([$navegacao['anterior']['ART_ID'] ?? null, $navegacao['proximo']['ART_ID'] ?? null]);
         $this->viewComLayout('blog/artigo', 'blog/layout', [
-            'artigo'=>$artigo, 'sumario'=>$preparado['sumario'], 'relacionados'=>$this->artigos->relacionados($artigo),
+            'artigo'=>$artigo, 'sumario'=>$preparado['sumario'], 'navegacao'=>$navegacao,
+            'relacionados'=>$this->artigos->relacionados($artigo, 3, $excluirRelacionados),
             'preview'=>false, 'whatsappSite'=>(new ConfiguracaoSite())->obterConfiguracaoWhatsappSite()
         ]);
     }
