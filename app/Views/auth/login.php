@@ -2,6 +2,7 @@
 <html lang="pt-br">
 
 <head>
+<?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <meta charset="UTF-8">
 
@@ -25,6 +26,7 @@ href="<?= ASSET_URL; ?>/css/style.css?v=6">
 </head>
 
 <body class="login-custom-page">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <div class="login-custom-wrapper">
 

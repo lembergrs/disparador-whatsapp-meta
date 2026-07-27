@@ -9,6 +9,7 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8'); ?></title>
@@ -49,6 +50,7 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
     <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=13">
 </head>
 <body class="blog-publico">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm site-navbar">
     <div class="container">
         <a class="navbar-brand" href="<?= BASE_URL; ?>/"><img src="<?= ASSET_URL; ?>/img/logo-disparador.png" alt="Disparador.net" class="site-logo" width="1136" height="247"></a>

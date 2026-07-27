@@ -25,6 +25,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
     <meta charset="UTF-8">
 
     <title>Disparador.net | Plataforma Oficial de WhatsApp Business da Meta</title>
@@ -151,6 +152,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 </head>
 
 <body>
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top site-navbar">
 
     <div class="container">

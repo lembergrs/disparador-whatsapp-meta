@@ -125,7 +125,10 @@ class ConfiguracaoController extends Controller
         $safeMessage = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
         $safeRequestId = htmlspecialchars((string) $requestId, ENT_QUOTES, 'UTF-8');
         $base = htmlspecialchars(BASE_URL, ENT_QUOTES, 'UTF-8');
-        echo "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><title>Conexão WhatsApp</title><style>body{font-family:Arial,sans-serif;margin:40px;background:#f6f7fb}.box{max-width:680px;margin:auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.08)}.success{color:#167c3b}.error{color:#b42318}.muted{color:#667085}</style></head><body><div class='box'><h1 class='{$type}'>" . ($ok ? 'Conexão concluída' : 'Não foi possível concluir') . "</h1><p>{$safeMessage}</p>";
+        $gtmPartial = __DIR__ . '/../Views/partials/google_tag_manager.php';
+        ob_start(); $googleTagManagerSection = 'head'; require $gtmPartial; $gtmHead = ob_get_clean();
+        ob_start(); $googleTagManagerSection = 'body'; require $gtmPartial; $gtmBody = ob_get_clean();
+        echo "<!doctype html><html lang='pt-BR'><head>{$gtmHead}<meta charset='utf-8'><title>Conexão WhatsApp</title><style>body{font-family:Arial,sans-serif;margin:40px;background:#f6f7fb}.box{max-width:680px;margin:auto;background:#fff;padding:28px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.08)}.success{color:#167c3b}.error{color:#b42318}.muted{color:#667085}</style></head><body>{$gtmBody}<div class='box'><h1 class='{$type}'>" . ($ok ? 'Conexão concluída' : 'Não foi possível concluir') . "</h1><p>{$safeMessage}</p>";
         if($safeRequestId !== ''){
             echo "<p class='muted'>Código de diagnóstico: <strong>{$safeRequestId}</strong></p>";
         }

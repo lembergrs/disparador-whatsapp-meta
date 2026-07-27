@@ -11,6 +11,7 @@ Session::remove('cadastro_dados');
 <html lang="pt-br">
 
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
     <meta charset="utf-8">
 
@@ -34,6 +35,7 @@ Session::remove('cadastro_dados');
 </head>
 
 <body class="site-cadastro-page">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <div class="container py-5">
 

@@ -2,6 +2,7 @@
 <html lang="pt-br">
 
 <head>
+<?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <meta charset="UTF-8">
 
@@ -25,6 +26,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css
 </head>
 
 <body>
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <?= $conteudo; ?>
 
