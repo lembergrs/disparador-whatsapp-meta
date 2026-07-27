@@ -4,6 +4,7 @@ namespace Services;
 
 class ArtigoConteudoService
 {
+    private const PALAVRAS_POR_MINUTO = 220;
     private const TAGS_PERMITIDAS = [
         'p','br','strong','b','em','i','u','h2','h3','h4','ul','ol','li',
         'blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','hr'
@@ -111,5 +112,12 @@ class ArtigoConteudoService
         $conteudo = '';
         foreach($raiz->childNodes as $filho){ $conteudo .= $dom->saveHTML($filho); }
         return ['conteudo'=>$conteudo, 'sumario'=>count($sumario) >= 3 ? $sumario : []];
+    }
+
+    public static function tempoLeitura($html)
+    {
+        $texto = html_entity_decode(strip_tags((string)$html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        preg_match_all('/[\p{L}\p{N}]+/u', $texto, $palavras);
+        return max(1, (int)ceil(count($palavras[0]) / self::PALAVRAS_POR_MINUTO));
     }
 }

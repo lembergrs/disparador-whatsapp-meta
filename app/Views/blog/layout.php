@@ -9,6 +9,7 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($tituloPagina, ENT_QUOTES, 'UTF-8'); ?></title>
@@ -49,15 +50,16 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
     <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=13">
 </head>
 <body class="blog-publico">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm site-navbar">
     <div class="container">
         <a class="navbar-brand" href="<?= BASE_URL; ?>/"><img src="<?= ASSET_URL; ?>/img/logo-disparador.png" alt="Disparador.net" class="site-logo" width="1136" height="247"></a>
-        <div class="ml-auto"><a href="<?= BASE_URL; ?>/blog" class="btn btn-link text-dark">Blog</a><a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-success site-btn-main">Começar teste grátis</a></div>
+        <div class="ml-auto"><a href="<?= BASE_URL; ?>/blog" class="btn btn-link text-dark">Blog</a><a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-success site-btn-main" data-analytics-event="click_start_trial" data-analytics-location="blog_menu">Começar teste grátis</a></div>
     </div>
 </nav>
 <?php if($preview){ ?><div class="alert alert-warning text-center rounded-0 mb-0"><strong>PRÉVIA:</strong> este artigo não está indexado nem disponível publicamente.</div><?php } ?>
 <main><?= $conteudo; ?></main>
 <footer class="py-4 bg-dark text-white mt-5"><div class="container d-flex flex-column flex-md-row justify-content-between"><span>© 2026 Disparador.net</span><span><a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/termosUso">Termos de Uso</a> · <a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/politicaPrivacidade">Privacidade</a></span></div></footer>
-<?php require __DIR__ . '/../site/partials/whatsapp_button.php'; ?>
+<?php $analyticsWhatsappLocation = 'blog'; require __DIR__ . '/../site/partials/whatsapp_button.php'; ?>
 </body>
 </html>

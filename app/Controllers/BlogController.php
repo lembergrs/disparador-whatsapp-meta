@@ -46,6 +46,7 @@ class BlogController extends Controller
         if(!$artigo){ http_response_code(404); $this->viewComLayout('blog/404', 'blog/layout', ['whatsappSite'=>null]); return; }
         $preparado = ArtigoConteudoService::prepararSumario($artigo['ART_Conteudo']);
         $artigo['ART_Conteudo'] = $preparado['conteudo'];
+        $artigo['ART_TempoLeitura'] = ArtigoConteudoService::tempoLeitura($artigo['ART_Conteudo']);
         $this->viewComLayout('blog/artigo', 'blog/layout', [
             'artigo'=>$artigo, 'sumario'=>$preparado['sumario'], 'relacionados'=>$this->artigos->relacionados($artigo),
             'preview'=>false, 'whatsappSite'=>(new ConfiguracaoSite())->obterConfiguracaoWhatsappSite()

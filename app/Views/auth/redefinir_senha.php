@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+<?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <meta charset="UTF-8">
 <title>Redefinir senha - Disparador.net</title>
 
@@ -12,6 +13,7 @@
 <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css?v=6">
 </head>
 <body class="login-custom-page">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <div class="login-custom-wrapper"><div class="login-custom-card">
     <h3 class="text-center mb-3">Definir nova senha</h3>
     <?php require __DIR__ . '/../components/flash.php'; ?>

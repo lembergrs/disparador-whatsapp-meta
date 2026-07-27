@@ -25,6 +25,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
     <meta charset="UTF-8">
 
     <title>Disparador.net | Plataforma Oficial de WhatsApp Business da Meta</title>
@@ -151,6 +152,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 </head>
 
 <body>
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top site-navbar">
 
     <div class="container">
@@ -217,6 +219,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 <li class="nav-item">
                     <a
                     class="btn btn-success ml-lg-2 site-btn-main"
+                    data-analytics-event="click_start_trial"
+                    data-analytics-location="menu"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
                         Começar teste grátis
@@ -256,6 +260,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <a
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
+                    data-analytics-event="click_start_trial"
+                    data-analytics-location="hero"
                     >
                         Começar teste grátis
                     </a>
@@ -830,6 +836,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                 <a
                                 href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                                 class="btn btn-outline-success btn-block"
+                                data-analytics-event="click_start_trial"
+                                data-analytics-location="plans"
                                 >
                         Começar teste grátis
                                 </a>
@@ -969,6 +977,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <a
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
+        data-analytics-event="click_start_trial"
+        data-analytics-location="footer"
         >
             Começar teste grátis
         </a>
@@ -1014,7 +1024,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </footer>
 
-<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
+<?php $analyticsWhatsappLocation = 'landing'; require __DIR__ . '/partials/whatsapp_button.php'; ?>
 
 <script>
 

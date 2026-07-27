@@ -11,6 +11,7 @@ Session::remove('cadastro_dados');
 <html lang="pt-br">
 
 <head>
+    <?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
     <meta charset="utf-8">
 
@@ -34,6 +35,7 @@ Session::remove('cadastro_dados');
 </head>
 
 <body class="site-cadastro-page">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <div class="container py-5">
 
@@ -475,6 +477,20 @@ Session::remove('cadastro_dados');
 <script>
 
 $(function(){
+
+    let inicioCadastroRastreado = false;
+
+    function rastrearInicioCadastro()
+    {
+        if(inicioCadastroRastreado){ return; }
+        inicioCadastroRastreado = true;
+        window.Disparador.analytics.push('begin_signup', {});
+        document.getElementById('formCadastroPublico').removeEventListener('input', rastrearInicioCadastro);
+        document.getElementById('formCadastroPublico').removeEventListener('change', rastrearInicioCadastro);
+    }
+
+    document.getElementById('formCadastroPublico').addEventListener('input', rastrearInicioCadastro);
+    document.getElementById('formCadastroPublico').addEventListener('change', rastrearInicioCadastro);
 
     function atualizarOrigemCadastroOutro()
     {

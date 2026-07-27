@@ -515,6 +515,7 @@ role="alert"
     let finishPayload = null;
     let oauthCode = null;
     let envioFinalizacaoEmAndamento = false;
+    let inicioMetaRastreado = false;
     let coordenacaoTimer = null;
     const COORDENACAO_TIMEOUT_MS = 5000;
 
@@ -748,7 +749,13 @@ role="alert"
         exibirFeedbackEmbeddedSignup('info', 'Abrindo a Meta para iniciar o cadastro do WhatsApp...');
 
         postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {})
-            .then(iniciarFacebookLogin)
+            .then(function(configuracao){
+                if(!inicioMetaRastreado){
+                    inicioMetaRastreado = true;
+                    window.Disparador.analytics.push('begin_meta_connection', {});
+                }
+                iniciarFacebookLogin(configuracao);
+            })
             .catch(function(error){
                 resetarTentativa();
                 exibirFeedbackEmbeddedSignup('danger', (error && error.message) || 'Não foi possível iniciar o Cadastro Incorporado.');

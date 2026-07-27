@@ -2,6 +2,8 @@
 
 namespace Models;
 
+use Services\AnalyticsService;
+
 use Core\Database;
 use PDO;
 
@@ -467,6 +469,7 @@ class Cliente
 
         if($executado && $sql->rowCount() > 0){
             $this->registrarInicioTrial($id);
+            AnalyticsService::registrar('trial_started');
         }
 
         return $executado;

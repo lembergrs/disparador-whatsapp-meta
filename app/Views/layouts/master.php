@@ -23,6 +23,7 @@ if($usuario && (($usuario['nivel'] ?? null) === 'admin' || Auth::nivelCliente($u
 <html lang="pt-br">
 
 <head>
+<?php $googleTagManagerSection = 'head'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <meta charset="UTF-8">
 
@@ -109,6 +110,7 @@ body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disp
 </head>
 
 <body class="hold-transition sidebar-mini">
+<?php $googleTagManagerSection = 'body'; require __DIR__ . '/../partials/google_tag_manager.php'; ?>
 
 <div class="wrapper">
 
