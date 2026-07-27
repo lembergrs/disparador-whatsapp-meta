@@ -202,6 +202,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 </li>
 
                 <li class="nav-item">
+                    <a class="nav-link" href="<?= BASE_URL; ?>/blog">Blog</a>
+                </li>
+
+                <li class="nav-item">
                     <a
                     class="btn btn-outline-success ml-lg-3"
                     href="<?= BASE_URL; ?>/index.php?url=login"

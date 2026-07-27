@@ -477,6 +477,59 @@ footer a:focus-visible{
     font-weight: 700;
 }
 
+.blog-publico{
+    color: var(--disp-dark, #102033);
+}
+
+.blog-hero h1,
+.blog-artigo-container h1{
+    font-weight: 900;
+}
+
+.blog-card .card-img-top{
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+}
+
+.blog-destaque-imagem{
+    min-height: 320px;
+    object-fit: cover;
+}
+
+.blog-artigo-container{
+    max-width: 900px;
+}
+
+.blog-artigo-imagem{
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    width: 100%;
+}
+
+.blog-artigo-conteudo{
+    font-size: 1.08rem;
+    line-height: 1.8;
+}
+
+.blog-artigo-conteudo img,
+.blog-artigo-conteudo table{
+    max-width: 100%;
+}
+
+.blog-artigo-conteudo table{
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+}
+
+.blog-artigo-conteudo pre{
+    background: #102033;
+    border-radius: 8px;
+    color: #f8fafc;
+    overflow-x: auto;
+    padding: 1rem;
+}
+
 .site-final-cta{
     background:
         linear-gradient(

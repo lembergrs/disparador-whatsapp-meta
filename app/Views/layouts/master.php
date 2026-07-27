@@ -214,7 +214,10 @@ Sair
 
 <nav class="mt-2">
 
-<ul class="nav nav-pills nav-sidebar flex-column">
+<ul class="nav nav-pills nav-sidebar flex-column"
+    data-widget="treeview"
+    role="menu"
+    data-accordion="false">
 
 <li class="nav-item">
 
@@ -232,6 +235,15 @@ class="nav-link <?= ($url == 'dashboard') ? 'active' : ''; ?>"
 </li>
 
 <?php if($usuario['nivel'] == 'admin'){ ?>
+
+<li class="nav-item has-treeview <?= str_contains($url, 'artigoAdmin') ? 'menu-open' : ''; ?>">
+    <a href="#" class="nav-link <?= str_contains($url, 'artigoAdmin') ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-pen-nib"></i><p>Conteúdo<i class="right fas fa-angle-left"></i></p>
+    </a>
+    <ul class="nav nav-treeview">
+        <li class="nav-item"><a href="<?= BASE_URL; ?>/index.php?url=artigoAdmin" class="nav-link <?= str_contains($url, 'artigoAdmin') ? 'active' : ''; ?>"><i class="far fa-circle nav-icon"></i><p>Artigos</p></a></li>
+    </ul>
+</li>
 
 <li class="nav-item">
 
