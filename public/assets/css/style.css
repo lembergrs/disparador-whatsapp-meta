@@ -565,10 +565,117 @@ footer a:focus-visible{
     min-height: 78px;
 }
 
+.site-navbar .navbar-brand{
+    margin-right: 2rem;
+}
+
+.site-main-nav{
+    align-items: center;
+    column-gap: .25rem;
+}
+
+.site-main-nav .nav-link{
+    color: var(--disp-dark);
+    font-weight: 600;
+    padding: .75rem .65rem;
+    white-space: nowrap;
+}
+
+.site-main-nav .nav-link:hover,
+.site-main-nav .nav-link:focus{
+    color: var(--disp-green-dark);
+}
+
+.site-nav-dropdown{
+    border: 0;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(15,23,42,.14);
+    margin-top: .35rem;
+    min-width: 245px;
+    padding: .5rem;
+}
+
+.site-nav-dropdown.show{
+    animation: site-dropdown-enter .16s ease-out;
+}
+
+.site-nav-dropdown .dropdown-item{
+    border-radius: 8px;
+    color: var(--disp-dark);
+    font-weight: 500;
+    padding: .65rem .8rem;
+    white-space: nowrap;
+}
+
+.site-nav-dropdown .dropdown-item:hover,
+.site-nav-dropdown .dropdown-item:focus{
+    background: #eef9f2;
+    color: var(--disp-green-dark);
+}
+
+.site-nav-action{
+    margin-left: .5rem;
+}
+
+.site-nav-button{
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    min-height: 44px;
+    padding: .6rem 1rem;
+    white-space: nowrap;
+    width: auto;
+}
+
+.site-nav-action .site-btn-main{
+    padding-left: 1.15rem;
+    padding-right: 1.15rem;
+}
+
+@keyframes site-dropdown-enter{
+    from{ opacity: 0; transform: translateY(-4px); }
+    to{ opacity: 1; transform: translateY(0); }
+}
+
 .site-logo{
     height: 62px;
     max-width: 300px;
     object-fit: contain;
+}
+
+@media(max-width: 991.98px){
+    .site-navbar .navbar-collapse{
+        padding: .75rem 0 1rem;
+    }
+
+    .site-main-nav{
+        align-items: stretch;
+    }
+
+    .site-main-nav .nav-link{
+        padding: .65rem 0;
+    }
+
+    .site-nav-dropdown{
+        border-left: 2px solid #d8f0e1;
+        border-radius: 0;
+        box-shadow: none;
+        margin: 0 0 .5rem .5rem;
+        padding: 0 0 0 .5rem;
+    }
+
+    .site-nav-dropdown .dropdown-item{
+        padding: .55rem .75rem;
+        white-space: normal;
+    }
+
+    .site-nav-action{
+        margin: .5rem 0 0;
+    }
+
+    .site-nav-button{
+        width: 100%;
+    }
 }
 
 .site-hero-v2{
