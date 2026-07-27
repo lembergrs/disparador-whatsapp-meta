@@ -30,7 +30,7 @@ notifAdminAssert(strpos($view, 'Limpar filtros') !== false, 'limpar filtros exis
 notifAdminAssert(strpos($view, 'Esta ação enviará novamente') !== false && strpos($view, "prop('disabled', true)") !== false, 'reenvio confirma e bloqueia duplo clique');
 notifAdminAssert(strpos($view, 'Em breve') !== false, 'canais indisponíveis desabilitados');
 notifAdminAssert(strpos($configModel, 'EventoNotificacao::todos()') !== false, 'eventos vêm da estrutura central');
-notifAdminAssert(strpos($configModel, 'canalImplementado($canal){ return $canal === CanalNotificacao::EMAIL; }') !== false, 'somente e-mail implementado editável');
+notifAdminAssert(strpos($configModel, 'canalImplementadoParaEvento') !== false && strpos($configModel, 'WhatsAppInstitucionalService::suporta') !== false, 'WhatsApp somente é editável nos eventos suportados');
 notifAdminAssert(strpos($service, 'canaisEfetivos') !== false, 'NotificacaoService lê configuração efetiva central');
 notifAdminAssert(strpos($migration, 'UNIQUE KEY uk_notificacoes_config_evento_canal') !== false, 'chave evento + canal é única');
 notifAdminAssert(strpos($menu, 'url=notificacao') !== false && strpos($menu, "usuario['nivel'] == 'admin'") !== false, 'menu Notificações fica no bloco admin');

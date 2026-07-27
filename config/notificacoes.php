@@ -5,8 +5,9 @@ use Services\EventoNotificacao;
 
 return [
     'eventos' => [
-        EventoNotificacao::BOAS_VINDAS => [CanalNotificacao::EMAIL],
+        EventoNotificacao::BOAS_VINDAS => [CanalNotificacao::EMAIL, CanalNotificacao::WHATSAPP],
         EventoNotificacao::META_CONECTADA => [CanalNotificacao::EMAIL],
+        EventoNotificacao::CADASTRO_PENDENTE_CONEXAO => [],
         EventoNotificacao::TRIAL_3_DIAS => [CanalNotificacao::EMAIL],
         EventoNotificacao::TRIAL_ULTIMO_DIA => [CanalNotificacao::EMAIL],
         EventoNotificacao::TRIAL_ENCERRADO => [CanalNotificacao::EMAIL],
