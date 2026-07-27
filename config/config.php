@@ -6,6 +6,10 @@ defined('APP_ENV') || define('APP_ENV', app_env());
 
 defined('APP_TIMEZONE') || define('APP_TIMEZONE', env_valor('APP_TIMEZONE', 'America/Sao_Paulo'));
 
+// Identificadores públicos de Analytics. O GA4 é configurado somente dentro do GTM.
+defined('GOOGLE_TAG_MANAGER_ID') || define('GOOGLE_TAG_MANAGER_ID', env_valor('GOOGLE_TAG_MANAGER_ID', 'GTM-5BV2SLDR'));
+defined('GOOGLE_ANALYTICS_MEASUREMENT_ID') || define('GOOGLE_ANALYTICS_MEASUREMENT_ID', env_valor('GOOGLE_ANALYTICS_MEASUREMENT_ID', 'G-H6JP7C3CHG'));
+
 date_default_timezone_set(APP_TIMEZONE);
 
 $host = $_SERVER['HTTP_HOST'] ?? '';
