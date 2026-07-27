@@ -478,6 +478,20 @@ Session::remove('cadastro_dados');
 
 $(function(){
 
+    let inicioCadastroRastreado = false;
+
+    function rastrearInicioCadastro()
+    {
+        if(inicioCadastroRastreado){ return; }
+        inicioCadastroRastreado = true;
+        window.Disparador.analytics.push('begin_signup', {});
+        document.getElementById('formCadastroPublico').removeEventListener('input', rastrearInicioCadastro);
+        document.getElementById('formCadastroPublico').removeEventListener('change', rastrearInicioCadastro);
+    }
+
+    document.getElementById('formCadastroPublico').addEventListener('input', rastrearInicioCadastro);
+    document.getElementById('formCadastroPublico').addEventListener('change', rastrearInicioCadastro);
+
     function atualizarOrigemCadastroOutro()
     {
         const outroSelecionado = $('#origemCadastro').val() === 'outro';

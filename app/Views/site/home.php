@@ -221,7 +221,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
                 <li class="nav-item site-nav-action">
                     <a
-                    class="btn btn-success site-btn-main site-nav-button"
+                    class="btn btn-success ml-lg-2 site-btn-main"
+                    data-analytics-event="click_start_trial"
+                    data-analytics-location="menu"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
                         Começar teste grátis
@@ -261,6 +263,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <a
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     class="btn btn-success btn-lg site-btn-main"
+                    data-analytics-event="click_start_trial"
+                    data-analytics-location="hero"
                     >
                         Começar teste grátis
                     </a>
@@ -835,6 +839,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                 <a
                                 href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                                 class="btn btn-outline-success btn-block"
+                                data-analytics-event="click_start_trial"
+                                data-analytics-location="plans"
                                 >
                         Começar teste grátis
                                 </a>
@@ -974,6 +980,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <a
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
+        data-analytics-event="click_start_trial"
+        data-analytics-location="footer"
         >
             Começar teste grátis
         </a>
@@ -1019,7 +1027,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </footer>
 
-<?php require __DIR__ . '/partials/whatsapp_button.php'; ?>
+<?php $analyticsWhatsappLocation = 'landing'; require __DIR__ . '/partials/whatsapp_button.php'; ?>
 
 <script>
 

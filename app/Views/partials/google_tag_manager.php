@@ -4,6 +4,9 @@ if($gtmId !== '' && !preg_match('/^GTM-[A-Z0-9]+$/', $gtmId)){
     $gtmId = '';
 }
 $gtmSection = $googleTagManagerSection ?? 'head';
+$analyticsEventosPendentes = $gtmSection === 'head' && class_exists('Services\\AnalyticsService')
+    ? \Services\AnalyticsService::consumir()
+    : [];
 ?>
 <?php if($gtmSection === 'head'){ ?>
 <script>
@@ -18,6 +21,19 @@ window.Disparador.analytics = window.Disparador.analytics || {
         window.dataLayer.push(payload);
     }
 };
+document.addEventListener('click', function(e) {
+    var alvo = e.target.closest ? e.target.closest('[data-analytics-event]') : null;
+    if(!alvo) return;
+    window.Disparador.analytics.push(alvo.getAttribute('data-analytics-event'), {
+        location: alvo.getAttribute('data-analytics-location') || 'unknown'
+    });
+});
+<?php foreach($analyticsEventosPendentes as $analyticsEvento){ ?>
+window.Disparador.analytics.push(
+    <?= json_encode($analyticsEvento['evento'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+    <?= json_encode($analyticsEvento['dados'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>
+);
+<?php } ?>
 </script>
 <?php if($gtmId !== ''){ ?>
 <!-- Google Tag Manager -->

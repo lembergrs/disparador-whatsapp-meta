@@ -11,6 +11,7 @@ use Models\MetaEmbeddedSignupAttempt;
 use Services\EmbeddedSignupFlowService;
 use Services\MetaService;
 use Services\EmbeddedSignupAttemptCoordinator;
+use Services\AnalyticsService;
 use Services\EventoNotificacao;
 use Services\CanalNotificacao;
 use Services\NotificacaoService;
@@ -604,13 +605,16 @@ class ConfiguracaoController extends Controller
     {
         $statusConexao = $dadosTelefone['status'] ?? $this->embeddedSignupFlowService()->definirStatusConexao($dadosTelefone);
 
-        $this->metaContaModel->atualizarStatusOperacionalEmbeddedSignup(
+        $atualizou = $this->metaContaModel->atualizarStatusOperacionalEmbeddedSignup(
             (int) $conta['MTA_ID'],
             $clienteId,
             array_merge($dadosTelefone, ['status' => $statusConexao])
         );
 
         if($statusConexao === 'conectado'){
+            if($atualizou && ($conta['MTA_Status'] ?? '') !== 'conectado' && !empty($conta['MTA_WabaId']) && !empty($conta['MTA_PhoneNumberId'])){
+                AnalyticsService::registrar('meta_connection_completed');
+            }
             $this->clienteModel->iniciarTrialSePendente($clienteId);
             $this->dispararMetaConectada($clienteId, CanalNotificacao::WHATSAPP);
         }

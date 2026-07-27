@@ -2,6 +2,8 @@
 <a
 href="https://wa.me/<?= htmlspecialchars($whatsappSite['telefone'], ENT_QUOTES, 'UTF-8'); ?>?text=<?= rawurlencode($whatsappSite['mensagem']); ?>"
 class="whatsapp-floating-button"
+data-analytics-event="click_whatsapp"
+data-analytics-location="<?= htmlspecialchars($analyticsWhatsappLocation ?? 'floating_button', ENT_QUOTES, 'UTF-8'); ?>"
 target="_blank"
 rel="noopener noreferrer"
 aria-label="Falar com o Disparador.net pelo WhatsApp"

@@ -14,6 +14,7 @@ use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
 use Services\NotificacaoService;
+use Services\AnalyticsService;
 
 class SiteController extends Controller
 {
@@ -273,6 +274,8 @@ class SiteController extends Controller
             $usuarioId = $db->lastInsertId();
 
             $db->commit();
+
+            AnalyticsService::registrar('sign_up', ['signup_method'=>'site']);
 
             $resultadoBoasVindas = $this->enviarEmailBoasVindasCadastro([
                 'CLI_ID' => $clienteId,

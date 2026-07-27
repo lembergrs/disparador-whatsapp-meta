@@ -9,6 +9,7 @@ use Core\Csrf;
 use Core\Auth;
 use PDO;
 use Services\RecuperacaoSenhaService;
+use Services\AnalyticsService;
 
 class LoginController extends Controller
 {
@@ -121,6 +122,8 @@ class LoginController extends Controller
                 'CMS_MensagensMesAtual' => 0
 
             ];
+
+            AnalyticsService::registrar('login', ['login_method'=>'password']);
 
             $this->redirect('dashboard');
 
