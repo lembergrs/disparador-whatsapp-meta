@@ -4,6 +4,8 @@ namespace Services;
 
 class ArtigoConteudoService
 {
+    private const PALAVRAS_POR_MINUTO = 220;
+
     private const TAGS_PERMITIDAS = [
         'p','br','strong','b','em','i','u','h2','h3','h4','ul','ol','li',
         'blockquote','pre','code','table','thead','tbody','tr','th','td','a','img','hr'
@@ -111,5 +113,42 @@ class ArtigoConteudoService
         $conteudo = '';
         foreach($raiz->childNodes as $filho){ $conteudo .= $dom->saveHTML($filho); }
         return ['conteudo'=>$conteudo, 'sumario'=>count($sumario) >= 3 ? $sumario : []];
+    }
+
+    public static function tempoLeitura($html)
+    {
+        $texto = html_entity_decode(strip_tags((string) $html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        preg_match_all('/[\p{L}\p{N}]+(?:[\'\x{2019}-][\p{L}\p{N}]+)*/u', $texto, $palavras);
+        return max(1, (int) ceil(count($palavras[0]) / self::PALAVRAS_POR_MINUTO));
+    }
+
+    public static function rotuloTempoLeitura($minutos)
+    {
+        $minutos = max(1, (int) $minutos);
+        return 'Leitura estimada: ' . $minutos . ' ' . ($minutos === 1 ? 'minuto' : 'minutos');
+    }
+
+    public static function formatarDataPtBr($data)
+    {
+        $timestamp = strtotime((string) $data);
+        if(!$timestamp){ return ''; }
+        $meses = [1=>'janeiro', 2=>'fevereiro', 3=>'março', 4=>'abril', 5=>'maio', 6=>'junho', 7=>'julho', 8=>'agosto', 9=>'setembro', 10=>'outubro', 11=>'novembro', 12=>'dezembro'];
+        return date('j', $timestamp) . ' de ' . $meses[(int) date('n', $timestamp)] . ' de ' . date('Y', $timestamp);
+    }
+
+    public static function foiAtualizadoDepoisDaPublicacao($publicacao, $atualizacao)
+    {
+        $publicadoEm = strtotime((string) $publicacao);
+        $atualizadoEm = strtotime((string) $atualizacao);
+        return $publicadoEm && $atualizadoEm && $atualizadoEm > $publicadoEm;
+    }
+
+    public static function urlCanonica(array $artigo, $baseUrl)
+    {
+        $informada = trim((string) ($artigo['ART_UrlCanonica'] ?? ''));
+        if($informada !== '' && filter_var($informada, FILTER_VALIDATE_URL) && preg_match('#^https://#i', $informada)){
+            return $informada;
+        }
+        return rtrim((string) $baseUrl, '/') . '/blog/' . rawurlencode((string) $artigo['ART_Slug']);
     }
 }

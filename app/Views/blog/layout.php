@@ -3,7 +3,7 @@ $ehArtigo = !empty($artigo);
 $preview = !empty($preview);
 $tituloPagina = $ehArtigo ? (($artigo['ART_MetaTitle'] ?? '') ?: $artigo['ART_Titulo']) : (!empty($categoria) ? 'Artigos sobre ' . $categoria['ACG_Nome'] : 'Blog Disparador.net');
 $descricaoPagina = mb_substr($ehArtigo ? (($artigo['ART_MetaDescription'] ?? '') ?: $artigo['ART_Resumo']) : 'Conteúdo sobre API Oficial do WhatsApp Business, campanhas, templates, atendimento e boas práticas.', 0, 320);
-$canonical = $ehArtigo ? (($artigo['ART_UrlCanonica'] ?? '') ?: 'https://disparador.net/blog/' . rawurlencode($artigo['ART_Slug'])) : (!empty($categoria) ? 'https://disparador.net/blog/categoria/' . rawurlencode($categoria['ACG_Slug']) : 'https://disparador.net/blog');
+$canonical = $ehArtigo ? ($artigo['urlCanonicaExibicao'] ?? (($artigo['ART_UrlCanonica'] ?? '') ?: 'https://disparador.net/blog/' . rawurlencode($artigo['ART_Slug']))) : (!empty($categoria) ? 'https://disparador.net/blog/categoria/' . rawurlencode($categoria['ACG_Slug']) : 'https://disparador.net/blog');
 $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparador.net' . $artigo['ART_ImagemDestaque'] : null;
 ?>
 <!DOCTYPE html>
@@ -30,16 +30,18 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
     <?php if($ehArtigo && !$preview){ ?>
     <script type="application/ld+json"><?= json_encode([
         '@context'=>'https://schema.org','@type'=>'BlogPosting','headline'=>$artigo['ART_Titulo'],
-        'description'=>$descricaoPagina,'image'=>$imagem,'author'=>['@type'=>'Organization','name'=>'Disparador.net'],
+        'description'=>$descricaoPagina,'image'=>$imagem,'author'=>['@type'=>'Person','name'=>$artigo['autorExibicao'] ?? (($artigo['AutorNome'] ?? '') ?: 'Equipe Disparador.net')],
         'publisher'=>['@type'=>'Organization','name'=>'Disparador.net','logo'=>['@type'=>'ImageObject','url'=>'https://disparador.net/public/assets/img/logo-disparador.png']],
         'datePublished'=>date('c', strtotime($artigo['ART_DataPublicacao'])),'dateModified'=>date('c', strtotime($artigo['ART_AtualizadoEm'])),
+        'timeRequired'=>'PT' . max(1, (int) ($artigo['tempoLeitura'] ?? 1)) . 'M',
         'mainEntityOfPage'=>$canonical
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
     <script type="application/ld+json"><?= json_encode([
         '@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>[
             ['@type'=>'ListItem','position'=>1,'name'=>'Início','item'=>'https://disparador.net/'],
             ['@type'=>'ListItem','position'=>2,'name'=>'Blog','item'=>'https://disparador.net/blog'],
-            ['@type'=>'ListItem','position'=>3,'name'=>$artigo['ART_Titulo'],'item'=>$canonical]
+            ['@type'=>'ListItem','position'=>3,'name'=>$artigo['ACG_Nome'],'item'=>'https://disparador.net/blog/categoria/' . rawurlencode($artigo['ACG_Slug'])],
+            ['@type'=>'ListItem','position'=>4,'name'=>$artigo['ART_Titulo'],'item'=>$canonical]
         ]
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
     <?php } ?>
@@ -59,5 +61,7 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
 <main><?= $conteudo; ?></main>
 <footer class="py-4 bg-dark text-white mt-5"><div class="container d-flex flex-column flex-md-row justify-content-between"><span>© 2026 Disparador.net</span><span><a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/termosUso">Termos de Uso</a> · <a class="text-white" href="<?= BASE_URL; ?>/index.php?url=site/politicaPrivacidade">Privacidade</a></span></div></footer>
 <?php require __DIR__ . '/../site/partials/whatsapp_button.php'; ?>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
