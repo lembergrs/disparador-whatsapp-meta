@@ -18,10 +18,14 @@ interfaceStatusAssert(strpos($html,'mensagem-status-entregue')!==false && strpos
 interfaceStatusAssert(strpos($html,'fa-check-double')!==false && strpos($html,'mensagem-status-lida')!==false && strpos($html,'aria-label="Lida"')!==false,'read deve exibir checks azuis acessíveis');
 interfaceStatusAssert(strpos($html,'fa-exclamation-circle')!==false && strpos($html,'mensagem-status-falha')!==false && strpos($html,'Código Meta: 131026')!==false,'failed deve exibir alerta e tooltip');
 interfaceStatusAssert(strpos($html,'segredo')===false && strpos($html,'payload')===false && strpos($html,'Authorization')===false,'marcação não deve vazar segredo ou payload');
+interfaceStatusAssert(substr_count($html,'mensagem-meta mensagem-meta-saida')===6,'toda mensagem de saída deve ter metadados em container próprio');
+interfaceStatusAssert(strpos($html,'mensagem-horario')!==false,'horário deve permanecer junto ao indicador');
 $view=file_get_contents(__DIR__ . '/../app/Views/conversas/index.php'); $css=file_get_contents(__DIR__ . '/../public/assets/css/style.css');
 interfaceStatusAssert(substr_count($view,'setInterval(')===1,'polling não deve criar múltiplos timers');
 interfaceStatusAssert(strpos($view,'atualizarIndicadoresStatus(retorno.statuses || [])')!==false && strpos($view,'data-message-status-id')!==false,'polling deve atualizar mensagem específica');
 $inicio=strpos($view,'function atualizarIndicadoresStatus'); $fim=strpos($view,'function iniciarAtualizacaoAutomatica',$inicio); $funcao=substr($view,$inicio,$fim-$inicio);
 interfaceStatusAssert(strpos($funcao,'.html(')===false && strpos($funcao,'scroll')===false,'atualização de status não deve recriar conversa nem mover rolagem');
 foreach(['mensagem-status-enviada','mensagem-status-entregue','mensagem-status-lida','mensagem-status-falha'] as $classe){ interfaceStatusAssert(strpos($css,'.'.$classe)!==false,'CSS ausente: '.$classe); }
+interfaceStatusAssert(strpos($css,'.mensagem-meta-saida')!==false && strpos($css,'justify-content: flex-end')!==false && strpos($css,'width: 100%')!==false,'rodapé de saída deve ocupar a bolha e alinhar à direita');
+interfaceStatusAssert(strpos($css,'float:')===false && strpos($css,'position: absolute')===false,'alinhamento não deve usar float ou posição absoluta');
 echo "ConversaStatusInterfaceTest OK\n";
