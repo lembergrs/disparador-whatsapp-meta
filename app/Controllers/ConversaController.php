@@ -13,6 +13,7 @@ use Models\MetaConta;
 use Models\TemplateMeta;
 use Services\ConversaTemplateService;
 use Services\MetaService;
+use Services\MensagemStatusService;
 
 class ConversaController extends Controller
 {
@@ -261,7 +262,7 @@ class ConversaController extends Controller
                     $messageId,
 
                 'status' =>
-                    $status,
+                    $messageId ? 'aguardando_confirmacao' : 'erro',
 
                 'retorno' =>
                     $response,
@@ -404,12 +405,23 @@ class ConversaController extends Controller
             $dados['ultima']
             ?? '';
 
+        $statusMensagens = [];
+        $conversaId = (int) ($_GET['conversa_id'] ?? 0);
+        if($conversaId > 0 && $this->conversaModel->buscarAcessivel($conversaId, $usuario['CLI_ID'], $usuario)){
+            foreach($this->conversaModel->listarStatusMensagens($conversaId) as $mensagem){
+                $visual = MensagemStatusService::apresentacao($mensagem['MSG_Status'] ?? null, $mensagem['MSG_CodigoErro'] ?? null, $mensagem['MSG_MensagemErro'] ?? null, $mensagem['MSG_FalhouEm'] ?? null);
+                if(!$visual) continue;
+                $statusMensagens[] = ['id'=>(int)$mensagem['MSG_ID'], 'status'=>$visual['status'], 'icone'=>$visual['icone'], 'classe'=>$visual['classe'], 'tooltip'=>$visual['tooltip']];
+            }
+        }
+
         echo json_encode([
             'atualizar' =>
                 $ultimaBanco != $ultimaLocal,
 
             'ultima' =>
-                $ultimaBanco
+                $ultimaBanco,
+            'statuses' => $statusMensagens
         ]);
     }
 
@@ -634,7 +646,7 @@ class ConversaController extends Controller
                     $messageId,
 
                 'status' =>
-                    $status,
+                    $messageId ? 'aguardando_confirmacao' : 'erro',
 
                 'retorno' =>
                     $response,

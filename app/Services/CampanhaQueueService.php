@@ -340,7 +340,7 @@ class CampanhaQueueService
             'tipo' => 'template',
             'texto' => $template['TMP_Nome'],
             'message_id' => $messageId,
-            'status' => 'enviado',
+            'status' => 'aguardando_confirmacao',
             'retorno' => $this->retornoSeguro($retorno),
             'data_mensagem' => date('Y-m-d H:i:s')
         ]);

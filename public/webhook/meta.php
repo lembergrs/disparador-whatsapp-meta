@@ -2,12 +2,6 @@
 
 $input = file_get_contents('php://input');
 
-file_put_contents(
-    __DIR__ . '/webhook_debug.log',
-    date('Y-m-d H:i:s') . PHP_EOL . $input . PHP_EOL . str_repeat('-', 80) . PHP_EOL,
-    FILE_APPEND
-);
-
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -25,6 +19,8 @@ spl_autoload_register(function($class){
 
 use Core\Database;
 use Models\Conversa;
+use Services\MensagemStatusService;
+use Services\MetaStatusWebhookService;
 
 $db = Database::getInstance();
 
@@ -125,6 +121,13 @@ if(empty($payload)){
 
 $conversaModel =
     new Conversa();
+
+$statusWebhookService = new MetaStatusWebhookService(
+    $conversaModel,
+    function($messageId, $status, array $erro) use ($db){
+        atualizarRegistrosSecundariosStatus($db, $messageId, $status, $erro);
+    }
+);
 
 $entries =
     $payload['entry']
@@ -296,83 +299,7 @@ foreach($entries as $entry){
         |--------------------------------------------------------------------------
         */
         if(!empty($value['statuses'])){
-
-            foreach($value['statuses'] as $status){
-
-                $messageId =
-                    $status['id']
-                    ?? null;
-
-                $statusMsg =
-                    $status['status']
-                    ?? null;
-
-                if(!$messageId || !$statusMsg){
-                    continue;
-                }
-
-                $statusInterno = mapearStatusMeta($statusMsg);
-                $erroMeta = extrairErroStatusMeta($status);
-                $retornoStatus = json_encode($status, JSON_UNESCAPED_UNICODE);
-
-                $sql = $db->prepare("
-                    UPDATE conversa_mensagens
-                    SET
-                        MSG_Status = ?,
-                        MSG_Retorno = ?
-                    WHERE MSG_MetaMessageId = ?
-                ");
-
-                $sql->execute([
-                    $statusInterno,
-                    $retornoStatus,
-                    $messageId
-                ]);
-
-                $db->prepare("
-                    UPDATE disparos
-                    SET
-                        DSP_Status = ?,
-                        DSP_Retorno = ?
-                    WHERE DSP_MessageId = ?
-                ")->execute([
-                    $statusInterno,
-                    $retornoStatus,
-                    $messageId
-                ]);
-
-                $db->prepare("
-                    UPDATE fila_envio
-                    SET
-                        FIL_Status = ?,
-                        FIL_Erro = CASE WHEN ? IS NOT NULL THEN ? ELSE FIL_Erro END,
-                        FIL_Retorno = ?
-                    WHERE FIL_MessageId = ?
-                ")->execute([
-                    $statusInterno,
-                    $erroMeta,
-                    $erroMeta,
-                    $retornoStatus,
-                    $messageId
-                ]);
-
-                $db->prepare("
-                    UPDATE disparo_manual_itens
-                    SET
-                        DMI_Status = ?,
-                        DMI_Erro = CASE WHEN ? IS NOT NULL THEN ? ELSE DMI_Erro END,
-                        DMI_Retorno = ?,
-                        DMI_DataAtualizacao = NOW()
-                    WHERE DMI_MessageId = ?
-                ")->execute([
-                    $statusInterno,
-                    $erroMeta,
-                    $erroMeta,
-                    $retornoStatus,
-                    $messageId
-                ]);
-
-            }
+            $statusWebhookService->processarLote($value['statuses']);
 
         }
 
@@ -617,43 +544,23 @@ function registrarLogAutoResposta($metaConta, $conversaId, $numero, $acao, $erro
     );
 }
 
-function mapearStatusMeta($status)
+function atualizarRegistrosSecundariosStatus($db, $messageId, $status, array $erro)
 {
-    $mapa = [
-        'sent' => 'enviado',
-        'delivered' => 'entregue',
-        'read' => 'lido',
-        'failed' => 'erro'
-    ];
-
-    return $mapa[$status] ?? $status;
-}
-
-
-
-function extrairErroStatusMeta($status)
-{
-    $erro = $status['errors'][0] ?? null;
-
-    if(!$erro){
-        return null;
+    $permitidos = MensagemStatusService::statusAtuaisPermitidos($status);
+    if(!$permitidos) return;
+    $placeholders = implode(',', array_fill(0, count($permitidos), '?'));
+    $retornoSeguro = json_encode(['status'=>$status, 'error_code'=>$erro['codigo'] ?? null], JSON_UNESCAPED_UNICODE);
+    foreach([
+        ['disparos','DSP_Status','DSP_Retorno','DSP_MessageId',null,null],
+        ['fila_envio','FIL_Status','FIL_Retorno','FIL_MessageId','FIL_Erro',null],
+        ['disparo_manual_itens','DMI_Status','DMI_Retorno','DMI_MessageId','DMI_Erro','DMI_DataAtualizacao'],
+    ] as $alvo){
+        [$tabela,$campoStatus,$campoRetorno,$campoId,$campoErro,$campoAtualizacao] = $alvo;
+        $setErro = $campoErro ? ", {$campoErro}=CASE WHEN ?='failed' THEN ? ELSE {$campoErro} END" : '';
+        $setAtualizacao = $campoAtualizacao ? ", {$campoAtualizacao}=NOW()" : '';
+        $sql = $db->prepare("UPDATE {$tabela} SET {$campoStatus}=?, {$campoRetorno}=?{$setErro}{$setAtualizacao} WHERE {$campoId}=? AND ({$campoStatus} IS NULL OR {$campoStatus} IN ({$placeholders}))");
+        $params = [$status, $retornoSeguro];
+        if($campoErro){ $params[]=$status; $params[]=MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null); }
+        $params[]=$messageId; $params=array_merge($params,$permitidos); $sql->execute($params);
     }
-
-    $partes = [];
-
-    foreach(['title', 'message', 'details', 'error_data'] as $campo){
-        if(empty($erro[$campo])){
-            continue;
-        }
-
-        $partes[] = is_array($erro[$campo])
-            ? json_encode($erro[$campo], JSON_UNESCAPED_UNICODE)
-            : $erro[$campo];
-    }
-
-    if(!empty($erro['code'])){
-        $partes[] = 'Código: ' . $erro['code'];
-    }
-
-    return trim(implode(' | ', array_filter($partes))) ?: 'Falha confirmada pela Meta';
 }

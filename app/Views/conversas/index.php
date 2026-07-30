@@ -871,10 +871,13 @@ document.addEventListener('DOMContentLoaded', function(){
             urlBase + 'conversa/verificarAtualizacao',
 
             {
-                ultima: ultimaAtualizacaoConversas
+                ultima: ultimaAtualizacaoConversas,
+                conversa_id: conversaAberta
             },
 
             function(retorno){
+
+                atualizarIndicadoresStatus(retorno.statuses || []);
 
                 if(retorno.atualizar){
 
@@ -895,6 +898,20 @@ document.addEventListener('DOMContentLoaded', function(){
 
             atualizandoConversas = false;
 
+        });
+    }
+
+    function atualizarIndicadoresStatus(statuses)
+    {
+        (statuses || []).forEach(function(status){
+            const indicador = $('[data-message-status-id="' + status.id + '"]');
+            if(!indicador.length || indicador.attr('data-status') === status.status){ return; }
+            indicador.attr('data-status', status.status)
+                .attr('title', status.tooltip)
+                .attr('aria-label', status.tooltip)
+                .removeClass('mensagem-status-pendente mensagem-status-enviada mensagem-status-entregue mensagem-status-lida mensagem-status-falha')
+                .addClass(status.classe);
+            indicador.find('i').attr('class', 'fas ' + status.icone);
         });
     }
 
