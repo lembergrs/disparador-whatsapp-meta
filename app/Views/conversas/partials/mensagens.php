@@ -43,7 +43,7 @@
 
         <br>
 
-        <small class="text-muted">
+        <small class="text-muted mensagem-meta mensagem-meta-saida">
             <?= date('d/m/Y H:i', strtotime($msg['MSG_DataMensagem'])); ?>
         </small>
 
