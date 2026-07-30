@@ -6,14 +6,15 @@ use Core\Database;
 use Core\Auth;
 use PDO;
 use Services\TelefoneService;
+use Services\MensagemStatusService;
 
 class Conversa
 {
     private $db;
 
-    public function __construct()
+    public function __construct($db = null)
     {
-        $this->db = Database::getInstance();
+        $this->db = $db ?: Database::getInstance();
     }
 
     private function escopoUsuario($usuario)
@@ -381,6 +382,29 @@ class Conversa
         $mensagens = $sql->fetchAll(PDO::FETCH_ASSOC);
 
         return array_reverse($mensagens);
+    }
+
+    public function atualizarStatusPorMetaMessageId($messageId, $novoStatus, $dataEvento = null, array $erro = [])
+    {
+        $novoStatus = MensagemStatusService::normalizar($novoStatus);
+        $permitidos = MensagemStatusService::statusAtuaisPermitidos($novoStatus);
+        $aceitos = MensagemStatusService::statusAtuaisAceitosNoWebhook($novoStatus);
+        if(!$novoStatus || !$permitidos || !$aceitos || trim((string)$messageId) === '') return false;
+        $placeholdersPermitidos = implode(',', array_fill(0, count($permitidos), '?'));
+        $placeholdersAceitos = implode(',', array_fill(0, count($aceitos), '?'));
+        $campoData = ['sent'=>'MSG_EnviadaEm','delivered'=>'MSG_EntregueEm','read'=>'MSG_LidaEm','failed'=>'MSG_FalhouEm'][$novoStatus] ?? null;
+        $setData = $campoData ? ", {$campoData}=COALESCE({$campoData}, ?)" : '';
+        $sql = $this->db->prepare("UPDATE conversa_mensagens SET MSG_Status=CASE WHEN MSG_Status IS NULL OR MSG_Status IN ({$placeholdersPermitidos}) THEN ? ELSE MSG_Status END, MSG_CodigoErro=CASE WHEN ?='failed' THEN ? ELSE MSG_CodigoErro END, MSG_MensagemErro=CASE WHEN ?='failed' THEN ? ELSE MSG_MensagemErro END{$setData}, MSG_AtualizadoEm=CASE WHEN MSG_Status IS NULL OR MSG_Status IN ({$placeholdersPermitidos})" . ($campoData ? " OR {$campoData} IS NULL" : '') . " THEN NOW() ELSE MSG_AtualizadoEm END WHERE MSG_MetaMessageId=? AND MSG_Direcao='enviada' AND (MSG_Status IS NULL OR MSG_Status IN ({$placeholdersAceitos}))");
+        $params = array_merge($permitidos, [$novoStatus, $novoStatus, $erro['codigo'] ?? null, $novoStatus, MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null)]);
+        if($campoData) $params[] = $dataEvento ?: date('Y-m-d H:i:s');
+        $params = array_merge($params, $permitidos, [$messageId], $aceitos);
+        $sql->execute($params); return $sql->rowCount() > 0;
+    }
+
+    public function listarStatusMensagens($conversaId)
+    {
+        $sql = $this->db->prepare("SELECT MSG_ID, MSG_Status, MSG_EnviadaEm, MSG_EntregueEm, MSG_LidaEm, MSG_FalhouEm, MSG_CodigoErro, MSG_MensagemErro FROM conversa_mensagens WHERE CVS_ID=? AND MSG_Direcao='enviada' ORDER BY MSG_ID DESC LIMIT 100");
+        $sql->execute([(int)$conversaId]); return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function buscar($conversaId, $clienteId, $usuario = null)

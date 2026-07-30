@@ -15,6 +15,26 @@
 .page-link{
     cursor: pointer;
 }
+
+.mensagem-meta-linha{
+    align-items: center;
+    display: inline-flex;
+    gap: .35rem;
+    white-space: nowrap;
+}
+
+.mensagem-status{
+    display: inline-flex;
+    font-size: .78rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.mensagem-status-pendente,
+.mensagem-status-enviada,
+.mensagem-status-entregue{ color: #6c757d; }
+.mensagem-status-lida{ color: #087ac1; }
+.mensagem-status-falha{ color: #c82333; cursor: help; }
 .table-striped tbody tr:nth-of-type(odd){
     background-color: rgba(0,0,0,.02);
 }

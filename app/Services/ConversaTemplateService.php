@@ -134,7 +134,7 @@ class ConversaTemplateService
                 'tipo' => 'template',
                 'texto' => $texto,
                 'message_id' => $messageId,
-                'status' => 'enviado',
+                'status' => 'aguardando_confirmacao',
                 'retorno' => [
                     'message_id' => $messageId,
                     'template' => $template['TMP_Nome'],

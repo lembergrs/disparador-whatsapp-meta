@@ -1,4 +1,4 @@
-<?php foreach($mensagens as $msg){ ?>
+<?php use Services\MensagemStatusService; foreach($mensagens as $msg){ ?>
 
 <?php if($msg['MSG_Direcao'] == 'enviada'){ ?>
 
@@ -17,8 +17,11 @@
 
         <br>
 
-        <small class="text-muted">
+        <small class="text-muted mensagem-meta-linha">
             <?= date('d/m/Y H:i', strtotime($msg['MSG_DataMensagem'])); ?>
+            <?php $statusVisual = MensagemStatusService::apresentacao($msg['MSG_Status'] ?? null, $msg['MSG_CodigoErro'] ?? null, $msg['MSG_MensagemErro'] ?? null, $msg['MSG_FalhouEm'] ?? null); if($statusVisual){ ?>
+            <span class="mensagem-status <?= htmlspecialchars($statusVisual['classe'], ENT_QUOTES, 'UTF-8'); ?>" data-message-status-id="<?= (int)$msg['MSG_ID']; ?>" data-status="<?= htmlspecialchars($statusVisual['status'], ENT_QUOTES, 'UTF-8'); ?>" title="<?= htmlspecialchars($statusVisual['tooltip'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?= htmlspecialchars($statusVisual['tooltip'], ENT_QUOTES, 'UTF-8'); ?>" role="img"><i class="fas <?= htmlspecialchars($statusVisual['icone'], ENT_QUOTES, 'UTF-8'); ?>" aria-hidden="true"></i></span>
+            <?php } ?>
         </small>
 
     </div>
