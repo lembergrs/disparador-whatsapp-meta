@@ -56,7 +56,7 @@ class Artigo
         $sql->execute($params); return ['itens'=>$sql->fetchAll(PDO::FETCH_ASSOC), 'total'=>$total];
     }
 
-    public function navegacaoPublicados(array $artigo)
+    public function navegacaoPublica(array $artigo)
     {
         $elegivel = "a.ART_Ativo = 'S' AND a.ART_Status = 'publicado' AND a.ART_DataPublicacao <= NOW() AND c.ACG_Ativo = 'S'";
         $sql = $this->db->prepare("(SELECT 'anterior' AS Direcao, a.ART_ID, a.ART_Titulo, a.ART_Slug, a.ART_DataPublicacao FROM artigos a INNER JOIN artigos_categorias c ON c.ACG_ID = a.ACG_ID WHERE {$elegivel} AND (a.ART_DataPublicacao < ? OR (a.ART_DataPublicacao = ? AND a.ART_ID < ?)) ORDER BY a.ART_DataPublicacao DESC, a.ART_ID DESC LIMIT 1) UNION ALL (SELECT 'proximo' AS Direcao, a.ART_ID, a.ART_Titulo, a.ART_Slug, a.ART_DataPublicacao FROM artigos a INNER JOIN artigos_categorias c ON c.ACG_ID = a.ACG_ID WHERE {$elegivel} AND (a.ART_DataPublicacao > ? OR (a.ART_DataPublicacao = ? AND a.ART_ID > ?)) ORDER BY a.ART_DataPublicacao ASC, a.ART_ID ASC LIMIT 1)");
