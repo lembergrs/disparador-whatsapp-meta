@@ -52,7 +52,7 @@ $assert(substr_count($admin, 'validarCsrfPost()') >= 8 && strpos($admin, 'Auth::
 $assert(strpos($admin, 'ArtigoConteudoService::sanitizarHtml') !== false, 'conteúdo deve ser sanitizado no backend');
 $assert(strpos($model, 'GROUP_CONCAT') !== false && strpos($model, 'LIMIT {$porPagina} OFFSET {$offset}') !== false, 'consultas devem evitar N+1 e paginar');
 $assert(strpos($model, "ART_Status = 'publicado'") !== false && strpos($model, 'ART_DataPublicacao <= NOW()') !== false, 'área pública deve retornar somente publicados');
-$assert(strpos($model, 'navegacaoPublicados') !== false && substr_count($model, "c.ACG_Ativo = 'S'") >= 3, 'navegação deve excluir rascunhos, futuros e categorias inativas');
+$assert(strpos($model, 'public function navegacaoPublica(array $artigo)') !== false && substr_count($model, "c.ACG_Ativo = 'S'") >= 3, 'navegação pública deve existir e excluir rascunhos, futuros e categorias inativas');
 $assert(strpos($model, 'ART_ID NOT IN') !== false && strpos($model, 'ORDER BY (a.ACG_ID = ?) DESC') !== false, 'relacionados devem excluir repetidos e priorizar categoria');
 $assert(strpos($publico, 'listarPublicados') !== false && strpos($publico, 'buscarPublicadoPorSlug') !== false, 'blog deve implementar listagem, busca e artigo');
 $assert(strpos($layout, "'@type'=>'BlogPosting'") !== false && strpos($layout, "'@type'=>'BreadcrumbList'") !== false, 'artigo deve gerar schemas SEO');

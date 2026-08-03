@@ -42,7 +42,7 @@ $renderizarSumario = function() use ($sumario, $esc){ ?>
             <div class="blog-artigo-conteudo"><?= $artigo['ART_Conteudo']; ?></div>
             <?php if(!empty($artigo['tags'])){ ?><div class="mt-4" aria-label="Tags"><?php foreach($artigo['tags'] as $tag){ ?><span class="badge badge-light border mr-1"><?= $esc($tag['ATG_Nome']); ?></span><?php } ?></div><?php } ?>
 
-            <aside class="blog-sobre rounded p-4 mt-5" aria-labelledby="sobre-disparador"><h2 id="sobre-disparador" class="h4">Sobre o Disparador.net</h2><p>O Disparador.net é uma plataforma integrada à API Oficial do WhatsApp Business, desenvolvida para ajudar empresas a organizar contatos, enviar campanhas, acompanhar conversas e profissionalizar sua comunicação com clientes de forma segura.</p><a class="btn btn-success" href="<?= BASE_URL; ?>/index.php?url=site/cadastro">Conheça o Disparador.net</a></aside>
+            <aside class="blog-sobre rounded p-4 mt-5" aria-labelledby="sobre-disparador"><h2 id="sobre-disparador" class="h4">Sobre o Disparador.net</h2><p>O Disparador.net é uma plataforma integrada à API Oficial do WhatsApp Business, desenvolvida para ajudar empresas a organizar contatos, enviar campanhas, acompanhar conversas e profissionalizar sua comunicação com clientes de forma segura.</p><a class="btn btn-success" href="<?= BASE_URL; ?>/index.php?url=site/cadastro" data-analytics-event="click_start_trial" data-analytics-location="blog_about">Conheça o Disparador.net</a></aside>
 
             <section class="blog-compartilhar mt-5" aria-labelledby="titulo-compartilhar"><h2 id="titulo-compartilhar" class="h4">Compartilhe este artigo</h2><div class="d-flex flex-wrap" role="group" aria-label="Opções de compartilhamento">
                 <a class="btn btn-success mr-2 mb-2" href="<?= $esc($urlsCompartilhamento['whatsapp']); ?>" target="_blank" rel="noopener noreferrer" aria-label="Compartilhar no WhatsApp"><i class="fab fa-whatsapp mr-1" aria-hidden="true"></i> WhatsApp</a>
@@ -59,7 +59,7 @@ $renderizarSumario = function() use ($sumario, $esc){ ?>
 
             <?php if(!empty($relacionados)){ ?><section class="mt-5" aria-labelledby="leia-tambem"><h2 id="leia-tambem">Leia também</h2><div class="row"><?php foreach($relacionados as $rel){ ?><div class="col-md-4 mb-3"><article class="card blog-relacionado h-100"><?php if(!empty($rel['ART_ImagemDestaque'])){ ?><img class="card-img-top" loading="lazy" src="<?= $esc($rel['ART_ImagemDestaque']); ?>" alt="<?= $esc($rel['ART_Titulo']); ?>"><?php } ?><div class="card-body d-flex flex-column"><h3 class="h5"><a href="<?= BASE_URL; ?>/blog/<?= rawurlencode($rel['ART_Slug']); ?>"><?= $esc($rel['ART_Titulo']); ?></a></h3><p class="small text-muted"><?= $esc(mb_substr($rel['ART_Resumo'], 0, 140)); ?><?= mb_strlen($rel['ART_Resumo']) > 140 ? '…' : ''; ?></p><a class="mt-auto" href="<?= BASE_URL; ?>/blog/<?= rawurlencode($rel['ART_Slug']); ?>" aria-label="Ler <?= $esc($rel['ART_Titulo']); ?>">Ler artigo →</a></div></article></div><?php } ?></div></section><?php } ?>
 
-            <div class="site-final-cta rounded text-center p-4 p-md-5 mt-5"><h2 class="h3">Leve sua comunicação no WhatsApp para o próximo nível</h2><p>Conheça campanhas, templates e atendimento pela API Oficial do WhatsApp Business.</p><a class="btn btn-light" href="<?= BASE_URL; ?>/index.php?url=site/cadastro">Começar teste grátis</a></div>
+            <div class="site-final-cta rounded text-center p-4 p-md-5 mt-5"><h2 class="h3">Leve sua comunicação no WhatsApp para o próximo nível</h2><p>Conheça campanhas, templates e atendimento pela API Oficial do WhatsApp Business.</p><a class="btn btn-light" href="<?= BASE_URL; ?>/index.php?url=site/cadastro" data-analytics-event="click_start_trial" data-analytics-location="blog_final_cta">Começar teste grátis</a></div>
         </div>
     </div>
 </div></article>
@@ -75,3 +75,14 @@ $renderizarSumario = function() use ($sumario, $esc){ ?>
     botao.addEventListener('click', function(){ if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(url).then(sucesso).catch(fallback); } else { fallback(); } });
 }());
 </script>
+<?php if(empty($preview)){ ?>
+<script>
+window.Disparador.analytics.push('view_blog_post', <?= json_encode([
+    'article_slug'=>(string)$artigo['ART_Slug'],
+    'article_title'=>(string)$artigo['ART_Titulo'],
+    'article_category'=>(string)$artigo['ACG_Nome'],
+    'article_author'=>(string)$artigo['autorExibicao'],
+    'article_reading_time'=>(int)$artigo['ART_TempoLeitura'],
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>);
+</script>
+<?php } ?>

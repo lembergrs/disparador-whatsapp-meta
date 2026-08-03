@@ -247,22 +247,23 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             <div class="col-lg-6">
 
                 <span class="badge badge-success mb-3">
-                    Integração com a WhatsApp Business Platform
+                    API Oficial da Meta • Mais segurança e estabilidade
                 </span>
 
                 <h1 class="site-hero-title">
-                    Envie mensagens pela API Oficial do WhatsApp Business da Meta
+                    Transforme seu WhatsApp em uma plataforma de
+                    <span>vendas e atendimento</span>
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    Use a API Oficial da Meta para criar campanhas segmentadas, organizar listas, templates e agendamentos, acompanhar mensagens e atender clientes em uma única plataforma.
+                    Crie campanhas, organize contatos, atenda clientes, use templates oficiais e gerencie múltiplos números em um único sistema conectado à API Oficial da Meta.
                 </p>
 
                 <div class="mt-4">
 
                     <a
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
-                    class="btn btn-success btn-lg site-btn-main"
+                    class="btn btn-success btn-lg site-btn-main shadow-sm"
                     data-analytics-event="click_start_trial"
                     data-analytics-location="hero"
                     >
@@ -278,7 +279,13 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
                 </div>
 
-                <div class="mt-4 text-muted">
+                <div class="mt-3 small text-muted">
+
+                    Teste grátis por até 7 dias ou 200 mensagens.
+
+                </div>
+
+                <div class="mt-3 text-muted">
 
                     <span class="mr-3">
                         <i class="fas fa-check text-success"></i>
