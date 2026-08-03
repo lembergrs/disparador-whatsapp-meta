@@ -16,6 +16,7 @@ use Models\ListaContatoItem;
 use Models\MetaConta;
 use Models\Cliente;
 use Models\ConsumoMensal;
+use Services\AnalyticsService;
 
 class CampanhaController extends Controller
 {
@@ -166,6 +167,12 @@ class CampanhaController extends Controller
                 count($contatos)
 
             );
+
+        if($this->campanhaModel->contarPorCliente($usuario['CLI_ID']) === 1){
+            AnalyticsService::registrar('first_campaign_created', [
+                'campaign_type'=>'scheduled', 'first_campaign'=>true
+            ]);
+        }
 
         \Core\Session::flash(
 

@@ -24,9 +24,17 @@ window.Disparador.analytics = window.Disparador.analytics || {
 document.addEventListener('click', function(e) {
     var alvo = e.target.closest ? e.target.closest('[data-analytics-event]') : null;
     if(!alvo) return;
-    window.Disparador.analytics.push(alvo.getAttribute('data-analytics-event'), {
-        location: alvo.getAttribute('data-analytics-location') || 'unknown'
-    });
+    var evento = alvo.getAttribute('data-analytics-event');
+    var dados = {location: alvo.getAttribute('data-analytics-location') || 'unknown'};
+    if(evento === 'select_trial') {
+        dados = {
+            cta_location: alvo.getAttribute('data-analytics-location') || 'unknown',
+            destination_type: alvo.getAttribute('data-analytics-destination') || 'registration'
+        };
+        var plano = alvo.getAttribute('data-analytics-plan');
+        if(plano) dados.plan_name = plano;
+    }
+    window.Disparador.analytics.push(evento, dados);
 });
 <?php foreach($analyticsEventosPendentes as $analyticsEvento){ ?>
 window.Disparador.analytics.push(

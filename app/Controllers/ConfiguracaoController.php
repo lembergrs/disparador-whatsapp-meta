@@ -613,7 +613,9 @@ class ConfiguracaoController extends Controller
 
         if($statusConexao === 'conectado'){
             if($atualizou && ($conta['MTA_Status'] ?? '') !== 'conectado' && !empty($conta['MTA_WabaId']) && !empty($conta['MTA_PhoneNumberId'])){
-                AnalyticsService::registrar('meta_connection_completed');
+                AnalyticsService::registrar('connect_meta', [
+                    'connection_type'=>'embedded_signup', 'first_connection'=>true, 'source_area'=>'configuration'
+                ]);
             }
             $this->clienteModel->iniciarTrialSePendente($clienteId);
             $this->dispararMetaConectada($clienteId, CanalNotificacao::WHATSAPP);
