@@ -222,8 +222,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 <li class="nav-item site-nav-action">
                     <a
                     class="btn btn-success ml-lg-2 site-btn-main"
-                    data-analytics-event="click_start_trial"
-                    data-analytics-location="menu"
+                    data-analytics-event="select_trial"
+                    data-analytics-location="header"
+                    data-analytics-destination="registration"
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                     >
                         Começar teste grátis
@@ -247,24 +248,26 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             <div class="col-lg-6">
 
                 <span class="badge badge-success mb-3">
-                    Integração com a WhatsApp Business Platform
+                    API Oficial da Meta • Mais segurança e estabilidade
                 </span>
 
                 <h1 class="site-hero-title">
-                    Envie mensagens pela API Oficial do WhatsApp Business da Meta
+                    Transforme seu WhatsApp em uma plataforma de
+                    <span>vendas e atendimento</span>
                 </h1>
 
                 <p class="site-hero-text mt-4">
-                    Use a API Oficial da Meta para criar campanhas segmentadas, organizar listas, templates e agendamentos, acompanhar mensagens e atender clientes em uma única plataforma.
+                    Crie campanhas, organize contatos, atenda clientes, use templates oficiais e gerencie múltiplos números em um único sistema conectado à API Oficial da Meta.
                 </p>
 
                 <div class="mt-4">
 
                     <a
                     href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
-                    class="btn btn-success btn-lg site-btn-main"
-                    data-analytics-event="click_start_trial"
+                    class="btn btn-success btn-lg site-btn-main shadow-sm"
+                    data-analytics-event="select_trial"
                     data-analytics-location="hero"
+                    data-analytics-destination="registration"
                     >
                         Começar teste grátis
                     </a>
@@ -278,7 +281,13 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
                 </div>
 
-                <div class="mt-4 text-muted">
+                <div class="mt-3 small text-muted">
+
+                    Teste grátis por até 7 dias ou 200 mensagens.
+
+                </div>
+
+                <div class="mt-3 text-muted">
 
                     <span class="mr-3">
                         <i class="fas fa-check text-success"></i>
@@ -839,8 +848,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                 <a
                                 href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
                                 class="btn btn-outline-success btn-block"
-                                data-analytics-event="click_start_trial"
-                                data-analytics-location="plans"
+                                data-analytics-event="select_trial"
+                                data-analytics-location="pricing"
+                                data-analytics-destination="registration"
+                                data-analytics-plan="<?= htmlspecialchars($plano['PLA_Nome'], ENT_QUOTES, 'UTF-8'); ?>"
                                 >
                         Começar teste grátis
                                 </a>
@@ -980,8 +991,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <a
         href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
         class="btn btn-light btn-lg"
-        data-analytics-event="click_start_trial"
-        data-analytics-location="footer"
+        data-analytics-event="select_trial"
+        data-analytics-location="final_cta"
+        data-analytics-destination="registration"
         >
             Começar teste grátis
         </a>
@@ -1032,6 +1044,34 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 <script>
 
 document.addEventListener('DOMContentLoaded', function(){
+
+    window.Disparador.analytics.push('view_home', {
+        page_type: 'home',
+        source_area: 'public_site'
+    });
+
+    const secaoPlanos = document.getElementById('planos');
+    let planosVisualizados = false;
+
+    function registrarVisualizacaoPlanos()
+    {
+        if(planosVisualizados){ return; }
+        planosVisualizados = true;
+        window.Disparador.analytics.push('view_pricing', {
+            page_type: 'home',
+            section: 'pricing'
+        });
+    }
+
+    if(secaoPlanos && 'IntersectionObserver' in window){
+        const observadorPlanos = new IntersectionObserver(function(entradas, observador){
+            if(entradas.some(function(entrada){ return entrada.isIntersecting; })){
+                registrarVisualizacaoPlanos();
+                observador.disconnect();
+            }
+        }, {threshold: 0.35});
+        observadorPlanos.observe(secaoPlanos);
+    }
 
     const sitePlanosCarousel =
         document.getElementById('sitePlanosCarousel');

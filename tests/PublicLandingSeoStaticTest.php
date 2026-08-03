@@ -17,7 +17,7 @@ $assert(strpos($home, '<title>Disparador.net | Plataforma Oficial de WhatsApp Bu
 $assert(strpos($home, 'Envie campanhas, notificações e mensagens pela API Oficial do WhatsApp Business da Meta.') !== false, 'description obrigatória ausente');
 $assert(strpos($home, '<link rel="canonical" href="https://disparador.net/">') !== false, 'canonical da Home ausente');
 $assert(substr_count($home, '<h1') === 1, 'Home deve possuir somente um H1');
-$assert(strpos($home, 'Envie mensagens pela API Oficial do WhatsApp Business da Meta') !== false, 'H1 comercial obrigatório ausente');
+$assert(strpos($home, 'Transforme seu WhatsApp em uma plataforma de') !== false && strpos($home, '<span>vendas e atendimento</span>') !== false, 'H1 orientado ao benefício ausente');
 $assert(strpos($home, 'og:locale') !== false && strpos($home, 'twitter:card') !== false, 'metadados sociais ausentes');
 $assert(substr_count($home, 'application/ld+json') === 3, 'schemas Organization, SoftwareApplication e FAQPage devem existir');
 $assert(strpos($home, "'@type' => 'FAQPage'") !== false, 'FAQ schema ausente');

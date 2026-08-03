@@ -469,7 +469,9 @@ class Cliente
 
         if($executado && $sql->rowCount() > 0){
             $this->registrarInicioTrial($id);
-            AnalyticsService::registrar('trial_started');
+            AnalyticsService::registrar('start_trial', [
+                'trial_duration_days'=>7, 'trial_message_limit'=>200, 'trigger'=>'meta_connection'
+            ]);
         }
 
         return $executado;
