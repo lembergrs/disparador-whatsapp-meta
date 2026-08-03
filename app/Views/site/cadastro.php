@@ -484,7 +484,10 @@ $(function(){
     {
         if(inicioCadastroRastreado){ return; }
         inicioCadastroRastreado = true;
-        window.Disparador.analytics.push('begin_signup', {});
+        window.Disparador.analytics.push('sign_up_start', {
+            form_name: 'public_registration',
+            source_area: 'public_site'
+        });
         document.getElementById('formCadastroPublico').removeEventListener('input', rastrearInicioCadastro);
         document.getElementById('formCadastroPublico').removeEventListener('change', rastrearInicioCadastro);
     }

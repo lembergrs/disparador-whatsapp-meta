@@ -92,6 +92,13 @@ class Campanha
         return $this->db->lastInsertId();
     }
 
+    public function contarPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare('SELECT COUNT(*) FROM campanhas WHERE CLI_ID = ?');
+        $sql->execute([(int) $clienteId]);
+        return (int) $sql->fetchColumn();
+    }
+
     public function atualizarTotalContatos(
         $campanhaId,
         $total

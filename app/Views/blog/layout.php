@@ -56,7 +56,7 @@ $imagem = $ehArtigo && !empty($artigo['ART_ImagemDestaque']) ? 'https://disparad
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm site-navbar">
     <div class="container">
         <a class="navbar-brand" href="<?= BASE_URL; ?>/"><img src="<?= ASSET_URL; ?>/img/logo-disparador.png" alt="Disparador.net" class="site-logo" width="1136" height="247"></a>
-        <div class="ml-auto"><a href="<?= BASE_URL; ?>/blog" class="btn btn-link text-dark">Blog</a><a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-success site-btn-main" data-analytics-event="click_start_trial" data-analytics-location="blog_menu">Começar teste grátis</a></div>
+        <div class="ml-auto"><a href="<?= BASE_URL; ?>/blog" class="btn btn-link text-dark">Blog</a><a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-success site-btn-main" data-analytics-event="select_trial" data-analytics-location="blog_header" data-analytics-destination="registration">Começar teste grátis</a></div>
     </div>
 </nav>
 <?php if($preview){ ?><div class="alert alert-warning text-center rounded-0 mb-0"><strong>PRÉVIA:</strong> este artigo não está indexado nem disponível publicamente.</div><?php } ?>

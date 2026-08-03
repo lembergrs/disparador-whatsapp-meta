@@ -275,7 +275,7 @@ class SiteController extends Controller
 
             $db->commit();
 
-            AnalyticsService::registrar('sign_up', ['signup_method'=>'site']);
+            AnalyticsService::registrar('sign_up', ['method'=>'public_form', 'account_type'=>'client']);
 
             $resultadoBoasVindas = $this->enviarEmailBoasVindasCadastro([
                 'CLI_ID' => $clienteId,

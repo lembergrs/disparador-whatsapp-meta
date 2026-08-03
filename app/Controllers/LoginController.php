@@ -123,7 +123,7 @@ class LoginController extends Controller
 
             ];
 
-            AnalyticsService::registrar('login', ['login_method'=>'password']);
+            AnalyticsService::registrar('login', ['method'=>'password']);
 
             $this->redirect('dashboard');
 
