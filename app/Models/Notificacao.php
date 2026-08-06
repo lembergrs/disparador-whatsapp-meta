@@ -4,6 +4,8 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\MensagemStatusService;
+use Services\NotificacaoStatusService;
 
 class Notificacao
 {
@@ -56,6 +58,38 @@ class Notificacao
         if(!in_array($status, ['enviada','erro_temporario','erro_definitivo'], true)) $status = 'erro_temporario';
         $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=:status, NOT_Erro=:erro, NOT_CodigoErro=:codigo, NOT_ProviderMessageId=:message_id, NOT_DataEnvio=CASE WHEN :ok=1 THEN NOW() ELSE NOT_DataEnvio END WHERE NOT_ID=:id AND NOT_Status='processando'");
         return $sql->execute([':status'=>$status, ':erro'=>$this->sanitizar($resultado['mensagem'] ?? null), ':codigo'=>$this->sanitizar($resultado['error_code'] ?? null), ':message_id'=>$this->sanitizar($resultado['message_id'] ?? null), ':ok'=>$sucesso ? 1 : 0, ':id'=>(int)$id]);
+    }
+
+    public function atualizarStatusWhatsAppPorWamid($messageId, $status, $dataEvento = null, array $erro = [])
+    {
+        $status = MensagemStatusService::normalizar($status);
+        $mapa = ['sent'=>'enviada', 'delivered'=>'entregue', 'read'=>'lida', 'failed'=>'erro_definitivo'];
+        $messageId = trim((string)$messageId);
+        if(!isset($mapa[$status]) || $messageId === '') return ['encontrada'=>false, 'atualizada'=>false];
+
+        $consulta = $this->db->prepare("SELECT NOT_ID, NOT_Status FROM notificacoes WHERE NOT_Canal='whatsapp' AND NOT_ProviderMessageId=? ORDER BY NOT_ID DESC LIMIT 1");
+        $consulta->execute([$messageId]);
+        $notificacao = $consulta->fetch(PDO::FETCH_ASSOC);
+        if(!$notificacao) return ['encontrada'=>false, 'atualizada'=>false];
+
+        $novoStatus = $mapa[$status];
+        $statusAnterior = (string)$notificacao['NOT_Status'];
+        if(!NotificacaoStatusService::podeAvancar($statusAnterior, $novoStatus)){
+            return ['encontrada'=>true, 'atualizada'=>false, 'status_anterior'=>$statusAnterior, 'status_atual'=>$statusAnterior];
+        }
+        $campoData = ['sent'=>'NOT_DataEnvio', 'delivered'=>'NOT_DataEntrega', 'read'=>'NOT_DataLeitura', 'failed'=>'NOT_DataErro'][$status];
+        $dataEvento = $dataEvento && strtotime($dataEvento) ? date('Y-m-d H:i:s', strtotime($dataEvento)) : date('Y-m-d H:i:s');
+        $codigo = preg_replace('/[^A-Za-z0-9_.-]/', '', (string)($erro['codigo'] ?? '')) ?: null;
+        $mensagem = MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null) ?: null;
+
+        $setEntregaImplicita = $status === 'read' ? ', NOT_DataEntrega=COALESCE(NOT_DataEntrega, ?)' : '';
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=?, {$campoData}=COALESCE({$campoData}, ?){$setEntregaImplicita}, NOT_CodigoErro=CASE WHEN ?='failed' THEN ? ELSE NOT_CodigoErro END, NOT_Erro=CASE WHEN ?='failed' THEN ? ELSE NOT_Erro END WHERE NOT_ID=? AND NOT_Status=?");
+        $params = [$novoStatus, $dataEvento];
+        if($status === 'read') $params[] = $dataEvento;
+        $params = array_merge($params, [$status, $codigo, $status, $mensagem, (int)$notificacao['NOT_ID'], $statusAnterior]);
+        $sql->execute($params);
+        $atualizada = $sql->rowCount() === 1;
+        return ['encontrada'=>true, 'atualizada'=>$atualizada, 'status_anterior'=>$statusAnterior, 'status_atual'=>$atualizada ? $novoStatus : $statusAnterior];
     }
 
     public function finalizar($id, array $resultado)

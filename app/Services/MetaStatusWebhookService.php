@@ -6,7 +6,8 @@ class MetaStatusWebhookService
 {
     private $conversas;
     private $secundario;
-    public function __construct($conversas, callable $secundario = null){ $this->conversas=$conversas; $this->secundario=$secundario; }
+    private $notificacoes;
+    public function __construct($conversas, callable $secundario = null, callable $notificacoes = null){ $this->conversas=$conversas; $this->secundario=$secundario; $this->notificacoes=$notificacoes; }
 
     public function processarLote(array $statuses)
     {
@@ -18,8 +19,10 @@ class MetaStatusWebhookService
                 if($messageId === '' || !$novo){ $resumo['ignorados']++; continue; }
                 $timestamp = $this->timestamp($status['timestamp'] ?? null);
                 $erro = $this->erro($status);
-                $alterou = $this->conversas->atualizarStatusPorMetaMessageId($messageId, $novo, $timestamp, $erro);
-                if($this->secundario) call_user_func($this->secundario, $messageId, $novo, $erro);
+                $alterou = false;
+                try{ $alterou = $this->conversas->atualizarStatusPorMetaMessageId($messageId, $novo, $timestamp, $erro) || $alterou; }catch(\Throwable $e){ $resumo['erros']++; }
+                try{ if($this->secundario) call_user_func($this->secundario, $messageId, $novo, $erro, $timestamp); }catch(\Throwable $e){ $resumo['erros']++; }
+                try{ if($this->notificacoes) $alterou = (bool)call_user_func($this->notificacoes, $messageId, $novo, $erro, $timestamp) || $alterou; }catch(\Throwable $e){ $resumo['erros']++; }
                 $alterou ? $resumo['processados']++ : $resumo['ignorados']++;
             }catch(\Throwable $e){ $resumo['erros']++; }
         }
