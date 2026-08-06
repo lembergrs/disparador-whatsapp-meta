@@ -27,4 +27,11 @@ webhookStatusAssert($repo->rows['wamid.2']['status']==='delivered','falha não d
 $repo->rows['wamid.2']=['status'=>'processing']; $service->processarLote([['id'=>'wamid.2','status'=>'failed','errors'=>[['code'=>131026,'message'=>'Falha segura']]]]);
 webhookStatusAssert($repo->rows['wamid.2']['status']==='failed' && $repo->rows['wamid.2']['erro']['codigo']==='131026','failed deve registrar código e erro');
 webhookStatusAssert(strpos($repo->rows['wamid.2']['erro']['mensagem'],'secreto')===false,'erro deve ser sanitizado');
+$conversasComErro = new class {
+ public function atualizarStatusPorMetaMessageId($id,$novo,$data,$erro){ throw new RuntimeException('falha isolada'); }
+};
+$notificacoesProcessadas=[];
+$isolado = new MetaStatusWebhookService($conversasComErro, function(){ throw new RuntimeException('falha secundária'); }, function($id,$status,$erro,$data) use (&$notificacoesProcessadas){ $notificacoesProcessadas[]=$id; return true; });
+$resultadoIsolado = $isolado->processarLote([['id'=>'wamid.institucional','status'=>'delivered'],['id'=>'','status'=>'read']]);
+webhookStatusAssert($notificacoesProcessadas===['wamid.institucional'] && $resultadoIsolado['processados']===1 && $resultadoIsolado['ignorados']===1,'notificações devem atualizar mesmo se conversas ou secundários falharem');
 echo "MetaStatusWebhookServiceTest OK\n";

@@ -32,5 +32,11 @@ $desconhecido = NotificacaoStatusService::apresentacao('legado_desconhecido', Ca
 notificacaoStatusAssert($desconhecido['icone']==='fa-circle' && $desconhecido['status']==='desconhecido', 'status legado deve ser neutro');
 $erro = NotificacaoStatusService::apresentacao('erro_definitivo', CanalNotificacao::WHATSAPP, '131026', 'token=segredo configuração ausente e uma explicação muito longa que não deve dominar a tela');
 notificacaoStatusAssert(strpos($erro['tooltip'], 'segredo')===false && mb_strlen($erro['tooltip'])<=97, 'tooltip de erro deve ser curto e sanitizado');
+notificacaoStatusAssert(NotificacaoStatusService::podeAvancar('pendente','enviada'), 'pendente deve avançar para enviada');
+notificacaoStatusAssert(NotificacaoStatusService::podeAvancar('enviada','entregue'), 'enviada deve avançar para entregue');
+notificacaoStatusAssert(NotificacaoStatusService::podeAvancar('enviada','lida'), 'read fora de ordem deve avançar diretamente');
+notificacaoStatusAssert(!NotificacaoStatusService::podeAvancar('lida','entregue'), 'lida não deve regredir');
+notificacaoStatusAssert(!NotificacaoStatusService::podeAvancar('entregue','enviada'), 'entregue não deve regredir');
+notificacaoStatusAssert(NotificacaoStatusService::podeAvancar('enviada','erro_definitivo'), 'falha posterior à aceitação inicial deve ser registrada');
 
 echo "NotificacaoStatusServiceTest OK\n";

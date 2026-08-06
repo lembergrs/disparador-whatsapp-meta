@@ -4,6 +4,7 @@ namespace Services;
 
 class NotificacaoStatusService
 {
+    private const PRIORIDADE = ['pendente'=>0, 'processando'=>1, 'enviada'=>2, 'entregue'=>3, 'lida'=>4];
     private const ALIASES = [
         'pendente'=>'pendente', 'pending'=>'pendente', 'fila'=>'pendente', 'aguardando'=>'pendente',
         'aguardando_confirmacao'=>'pendente', 'processando'=>'processando', 'processing'=>'processando',
@@ -27,6 +28,16 @@ class NotificacaoStatusService
     {
         $status = strtolower(trim((string)$status));
         return self::ALIASES[$status] ?? null;
+    }
+
+    public static function podeAvancar($atual, $novo)
+    {
+        $atual = self::normalizar($atual);
+        $novo = self::normalizar($novo);
+        if(!$novo || $atual === $novo || in_array($atual, ['lida','erro_definitivo'], true)) return false;
+        if($novo === 'erro_definitivo') return in_array($atual, ['pendente','processando','enviada','erro_temporario'], true);
+        if($novo === 'erro_temporario') return in_array($atual, ['pendente','processando'], true);
+        return isset(self::PRIORIDADE[$novo]) && (!isset(self::PRIORIDADE[$atual]) || self::PRIORIDADE[$novo] > self::PRIORIDADE[$atual]);
     }
 
     public static function apresentacao($status, $canal, $codigoErro = null, $mensagemErro = null)

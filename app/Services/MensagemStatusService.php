@@ -83,7 +83,7 @@ class MensagemStatusService
     public static function sanitizarErro($mensagem)
     {
         $mensagem = preg_replace('/[\r\n\t]+/', ' ', trim((string)$mensagem));
-        $mensagem = preg_replace('/(token|authorization|bearer|secret|password|senha)\s*[:=]?\s*\S+/i', '$1=[removido]', $mensagem);
+        $mensagem = preg_replace('/(token|authorization|bearer|secret|password|senha|payload)\s*[:=]?\s*\S+/i', '$1=[removido]', $mensagem);
         return mb_substr($mensagem, 0, 500, 'UTF-8');
     }
 }

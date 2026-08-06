@@ -128,7 +128,10 @@ $statusWebhookService = new MetaStatusWebhookService(
     $conversaModel,
     function($messageId, $status, array $erro, $dataEvento = null) use ($db, $notificacaoModel){
         atualizarRegistrosSecundariosStatus($db, $messageId, $status, $erro);
-        $notificacaoModel->atualizarStatusWhatsAppPorMessageId($messageId, $status, $dataEvento, $erro);
+    },
+    function($messageId, $status, array $erro, $dataEvento = null) use ($notificacaoModel){
+        $resultado = $notificacaoModel->atualizarStatusWhatsAppPorWamid($messageId, $status, $dataEvento, $erro);
+        return !empty($resultado['atualizada']);
     }
 );
 
