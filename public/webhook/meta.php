@@ -126,7 +126,7 @@ $notificacaoModel = new Notificacao($db);
 
 $statusWebhookService = new MetaStatusWebhookService(
     $conversaModel,
-    function($messageId, $status, array $erro) use ($db){
+    function($messageId, $status, array $erro, $dataEvento = null) use ($db, $notificacaoModel){
         atualizarRegistrosSecundariosStatus($db, $messageId, $status, $erro);
     },
     function($messageId, $status, array $erro, $dataEvento = null) use ($notificacaoModel){
