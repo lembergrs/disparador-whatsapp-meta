@@ -43,6 +43,24 @@
 .mensagem-status-entregue{ color: #6c757d; }
 .mensagem-status-lida{ color: #087ac1; }
 .mensagem-status-falha{ color: #c82333; cursor: help; }
+
+.notificacao-status{
+    align-items: center;
+    display: inline-flex;
+    font-size: .9rem;
+    justify-content: center;
+    line-height: 1;
+    min-height: 1.5rem;
+    min-width: 1.5rem;
+    vertical-align: middle;
+}
+.notificacao-status-pendente{ color: #856404; }
+.notificacao-status-enviada,
+.notificacao-status-entregue,
+.notificacao-status-desconhecido{ color: #5f6870; }
+.notificacao-status-lida{ color: #087ac1; }
+.notificacao-status-erro-temporario{ color: #b35c00; }
+.notificacao-status-erro-definitivo{ color: #c82333; }
 .table-striped tbody tr:nth-of-type(odd){
     background-color: rgba(0,0,0,.02);
 }

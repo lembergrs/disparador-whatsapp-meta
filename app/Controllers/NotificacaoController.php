@@ -12,6 +12,7 @@ use Services\CanalNotificacao;
 use Services\EventoNotificacao;
 use Services\NotificacaoFormatador;
 use Services\NotificacaoService;
+use Services\NotificacaoStatusService;
 use Services\EmailService;
 use Services\WhatsAppInstitucionalService;
 
@@ -198,6 +199,14 @@ class NotificacaoController extends Controller
     private function linhaDataTable(array $n)
     {
         $status = (string) ($n['NOT_Status'] ?? '');
+        $visual = NotificacaoStatusService::apresentacao(
+            $status,
+            $n['NOT_Canal'] ?? '',
+            $n['NOT_CodigoErro'] ?? null,
+            $n['NOT_Erro'] ?? null
+        );
+        $rotuloStatus = htmlspecialchars($visual['rotulo'], ENT_QUOTES, 'UTF-8');
+        $tooltipStatus = htmlspecialchars($visual['tooltip'], ENT_QUOTES, 'UTF-8');
         $podeReenviar = ($n['NOT_Canal'] ?? '') === CanalNotificacao::EMAIL && in_array($status, ['pendente','erro_temporario','erro_definitivo'], true);
         return [
             'data' => $this->data($n['NOT_CriadoEm'] ?? null),
@@ -206,7 +215,7 @@ class NotificacaoController extends Controller
             'canal' => htmlspecialchars(NotificacaoFormatador::canal($n['NOT_Canal'] ?? ''), ENT_QUOTES, 'UTF-8'),
             'destino' => htmlspecialchars(($n['NOT_Canal'] ?? '') === CanalNotificacao::WHATSAPP ? WhatsAppInstitucionalService::mascararTelefone($n['NOT_Destino'] ?? '') : ($n['NOT_Destino'] ?? '-'), ENT_QUOTES, 'UTF-8'),
             'assunto' => htmlspecialchars($n['NOT_Assunto'] ?? '-', ENT_QUOTES, 'UTF-8'),
-            'status' => '<span class="badge badge-' . NotificacaoFormatador::badgeStatus($status) . '">' . htmlspecialchars(NotificacaoFormatador::status($status), ENT_QUOTES, 'UTF-8') . '</span>',
+            'status' => '<span class="notificacao-status ' . $visual['classe'] . '" data-toggle="tooltip" data-placement="top" title="' . $tooltipStatus . '" aria-label="' . $tooltipStatus . '"><i class="fas ' . $visual['icone'] . '" aria-hidden="true"></i><span class="sr-only">' . $rotuloStatus . '</span></span>',
             'tentativas' => (int) ($n['NOT_Tentativas'] ?? 0),
             'atualizado' => $this->data($n['NOT_AtualizadoEm'] ?? null),
             'acoes' => '<button class="btn btn-sm btn-info js-detalhe" data-id="' . (int) $n['NOT_ID'] . '">Detalhes</button> ' . ($podeReenviar ? '<button class="btn btn-sm btn-warning js-reenviar" data-id="' . (int) $n['NOT_ID'] . '">Reenviar</button>' : ''),
@@ -232,7 +241,9 @@ class NotificacaoController extends Controller
             <dt class="col-sm-4">Tentativas</dt><dd class="col-sm-8"><?= (int) ($n['NOT_Tentativas'] ?? 0); ?></dd>
             <dt class="col-sm-4">Criação</dt><dd class="col-sm-8"><?= $this->data($n['NOT_CriadoEm'] ?? null); ?></dd>
             <dt class="col-sm-4">Envio</dt><dd class="col-sm-8"><?= $this->data($n['NOT_DataEnvio'] ?? null); ?></dd>
+            <dt class="col-sm-4">Entrega</dt><dd class="col-sm-8"><?= $this->data($n['NOT_DataEntrega'] ?? null); ?></dd>
             <dt class="col-sm-4">Leitura</dt><dd class="col-sm-8"><?= $this->data($n['NOT_DataLeitura'] ?? null); ?></dd>
+            <dt class="col-sm-4">Erro registrado em</dt><dd class="col-sm-8"><?= $this->data($n['NOT_DataErro'] ?? null); ?></dd>
             <dt class="col-sm-4">Atualização</dt><dd class="col-sm-8"><?= $this->data($n['NOT_AtualizadoEm'] ?? null); ?></dd>
             <dt class="col-sm-4">Erro</dt><dd class="col-sm-8"><code><?= htmlspecialchars($erro ?: '-'); ?></code></dd>
             <dt class="col-sm-4">Dados</dt><dd class="col-sm-8"><pre class="bg-light p-2 border rounded mb-0"><?= htmlspecialchars(json_encode($dados, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)); ?></pre></dd>
