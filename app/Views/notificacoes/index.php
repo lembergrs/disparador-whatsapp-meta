@@ -26,7 +26,7 @@
             <div class="col-md-2 mb-2"><input type="number" min="1" id="filtroCliente" class="form-control" placeholder="ID do cliente"></div>
             <div class="col-md-2 mb-2"><select id="filtroEvento" class="form-control"><option value="">Evento</option><?php foreach($eventos as $evento){ ?><option value="<?= htmlspecialchars($evento); ?>"><?= htmlspecialchars(NotificacaoFormatador::evento($evento)); ?></option><?php } ?></select></div>
             <div class="col-md-2 mb-2"><select id="filtroCanal" class="form-control"><option value="">Canal</option><?php foreach($canais as $canal){ ?><option value="<?= htmlspecialchars($canal); ?>"><?= htmlspecialchars(NotificacaoFormatador::canal($canal)); ?></option><?php } ?></select></div>
-            <div class="col-md-2 mb-2"><select id="filtroStatus" class="form-control"><option value="">Status</option><option value="enviada">Enviada</option><option value="pendente">Pendente</option><option value="erro">Erro</option><option value="lida">Lida</option><option value="cancelada">Cancelada</option></select></div>
+            <div class="col-md-2 mb-2"><select id="filtroStatus" class="form-control"><option value="">Status</option><option value="pendente">Pendente</option><option value="processando">Processando</option><option value="enviada">Enviada</option><option value="entregue">Entregue</option><option value="lida">Lida</option><option value="erro">Erro</option><option value="cancelada">Cancelada</option></select></div>
             <div class="col-md-2 mb-2"><input type="date" id="filtroDataInicial" class="form-control" title="Data inicial"></div>
             <div class="col-md-2 mb-2"><input type="date" id="filtroDataFinal" class="form-control" title="Data final"></div>
             <div class="col-md-3 mb-2"><input type="text" id="filtroDestino" class="form-control" placeholder="Destino"></div>
@@ -119,6 +119,7 @@ $(function(){
         columns: [{data:'data'},{data:'cliente'},{data:'evento'},{data:'canal'},{data:'destino'},{data:'assunto'},{data:'status'},{data:'tentativas'},{data:'atualizado'},{data:'acoes', orderable:false, searchable:false}],
         language: { url: 'https://cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json' },
         drawCallback: function(settings){
+            $('#tabelaNotificacoes [data-toggle="tooltip"]').tooltip({container: 'body'});
             if(settings.json && settings.json.recordsFiltered === 0){
                 $('#tabelaNotificacoes tbody').html('<tr><td colspan="10" class="text-center text-muted">Nenhuma notificação foi registrada até o momento. As notificações aparecerão aqui após eventos como cadastro de clientes, conexão da conta Meta, avisos de trial e pagamentos.</td></tr>');
             }
@@ -129,7 +130,7 @@ $(function(){
     $('#btnLimparFiltros').on('click', function(){ $('#filtroCliente,#filtroEvento,#filtroCanal,#filtroStatus,#filtroDataInicial,#filtroDataFinal,#filtroDestino,#filtroTexto').val(''); tabela.ajax.reload(); });
     $('#tabelaNotificacoes').on('click', '.js-detalhe', function(){
         $('#conteudoDetalheNotificacao').html('<p class="text-muted">Carregando...</p>'); $('#modalDetalheNotificacao').modal('show');
-        $.get(BASE_URL + '/index.php?url=notificacao/detalhe', {id: $(this).data('id')}, function(resp){ $('#conteudoDetalheNotificacao').html(resp.html || '<p class="text-danger">Não foi possível carregar.</p>'); }, 'json');
+        $.get(BASE_URL + '/index.php?url=notificacao/detalhe', {id: $(this).data('id')}, function(resp){ $('#conteudoDetalheNotificacao').html(resp.html || '<p class="text-danger">Não foi possível carregar.</p>'); $('#conteudoDetalheNotificacao [data-toggle="tooltip"]').tooltip({container: 'body'}); }, 'json');
     });
     $('#tabelaNotificacoes').on('click', '.js-reenviar', function(){
         if(!confirm('Esta ação enviará novamente a notificação para o destinatário. Deseja continuar?')) return;

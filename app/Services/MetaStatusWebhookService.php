@@ -19,7 +19,7 @@ class MetaStatusWebhookService
                 $timestamp = $this->timestamp($status['timestamp'] ?? null);
                 $erro = $this->erro($status);
                 $alterou = $this->conversas->atualizarStatusPorMetaMessageId($messageId, $novo, $timestamp, $erro);
-                if($this->secundario) call_user_func($this->secundario, $messageId, $novo, $erro);
+                if($this->secundario) call_user_func($this->secundario, $messageId, $novo, $erro, $timestamp);
                 $alterou ? $resumo['processados']++ : $resumo['ignorados']++;
             }catch(\Throwable $e){ $resumo['erros']++; }
         }

@@ -19,6 +19,7 @@ spl_autoload_register(function($class){
 
 use Core\Database;
 use Models\Conversa;
+use Models\Notificacao;
 use Services\MensagemStatusService;
 use Services\MetaStatusWebhookService;
 
@@ -121,11 +122,13 @@ if(empty($payload)){
 
 $conversaModel =
     new Conversa();
+$notificacaoModel = new Notificacao($db);
 
 $statusWebhookService = new MetaStatusWebhookService(
     $conversaModel,
-    function($messageId, $status, array $erro) use ($db){
+    function($messageId, $status, array $erro, $dataEvento = null) use ($db, $notificacaoModel){
         atualizarRegistrosSecundariosStatus($db, $messageId, $status, $erro);
+        $notificacaoModel->atualizarStatusWhatsAppPorMessageId($messageId, $status, $dataEvento, $erro);
     }
 );
 

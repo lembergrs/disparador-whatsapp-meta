@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\MensagemStatusService;
 
 class Notificacao
 {
@@ -56,6 +57,31 @@ class Notificacao
         if(!in_array($status, ['enviada','erro_temporario','erro_definitivo'], true)) $status = 'erro_temporario';
         $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=:status, NOT_Erro=:erro, NOT_CodigoErro=:codigo, NOT_ProviderMessageId=:message_id, NOT_DataEnvio=CASE WHEN :ok=1 THEN NOW() ELSE NOT_DataEnvio END WHERE NOT_ID=:id AND NOT_Status='processando'");
         return $sql->execute([':status'=>$status, ':erro'=>$this->sanitizar($resultado['mensagem'] ?? null), ':codigo'=>$this->sanitizar($resultado['error_code'] ?? null), ':message_id'=>$this->sanitizar($resultado['message_id'] ?? null), ':ok'=>$sucesso ? 1 : 0, ':id'=>(int)$id]);
+    }
+
+    public function atualizarStatusWhatsAppPorMessageId($messageId, $status, $dataEvento = null, array $erro = [])
+    {
+        $status = MensagemStatusService::normalizar($status);
+        $mapa = ['sent'=>'enviada', 'delivered'=>'entregue', 'read'=>'lida', 'failed'=>'erro_definitivo'];
+        if(!isset($mapa[$status]) || trim((string)$messageId) === '') return false;
+
+        $novoStatus = $mapa[$status];
+        $permitidos = [
+            'sent'=>['pendente','processando'],
+            'delivered'=>['pendente','processando','enviada','enviado'],
+            'read'=>['pendente','processando','enviada','enviado','entregue'],
+            'failed'=>['pendente','processando','enviada','enviado','erro_temporario'],
+        ][$status];
+        $placeholders = implode(',', array_fill(0, count($permitidos), '?'));
+        $campoData = ['sent'=>'NOT_DataEnvio', 'delivered'=>'NOT_DataEntrega', 'read'=>'NOT_DataLeitura', 'failed'=>'NOT_DataErro'][$status];
+        $dataEvento = $dataEvento && strtotime($dataEvento) ? date('Y-m-d H:i:s', strtotime($dataEvento)) : date('Y-m-d H:i:s');
+        $codigo = preg_replace('/[^A-Za-z0-9_.-]/', '', (string)($erro['codigo'] ?? '')) ?: null;
+        $mensagem = MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null) ?: null;
+
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=?, {$campoData}=COALESCE({$campoData}, ?), NOT_CodigoErro=CASE WHEN ?='failed' THEN ? ELSE NOT_CodigoErro END, NOT_Erro=CASE WHEN ?='failed' THEN ? ELSE NOT_Erro END WHERE NOT_Canal='whatsapp' AND NOT_ProviderMessageId=? AND NOT_Status IN ({$placeholders})");
+        $params = [$novoStatus, $dataEvento, $status, $codigo, $status, $mensagem, $messageId];
+        $sql->execute(array_merge($params, $permitidos));
+        return $sql->rowCount() > 0;
     }
 
     public function finalizar($id, array $resultado)
