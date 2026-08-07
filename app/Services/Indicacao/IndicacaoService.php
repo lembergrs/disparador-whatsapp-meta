@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use Models\Indicacao;
 use Models\IndicacaoCampanha;
 use Models\IndicacaoCodigo;
+use PDO;
 
 class IndicacaoService
 {
@@ -17,14 +18,14 @@ class IndicacaoService
     private $trans;
     private $db;
 
-    public function __construct(Indicacao $model=null, IndicacaoCampanha $campanhas=null, IndicacaoCodigo $codigos=null, IndicacaoAuditoriaService $audit=null, IndicacaoStatusTransitionService $trans=null)
+    public function __construct(Indicacao $model=null, IndicacaoCampanha $campanhas=null, IndicacaoCodigo $codigos=null, IndicacaoAuditoriaService $audit=null, IndicacaoStatusTransitionService $trans=null, PDO $db=null)
     {
-        $this->model = $model ?: new Indicacao();
-        $this->campanhas = $campanhas ?: new IndicacaoCampanha();
-        $this->codigos = $codigos ?: new IndicacaoCodigo();
+        $this->db = $db ?: Database::getInstance();
+        $this->model = $model ?: new Indicacao($this->db);
+        $this->campanhas = $campanhas ?: new IndicacaoCampanha($this->db);
+        $this->codigos = $codigos ?: new IndicacaoCodigo($this->db);
         $this->audit = $audit ?: new IndicacaoAuditoriaService();
         $this->trans = $trans ?: new IndicacaoStatusTransitionService();
-        $this->db = Database::getInstance();
     }
 
     public function criar($codigoId, $indicadorId, $indicadoId, $origem='manual', $usuarioId=null): int
