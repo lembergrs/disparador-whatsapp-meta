@@ -94,20 +94,22 @@ Não armazenar tokens, senhas, credenciais, payload externo bruto, SQL, nomes de
 
 ## Catálogo
 
-Nesta versão existe somente o tipo interno `teste_scheduler`, sem rota pública. Tipos funcionais futuros precisam ser adicionados explicitamente ao `TaskRegistry` e possuir handler que implemente `TaskHandlerInterface`.
+O catálogo contém o tipo de teste interno `teste_scheduler`, sem rota pública. Tipos funcionais precisam ser adicionados explicitamente ao `TaskRegistry` e possuir handler que implemente `TaskHandlerInterface`.
 
-Exemplo conceitual futuro para o Programa de Indicação:
+O tipo interno fechado `indicacao_confirmacao` executa a revalidação de sete dias do Programa de Indicação. Seu payload contém somente `indicacao_id`; o handler busca novamente o estado no banco e não recebe dados pessoais ou financeiros.
+
+Agendamento usado pelo Programa de Indicação:
 
 ```php
 $scheduler->agendar(
-    'liberar_credito_indicacao',
+    'indicacao_confirmacao',
     ['indicacao_id' => $indicacaoId],
     $dataPagamento->modify('+7 days'),
-    'liberar_credito_indicacao:' . $indicacaoId
+    'indicacao_confirmacao_7d:' . $indicacaoId
 );
 ```
 
-Esse tipo ainda não está implementado.
+O handler revalida a indicação na execução; o agendamento não congela elegibilidade no payload.
 
 ## CLI e cron
 
@@ -117,17 +119,58 @@ Execução manual:
 php processar_tarefas.php
 ```
 
+Essa execução é silenciosa: um ciclo normal, inclusive sem tarefas elegíveis, não escreve resumo em `stdout` e não cria uma entrada de log para "zero tarefas". Para diagnóstico manual, use o modo verbose, que altera somente a saída e não as regras de processamento:
+
+```bash
+php processar_tarefas.php --verbose
+```
+
+O modo verbose imprime as quantidades de processadas, concluídas, retries e falhas.
+
 Cron recomendado, somente após homologação:
 
 ```cron
-* * * * * cd /opt/disparador-app && /usr/bin/php processar_tarefas.php
+* * * * * cd /opt/disparador-app && /usr/bin/php processar_tarefas.php > /dev/null 2>&1
 ```
 
-O processador não é daemon: executa um lote e encerra. A latência típica do cron é de até 59 segundos; o processamento sob demanda existe para tarefas que precisam começar antes disso.
+O processador não é daemon: executa um lote e encerra. A latência típica do cron é de até 59 segundos; o processamento sob demanda existe para tarefas que precisam começar antes disso. O cron e o redirecionamento devem ser configurados manualmente somente depois de deploy e homologação.
 
 ## Logs
 
-O log JSONL contém apenas data, ID da tarefa, tipo, status, tentativa, duração e código resumido de erro. Payload e informações sensíveis não são registrados.
+O arquivo definido por `TASK_SCHEDULER_LOG_FILE` (por padrão, `storage/logs/task-scheduler.log`) é o log oficial. Cada evento ocupa uma linha JSON (JSONL) com os campos permitidos: `data`, `nivel`, `tarefa_id`, `tipo`, `status`, `tentativa`, `duracao_ms` e, quando aplicável, `erro_codigo`.
+
+Os níveis são:
+
+- `INFO`: tarefa concluída;
+- `WARNING`: retry ou recuperação de lease expirado;
+- `ERROR`: falha definitiva de uma tarefa ou falha operacional do ciclo.
+
+O ciclo vazio não é registrado. O logger usa uma lista fechada de campos e nunca registra payload completo, telefone, e-mail, token, senha, credenciais, mensagem original de exceção ou stack trace. Falhas operacionais são reduzidas a códigos genéricos e sanitizados, como `banco_indisponivel` ou `falha_inicializacao_ou_processamento`.
+
+### Exit codes e troubleshooting
+
+- `0`: o ciclo foi executado normalmente, com ou sem tarefas. Uma falha definitiva de tarefa individual também mantém `0`, pois ela é um resultado de negócio já tratado e registrado pelo scheduler;
+- `1`: uma falha operacional impediu o ciclo, por exemplo indisponibilidade do banco, falha de inicialização ou exceção inesperada do processador.
+
+Para investigar, execute `php processar_tarefas.php --verbose`, confira o exit code (`echo $?`) e consulte o JSONL oficial. Se o diretório do log não puder ser criado ou escrito, o processo retorna `1` e emite somente um aviso genérico em `stderr`, pois não existe meio de persistir no arquivo indisponível. Não habilite dump de payload ou stack trace como solução de diagnóstico.
+
+### Rotação
+
+Como o PHP CLI abre o arquivo somente durante cada execução curta, não é necessário usar `copytruncate`. Após homologar usuário, grupo e caminho do deploy, uma política conceitual de `/etc/logrotate.d` é:
+
+```logrotate
+/opt/disparador-app/storage/logs/task-scheduler.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0664 disparador disparador
+}
+```
+
+Ela faz rotação diária, mantém 14 arquivos, compacta os antigos, ignora arquivo ausente ou vazio e cria o sucessor com permissões explícitas. Essa configuração deve ser instalada manualmente na infraestrutura; a aplicação não altera `logrotate`.
 
 ## Validação recomendada
 
