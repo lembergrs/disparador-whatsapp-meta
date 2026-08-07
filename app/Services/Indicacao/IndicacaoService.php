@@ -61,15 +61,43 @@ class IndicacaoService
         });
     }
 
+    public function confirmarPagamento($id, \DateTimeInterface $pagoEm, \DateTimeInterface $confirmacaoAte, $usuarioId=null): void
+    {
+        $this->transacao(function() use ($id,$pagoEm,$confirmacaoAte,$usuarioId){
+            $r = $this->model->buscar($id, true);
+            if(!$r) throw new InvalidArgumentException('Indicação não encontrada.');
+            if($r['IND_Status'] !== 'aguardando_pagamento') throw new InvalidArgumentException('Indicação não está aguardando pagamento.');
+            $pago = \DateTimeImmutable::createFromInterface($pagoEm)->format('Y-m-d H:i:s');
+            $ate = \DateTimeImmutable::createFromInterface($confirmacaoAte)->format('Y-m-d H:i:s');
+            if(!$this->model->confirmarPagamento($id,$pago,$ate)) throw new \RuntimeException('Indicação alterada por outro processo.');
+            $this->audit->registrar('indicacao',$id,'primeiro_pagamento_confirmado','aguardando_pagamento','pagamento_confirmado',null,$usuarioId);
+        });
+    }
+
+    public function iniciarConfirmacao($id, $usuarioId=null): void
+    {
+        $this->alterarStatusComAcao($id,'em_confirmacao','confirmacao_iniciada',$usuarioId);
+    }
+
+    public function aprovar($id, $usuarioId=null): void
+    {
+        $this->alterarStatusComAcao($id,'aprovada','indicacao_aprovada',$usuarioId,null,['aprovada_em'=>date('Y-m-d H:i:s')]);
+    }
+
     public function alterarStatus($id, $novo, $usuarioId=null, $motivo=null, array $datas=[]): void
     {
-        $this->transacao(function() use ($id,$novo,$usuarioId,$motivo,$datas){
-            $r = $this->model->buscar($id);
+        $acao = $novo === 'cancelada' ? 'indicacao_cancelada' : 'status_alterado';
+        $this->alterarStatusComAcao($id,$novo,$acao,$usuarioId,$motivo,$datas);
+    }
+
+    private function alterarStatusComAcao($id,$novo,$acao,$usuarioId=null,$motivo=null,array $datas=[]): void
+    {
+        $this->transacao(function() use ($id,$novo,$acao,$usuarioId,$motivo,$datas){
+            $r = $this->model->buscar($id, true);
             if(!$r) throw new InvalidArgumentException('Indicação não encontrada.');
             $atual = $r['IND_Status'];
             $this->trans->validar('indicacao',$atual,$novo);
             if(!$this->model->alterarStatus($id,$atual,$novo,$motivo,$datas)) throw new \RuntimeException('Status alterado por outro processo.');
-            $acao = $novo === 'cancelada' ? 'indicacao_cancelada' : 'status_alterado';
             $this->audit->registrar('indicacao',$id,$acao,$atual,$novo,$motivo,$usuarioId);
         });
     }
