@@ -27,7 +27,9 @@ TaskProcessor → TaskDispatcher → TaskRegistry → Handler permitido
 - `TaskProcessor`: reserva tarefas elegíveis, executa handlers fora da transação e aplica o ciclo de sucesso/retry/falha.
 - `TaskExecutionService`: aciona o mesmo `TaskProcessor` sob demanda, sem criar um segundo motor de execução.
 - `TaskRetryPolicy`: backoff central de 5, 15 e 60 minutos.
-- `processar_tarefas.php`: entrada CLI finita, com `flock`, lote configurável e log sanitizado.
+- `TaskSchedulerLogger`: grava eventos relevantes em JSONL com campos fechados e sem payload.
+- `TaskSchedulerCliOutput`: controla a saída manual `--verbose` sem interferir no processamento.
+- `processar_tarefas.php`: entrada CLI finita, silenciosa por padrão, com `flock`, lote configurável e log sanitizado.
 
 ## Banco e estados
 
@@ -109,25 +111,89 @@ $scheduler->agendar(
 
 Esse tipo ainda não está implementado.
 
-## CLI e cron
+## CLI, saída e cron
 
-Execução manual:
+A execução normal é silenciosa:
 
 ```bash
 php processar_tarefas.php
 ```
 
-Cron recomendado, somente após homologação:
+Se nenhuma tarefa estiver elegível e não houver erro operacional, nada é escrito em stdout/stderr.
 
-```cron
-* * * * * cd /opt/disparador-app && /usr/bin/php processar_tarefas.php
+Para diagnóstico manual, use:
+
+```bash
+php processar_tarefas.php --verbose
 ```
 
-O processador não é daemon: executa um lote e encerra. A latência típica do cron é de até 59 segundos; o processamento sob demanda existe para tarefas que precisam começar antes disso.
+O modo verbose mostra:
+
+```text
+Processadas: X
+Concluídas: X
+Retry: X
+Falhas: X
+```
+
+O modo verbose altera somente a saída no terminal; não muda elegibilidade, prioridade, reserva, retry ou concorrência.
+
+Cron recomendado:
+
+```cron
+* * * * * cd /opt/disparador-app && /usr/bin/php processar_tarefas.php > /dev/null 2>&1
+```
+
+O processador não é daemon: executa um lote e encerra. O cron é fallback para tarefas futuras, retries e tarefas imediatas que não receberam gatilho sob demanda.
+
+### Exit codes
+
+- `0`: ciclo do scheduler executado normalmente, com ou sem tarefas. Falhas funcionais de tarefas individuais permanecem registradas no próprio ciclo da tarefa e não tornam o processo CLI operacionalmente inválido.
+- `1`: falha operacional que impediu o scheduler de executar corretamente.
 
 ## Logs
 
-O log JSONL contém apenas data, ID da tarefa, tipo, status, tentativa, duração e código resumido de erro. Payload e informações sensíveis não são registrados.
+O arquivo configurado por `TASK_SCHEDULER_LOG_FILE` usa JSONL e registra apenas eventos relevantes. Ciclos vazios não geram linha de log.
+
+Níveis:
+
+- `INFO`: tarefa concluída;
+- `WARNING`: retry ou recuperação de lease;
+- `ERROR`: falha definitiva ou erro operacional do scheduler.
+
+Campos permitidos: data, nível, ID da tarefa, tipo, status, tentativa, duração e código resumido de erro. Não registrar payload, tokens, senhas, credenciais, telefones, e-mails, stack traces ou mensagens externas brutas.
+
+Exemplo:
+
+```json
+{"data":"2026-08-07T12:00:00-03:00","nivel":"INFO","tarefa_id":123,"tipo":"teste_scheduler","status":"concluida","tentativa":1,"duracao_ms":42}
+```
+
+## Rotação de logs
+
+Mesmo com logging somente de eventos reais, o arquivo deve possuir rotação operacional. Configuração recomendada para `/etc/logrotate.d/disparador-task-scheduler`:
+
+```conf
+/opt/disparador-app/storage/logs/task-scheduler.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0664 disparador disparador
+}
+```
+
+`copytruncate` não é necessário porque o PHP CLI abre o arquivo apenas durante a execução curta do processo. A configuração deve ser aplicada manualmente na VPS; o código não altera `/etc/logrotate.d`.
+
+## Troubleshooting
+
+- `php processar_tarefas.php --verbose` para validar manualmente o ciclo.
+- Se o cron não processar, conferir `crontab`, usuário, caminho do PHP, permissões em `storage` e elegibilidade das tarefas.
+- Se não houver linhas no log, isso pode ser normal: ciclos sem tarefas não são registrados.
+- Erros operacionais aparecem com nível `ERROR` e código sanitizado, sem stack trace ou payload.
+- Logs antigos devem ser tratados pelo `logrotate` e não por exclusão feita pelo scheduler.
 
 ## Validação recomendada
 
@@ -140,7 +206,9 @@ Após aplicar a migration em ambiente controlado:
 5. testar falha permanente;
 6. repetir uma chave idempotente;
 7. simular lease expirado;
-8. confirmar que dois workers não reservam a mesma tarefa.
+8. confirmar que dois workers não reservam a mesma tarefa;
+9. validar que um ciclo vazio não gera stdout nem log;
+10. validar `--verbose` e os níveis `INFO`, `WARNING` e `ERROR`.
 
 ## Limitações e roadmap
 
