@@ -14,9 +14,13 @@ class Indicacao
         $this->db = $db ?: Database::getInstance();
     }
 
-    public function buscar($id)
+    public function buscar($id, $forUpdate = false)
     {
-        $s = $this->db->prepare('SELECT * FROM indicacoes WHERE IND_ID=?');
+        $sql = 'SELECT * FROM indicacoes WHERE IND_ID=?';
+        if($forUpdate && $this->driver() === 'mysql'){
+            $sql .= ' FOR UPDATE';
+        }
+        $s = $this->db->prepare($sql);
         $s->execute([(int) $id]);
         return $s->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -45,6 +49,13 @@ class Indicacao
             $d['status'] ?? 'cadastrada'
         ]);
         return (int) $this->db->lastInsertId();
+    }
+
+    public function confirmarPagamento($id, $pagoEm, $confirmacaoAte)
+    {
+        $s = $this->db->prepare("UPDATE indicacoes SET IND_Status='pagamento_confirmado', IND_PagamentoConfirmadoEm=?, IND_ConfirmacaoAte=? WHERE IND_ID=? AND IND_Status='aguardando_pagamento'");
+        $s->execute([$pagoEm, $confirmacaoAte, (int) $id]);
+        return $s->rowCount() === 1;
     }
 
     public function alterarStatus($id, $anterior, $novo, $motivo = null, array $datas = [])
