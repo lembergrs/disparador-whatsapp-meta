@@ -31,11 +31,16 @@ class TaskProcessor
             if(!$tarefa) break;
             $resumo['processadas']++;
             $inicio = microtime(true);
+            if(!empty($tarefa['recuperada'])){
+                $this->log($tarefa, 'lease_recuperada', $inicio, 'lease_expirado_recuperado');
+            }
             try{
                 $this->dispatcher->executar($tarefa);
                 $this->tarefas->concluir($tarefa['TAG_ID'], $workerId, date('Y-m-d H:i:s'));
                 $resumo['concluidas']++;
                 $this->log($tarefa, 'concluida', $inicio);
+            }catch(TaskSchedulerLoggingException $e){
+                throw $e;
             }catch(TaskRetryException $e){
                 if((int)$tarefa['TAG_Tentativas'] >= (int)$tarefa['TAG_MaxTentativas']){
                     $this->falhar($tarefa, $workerId, $e, $inicio, $resumo, 'max_tentativas');
@@ -76,8 +81,9 @@ class TaskProcessor
     private function log(array $tarefa, $status, $inicio, $codigo = null): void
     {
         if(!$this->logger) return;
+        $nivel = $status === 'concluida' ? 'INFO' : ($status === 'falha' ? 'ERROR' : 'WARNING');
         call_user_func($this->logger, [
-            'data'=>date('c'), 'tarefa_id'=>(int)$tarefa['TAG_ID'], 'tipo'=>$tarefa['TAG_Tipo'],
+            'data'=>date('c'), 'nivel'=>$nivel, 'tarefa_id'=>(int)$tarefa['TAG_ID'], 'tipo'=>$tarefa['TAG_Tipo'],
             'status'=>$status, 'tentativa'=>(int)$tarefa['TAG_Tentativas'],
             'duracao_ms'=>(int)round((microtime(true)-$inicio)*1000), 'erro_codigo'=>$codigo,
         ]);
