@@ -1,0 +1,13 @@
+<?php
+namespace Services\Indicacao;
+use Core\Database;
+use InvalidArgumentException;
+use Models\Indicacao;
+use Models\IndicacaoCampanha;
+use Models\IndicacaoCodigo;
+class IndicacaoService{
+    private $model;private $campanhas;private $codigos;private $audit;private $trans;private $db;
+    public function __construct(Indicacao $model=null,IndicacaoCampanha $campanhas=null,IndicacaoCodigo $codigos=null,IndicacaoAuditoriaService $audit=null,IndicacaoStatusTransitionService $trans=null){$this->model=$model?:new Indicacao();$this->campanhas=$campanhas?:new IndicacaoCampanha();$this->codigos=$codigos?:new IndicacaoCodigo();$this->audit=$audit?:new IndicacaoAuditoriaService();$this->trans=$trans?:new IndicacaoStatusTransitionService();$this->db=Database::getInstance();}
+    public function criar($codigoId,$indicadorId,$indicadoId,$origem='manual',$usuarioId=null):int{if((int)$indicadorId===(int)$indicadoId)throw new InvalidArgumentException('Autoindicação não permitida.');if(!in_array($origem,['link','manual'],true))throw new InvalidArgumentException('Origem inválida.');if($this->model->buscarPorIndicado($indicadoId))throw new InvalidArgumentException('Cliente já possui indicação.');$codigo=$this->codigos->buscar($codigoId);if(!$codigo||$codigo['ICD_Status']!=='ativo')throw new InvalidArgumentException('Código inelegível.');$camp=$this->campanhas->buscar($codigo['ICP_ID']);if(!$camp)throw new InvalidArgumentException('Campanha não encontrada.');$percentual=(float)$camp['ICP_Percentual'];$this->db->beginTransaction();try{$id=$this->model->criar(['codigo_id'=>$codigoId,'campanha_id'=>$camp['ICP_ID'],'indicador_id'=>$indicadorId,'indicado_id'=>$indicadoId,'percentual'=>$percentual,'origem'=>$origem]);$this->audit->registrar('indicacao',$id,'criada',null,'cadastrada',null,$usuarioId,null,['origem'=>$origem,'campanha_id'=>$camp['ICP_ID'],'indicador_id'=>$indicadorId,'indicado_id'=>$indicadoId,'percentual'=>$percentual]);$this->db->commit();return $id;}catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}}
+    public function alterarStatus($id,$novo,$usuarioId=null,$motivo=null,array $datas=[]):void{$r=$this->model->buscar($id);if(!$r)throw new InvalidArgumentException('Indicação não encontrada.');$atual=$r['IND_Status'];$this->trans->validar('indicacao',$atual,$novo);$this->db->beginTransaction();try{if(!$this->model->alterarStatus($id,$atual,$novo,$motivo,$datas))throw new \RuntimeException('Status alterado por outro processo.');$this->audit->registrar('indicacao',$id,'status_alterado',$atual,$novo,$motivo,$usuarioId);$this->db->commit();}catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}}
+}
