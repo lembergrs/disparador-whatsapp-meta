@@ -3,7 +3,10 @@ $root=dirname(__DIR__); $cli=file_get_contents($root.'/processar_tarefas.php'); 
 function taskStaticAssert($c,$m){if(!$c){fwrite(STDERR,"FAIL: {$m}\n");exit(1);}}
 taskStaticAssert(strpos($cli,"PHP_SAPI !== 'cli'")!==false,'CLI deve rejeitar HTTP');
 taskStaticAssert(strpos($cli,'flock($lock, LOCK_EX | LOCK_NB)')!==false,'CLI deve possuir lock não bloqueante');
-taskStaticAssert(strpos($cli,'TASK_SCHEDULER_BATCH_SIZE')!==false && strpos($cli,'Processadas: ')!==false,'CLI deve executar lote finito e imprimir resumo');
+taskStaticAssert(strpos($cli,'TASK_SCHEDULER_BATCH_SIZE')!==false && strpos($cli,"in_array('--verbose'")!==false,'CLI deve executar lote finito e suportar modo verbose');
+taskStaticAssert(strpos($cli,'TaskSchedulerCliOutput::resumo($resumo, $verbose)')!==false,'resumo deve ser condicionado ao modo verbose');
+taskStaticAssert(strpos($cli,'$exitCode = 0;')!==false,'tarefas individuais com falha não devem alterar o exit code do ciclo normal');
+taskStaticAssert(strpos($cli,'$logger->erroOperacional($e)')!==false && strpos($cli,'$exitCode = 1;')!==false,'falha operacional deve ser registrada e retornar exit code não zero');
 taskStaticAssert(strpos($cli,'TaskExecutionService')!==false && strpos($cli,'processarSobDemanda')!==false,'CLI deve reutilizar execução sob demanda');
 taskStaticAssert(strpos($execution,'TaskProcessor')!==false && strpos($execution,'processarLote')!==false,'execução sob demanda deve delegar ao TaskProcessor');
 taskStaticAssert(strpos($migration,'UNIQUE KEY uk_tarefas_agendadas_idempotencia')!==false,'idempotência deve estar no banco');

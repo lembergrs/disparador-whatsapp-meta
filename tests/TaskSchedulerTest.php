@@ -10,6 +10,9 @@ require_once __DIR__ . '/../app/Services/Tasks/TaskRetryPolicy.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskDispatcher.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskProcessor.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskExecutionService.php';
+require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerCliOutput.php';
+require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerLoggingException.php';
+require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerLogger.php';
 require_once __DIR__ . '/../app/Services/TaskSchedulerService.php';
 
 use Models\TarefaAgendada;
@@ -20,6 +23,8 @@ use Services\Tasks\TaskProcessor;
 use Services\Tasks\TaskRegistry;
 use Services\Tasks\TaskHandlerInterface;
 use Services\Tasks\TaskPermanentFailureException;
+use Services\Tasks\TaskSchedulerLogger;
+use Services\Tasks\TaskSchedulerCliOutput;
 
 function taskAssert($condicao,$mensagem){if(!$condicao){fwrite(STDERR,"FAIL: {$mensagem}\n");exit(1);}}
 function taskDb(){
@@ -27,6 +32,11 @@ function taskDb(){
     $db->exec("CREATE TABLE tarefas_agendadas (TAG_ID INTEGER PRIMARY KEY AUTOINCREMENT,TAG_Tipo TEXT NOT NULL,TAG_Status TEXT NOT NULL DEFAULT 'pendente',TAG_Prioridade INTEGER NOT NULL DEFAULT 100,TAG_ExecutarEm TEXT NOT NULL,TAG_Payload TEXT NOT NULL,TAG_ChaveIdempotencia TEXT NULL UNIQUE,TAG_Tentativas INTEGER NOT NULL DEFAULT 0,TAG_MaxTentativas INTEGER NOT NULL DEFAULT 3,TAG_ProximaTentativaEm TEXT NULL,TAG_ReservadaEm TEXT NULL,TAG_WorkerId TEXT NULL,TAG_IniciadaEm TEXT NULL,TAG_FinalizadaEm TEXT NULL,TAG_UltimoErro TEXT NULL,TAG_CriadaEm TEXT DEFAULT CURRENT_TIMESTAMP,TAG_AtualizadaEm TEXT DEFAULT CURRENT_TIMESTAMP)");
     return $db;
 }
+
+$resumoZero=['processadas'=>0,'concluidas'=>0,'retry'=>0,'falhas'=>0];
+taskAssert(TaskSchedulerCliOutput::resumo($resumoZero,false)==='','execução normal sem tarefas não deve gerar stdout');
+$saidaVerbose=TaskSchedulerCliOutput::resumo($resumoZero,true);
+taskAssert($saidaVerbose==="Processadas: 0\nConcluídas: 0\nRetry: 0\nFalhas: 0\n",'modo verbose deve mostrar resumo completo');
 
 date_default_timezone_set('America/Sao_Paulo');
 $db=taskDb(); $repo=new TarefaAgendada($db); $registry=new TaskRegistry(); $scheduler=new TaskSchedulerService($repo,$registry);
@@ -56,6 +66,9 @@ taskAssert($resumo===['processadas'=>3,'concluidas'=>1,'retry'=>1,'falhas'=>1],'
 taskAssert($repo->buscar($retry['id'])['TAG_Status']==='pendente','retry deve voltar a pendente');
 taskAssert($repo->buscar($permanente['id'])['TAG_Status']==='falha','falha permanente deve finalizar');
 taskAssert($logs && !array_key_exists('payload',$logs[0]),'log não deve conter payload');
+taskAssert(array_column($logs,'nivel')===['INFO','WARNING','ERROR'],'conclusão, retry e falha devem usar os níveis esperados');
+$quantidadeLogs=count($logs); $resumoVazio=$processor->processarLote(1,'worker-vazio');
+taskAssert($resumoVazio['processadas']===0 && count($logs)===$quantidadeLogs,'ciclo vazio não deve gerar log');
 
 $dbImediato=taskDb(); $repoImediato=new TarefaAgendada($dbImediato); $registryImediato=new TaskRegistry();
 $schedulerImediato=new TaskSchedulerService($repoImediato,$registryImediato);
@@ -77,5 +90,18 @@ $segura=$schedulerSeguro->agendarAgora('teste_scheduler',[],'seguranca:erro');
 (new TaskProcessor($repoSeguro,new TaskDispatcher($registrySeguro)))->processarLote(1,'worker-seguro');
 $erroSeguro=$repoSeguro->buscar($segura['id'])['TAG_UltimoErro'];
 taskAssert(strpos($erroSeguro,'secreto')===false && strpos($erroSeguro,'privado')===false,'erro persistido deve ser sanitizado');
+
+$arquivoLog=tempnam(sys_get_temp_dir(),'scheduler-log-');
+$loggerArquivo=new TaskSchedulerLogger($arquivoLog);
+$loggerArquivo(['nivel'=>'ERROR','status'=>'falha','tarefa_id'=>99,'tipo'=>'teste_scheduler','payload'=>'token=secreto','senha'=>'privada']);
+$loggerArquivo->erroOperacional(new RuntimeException('token=secreto senha=privada payload=confidencial'));
+$conteudoLog=file_get_contents($arquivoLog); unlink($arquivoLog);
+$linhasLog=array_values(array_filter(explode("\n",trim($conteudoLog))));
+taskAssert(count($linhasLog)===2,'logger deve registrar somente eventos enviados');
+foreach($linhasLog as $linhaLog){
+    $eventoLog=json_decode($linhaLog,true);
+    taskAssert(is_array($eventoLog) && isset($eventoLog['data'],$eventoLog['nivel'],$eventoLog['status']),'log deve ser JSONL estruturado');
+    taskAssert(strpos($linhaLog,'secreto')===false && strpos($linhaLog,'privada')===false && strpos($linhaLog,'confidencial')===false,'log não deve expor payload ou credenciais');
+}
 
 echo "TaskSchedulerTest OK\n";
