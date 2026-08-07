@@ -5,6 +5,7 @@ namespace Services\Indicacao;
 use Core\Database;
 use InvalidArgumentException;
 use Models\IndicacaoCodigo;
+use PDO;
 
 class IndicacaoCodigoService
 {
@@ -15,14 +16,14 @@ class IndicacaoCodigoService
     private $trans;
     private $db;
 
-    public function __construct(IndicacaoCodigo $model=null, CodigoIndicacaoGeneratorInterface $gen=null, CodigoIndicacaoNormalizer $norm=null, IndicacaoAuditoriaService $audit=null, IndicacaoStatusTransitionService $trans=null)
+    public function __construct(IndicacaoCodigo $model=null, CodigoIndicacaoGeneratorInterface $gen=null, CodigoIndicacaoNormalizer $norm=null, IndicacaoAuditoriaService $audit=null, IndicacaoStatusTransitionService $trans=null, PDO $db=null)
     {
-        $this->model = $model ?: new IndicacaoCodigo();
+        $this->db = $db ?: Database::getInstance();
+        $this->model = $model ?: new IndicacaoCodigo($this->db);
         $this->gen = $gen ?: new CodigoIndicacaoPadraoGenerator();
         $this->norm = $norm ?: new CodigoIndicacaoNormalizer();
         $this->audit = $audit ?: new IndicacaoAuditoriaService();
         $this->trans = $trans ?: new IndicacaoStatusTransitionService();
-        $this->db = Database::getInstance();
     }
 
     public function criar($clienteId, $campanhaId, array $cliente, $usuarioId=null): int
