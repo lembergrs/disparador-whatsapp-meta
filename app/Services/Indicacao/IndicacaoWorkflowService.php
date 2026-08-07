@@ -6,6 +6,7 @@ use Core\Database;
 use Models\Cliente;
 use Models\Indicacao;
 use Models\IndicacaoCampanha;
+use Models\IndicacaoCodigo;
 use PDO;
 use PDOException;
 
@@ -27,11 +28,20 @@ class IndicacaoWorkflowService
         IndicacaoService $indicacaoService = null
     ) {
         $this->db = $db ?: Database::getInstance();
-        $this->codigos = $codigos ?: new IndicacaoCodigoService();
         $this->campanhas = $campanhas ?: new IndicacaoCampanha($this->db);
         $this->indicacoes = $indicacoes ?: new Indicacao($this->db);
         $this->clientes = $clientes ?: new Cliente($this->db);
-        $this->indicacaoService = $indicacaoService ?: new IndicacaoService();
+
+        $codigoModel = new IndicacaoCodigo($this->db);
+        $this->codigos = $codigos ?: new IndicacaoCodigoService($codigoModel, null, null, null, null, $this->db);
+        $this->indicacaoService = $indicacaoService ?: new IndicacaoService(
+            $this->indicacoes,
+            $this->campanhas,
+            $codigoModel,
+            null,
+            null,
+            $this->db
+        );
     }
 
     public function validarCodigo($codigo, $forUpdate = false): array
