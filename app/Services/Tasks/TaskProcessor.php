@@ -31,6 +31,9 @@ class TaskProcessor
             if(!$tarefa) break;
             $resumo['processadas']++;
             $inicio = microtime(true);
+            if(!empty($tarefa['recuperada'])){
+                $this->log($tarefa, 'recuperada', $inicio, 'lease_expirado_recuperado');
+            }
             try{
                 $this->dispatcher->executar($tarefa);
                 $this->tarefas->concluir($tarefa['TAG_ID'], $workerId, date('Y-m-d H:i:s'));
