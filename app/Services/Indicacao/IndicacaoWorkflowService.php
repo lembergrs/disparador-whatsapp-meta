@@ -5,6 +5,7 @@ namespace Services\Indicacao;
 use Core\Database;
 use Models\Cliente;
 use Models\Indicacao;
+use Models\IndicacaoAuditoria;
 use Models\IndicacaoCampanha;
 use Models\IndicacaoCodigo;
 use PDO;
@@ -33,12 +34,13 @@ class IndicacaoWorkflowService
         $this->clientes = $clientes ?: new Cliente($this->db);
 
         $codigoModel = new IndicacaoCodigo($this->db);
-        $this->codigos = $codigos ?: new IndicacaoCodigoService($codigoModel, null, null, null, null, $this->db);
+        $audit = new IndicacaoAuditoriaService(new IndicacaoAuditoria($this->db));
+        $this->codigos = $codigos ?: new IndicacaoCodigoService($codigoModel, null, null, $audit, null, $this->db);
         $this->indicacaoService = $indicacaoService ?: new IndicacaoService(
             $this->indicacoes,
             $this->campanhas,
             $codigoModel,
-            null,
+            $audit,
             null,
             $this->db
         );
