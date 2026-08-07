@@ -16,7 +16,7 @@ Princípios obrigatórios:
 2. cadastro sozinho não gera crédito;
 3. confirmação financeira e permanência por sete dias completos antecedem a liberação;
 4. crédito é percentual promocional, não dinheiro;
-5. somente um crédito pode afetar cada cobrança elegível;
+5. uma cobrança pode usar até um crédito por mês representado no ciclo, preservando a identidade de cada crédito;
 6. o valor do plano e da assinatura não é reescrito pelo benefício;
 7. reserva do crédito e utilização definitiva são fatos diferentes;
 8. histórico financeiro e administrativo nunca é apagado;
@@ -68,7 +68,7 @@ Ambos ativam a assinatura e atualizam o cliente após persistência. Esse ponto 
 Para o programa:
 
 - **valor total do ciclo:** deve continuar vindo de `Plano::valorPorCiclo()`/snapshot da assinatura conforme a política financeira vigente;
-- **mensalidade equivalente para o crédito:** recomenda-se uma única função de domínio baseada em `PLA_ValorMensal` (com fallback formalmente definido), e não dividir automaticamente o valor promocional do ciclo por 3, 6 ou 12;
+- **mensalidade equivalente para o crédito:** decisão aprovada: `valor_base_do_ciclo / meses_do_ciclo`, usando o valor efetivamente contratado antes dos créditos e sem excedentes/adicionais; `PLA_ValorMensal` não é a base de ciclos maiores;
 - a mesma fonte deve alimentar cadastro de plano, assinatura, cobrança, página comercial e programa;
 - valores monetários devem seguir o arredondamento financeiro do projeto. Como o domínio atual normaliza para `float`, a implementação deve centralizar arredondamento em duas casas ou, preferencialmente, operar em centavos internamente, sem espalhar regras.
 
@@ -106,7 +106,7 @@ O desconto inicial:
 Prioridade aprovada:
 
 1. primeira cobrança: desconto inicial de 50%;
-2. cobranças seguintes: no máximo um crédito de indicação elegível;
+2. cobranças seguintes: até um crédito elegível por mês representado no ciclo contratado;
 3. excedentes e adicionais: sempre integrais.
 
 Recomenda-se um serviço/política central de descontos, compartilhado por contratação e recorrência.
@@ -123,7 +123,7 @@ Não deve existir código válido compartilhável antes da confirmação. O even
 
 ## 4. Campanhas de indicação — regras aprovadas
 
-O programa será organizado por campanhas configuráveis, e não por percentual global fixo. A primeira campanha usa **15%**.
+O programa será organizado por campanhas configuráveis, e não por percentual global fixo. A primeira campanha usa definitivamente **15% por indicação qualificada**; cada crédito originado nela preserva esse percentual histórico.
 
 Cada campanha deverá conceitualmente preservar:
 
@@ -257,14 +257,15 @@ O crédito:
 - não migra entre cliente, CPF/CNPJ ou contrato reativado;
 - não gera saldo a pagar;
 - não expira enquanto indicador continuar ativo e elegível;
-- limita-se a um por cobrança;
+- aplica o percentual histórico da campanha a uma única fração mensal do ciclo;
+- pode estar reservado ou utilizado por, no máximo, uma cobrança ativa;
 - segue FIFO: menor data de liberação e, no empate, menor identificador persistido.
 
-Cinco créditos disponíveis beneficiam cinco cobranças elegíveis distintas; jamais formam 30%, 45%, 60% etc. na mesma cobrança.
+A regra aprovada é: **1 indicação qualificada = 1 crédito. Cada crédito concede o percentual histórico da campanha sobre uma fração mensal do valor-base do ciclo contratado. Uma mesma cobrança pode utilizar vários créditos, limitada à quantidade de meses representados pelo ciclo.** Créditos excedentes continuam liberados na ordem FIFO para cobranças futuras.
 
 ## 8. Cobranças elegíveis e cálculo — regras aprovadas
 
-Um crédito pode ser reservado quando:
+Créditos podem ser reservados quando:
 
 - não é a primeira cobrança promocional;
 - é mensalidade ou cobrança de ciclo do plano ativo;
@@ -272,76 +273,90 @@ Um crédito pode ser reservado quando:
 - cliente está ativo e sem impedimento financeiro;
 - cobrança ainda pode receber o desconto corretamente;
 - não existe promoção incompatível;
-- crédito FIFO mais antigo está `liberado`;
+- os créditos selecionados são os mais antigos em estado `liberado`;
 - campanha preserva créditos já gerados;
 - desconto não afeta excedentes/adicionais.
 
-### 8.1 Ciclos
-
-Cada crédito desconta **uma mensalidade equivalente**, independentemente do ciclo:
-
-| Ciclo | Total cobrado | Base do crédito |
-|---|---|---|
-| mensal | uma mensalidade | uma mensalidade equivalente |
-| trimestral | três meses/valor comercial do ciclo | uma mensalidade equivalente |
-| semestral | seis meses/valor comercial do ciclo | uma mensalidade equivalente |
-| anual | doze meses/valor comercial do ciclo | uma mensalidade equivalente |
-
-Fórmula:
+### 8.1 Ciclos, mensalidade equivalente e limite de créditos
 
 ```text
-valor_desconto = arredondar(valor_mensal_equivalente_do_plano_ativo × percentual_do_credito)
-valor_final = valor_total_do_ciclo - valor_desconto + excedentes_e_adicionais_integrais
+meses_do_ciclo =
+mensal      = 1
+trimestral  = 3
+semestral   = 6
+anual       = 12
+
+mensalidade_equivalente =
+valor_base_do_ciclo / meses_do_ciclo
+
+creditos_utilizados =
+min(creditos_disponiveis_e_elegiveis, meses_do_ciclo)
 ```
 
-O desconto nunca incide sobre todo o ciclo antecipado. A fonte recomendada para `valor_mensal_equivalente` é `PLA_ValorMensal`, por função única no domínio de Plano; `Plano::valorPorCiclo()` continua sendo fonte do total. A cobrança deve congelar os valores usados.
+O `valor_base_do_ciclo` é o valor efetivamente contratado para aquele ciclo, antes do crédito de indicação e sem excedentes/adicionais. Assim, um plano mensal de R$ 100,00 e trimestral de R$ 270,00 usa R$ 90,00 (`270 / 3`) como mensalidade equivalente trimestral, e **não** `PLA_ValorMensal` de R$ 100,00.
 
-### 8.2 Excedentes
+| Ciclo | Meses | Máximo de créditos por cobrança |
+|---|---:|---:|
+| mensal | 1 | 1 |
+| trimestral | 3 | 3 |
+| semestral | 6 | 6 |
+| anual | 12 | 12 |
 
-Excluem-se mensagens excedentes, consumo adicional, tarifas Meta, taxas, serviços avulsos, implantação, integrações, multas, juros e itens que não sejam mensalidade-base.
+O ciclo mensal preserva o comportamento já aprovado: com três créditos, as cobranças dos meses 1, 2 e 3 usam um crédito cada. Um trimestral com dois créditos aplica desconto a duas frações mensais e mantém uma integral; um semestral com quatro aplica a quatro frações e mantém duas integrais; um anual com quinze usa os doze mais antigos e deixa três disponíveis para a próxima cobrança. Se houver vinte créditos no anual, os doze mais antigos são reservados e os oito restantes continuam liberados no FIFO, cada qual com identidade, indicação, percentual e histórico próprios.
+
+### 8.2 Cálculo individual e arredondamento
+
+Para cada crédito reservado:
 
 ```text
-valor-base do plano
-- desconto de indicação
-+ excedentes integrais
-= valor final
+desconto_unitario =
+arredondar(mensalidade_equivalente × percentual_historico_do_credito)
+
+desconto_total =
+soma(desconto de cada crédito reservado)
+
+valor_final =
+valor_base_do_ciclo
+- desconto_total
++ excedentes_e_adicionais_integrais
 ```
 
-A cobrança deve preservar valor-base, mensal equivalente, percentual, desconto, excedentes excluídos e valor final.
+O cálculo monetário deve ser centralizado e preferencialmente feito em centavos. Não se deve multiplicar `percentual × quantidade` e aplicar esse percentual único à cobrança inteira: cada crédito pertence a uma fração mensal distinta e pode ter percentual histórico diferente.
 
-### 8.3 Plano atual e troca
+Exemplo com percentuais iguais:
 
-O cálculo usa o plano ativo ao gerar a cobrança. Upgrade/downgrade não elimina créditos e não usa o plano antigo. FIFO e percentual do crédito permanecem.
+```text
+ciclo trimestral = R$ 270,00
+mensalidade equivalente = R$ 90,00
+crédito A = 15% → desconto A = R$ 13,50
+crédito B = 15% → desconto B = R$ 13,50
+desconto total = R$ 27,00
+cobrança sem adicionais = R$ 243,00
+```
 
-- antes da integração definitiva: liberar reserva, recalcular no novo plano e recriar/atualizar pelo workflow;
-- depois da integração definitiva: cancelar/substituir pelo procedimento oficial, sem editar valor diretamente; reservar novamente só depois de invalidar a cobrança anterior;
+A cobrança deve congelar o valor-base contratado, meses do ciclo, mensalidade equivalente, identidade e percentual de cada crédito, descontos unitários, desconto total e valor final.
+
+### 8.3 Excedentes
+
+Mensagens excedentes, consumo adicional, tarifas Meta, taxas, serviços avulsos, implantação, integrações, multas, juros e demais adicionais são somados integralmente depois do desconto. Nenhum crédito incide sobre esses itens.
+
+### 8.4 Plano atual e troca
+
+O cálculo usa o plano/ciclo efetivamente contratado ao gerar a cobrança. Upgrade/downgrade não elimina créditos nem altera seus percentuais históricos.
+
+- antes da integração definitiva: liberar todas as reservas, recalcular no novo plano/ciclo e recriar ou atualizar pelo workflow;
+- depois da integração definitiva: cancelar/substituir pelo procedimento oficial, sem editar valor diretamente; reservar novamente somente após invalidar a cobrança anterior;
 - nunca recalcular silenciosamente cobrança já integrada.
 
 Mudança de **ciclo** com cobrança aberta ainda requer decisão específica.
 
-### 8.4 Reserva, pontualidade e utilização
+### 8.5 Reserva, pontualidade e utilização
 
-A cobrança deve ser preparada preferencialmente ao menos cinco dias antes do vencimento. Na geração:
+A cobrança deve ser preparada preferencialmente ao menos cinco dias antes do vencimento. Buscar até `meses_do_ciclo` créditos elegíveis em FIFO e reservar todo o conjunto na mesma transação, com locks e validação concorrente. A relação aprovada é cobrança 1 → N créditos reservados; crédito 1 → no máximo 1 cobrança ativa. A quantidade de reservas ativas nunca pode superar os meses do ciclo.
 
-```text
-crédito liberado → reservado
-```
+A reserva congela cada cálculo, mas não consome definitivamente os créditos. Pagamento confirmado até o vencimento transforma **todos** os créditos daquela cobrança de `reservado` em `utilizado`, atomicamente. Vencimento sem pagamento, cancelamento, substituição, falha definitiva ou inelegibilidade libera **todos** novamente no FIFO. Não pode haver utilização ou liberação parcial acidental do conjunto.
 
-A reserva mostra o desconto, vincula unicamente crédito e cobrança e congela o cálculo, mas **não consome definitivamente** o crédito.
-
-Pagamento confirmado até a data de vencimento:
-
-```text
-reservado → utilizado
-```
-
-Vencimento sem pagamento, cancelamento/substituição da cobrança, falha definitiva de integração ou inelegibilidade financeira:
-
-```text
-reservado → liberado
-```
-
-Pagamento atrasado não causa multa/juros pelo programa, não utiliza o crédito e não o expira. O cliente deve pagar o valor integral da cobrança atrasada conforme mecanismo homologado no provedor; o crédito volta à próxima cobrança elegível, sem produzir desconto simultaneamente na atrasada e na futura.
+Pagamento atrasado não cria multa/juros pelo programa, não utiliza nem expira os créditos. O cliente deve pagar o valor integral da cobrança atrasada conforme mecanismo homologado no provedor; todos os créditos retornam para cobranças elegíveis futuras, sem desconto simultâneo na cobrança atrasada.
 
 ## 9. Fluxos funcionais obrigatórios
 
@@ -374,18 +389,19 @@ Acesso por link `ref` ou código manual
 ### Fluxo C — Aplicação do crédito
 
 ```text
-Preparação da próxima cobrança elegível
+Preparar cobrança
 → verificar cliente ativo, adimplência e prioridade de descontos
-→ localizar o crédito liberado mais antigo (FIFO)
-→ calcular 15% ou percentual histórico sobre uma mensalidade equivalente
-→ vincular crédito e snapshot à cobrança
-→ liberado → reservado
-→ integrar a cobrança pelo fluxo financeiro oficial
+→ determinar meses do ciclo
+→ buscar até N créditos FIFO elegíveis
+→ calcular mensalidade equivalente do ciclo contratado
+→ calcular individualmente o desconto de cada crédito
+→ reservar todos transacionalmente
+→ gerar cobrança com desconto total pelo fluxo financeiro oficial
 → pagamento pontual confirmado
-→ reservado → utilizado
+→ todos os reservados tornam-se utilizados
 ```
 
-Em falha definitiva, cancelamento, substituição ou vencimento sem pagamento, a reserva retorna a `liberado` antes de nova aplicação.
+Em falha definitiva, cancelamento, substituição ou vencimento sem pagamento, todas as reservas retornam a `liberado` antes de nova aplicação.
 
 ### Fluxo D — Cancelamento antes dos sete dias
 
@@ -441,8 +457,9 @@ pendente|em_confirmacao|liberado|reservado → cancelado (fraude/inelegibilidade
 
 Restrições:
 
-- uma cobrança não reserva dois créditos;
-- um crédito não pertence a duas cobranças;
+- uma cobrança pode reservar vários créditos, sem superar `meses_do_ciclo`;
+- um crédito não pertence a duas cobranças ativas;
+- reserva, utilização ou liberação do conjunto da cobrança deve ser atômica;
 - `utilizado` exige pagamento pontual;
 - atraso não cancela/expira;
 - `utilizado` nunca regride automaticamente;
@@ -460,7 +477,7 @@ Restrições:
 
 - pendentes/em confirmação são cancelados/encerrados;
 - liberados/bloqueados não usados expiram;
-- reservados exigem tratamento junto à cobrança, com liberação da reserva e expiração;
+- todos os reservados da cobrança exigem tratamento atômico, com liberação das reservas e expiração;
 - utilizados permanecem históricos;
 - não há pagamento, restituição ou conversão;
 - reativação começa sem créditos antigos;
@@ -469,7 +486,7 @@ Restrições:
 ### 11.2 Indicador inadimplente
 
 - mantém histórico e créditos;
-- reserva volta a liberado ao vencer sem pagamento;
+- todas as reservas da cobrança voltam a liberado ao vencer sem pagamento;
 - liberados passam a bloqueados enquanto houver impedimento;
 - não quitam retroativamente cobrança vencida;
 - após regularização, bloqueados voltam ao FIFO;
@@ -526,7 +543,7 @@ Campos conceituais mínimos:
 | Crédito | ID, indicação, indicador, campanha, percentual, estado, liberação, cobrança/assinatura reservadas, base do plano, mensal equivalente, desconto calculado, reserva, uso, bloqueio/cancelamento/expiração |
 | Auditoria | ID, tipo/ID da entidade, ação, antes/depois sanitizado, motivo, usuário, data, correlação |
 
-Relacionamentos devem usar FKs com entidades reais (`CLI_ID`, `USU_ID`, `PLA_ID`, `ASS_ID`, `COB_ID`) quando aplicáveis. Restrições únicas devem garantir código normalizado, um indicador por indicado, um crédito por indicação, uma reserva ativa por crédito e no máximo um crédito por cobrança.
+Relacionamentos devem usar FKs com entidades reais (`CLI_ID`, `USU_ID`, `PLA_ID`, `ASS_ID`, `COB_ID`) quando aplicáveis. Restrições únicas devem garantir código normalizado, um indicador por indicado, um crédito por indicação, uma reserva ativa por crédito e no máximo `meses_do_ciclo` reservas ativas por cobrança.
 
 ### 12.3 Configuração e snapshots
 
@@ -536,15 +553,15 @@ Campanha é a configuração central. Indicação deve apontar para campanha e g
 
 Toda integração deverá ocorrer em serviços/modelos, orquestrada pelo `FinanceiroWorkflowService` ou equivalente:
 
-1. selecionar crédito FIFO com lock;
-2. validar cliente, campanha histórica, assinatura, cobrança, prioridade e itens;
-3. reservar crédito e registrar snapshot dentro da mesma transação que cria/prepara a cobrança;
+1. determinar os meses do ciclo e selecionar, com lock, até esse limite de créditos FIFO;
+2. validar cliente, campanhas históricas, assinatura, cobrança, prioridade e itens;
+3. reservar todos os créditos e registrar seus snapshots individuais dentro da mesma transação que cria/prepara a cobrança;
 4. confirmar commit local;
 5. chamar Asaas fora de transação longa;
-6. se integração falhar definitivamente, transação compensatória libera reserva;
+6. se a integração falhar definitivamente, transação compensatória libera todas as reservas;
 7. se integrar, preservar vínculo e valores;
-8. webhook/manual confirmado até vencimento marca utilizado na mesma transação do sucesso financeiro;
-9. vencimento/cancelamento/substituição libera a reserva de forma idempotente;
+8. webhook/manual confirmado até vencimento marca todos os reservados como utilizados na mesma transação do sucesso financeiro;
+9. vencimento/cancelamento/substituição libera todas as reservas de forma idempotente;
 10. logs e auditoria usam dados sanitizados.
 
 Nunca:
@@ -558,14 +575,14 @@ Nunca:
 
 ### 13.1 Requisito crítico: desconto exibido versus crédito utilizado
 
-**Mostrar desconto** significa `reservado`. **Utilizar definitivamente** exige pagamento confirmado até o vencimento. Atraso devolve ao FIFO e a solução do provedor deve retirar/não honrar o desconto atrasado. A homologação deve provar que não ocorre simultaneamente:
+**Mostrar o desconto total** significa que os créditos estão `reservados`. **Utilizar definitivamente** exige pagamento confirmado até o vencimento e transição atômica de todo o conjunto. Atraso devolve todos ao FIFO e a solução do provedor deve retirar/não honrar o desconto atrasado. A homologação deve provar que não ocorre simultaneamente:
 
 - pagamento atrasado com desconto; e
 - reutilização do mesmo crédito na próxima cobrança.
 
 ### 13.2 Campos financeiros futuros
 
-Sem definir migration, a cobrança precisa preservar: valor original/total do ciclo, valor-base, mensal equivalente, percentual, desconto, valor final, origem, crédito, excedentes, vencimento e pontualidade. Hoje não foram identificados campos locais explícitos para todos esses snapshots; serão necessários na modelagem futura.
+Sem definir migration, a cobrança precisa preservar: valor original/total do ciclo, valor-base, mensal equivalente, percentual, desconto, valor final, origem, créditos e descontos individuais, excedentes, vencimento e pontualidade. Hoje não foram identificados campos locais explícitos para todos esses snapshots; serão necessários na modelagem futura.
 
 ## 14. Tarefas agendadas
 
@@ -628,7 +645,7 @@ Não mostrar CPF/CNPJ, e-mail, telefone, endereço, plano, pagamento, Meta ou da
 
 Filtros: indicador, indicado, campanha/estado, percentual, código, indicação/crédito, cobrança, período, fraude, cancelamento, bloqueio/reserva, pontualidade, alteração de plano.
 
-Detalhes: origem, vigência, datas, pagamento qualificante, janela, crédito, cobrança de uso, valor-base, mensal equivalente, desconto, excedentes excluídos, mudança de plano, histórico, motivo e operador.
+Detalhes: origem, vigência, datas, pagamento qualificante, janela, créditos, cobrança de uso, valor-base, mensal equivalente, descontos individuais e total, excedentes excluídos, mudança de plano, histórico, motivo e operador.
 
 Campanhas: criar, editar futuro, ativar/inativar, consultar histórico e volumes de códigos/indicações/créditos. Proibir efeito retroativo.
 
@@ -647,8 +664,8 @@ Explicar brevemente:
 - código após primeiro pagamento;
 - condições podem variar por campanha;
 - indicação aprovada gera percentual divulgado;
-- um crédito por cobrança;
-- ciclos maiores descontam sobre uma mensalidade equivalente;
+- até um crédito por mês representado no ciclo;
+- cada crédito desconta individualmente uma fração mensal equivalente;
 - apenas plano-base, sem excedentes;
 - pagamento precisa ser pontual;
 - atraso preserva crédito para próxima cobrança;
@@ -661,7 +678,7 @@ URL sugerida: `/programa-indicacao/regulamento`. Deve cobrir elegibilidade, camp
 
 ### 18.3 Texto-base público resumido
 
-> O primeiro pagamento possui 50% de desconto. Após a confirmação desse pagamento, o cliente elegível recebe seu código de indicação. Cada indicação aprovada, após pagamento e permanência ativa por sete dias, gera um crédito com o percentual da campanha. É utilizado no máximo um crédito por cobrança futura elegível. Em ciclos maiores, o desconto considera uma mensalidade equivalente e não alcança excedentes. O pagamento deve ocorrer até o vencimento; em atraso, o crédito permanece disponível para outra cobrança. Créditos são promocionais, automáticos, intransferíveis e não podem ser convertidos em dinheiro.
+> O primeiro pagamento possui 50% de desconto. Após a confirmação desse pagamento, o cliente elegível recebe seu código de indicação. Cada indicação aprovada, após pagamento e permanência ativa por sete dias, gera um crédito com o percentual da campanha. Cada cobrança futura elegível pode usar até um crédito por mês representado no ciclo. Cada crédito aplica seu percentual histórico a uma fração mensal equivalente, sem alcançar excedentes. O pagamento deve ocorrer até o vencimento; em atraso, o crédito permanece disponível para outra cobrança. Créditos são promocionais, automáticos, intransferíveis e não podem ser convertidos em dinheiro.
 
 ## 19. Analytics futuros (não implementar nesta etapa)
 
@@ -740,39 +757,43 @@ Usar a infraestrutura GA4/GTM existente. Nunca enviar nome, e-mail, telefone, CP
 
 ### 22.3 Crédito e cobrança
 
-23. percentual/snapshot não muda ao editar campanha;
-24. FIFO por liberação/ID;
-25. um crédito por cobrança e exclusividade de reserva concorrente;
-26. primeira cobrança nunca usa crédito;
-27. mensal usa uma mensalidade;
-28. trimestral/semestral/anual descontam somente uma mensalidade equivalente;
-29. arredondamento e valores mínimos;
-30. plano + excedentes desconta somente base;
-31. upgrade/downgrade recalcula antes da integração;
-32. cobrança integrada não é editada silenciosamente;
-33. mudança de ciclo com cobrança aberta segue decisão aprovada futura;
-34. falha local não reserva; falha Asaas libera reserva;
-35. reconciliação/retry não duplica reserva;
-36. pagamento até vencimento usa crédito;
-37. atraso libera crédito e cobra integral sem desconto duplicado;
-38. cancelamento/substituição/vencimento devolve ao FIFO;
-39. inadimplência bloqueia e regularização libera;
-40. crédito não quita vencida retroativamente.
+23. percentual/snapshot não muda ao editar campanha; primeira campanha concede 15%;
+24. FIFO por liberação/ID e identidade individual preservada;
+25. mensal com vários créditos disponíveis consome somente um;
+26. trimestral com um, dois, três e mais de três créditos usa respectivamente um, dois, três e três;
+27. semestral com quantidade inferior, igual e superior a seis respeita o limite de seis;
+28. anual com quantidade inferior, igual e superior a doze respeita o limite de doze;
+29. créditos excedentes permanecem liberados na ordem FIFO para cobranças futuras;
+30. mensalidade equivalente deriva do valor-base efetivamente contratado dividido pelos meses do ciclo;
+31. plano trimestral promocional usa o valor efetivo do ciclo e não `PLA_ValorMensal`;
+32. arredondamento monetário é centralizado e preferencialmente calculado em centavos;
+33. créditos com percentuais históricos diferentes têm descontos calculados individualmente;
+34. vários créditos são reservados atomicamente e cada crédito fica em no máximo uma cobrança ativa;
+35. concorrência não duplica crédito nem excede os meses do ciclo;
+36. primeira cobrança nunca usa crédito e aplica somente os 50% iniciais;
+37. pagamento pontual utiliza atomicamente todos os créditos reservados na cobrança;
+38. atraso, cancelamento, substituição, vencimento ou falha definitiva devolve todos ao FIFO;
+39. falha local não reserva; falha Asaas libera todo o conjunto;
+40. plano + excedentes desconta somente o valor-base e mantém adicionais integrais;
+41. upgrade/downgrade recalcula antes da integração;
+42. cobrança integrada não é editada silenciosamente;
+43. reconciliação/retry não duplica reservas nem causa utilização parcial;
+44. crédito não quita cobrança vencida retroativamente.
 
 ### 22.4 Ciclo de vida e interfaces
 
-41. cancelamento do indicador cancela pendentes, expira disponíveis e preserva usados;
-42. reativação não restaura expirados;
-43. fraude pré/pós-liberação e exceção após uso;
-44. empresas do grupo não são bloqueadas apenas pelo grupo;
-45. campanha inativa bloqueia novas participações e preserva créditos;
-46. comportamento de indicações em confirmação aguarda decisão;
-47. notificações após commit, idempotência e falha de canal;
-48. WhatsApp sem template aprovado não é enviado;
-49. área do cliente minimiza e remove/anonimiza nome no momento definido;
-50. área admin exige permissão, CSRF, motivo e auditoria;
-51. Analytics não contém PII/código/IDs pessoais;
-52. relatórios conciliam crédito, cobrança e pagamento.
+45. cancelamento do indicador cancela pendentes, expira disponíveis e preserva usados;
+46. reativação não restaura expirados;
+47. fraude pré/pós-liberação e exceção após uso;
+48. empresas do grupo não são bloqueadas apenas pelo grupo;
+49. campanha inativa bloqueia novas participações e preserva créditos;
+50. comportamento de indicações em confirmação aguarda decisão;
+51. notificações após commit, idempotência e falha de canal;
+52. WhatsApp sem template aprovado não é enviado;
+53. área do cliente minimiza e remove/anonimiza nome no momento definido;
+54. área admin exige permissão, CSRF, motivo e auditoria;
+55. Analytics não contém PII/código/IDs pessoais;
+56. relatórios conciliam créditos, cobrança e pagamento.
 
 ## 23. Decisões que precisam de aprovação antes da implementação
 
@@ -796,7 +817,7 @@ Nenhuma recomendação desta tabela é regra até aprovação formal.
 
 ## 24. Fora do escopo da primeira versão
 
-Pagamento de comissão, saque, PIX ao indicador, afiliados/marketplace externo, níveis, ranking, gamificação, código customizado, transferência/cessão, conversão em dinheiro, múltiplos créditos na mesma cobrança, multinível, comissão de indicação de indicação, influenciadores e integrações de afiliados.
+Pagamento de comissão, saque, PIX ao indicador, afiliados/marketplace externo, níveis, ranking, gamificação, código customizado, transferência/cessão, conversão em dinheiro, multinível, comissão de indicação de indicação, influenciadores e integrações de afiliados.
 
 Também não fazem parte desta branch documental: código, banco, migration, tela, rota, financeiro, cadastro, worker, deploy, template ou tag Analytics.
 

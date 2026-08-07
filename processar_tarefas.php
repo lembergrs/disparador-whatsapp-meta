@@ -9,39 +9,43 @@ use Services\Tasks\TaskDispatcher;
 use Services\Tasks\TaskExecutionService;
 use Services\Tasks\TaskProcessor;
 use Services\Tasks\TaskRegistry;
+use Services\Tasks\TaskSchedulerCliOutput;
+use Services\Tasks\TaskSchedulerLogger;
 
+$verbose = in_array('--verbose', array_slice($argv, 1), true);
+$lock = null;
+$possuiLock = false;
+$logger = null;
 $lockPath = TASK_SCHEDULER_LOCK_FILE;
-$diretorioLock = dirname($lockPath);
-if(!is_dir($diretorioLock)) mkdir($diretorioLock, 0770, true);
-$lock = fopen($lockPath, 'c+');
-if(!$lock || !flock($lock, LOCK_EX | LOCK_NB)){
-    fwrite(STDERR, "Task Scheduler já está em execução.\n");
-    exit(0);
-}
 
-$liberar = function() use (&$lock, $lockPath){
+$liberar = function() use (&$lock, &$possuiLock, $lockPath){
     if(is_resource($lock)){ flock($lock, LOCK_UN); fclose($lock); }
-    if(is_file($lockPath)) @unlink($lockPath);
+    if($possuiLock && is_file($lockPath)) @unlink($lockPath);
+    $possuiLock = false;
 };
 register_shutdown_function($liberar);
 
 try{
-    $logFile = TASK_SCHEDULER_LOG_FILE;
-    if(!is_dir(dirname($logFile))) mkdir(dirname($logFile), 0770, true);
-    $logger = function(array $linha) use ($logFile){
-        error_log(json_encode($linha, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $logFile);
-    };
+    $logger = new TaskSchedulerLogger(TASK_SCHEDULER_LOG_FILE);
+    $diretorioLock = dirname($lockPath);
+    if(!is_dir($diretorioLock) && !mkdir($diretorioLock, 0770, true) && !is_dir($diretorioLock)) throw new RuntimeException('Falha ao criar diretório de lock.');
+    $lock = fopen($lockPath, 'c+');
+    if(!$lock) throw new RuntimeException('Falha ao abrir lock.');
+    if(!flock($lock, LOCK_EX | LOCK_NB)){ fclose($lock); $lock = null; exit(0); }
+    $possuiLock = true;
     $repositorio = new TarefaAgendada();
     $processador = new TaskProcessor($repositorio,new TaskDispatcher(new TaskRegistry()),null,TASK_SCHEDULER_LEASE_MINUTES,$logger);
     $execucao = new TaskExecutionService($processador, TASK_SCHEDULER_BATCH_SIZE);
     $resumo = $execucao->processarSobDemanda(TASK_SCHEDULER_BATCH_SIZE);
-    echo 'Processadas: ' . $resumo['processadas'] . PHP_EOL;
-    echo 'Concluídas: ' . $resumo['concluidas'] . PHP_EOL;
-    echo 'Retry: ' . $resumo['retry'] . PHP_EOL;
-    echo 'Falhas: ' . $resumo['falhas'] . PHP_EOL;
-    $exitCode = $resumo['falhas'] > 0 ? 1 : 0;
+    echo TaskSchedulerCliOutput::resumo($resumo, $verbose);
+    $exitCode = 0;
 }catch(Throwable $e){
-    error_log('Task Scheduler: falha operacional controlada.');
+    try{
+        if(!$logger) $logger = new TaskSchedulerLogger(TASK_SCHEDULER_LOG_FILE);
+        $logger->erroOperacional($e);
+    }catch(Throwable $falhaLog){
+        error_log('Task Scheduler: falha operacional; log oficial indisponível.');
+    }
     $exitCode = 1;
 }
 
