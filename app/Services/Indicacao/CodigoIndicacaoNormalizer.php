@@ -4,7 +4,7 @@ namespace Services\Indicacao;
 
 class CodigoIndicacaoNormalizer
 {
-    public function normalizar($codigo): string
+    public static function normalizar($codigo): string
     {
         $codigo = trim((string)$codigo);
         if($codigo === '') return '';
