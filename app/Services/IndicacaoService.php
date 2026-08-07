@@ -1,0 +1,11 @@
+<?php
+namespace Services;
+use Models\Indicacao; use Models\IndicacaoCampanha; use Services\Indicacao\IndicacaoStatusTransitionService; use PDO;
+class IndicacaoService
+{
+ private $db,$modelo,$campanhas,$audit; public function __construct(PDO $db,Indicacao $m,IndicacaoCampanha $c,IndicacaoAuditoriaService $a){$this->db=$db;$this->modelo=$m;$this->campanhas=$c;$this->audit=$a;}
+ public function criar(array $d): int {if((int)$d['indicador_id']===(int)$d['indicado_id'])throw new \DomainException('Autoindicação não permitida.');if(!in_array($d['origem'],['link','manual'],true))throw new \InvalidArgumentException('Origem inválida.');return $this->tx(function()use($d){$c=$this->campanhas->buscar($d['campanha_id'],true);if(!$c)throw new \DomainException('Campanha não encontrada.');$d['percentual']=$c['ICP_Percentual'];$d['cadastrada_em']=$d['cadastrada_em']??date('Y-m-d H:i:s');$id=$this->modelo->criar($d);$this->aud($id,'criada',null,'cadastrada',null,['origem'=>$d['origem'],'percentual'=>$d['percentual']]);return $id;});}
+ public function transicionar($id,$novo,$motivo=null): bool {return $this->tx(function()use($id,$novo,$motivo){$i=$this->modelo->buscar($id);if(!$i)throw new \DomainException('Indicação não encontrada.');$a=$i['IND_Status'];IndicacaoStatusTransitionService::validar('indicacao',$a,$novo);if(!$this->modelo->status($id,$a,$novo,$motivo))throw new \RuntimeException('Indicação alterada concorrentemente.');$this->aud($id,'status_alterado',$a,$novo,$motivo);return true;});}
+ private function aud($id,$acao,$a,$n,$m=null,$d=[]){$this->audit->registrar(['entidade'=>'indicacao','entidade_id'=>$id,'acao'=>$acao,'status_anterior'=>$a,'status_novo'=>$n,'motivo'=>$m,'dados'=>$d]);}
+ private function tx(callable $f){$own=!$this->db->inTransaction();if($own)$this->db->beginTransaction();try{$r=$f();if($own)$this->db->commit();return $r;}catch(\Throwable $e){if($own&&$this->db->inTransaction())$this->db->rollBack();throw $e;}}
+}
