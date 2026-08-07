@@ -8,7 +8,10 @@ class TaskRegistry
 
     public function __construct(array $tipos = null)
     {
-        $this->tipos = $tipos ?? ['teste_scheduler'=>TesteSchedulerHandler::class];
+        $this->tipos = $tipos ?? [
+            'teste_scheduler'=>TesteSchedulerHandler::class,
+            'indicacao_confirmacao'=>IndicacaoConfirmacaoHandler::class,
+        ];
     }
 
     public function possui($tipo): bool
