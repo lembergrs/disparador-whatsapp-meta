@@ -72,6 +72,12 @@ defined('WORKER_DAEMON_ID') || define('WORKER_DAEMON_ID', env_valor('WORKER_DAEM
 defined('WORKER_DAEMON_LIMITE_CAMPANHAS') || define('WORKER_DAEMON_LIMITE_CAMPANHAS', (int) env_valor('WORKER_DAEMON_LIMITE_CAMPANHAS', 50));
 defined('WORKER_DAEMON_LIMITE_DISPARO_MANUAL') || define('WORKER_DAEMON_LIMITE_DISPARO_MANUAL', (int) env_valor('WORKER_DAEMON_LIMITE_DISPARO_MANUAL', 20));
 
+// Task Scheduler genérico. Nenhum fluxo legado é ativado por estas opções.
+defined('TASK_SCHEDULER_BATCH_SIZE') || define('TASK_SCHEDULER_BATCH_SIZE', max(1, (int) env_valor('TASK_SCHEDULER_BATCH_SIZE', 50)));
+defined('TASK_SCHEDULER_LEASE_MINUTES') || define('TASK_SCHEDULER_LEASE_MINUTES', max(1, (int) env_valor('TASK_SCHEDULER_LEASE_MINUTES', 15)));
+defined('TASK_SCHEDULER_LOCK_FILE') || define('TASK_SCHEDULER_LOCK_FILE', env_valor('TASK_SCHEDULER_LOCK_FILE', __DIR__ . '/../storage/task-scheduler.lock'));
+defined('TASK_SCHEDULER_LOG_FILE') || define('TASK_SCHEDULER_LOG_FILE', env_valor('TASK_SCHEDULER_LOG_FILE', __DIR__ . '/../storage/logs/task-scheduler.log'));
+
 // Dias de tolerância financeira após vencimento antes do bloqueio operacional.
 defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
 
