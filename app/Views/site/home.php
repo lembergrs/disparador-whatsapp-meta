@@ -5,7 +5,7 @@ $perguntasFrequentes = [
     'Preciso contratar um plano antes de conectar o primeiro número?' => 'Não. O cliente elegível ao pré-trial pode conectar o primeiro número para iniciar a avaliação.',
     'Quem define os limites de envio?' => 'Os limites de envio são definidos e administrados pela Meta conforme os critérios aplicáveis à conta e ao número.',
     'O plano do Disparador aumenta automaticamente meu limite na Meta?' => 'Não. O limite do plano do Disparador.net e as faixas administradas pela Meta são capacidades diferentes.',
-    'A Meta cobra pelas mensagens?' => 'Podem existir tarifas da Meta por mensagens entregues, conforme a categoria da mensagem e o mercado do destinatário.',
+    'A Meta cobra pelas mensagens?' => 'A Meta cobra pelo uso da WhatsApp Business Platform conforme sua política vigente. A cobrança pode variar de acordo com a categoria da mensagem e o mercado do destinatário. A partir de 1º de outubro de 2026, mensagens de Serviço — como respostas enviadas pela empresa durante a janela de atendimento de 24 horas — e templates de Utilidade enviados nessa janela também passam a ser cobrados pela Meta. Esses valores são independentes da mensalidade e da franquia de mensagens do Disparador.net.',
     'Posso usar qualquer mensagem em uma campanha?' => 'Mensagens iniciadas pela empresa normalmente dependem de templates aprovados e do cumprimento das políticas aplicáveis da Meta.',
     'O teste grátis possui limite?' => 'Sim. O teste grátis é de até 7 dias ou 200 mensagens, o que ocorrer primeiro.'
 ];
@@ -877,6 +877,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <p class="text-center text-muted mt-3 mb-0">
             Valores e limites podem ser ajustados conforme a necessidade da operação.
         </p>
+        <div class="alert alert-light border text-center mt-3 mb-0" role="note">
+            <strong>A franquia de mensagens corresponde ao uso do Disparador.net.</strong>
+            Tarifas da WhatsApp Business Platform cobradas pela Meta não estão incluídas na mensalidade e seguem a política vigente da Meta.
+        </div>
         <div class="row justify-content-center">
             <div class="col-lg-9 text-center">
                 <p class="text-center text-muted mt-3 mb-0">
@@ -897,14 +901,26 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="row justify-content-center">
 
             <div class="col-lg-9 text-center">
-                <span class="badge badge-success mb-3">Tarifas da plataforma</span>
+                <span class="badge badge-success mb-3">Tarifas da Meta</span>
                 <h2 class="site-section-title">Limites de envio e cobrança são diferentes</h2>
                 <p class="text-muted">
-                    As faixas tratam da capacidade de iniciar conversas. A cobrança da WhatsApp Business Platform segue a política de preços da Meta por mensagem entregue, conforme a categoria — Marketing, Utilidade, Autenticação ou Serviço — e o mercado do destinatário.
+                    O Disparador.net cobra pela utilização de sua plataforma, com mensalidade e franquia conforme o plano contratado. Separadamente, a Meta cobra pelo uso da WhatsApp Business Platform segundo regras e tarifas próprias, que podem variar conforme a categoria da mensagem, o mercado do destinatário, a política vigente e eventuais faixas de volume.
                 </p>
-                <p class="text-muted small mb-0">
-                    As tarifas podem mudar e eventuais cobranças da Meta são separadas da mensalidade do Disparador.net. Consulte sempre as condições vigentes da Meta.
+                <p class="text-muted small">
+                    As tarifas da Meta não estão incluídas na mensalidade nem na franquia do Disparador.net. O Disparador.net não revende créditos da Meta e não define essas regras ou tarifas.
                 </p>
+                <div class="alert alert-light border text-left mt-4 mb-0" role="note">
+                    <h3 class="h5 font-weight-bold">Atualização na política de cobrança da Meta a partir de 1º de outubro de 2026</h3>
+                    <p>
+                        Até 30 de setembro de 2026, mensagens de Serviço enviadas pela empresa durante a janela de atendimento de 24 horas e templates de Utilidade enviados nessa janela têm tratamento gratuito segundo a política atual aplicável.
+                    </p>
+                    <p>
+                        A partir de 1º de outubro de 2026, a Meta anunciou que mensagens de Serviço, incluindo respostas enviadas pela empresa durante essa janela, e templates de Utilidade enviados nela passarão a ser cobrados por mensagem. Mensagens de Marketing e Autenticação continuam sujeitas às respectivas tarifas.
+                    </p>
+                    <p class="mb-0">
+                        A alteração é definida pela Meta e não representa aumento da mensalidade do Disparador.net. Mensagens recebidas do cliente não são apresentadas como mensagens cobradas pelo Disparador.net, e exceções e janelas gratuitas continuam sujeitas às regras oficiais vigentes da Meta.
+                    </p>
+                </div>
             </div>
 
         </div>
