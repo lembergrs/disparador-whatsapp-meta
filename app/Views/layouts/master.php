@@ -507,6 +507,21 @@ class="nav-link <?= str_contains($url, 'campanha') ? 'active' : ''; ?>"
 <li class="nav-item">
 
 <a
+href="<?= BASE_URL; ?>/index.php?url=indicacao"
+class="nav-link <?= str_contains($url, 'indicacao') ? 'active' : ''; ?>"
+>
+
+<i class="nav-icon fas fa-share-alt"></i>
+
+<p>Indique e Ganhe</p>
+
+</a>
+
+</li>
+
+<li class="nav-item">
+
+<a
 href="<?= $clienteLiberado
 ? BASE_URL . '/index.php?url=conversa'
 : BASE_URL . '/index.php?url=financeiro'; ?>"

@@ -646,16 +646,27 @@ A configuração deve usar `EventoNotificacao`, `CanalNotificacao` e `Notificaca
 
 ## 16. Área do cliente
 
-Futura página **Programa de Indicação**.
+Página autenticada **Indique e Ganhe**, acessível também antes do primeiro
+pagamento para explicar o estado do programa. A navegação não recebe `CLI_ID`:
+todos os dados são filtrados pelo cliente da sessão.
 
 ### 16.1 Sem código/campanha
 
 - antes do primeiro pagamento: mensagem de liberação futura;
+- sem campanha pública vigente: informar indisponibilidade sem exibir ações de
+  compartilhamento;
+- código `nao_liberado`, suspenso, cancelado ou ausente: explicar a
+  indisponibilidade sem inventar data ou motivo;
 - campanha inativa: impedir novos compartilhamentos e informar indisponibilidade, mas exibir créditos antigos e indicações anteriores válidas.
 
 ### 16.2 Campanha ativa e código liberado
 
 Exibir código, link, copiar, campanha vigente, percentual, regras resumidas, link público/regulamento, totais de indicados, em andamento, disponíveis, reservados, bloqueados, utilizados, expirados/cancelados e próximo desconto previsto.
+
+Na primeira versão da área, o link usa a rota pública de cadastro com `ref`
+normalizado; o cliente pode copiar código/link ou compartilhar pelo WhatsApp.
+Os totais exibidos são apenas agregações dos estados persistidos, sem recalcular
+elegibilidade, FIFO ou descontos.
 
 Lista do indicador mostra somente:
 
