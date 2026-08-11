@@ -1,8 +1,30 @@
 # Reservas financeiras de créditos de indicação
 
+## Integração com o Financeiro (Sprint 3B)
+
+`FinanceiroWorkflowService` cria primeiro `cobrancas.COB_ID` e, antes de chamar o
+Asaas, delega a preparação da cobrança elegível a
+`IndicacaoDescontoService::prepararDesconto()`, usando a referência
+`cobranca:<COB_ID>`. O workflow não seleciona créditos, não calcula percentuais e
+não implementa FIFO: essas responsabilidades continuam no domínio de indicação.
+
+A composição enviada ao provedor fica congelada na cobrança (valor-base, ciclo,
+desconto inicial, desconto de indicação, adicionais e valor final). A primeira
+cobrança recebe o benefício comercial independente de 50% e não consulta nem
+reserva créditos. Somente cobranças posteriores podem reservar créditos; valores
+adicionais permanecem integrais.
+
+Uma criação bem-sucedida no Asaas mantém as reservas em `reservada`. O pagamento
+confirmado pelo workflow (webhook idempotente ou lançamento manual) chama
+`confirmarUtilizacao()`, realizando `reservada -> utilizada`. Cancelamento,
+vencimento ou falha definitiva de criação externa chama `liberarReservas()`,
+realizando `reservada -> liberada`. Eventos duplicados são descartados pela chave
+idempotente financeira antes da transição do domínio, que também mantém seus locks
+e sua própria idempotência.
+
 ## Escopo
 
-A Sprint 3A implementa um motor interno e isolado para calcular e reservar créditos antes de uma futura cobrança. Ele não cria cobrança, não conhece Asaas e não altera Financeiro, assinatura, recorrência, Scheduler, worker ou interface.
+A Sprint 3A implementou um motor interno e isolado para calcular e reservar créditos antes de uma cobrança. O motor não conhece o Asaas; a Sprint 3B apenas passou a consumi-lo pelo workflow financeiro.
 
 ## Tabela e cardinalidade
 

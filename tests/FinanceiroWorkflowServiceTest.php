@@ -40,6 +40,9 @@ class FwAssinaturas {
 class FwCobrancas {
     public $rows=[]; public $events=[]; public $next=1; public $falharPersistencia=false;
     public function buscarPendentePorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['COB_Status']==='pendente')return $r;}return null;}
+    public function listarPendentesPorCliente($c){return array_values(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']==='pendente'));}
+    public function contarAnterioresDoCliente($c,$id){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_ID']<$id&&$r['COB_Status']!=='cancelado'));}
+    public function registrarComposicaoDesconto($id,$d){foreach(['valor'=>'COB_Valor','valor_base_centavos'=>'COB_ValorBaseCentavos','desconto_inicial_centavos'=>'COB_DescontoInicialCentavos','desconto_indicacao_centavos'=>'COB_DescontoIndicacaoCentavos','adicionais_centavos'=>'COB_AdicionaisCentavos','ciclo'=>'COB_Ciclo'] as $k=>$f)$this->rows[$id][$f]=$d[$k];return true;}
     public function criar($d){$id=$this->next++;$this->rows[$id]=array_merge(['COB_ID'=>$id,'CLI_ID'=>$d['cliente'],'PLA_ID'=>$d['plano'],'ASS_ID'=>$d['assinatura']??null,'COB_Status'=>'pendente','COB_Valor'=>$d['valor'],'COB_DataVencimento'=>$d['vencimento']],$d);return $id;}
     public function criarRecorrenteIdempotente($d){$e=$this->buscarRecorrente($d['cliente'],$d['plano'],$d['vencimento'],$d['tipo'],$d['assinatura']);return $e?['id'=>$e['COB_ID'],'criada'=>false]:['id'=>$this->criar($d),'criada'=>true];}
     public function buscarRecorrente($c,$p,$v,$t='mensalidade',$a=null){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['PLA_ID']==$p&&$r['COB_DataVencimento']===$v&&($a===null||$r['ASS_ID']==$a)&&$r['COB_Status']!=='cancelado')return $r;}return false;}
@@ -49,6 +52,7 @@ class FwCobrancas {
     public function comLockIntegracao($id,callable $c){return $c();}
     public function prepararReprocessamento($id,$tentativa){$this->rows[$id]['COB_Status']='pendente';$this->rows[$id]['COB_ProviderPaymentId']=null;$this->rows[$id]['COB_ProviderStatus']=$tentativa<=1?'reprocessamento_base':'reprocessamento_tentativa_'.$tentativa;return true;}
     public function marcarPago($id){$this->rows[$id]['COB_Status']='pago';return true;}
+    public function cancelar($id){$this->rows[$id]['COB_Status']='cancelado';return true;}
     public function atualizarIntegracaoProvider($id,$d){if($this->falharPersistencia&&!empty($d['provider_payment_id'])){$this->falharPersistencia=false;throw new RuntimeException('falha simulada');}foreach(['status'=>'COB_Status','provider_payment_id'=>'COB_ProviderPaymentId','provider_status'=>'COB_ProviderStatus','provider_payload'=>'COB_ProviderPayload'] as $k=>$f){if(array_key_exists($k,$d))$this->rows[$id][$f]=$d[$k];}return true;}
     public function buscarPorProviderPaymentId($p,$id){foreach($this->rows as $r){if(($r['COB_ProviderPaymentId']??'')===$id)return $r;}return null;}
     public function registrarEventoProvider($id,$p,$eid,$e,$s,$payload){if(isset($this->events[$eid]))return 'duplicado';$this->events[$eid]=compact('id','e','s','payload');return true;}
@@ -67,17 +71,24 @@ class FwAsaas {
 }
 class FwRecorrencia {public function diasTolerancia(){return 5;}public function calcularProximaData($c,$d){return date('Y-m-d',strtotime('+1 month',strtotime($d)));}}
 class FwMetas {public function validarLimiteNumerosPlano(){return ['permitido'=>true];}}
+class FwDescontos {
+    public $total=0;public $preparadas=[];public $confirmadas=[];public $liberadas=[];
+    public function prepararDesconto($cliente,$ciclo,$base,$tipo,$id){$this->preparadas[]=compact('cliente','ciclo','base','tipo','id');return ['desconto_total_centavos'=>$this->total];}
+    public function confirmarUtilizacao($tipo,$id){$this->confirmadas[$tipo.':'.$id]=true;return [];}
+    public function liberarReservas($tipo,$id,$motivo){$this->liberadas[$tipo.':'.$id]=$motivo;return [];}
+}
 class FwRollbackTransacao {
     private $cli;private $ass;private $cob;
     public function __construct($cli,$ass,$cob){$this->cli=$cli;$this->ass=$ass;$this->cob=$cob;}
     public function executar(callable $c){$cr=$this->cli->rows;$ar=$this->ass->rows;$br=$this->cob->rows;$ev=$this->cob->events;try{return $c();}catch(Throwable $e){$this->cli->rows=$cr;$this->ass->rows=$ar;$this->cob->rows=$br;$this->cob->events=$ev;throw $e;}}
 }
 
-function novoWorkflow(&$cli,&$ass,&$cob,&$asaas){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas());}
+function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas(),$descontos);}
 
 $w=novoWorkflow($cli,$ass,$cob,$asaas);
 $contrato=$w->contratarPlano(1,1,'mensal');
 fwAssert($contrato['sucesso']&&$asaas->posts===1,'contratação integra uma cobrança');
+fwAssert($cob->rows[1]['COB_Valor']==='5.00'&&$cob->rows[1]['COB_DescontoInicialCentavos']===500&&$cob->rows[1]['COB_DescontoIndicacaoCentavos']===0,'primeira mensalidade recebe somente 50%');
 $w->confirmarPagamentoManual(1);fwAssert($cob->rows[1]['COB_Status']==='pago','pagamento manual confirma cobrança');
 
 $cob->rows[1]['COB_ProviderPaymentId']='pay_1';
@@ -131,5 +142,23 @@ $w->reativarContrato(1);$vinculada=$cob->rows[$id]['ASS_ID'];$quantidadeAssinatu
 $cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>null,'valor'=>10,'vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$cob->rows[$id]['COB_ProviderPaymentId']='pay_sem_assinatura';
 $w=new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwRollbackTransacao($cli,$ass,$cob),new FwMetas());$falhou=false;try{$w->processarPagamentoWebhook(['id'=>'evt_sem_assinatura','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_sem_assinatura','status'=>'CONFIRMED']]);}catch(LogicException $e){$falhou=true;}
 fwAssert($falhou&&$cob->rows[$id]['COB_Status']==='pendente'&&$cli->rows[1]['CLI_StatusPagamento']==='pendente','pagamento sem assinatura válida falha e sofre rollback');
+
+$descontos=new FwDescontos();$descontos->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos);
+$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';
+$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['ciclo'=>'mensal','valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);
+$w->gerarCobrancasRecorrentes();$recorrente=$cob->rows[2];
+fwAssert($recorrente['COB_Valor']==='8.50'&&$recorrente['COB_ValorBaseCentavos']===1000&&$recorrente['COB_DescontoIndicacaoCentavos']===150&&count($descontos->preparadas)===1,'segunda cobrança delega desconto e envia valor final');
+fwAssert(empty($descontos->confirmadas),'criação no Asaas mantém crédito apenas reservado');
+$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED']]);
+$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED']]);
+fwAssert(count($descontos->confirmadas)===1,'webhook duplicado não confirma utilização novamente');
+
+$descontos2=new FwDescontos();$descontos2->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos2);
+$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';
+$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$asaas->falharCriacao=true;$w->gerarCobrancasRecorrentes();
+fwAssert(($descontos2->liberadas['cobranca:2']??null)==='falha_criacao_cobranca_asaas','falha externa libera reservas');
+
+$workflowFonte=file_get_contents(__DIR__.'/../app/Services/FinanceiroWorkflowService.php');
+fwAssert(strpos($workflowFonte,'selecionarDisponiveisFifo')===false&&strpos($workflowFonte,'ICR_Percentual')===false,'Financeiro não duplica FIFO nem cálculo percentual do domínio');
 
 echo "FinanceiroWorkflowServiceTest OK\n";
