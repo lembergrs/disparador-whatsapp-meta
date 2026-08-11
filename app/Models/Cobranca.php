@@ -32,6 +32,43 @@ class Cobranca
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function listarPendentesPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE CLI_ID = ? AND COB_Status = 'pendente' ORDER BY COB_ID");
+        $sql->execute([(int) $clienteId]);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function contarAnterioresDoCliente($clienteId, $cobrancaId)
+    {
+        $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ? AND COB_ID < ? AND COB_Status <> 'cancelado'");
+        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
+        return (int) $sql->fetchColumn();
+    }
+
+    public function registrarComposicaoDesconto($id, array $dados)
+    {
+        $mapa = [
+            'COB_Valor'=>'valor',
+            'COB_ValorBaseCentavos'=>'valor_base_centavos',
+            'COB_DescontoInicialCentavos'=>'desconto_inicial_centavos',
+            'COB_DescontoIndicacaoCentavos'=>'desconto_indicacao_centavos',
+            'COB_AdicionaisCentavos'=>'adicionais_centavos',
+            'COB_Ciclo'=>'ciclo'
+        ];
+        $sets = [];
+        $params = [':id'=>(int) $id];
+        foreach($mapa as $coluna=>$chave){
+            if($this->colunaExiste('cobrancas', $coluna) && array_key_exists($chave, $dados)){
+                $sets[] = $coluna . '=:' . $chave;
+                $params[':' . $chave] = $dados[$chave];
+            }
+        }
+        if(!$sets){ return false; }
+        $sql = $this->db->prepare('UPDATE cobrancas SET ' . implode(',', $sets) . ' WHERE COB_ID=:id');
+        return $sql->execute($params);
+    }
+
 
     public function listarPorCliente($clienteId)
     {
