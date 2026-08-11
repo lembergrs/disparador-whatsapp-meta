@@ -35,6 +35,16 @@ class IndicacaoCampanha
         return $s->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public function buscarPublicaElegivel($forUpdate = false)
+    {
+        $sql = "SELECT * FROM indicacao_campanhas WHERE ICP_Ativo='S' AND ICP_Publica='S' AND (ICP_DataInicio IS NULL OR ICP_DataInicio <= CURRENT_TIMESTAMP) AND (ICP_DataFim IS NULL OR ICP_DataFim >= CURRENT_TIMESTAMP) LIMIT 1";
+        if($forUpdate && $this->driver() === 'mysql'){
+            $sql .= ' FOR UPDATE';
+        }
+        $s = $this->db->query($sql);
+        return $s->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public function criar(array $d)
     {
         $s = $this->db->prepare('INSERT INTO indicacao_campanhas (ICP_Nome,ICP_Descricao,ICP_Percentual,ICP_DataInicio,ICP_DataFim,ICP_Ativo,ICP_Publica,ICP_RegrasSnapshot,ICP_CriadoPor_USU_ID) VALUES (?,?,?,?,?,?,?,?,?)');

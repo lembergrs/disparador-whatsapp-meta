@@ -4,6 +4,24 @@
 
 `Services\Indicacao\IndicacaoWorkflowService` é a entrada interna da Sprint 2A. Ele coordena Models e Services da fundação de domínio; não replica SQL, geração de código, normalização, máquina de estados ou auditoria. Controllers futuros deverão receber a entrada HTTP, aplicar autenticação/CSRF quando cabível e chamar `registrarIndicacao()`, sem acessar Models diretamente.
 
+## Integração de cadastro e primeiro pagamento
+
+O cadastro público aceita `?ref=` somente como entrada transitória. O
+`SiteController` valida o valor por `validarCodigo()`, guarda exclusivamente
+`ICD_CodigoNormalizado` na sessão de cadastro e, depois de criar o cliente na
+mesma transação, delega a criação do vínculo a `registrarIndicacao(..., 'link')`.
+O parâmetro bruto não é persistido nem contém identificadores internos. Código
+ausente, inválido ou que se torne inelegível não impede o cadastro comum e não
+cria indicação.
+
+`FinanceiroWorkflowService` chama `IndicacaoPrimeiroPagamentoService` somente
+quando a cobrança recém-confirmada é a primeira paga do cliente. Esse ponto é
+comum ao webhook do Asaas e ao lançamento manual. O serviço cria ou reutiliza o
+código da campanha pública ativa e o ativa apenas a partir de `nao_liberado`.
+Para um cliente indicado em `aguardando_pagamento`, ele delega a
+`IndicacaoElegibilidadeService::confirmarPrimeiroPagamento()`, que preserva a
+janela de sete dias e o agendamento transacional existentes.
+
 ## Fluxo de criação
 
 ```text
@@ -44,4 +62,7 @@ Os dados adicionais continuam sujeitos à whitelist e sanitização da fundaçã
 
 ## Fora do escopo
 
-Não há alteração do cadastro público, View, `?ref=`, Controller, primeiro pagamento, 50% inicial, Financeiro, Asaas, Scheduler, sete dias, crédito, reserva financeira, notificação, WhatsApp, Analytics, área administrativa/cliente, landing page ou regulamento. Não há migration nova nem alteração da migration aplicada da Sprint 1.
+Não há dashboard/área de indicação, landing page, regulamento, notificação,
+WhatsApp ou Analytics. O benefício inicial de 50%, os descontos posteriores,
+reservas e o Scheduler mantêm seus fluxos próprios. Não há migration nova nem
+alteração da migration aplicada da Sprint 1.

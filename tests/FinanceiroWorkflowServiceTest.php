@@ -42,6 +42,7 @@ class FwCobrancas {
     public function buscarPendentePorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['COB_Status']==='pendente')return $r;}return null;}
     public function listarPendentesPorCliente($c){return array_values(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']==='pendente'));}
     public function contarAnterioresDoCliente($c,$id){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_ID']<$id&&$r['COB_Status']!=='cancelado'));}
+    public function contarPagasPorCliente($c){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']==='pago'));}
     public function registrarComposicaoDesconto($id,$d){foreach(['valor'=>'COB_Valor','valor_base_centavos'=>'COB_ValorBaseCentavos','desconto_inicial_centavos'=>'COB_DescontoInicialCentavos','desconto_indicacao_centavos'=>'COB_DescontoIndicacaoCentavos','adicionais_centavos'=>'COB_AdicionaisCentavos','ciclo'=>'COB_Ciclo'] as $k=>$f)$this->rows[$id][$f]=$d[$k];return true;}
     public function criar($d){$id=$this->next++;$this->rows[$id]=array_merge(['COB_ID'=>$id,'CLI_ID'=>$d['cliente'],'PLA_ID'=>$d['plano'],'ASS_ID'=>$d['assinatura']??null,'COB_Status'=>'pendente','COB_Valor'=>$d['valor'],'COB_DataVencimento'=>$d['vencimento']],$d);return $id;}
     public function criarRecorrenteIdempotente($d){$e=$this->buscarRecorrente($d['cliente'],$d['plano'],$d['vencimento'],$d['tipo'],$d['assinatura']);return $e?['id'=>$e['COB_ID'],'criada'=>false]:['id'=>$this->criar($d),'criada'=>true];}
@@ -79,26 +80,35 @@ class FwDescontos {
     public function confirmarUtilizacao($tipo,$id){$chave=$tipo.':'.$id;if(($this->estados[$chave]??null)!=='reservada')throw new DomainException('reserva não confirmável');$this->estados[$chave]='utilizada';$this->confirmadas[$chave]=true;return [];}
     public function liberarReservas($tipo,$id,$motivo){$chave=$tipo.':'.$id;if(($this->estados[$chave]??null)==='reservada')$this->estados[$chave]='liberada';$this->liberadas[$chave]=$motivo;return [];}
 }
+class FwPrimeiroPagamentoIndicacao {
+    public $chamadas=[];
+    public function processar($clienteId,$pagoEm){$this->chamadas[]=['cliente_id'=>$clienteId,'pago_em'=>$pagoEm];return [];}
+}
 class FwRollbackTransacao {
     private $cli;private $ass;private $cob;
     public function __construct($cli,$ass,$cob){$this->cli=$cli;$this->ass=$ass;$this->cob=$cob;}
     public function executar(callable $c){$cr=$this->cli->rows;$ar=$this->ass->rows;$br=$this->cob->rows;$ev=$this->cob->events;try{return $c();}catch(Throwable $e){$this->cli->rows=$cr;$this->ass->rows=$ar;$this->cob->rows=$br;$this->cob->events=$ev;throw $e;}}
 }
 
-function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas(),$descontos);}
+function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null,&$primeiroPagamento=null){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();$primeiroPagamento=new FwPrimeiroPagamentoIndicacao();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas(),$descontos,null,$primeiroPagamento);}
 
-$w=novoWorkflow($cli,$ass,$cob,$asaas);
+$w=novoWorkflow($cli,$ass,$cob,$asaas,null,$primeiroPagamento);
 $contrato=$w->contratarPlano(1,1,'mensal');
 fwAssert($contrato['sucesso']&&$asaas->posts===1,'contratação integra uma cobrança');
 fwAssert($cob->rows[1]['COB_Valor']==='5.00'&&$cob->rows[1]['COB_DescontoInicialCentavos']===500&&$cob->rows[1]['COB_DescontoIndicacaoCentavos']===0,'primeira mensalidade recebe somente 50%');
-$w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert($cob->rows[1]['COB_Status']==='pago','pagamento manual simples confirma cobrança');
+$w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert($cob->rows[1]['COB_Status']==='pago'&&count($primeiroPagamento->chamadas)===1,'pagamento manual simples confirma cobrança e dispara o marco de indicação');
 
 $cob->rows[1]['COB_ProviderPaymentId']='pay_1';
 $w->processarPagamentoWebhook(['id'=>'evt_confirmado','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_1','status'=>'CONFIRMED']]);
 $w->processarPagamentoWebhook(['id'=>'evt_atrasado','event'=>'PAYMENT_OVERDUE','payment'=>['id'=>'pay_1','status'=>'OVERDUE']]);
 fwAssert($cob->rows[1]['COB_Status']==='pago'&&$cli->rows[1]['status_pagamento']==='pago','evento atrasado não regride pagamento');
 $duplicado=$w->processarPagamentoWebhook(['id'=>'evt_atrasado','event'=>'PAYMENT_OVERDUE','payment'=>['id'=>'pay_1','status'=>'OVERDUE']]);
-fwAssert(!empty($duplicado['duplicado'])&&count($cob->events)===2,'webhook duplicado não é processado novamente');
+fwAssert(!empty($duplicado['duplicado'])&&count($cob->events)===2&&count($primeiroPagamento->chamadas)===1,'webhook duplicado não é processado novamente nem repete o marco de indicação');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas,null,$primeiroPagamentoWebhook);$w->contratarPlano(1,1,'mensal');
+$w->processarPagamentoWebhook(['id'=>'evt_primeiro_webhook','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_1','status'=>'CONFIRMED']]);
+$w->processarPagamentoWebhook(['id'=>'evt_primeiro_webhook','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_1','status'=>'CONFIRMED']]);
+fwAssert(count($primeiroPagamentoWebhook->chamadas)===1,'primeiro pagamento via webhook dispara o mesmo marco uma única vez');
 
 $w=novoWorkflow($cli,$ass,$cob,$asaas);$w->contratarPlano(1,1,'mensal');
 $w->processarPagamentoWebhook(['id'=>'evt_overdue','event'=>'PAYMENT_OVERDUE','payment'=>['id'=>'pay_1','status'=>'OVERDUE']]);

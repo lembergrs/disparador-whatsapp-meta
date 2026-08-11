@@ -32,7 +32,10 @@ class IndicacaoCodigoService
             $codigo = $this->gen->gerar($cliente);
             $n = $this->norm->normalizar($codigo);
             if($this->model->buscarPorNormalizado($n)) continue;
-            $this->db->beginTransaction();
+            $propria = !$this->db->inTransaction();
+            if($propria){
+                $this->db->beginTransaction();
+            }
             try{
                 $id = $this->model->criar([
                     'cliente_id'=>$clienteId,
@@ -45,11 +48,16 @@ class IndicacaoCodigoService
                     'campanha_id'=>$campanhaId,
                     'codigo_prefixo'=>strtok($codigo,'-')
                 ]);
-                $this->db->commit();
+                if($propria){
+                    $this->db->commit();
+                }
                 return $id;
             }catch(\PDOException $e){
-                if($this->db->inTransaction()) $this->db->rollBack();
+                if($propria && $this->db->inTransaction()) $this->db->rollBack();
                 if($e->getCode()==='23000') continue;
+                throw $e;
+            }catch(\Throwable $e){
+                if($propria && $this->db->inTransaction()) $this->db->rollBack();
                 throw $e;
             }
         }
@@ -72,13 +80,18 @@ class IndicacaoCodigoService
         if($novo==='ativo') $datas['liberado_em']=$agora;
         if($novo==='suspenso') $datas['suspenso_em']=$agora;
         if($novo==='cancelado') $datas['cancelado_em']=$agora;
-        $this->db->beginTransaction();
+        $propria = !$this->db->inTransaction();
+        if($propria){
+            $this->db->beginTransaction();
+        }
         try{
             if(!$this->model->alterarStatus($id,$atual,$novo,$datas)) throw new \RuntimeException('Status alterado por outro processo.');
             $this->audit->registrar('codigo',$id,'status_alterado',$atual,$novo,$motivo,$usuarioId);
-            $this->db->commit();
+            if($propria){
+                $this->db->commit();
+            }
         }catch(\Throwable $e){
-            if($this->db->inTransaction()) $this->db->rollBack();
+            if($propria && $this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
     }

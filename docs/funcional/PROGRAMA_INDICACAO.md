@@ -196,13 +196,15 @@ Cancelado, inativo, definitivamente suspenso ou sem contrato válido não compar
 
 ### 5.4 Link
 
-URL conceitual: `https://disparador.net/cadastro?ref=ROD-8XJ4P`.
+URL: `https://disparador.net/cadastro?ref=ROD-8XJ4P`.
 
 O link:
 
-- preenche o campo opcional `Código de indicação`;
-- preserva `ref` e valor normalizado em erros do formulário;
-- permite edição manual até o envio, salvo decisão futura;
+- valida o código no servidor e preserva apenas seu valor normalizado na sessão
+  do cadastro até a criação do cliente;
+- não expõe ou persiste IDs internos no parâmetro ou na sessão;
+- nesta fase, é recebido pelo parâmetro `ref`; suporte a digitação manual é
+  decisão posterior;
 - não expõe IDs;
 - não cria vínculo antes da conclusão transacional do cadastro;
 - não deve usar cookie como fonte definitiva sem revalidação backend.
@@ -882,9 +884,9 @@ Cada item deve ser branch/PR próprio, após aprovação do anterior:
 
 1. `feat/tarefas-agendadas-infraestrutura` — fila, idempotência, retry, CLI/daemon e observabilidade;
 2. `feat/indicacao-banco-dominio` — campanhas, códigos, indicações, créditos e auditoria;
-3. `feat/indicacao-cadastro` — `ref`, validação, vínculo transacional e antifraude inicial;
-4. `feat/indicacao-codigo-primeiro-pagamento` — liberação idempotente por confirmação financeira;
-5. `feat/indicacao-credito-sete-dias` — tarefa, revalidações e liberação;
+3. `feat/indicacao-cadastro` — `ref`, validação, vínculo transacional e antifraude inicial; **concluído**;
+4. `feat/indicacao-codigo-primeiro-pagamento` — liberação idempotente por confirmação financeira; **concluído**;
+5. `feat/indicacao-credito-sete-dias` — tarefa, revalidações e liberação; **concluído**;
 6. `feat/indicacao-financeiro` — 50%, política central, FIFO, reservas múltiplas por ciclo, pontualidade e Asaas;
 7. `feat/indicacao-area-cliente` — painel, lista minimizada e históricos;
 8. `feat/indicacao-admin` — campanhas, revisão, fraude e auditoria;
