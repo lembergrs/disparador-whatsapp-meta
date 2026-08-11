@@ -52,6 +52,7 @@ class FwCobrancas {
     public function comLockIntegracao($id,callable $c){return $c();}
     public function prepararReprocessamento($id,$tentativa){$this->rows[$id]['COB_Status']='pendente';$this->rows[$id]['COB_ProviderPaymentId']=null;$this->rows[$id]['COB_ProviderStatus']=$tentativa<=1?'reprocessamento_base':'reprocessamento_tentativa_'.$tentativa;return true;}
     public function marcarPago($id){$this->rows[$id]['COB_Status']='pago';return true;}
+    public function registrarPagamentoManual($id,$d){$this->rows[$id]['manual']=$d;return true;}
     public function cancelar($id){$this->rows[$id]['COB_Status']='cancelado';return true;}
     public function atualizarIntegracaoProvider($id,$d){if($this->falharPersistencia&&!empty($d['provider_payment_id'])){$this->falharPersistencia=false;throw new RuntimeException('falha simulada');}foreach(['status'=>'COB_Status','provider_payment_id'=>'COB_ProviderPaymentId','provider_status'=>'COB_ProviderStatus','provider_payload'=>'COB_ProviderPayload'] as $k=>$f){if(array_key_exists($k,$d))$this->rows[$id][$f]=$d[$k];}return true;}
     public function buscarPorProviderPaymentId($p,$id){foreach($this->rows as $r){if(($r['COB_ProviderPaymentId']??'')===$id)return $r;}return null;}
@@ -90,7 +91,7 @@ $w=novoWorkflow($cli,$ass,$cob,$asaas);
 $contrato=$w->contratarPlano(1,1,'mensal');
 fwAssert($contrato['sucesso']&&$asaas->posts===1,'contratação integra uma cobrança');
 fwAssert($cob->rows[1]['COB_Valor']==='5.00'&&$cob->rows[1]['COB_DescontoInicialCentavos']===500&&$cob->rows[1]['COB_DescontoIndicacaoCentavos']===0,'primeira mensalidade recebe somente 50%');
-$w->confirmarPagamentoManual(1);fwAssert($cob->rows[1]['COB_Status']==='pago','pagamento manual confirma cobrança');
+$w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert($cob->rows[1]['COB_Status']==='pago','pagamento manual simples confirma cobrança');
 
 $cob->rows[1]['COB_ProviderPaymentId']='pay_1';
 $w->processarPagamentoWebhook(['id'=>'evt_confirmado','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_1','status'=>'CONFIRMED']]);
@@ -163,7 +164,16 @@ fwAssert(($descontos2->estados['cobranca:2']??null)==='reservada'&&count($descon
 fwAssert($cob->rows[2]['COB_Valor']===$valorCongelado&&$asaas->values===[$valorCongelado,$valorCongelado],'retry preserva exatamente o valor congelado');
 $w->processarPagamentoWebhook(['id'=>'evt_retry_pago','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>8.50,'originalValue'=>10.00]]);fwAssert(($descontos2->estados['cobranca:2']??null)==='utilizada','pagamento após retry utiliza reserva restabelecida com snapshots congelados');
 
-$descontos3=new FwDescontos();$descontos3->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos3);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$cob->rows[2]['COB_Status']='vencido';$w->confirmarPagamentoManual(2);fwAssert(($descontos3->estados['cobranca:2']??null)==='reservada','lançamento manual sem evidência do Asaas não infere utilização da indicação');
+$descontos3=new FwDescontos();$descontos3->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos3);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$cob->rows[2]['COB_Status']='vencido';$w->confirmarPagamentoManual(2,['valor_pago'=>'8.50','decisao_indicacao'=>'aplicado']);fwAssert(($descontos3->estados['cobranca:2']??null)==='utilizada','pagamento manual com indicação aplicada utiliza a reserva integral');
+$duplicadoManual=false;try{$w->confirmarPagamentoManual(2,['valor_pago'=>'8.50','decisao_indicacao'=>'aplicado']);}catch(DomainException $e){$duplicadoManual=true;}fwAssert($duplicadoManual&&count($descontos3->confirmadas)===1,'retry manual não utiliza a reserva duas vezes');
+
+$descontosManualLiberado=new FwDescontos();$descontosManualLiberado->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontosManualLiberado);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$w->confirmarPagamentoManual(2,['valor_pago'=>'10.00','decisao_indicacao'=>'nao_aplicado','motivo'=>'desconto não concedido']);fwAssert(($descontosManualLiberado->estados['cobranca:2']??null)==='liberada','pagamento manual sem indicação libera a reserva integral');
+
+$descontosManualDivergente=new FwDescontos();$descontosManualDivergente->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontosManualDivergente);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$w->confirmarPagamentoManual(2,['valor_pago'=>'9.00','decisao_indicacao'=>'aplicado','confirmar_valor_divergente'=>1,'motivo'=>'ajuste manual']);fwAssert(($descontosManualDivergente->estados['cobranca:2']??null)==='utilizada'&&$cob->rows[2]['manual']['valor_divergente']===true,'valor divergente confirmado utiliza integralmente e fica auditado');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>null,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$falhou=false;try{$w->confirmarPagamentoManual($id,['valor_pago'=>'invalido']);}catch(DomainException $e){$falhou=true;}fwAssert($falhou&&$cob->rows[$id]['COB_Status']==='pendente','valor manual inválido é rejeitado');
+
+$descontosInicialManual=new FwDescontos();$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontosInicialManual);$w->contratarPlano(1,1,'mensal');$w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert(empty($descontosInicialManual->confirmadas)&&empty($descontosInicialManual->liberadas),'benefício inicial de 50% manual não movimenta créditos de indicação');
 
 $descontos5=new FwDescontos();$descontos5->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos5);
 $anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';

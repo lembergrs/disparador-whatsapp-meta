@@ -168,7 +168,13 @@ class FinanceiroAdminController extends Controller
         $this->validarCsrfPost();
         Auth::admin();
         try{
-            (new FinanceiroWorkflowService())->confirmarPagamentoManual((int) ($_GET['id'] ?? 0));
+            (new FinanceiroWorkflowService())->confirmarPagamentoManual((int) ($_GET['id'] ?? 0), [
+                'valor_pago'=>$_POST['valor_pago'] ?? null,
+                'decisao_indicacao'=>$_POST['decisao_indicacao'] ?? null,
+                'motivo'=>$_POST['motivo'] ?? null,
+                'confirmar_valor_divergente'=>$_POST['confirmar_valor_divergente'] ?? null,
+                'usuario_id'=>Auth::usuario()['id'] ?? null
+            ]);
             Session::flash('success', 'Pagamento lançado com sucesso.');
         }catch(\Throwable $e){
             Session::flash('error', $e instanceof \DomainException ? $e->getMessage() : 'Não foi possível lançar o pagamento.');

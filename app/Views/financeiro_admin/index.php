@@ -30,6 +30,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
         return $nomes[$cor] ?? ucfirst($cor);
     }
 }
+
 ?>
 <div class="card">
 
@@ -402,15 +403,30 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                         )
                                     ){ ?>
 
-                                        <a
-                                        href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=<?= (int) $cobranca['COB_ID']; ?>#tabCobrancas"
-                                        class="btn btn-success btn-sm"
-                                        onclick="return confirm('Confirmar pagamento?')"
+                                        <?php
+                                        $nominalCentavos = isset($cobranca['COB_ValorBaseCentavos']) && $cobranca['COB_ValorBaseCentavos'] !== null
+                                            ? (int) $cobranca['COB_ValorBaseCentavos'] + (int) ($cobranca['COB_AdicionaisCentavos'] ?? 0)
+                                            : (int) round(((float) $cobranca['COB_Valor']) * 100);
+                                        $descontoInicialCentavos = (int) ($cobranca['COB_DescontoInicialCentavos'] ?? 0);
+                                        $descontoIndicacaoCentavos = (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0);
+                                        $comIndicacaoCentavos = max(0, $nominalCentavos - $descontoInicialCentavos - $descontoIndicacaoCentavos);
+                                        $semIndicacaoCentavos = max(0, $nominalCentavos - $descontoInicialCentavos);
+                                        ?>
+                                        <button
+                                        type="button"
+                                        class="btn btn-success btn-sm btnConfirmarPagamentoManual"
+                                        data-id="<?= (int) $cobranca['COB_ID']; ?>"
+                                        data-nominal="<?= $nominalCentavos; ?>"
+                                        data-inicial="<?= $descontoInicialCentavos; ?>"
+                                        data-indicacao="<?= $descontoIndicacaoCentavos; ?>"
+                                        data-com-indicacao="<?= $comIndicacaoCentavos; ?>"
+                                        data-sem-indicacao="<?= $semIndicacaoCentavos; ?>"
+                                        title="Confirmar pagamento manual"
                                         >
 
                                             <i class="fas fa-check"></i>
 
-                                        </a>
+                                        </button>
 
                                         <a
                                         href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/cancelarCobranca&id=<?= (int) $cobranca['COB_ID']; ?>#tabCobrancas"
@@ -970,6 +986,25 @@ tabindex="-1"
 
 </div>
 
+<div class="modal fade" id="modalConfirmarPagamentoManual" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document"><div class="modal-content">
+        <form method="post" id="formConfirmarPagamentoManual" action="<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago#tabCobrancas">
+            <div class="modal-header"><h5 class="modal-title">Confirmar pagamento manual</h5><button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span>&times;</span></button></div>
+            <div class="modal-body">
+                <div id="composicaoPagamentoManual" class="small text-muted mb-3"></div>
+                <div class="form-group"><label for="valor_pago_manual">Valor efetivamente pago</label><input class="form-control" type="text" inputmode="decimal" name="valor_pago" id="valor_pago_manual" required></div>
+                <div id="decisaoIndicacaoManual" class="form-group d-none">
+                    <label>O desconto de indicação foi aplicado?</label>
+                    <div><div class="custom-control custom-radio custom-control-inline"><input class="custom-control-input" type="radio" id="indicacaoAplicada" name="decisao_indicacao" value="aplicado"><label class="custom-control-label" for="indicacaoAplicada">Aplicado</label></div><div class="custom-control custom-radio custom-control-inline"><input class="custom-control-input" type="radio" id="indicacaoNaoAplicada" name="decisao_indicacao" value="nao_aplicado"><label class="custom-control-label" for="indicacaoNaoAplicada">Não aplicado</label></div></div>
+                </div>
+                <div id="avisoValorDivergente" class="alert alert-warning d-none"><div id="textoValorDivergente"></div><div class="custom-control custom-checkbox mt-2"><input class="custom-control-input" type="checkbox" id="confirmar_valor_divergente" name="confirmar_valor_divergente" value="1"><label class="custom-control-label" for="confirmar_valor_divergente">Confirmo o lançamento com valor divergente.</label></div></div>
+                <div class="form-group mb-0"><label for="motivo_pagamento_manual">Observação administrativa <small class="text-muted">(opcional)</small></label><textarea class="form-control" maxlength="500" rows="3" id="motivo_pagamento_manual" name="motivo"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-success">Confirmar pagamento</button></div>
+        </form>
+    </div></div>
+</div>
+
 <script>
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -1086,6 +1121,35 @@ document.addEventListener('DOMContentLoaded', function(){
 
     $('#cor').on('change', atualizarPreviewCor);
     atualizarPreviewCor();
+
+    const formPagamentoManual = document.getElementById('formConfirmarPagamentoManual');
+    const valorPagoManual = document.getElementById('valor_pago_manual');
+    const decisaoIndicacaoManual = document.getElementById('decisaoIndicacaoManual');
+    const avisoValorDivergente = document.getElementById('avisoValorDivergente');
+    let contextoPagamentoManual = null;
+    const moedaManual = function(centavos){ return 'R$ ' + (centavos / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };
+    const centavosInformados = function(valor){ let texto = String(valor || '').trim(); texto = texto.includes(',') ? texto.replace(/\./g, '').replace(',', '.') : texto; return /^\d+(\.\d{1,2})?$/.test(texto) ? Math.round(Number(texto) * 100) : null; };
+    const atualizarAvisoPagamentoManual = function(){
+        if(!contextoPagamentoManual){ return; }
+        const decisao = formPagamentoManual.querySelector('input[name="decisao_indicacao"]:checked');
+        const esperado = contextoPagamentoManual.indicacao > 0 && decisao && decisao.value === 'nao_aplicado' ? contextoPagamentoManual.semIndicacao : contextoPagamentoManual.comIndicacao;
+        const informado = centavosInformados(valorPagoManual.value);
+        const deveAvisar = informado !== null && (contextoPagamentoManual.indicacao === 0 || decisao) && informado !== esperado;
+        avisoValorDivergente.classList.toggle('d-none', !deveAvisar);
+        if(deveAvisar){ document.getElementById('textoValorDivergente').textContent = 'Valor esperado para a opção selecionada: ' + moedaManual(esperado) + '. O valor informado é diferente.'; }
+    };
+    document.querySelectorAll('.btnConfirmarPagamentoManual').forEach(function(botao){ botao.addEventListener('click', function(){
+        contextoPagamentoManual = {id: botao.dataset.id, nominal: Number(botao.dataset.nominal), inicial: Number(botao.dataset.inicial), indicacao: Number(botao.dataset.indicacao), comIndicacao: Number(botao.dataset.comIndicacao), semIndicacao: Number(botao.dataset.semIndicacao)};
+        formPagamentoManual.action = '<?= BASE_URL; ?>/index.php?url=financeiroAdmin/marcarPago&id=' + contextoPagamentoManual.id + '#tabCobrancas';
+        valorPagoManual.value = moedaManual(contextoPagamentoManual.comIndicacao).replace('R$ ', '');
+        formPagamentoManual.querySelectorAll('input[name="decisao_indicacao"]').forEach(function(input){ input.checked = false; input.required = contextoPagamentoManual.indicacao > 0; });
+        decisaoIndicacaoManual.classList.toggle('d-none', contextoPagamentoManual.indicacao === 0);
+        document.getElementById('confirmar_valor_divergente').checked = false;
+        document.getElementById('composicaoPagamentoManual').innerHTML = 'Nominal: <strong>' + moedaManual(contextoPagamentoManual.nominal) + '</strong><br>Benefício inicial: <strong>-' + moedaManual(contextoPagamentoManual.inicial) + '</strong><br>Desconto de indicação: <strong>-' + moedaManual(contextoPagamentoManual.indicacao) + '</strong><br>Esperado com indicação: <strong>' + moedaManual(contextoPagamentoManual.comIndicacao) + '</strong><br>Esperado sem indicação: <strong>' + moedaManual(contextoPagamentoManual.semIndicacao) + '</strong>';
+        atualizarAvisoPagamentoManual(); $('#modalConfirmarPagamentoManual').modal('show');
+    }); });
+    valorPagoManual.addEventListener('input', atualizarAvisoPagamentoManual);
+    formPagamentoManual.querySelectorAll('input[name="decisao_indicacao"]').forEach(function(input){ input.addEventListener('change', atualizarAvisoPagamentoManual); });
 
     if(window.location.hash){
 
