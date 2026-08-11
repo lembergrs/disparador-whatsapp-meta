@@ -9,6 +9,7 @@ use Models\FinanceiroTransacao;
 use Models\MetaConta;
 use Models\Plano;
 use Services\Indicacao\IndicacaoDescontoService;
+use Services\Indicacao\IndicacaoAuditoriaService;
 
 class FinanceiroWorkflowService
 {
@@ -21,8 +22,9 @@ class FinanceiroWorkflowService
     private $transacao;
     private $metas;
     private $descontosIndicacao;
+    private $auditoriaIndicacao;
 
-    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null)
+    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null)
     {
         $this->clientes = $clientes ?: new Cliente();
         $this->assinaturas = $assinaturas ?: new Assinatura();
@@ -33,6 +35,7 @@ class FinanceiroWorkflowService
         $this->transacao = $transacao ?: new FinanceiroTransacao();
         $this->metas = $metas ?: new MetaConta();
         $this->descontosIndicacao = $descontosIndicacao;
+        $this->auditoriaIndicacao = $auditoriaIndicacao;
     }
 
     public function contratarPlano(int $clienteId, int $planoId, string $ciclo): array
@@ -75,19 +78,65 @@ class FinanceiroWorkflowService
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId, 'plano'=>$plano]);
     }
 
-    public function confirmarPagamentoManual(int $cobrancaId): array
+    public function confirmarPagamentoManual(int $cobrancaId, array $dados = []): array
     {
         $cobranca = $this->cobrancas->buscar($cobrancaId);
         if(!$cobranca || !in_array(strtolower((string) $cobranca['COB_Status']), ['pendente','vencido'], true)){
             throw new \DomainException('Não foi possível lançar o pagamento.');
         }
-        $this->transacao->executar(function() use ($cobrancaId, $cobranca){
-            $this->cobrancas->marcarPago($cobrancaId);
-            $this->confirmarDescontoIndicacao($cobranca);
+        $valorPagoCentavos = $this->valorManualEmCentavos($dados['valor_pago'] ?? null);
+        $temDescontoIndicacao = (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) > 0;
+        $decisaoIndicacao = trim((string) ($dados['decisao_indicacao'] ?? ''));
+        if($temDescontoIndicacao && !in_array($decisaoIndicacao, ['aplicado', 'nao_aplicado'], true)){
+            throw new \DomainException('Informe se o desconto de indicação foi aplicado.');
+        }
+        if(!$temDescontoIndicacao){ $decisaoIndicacao = null; }
+
+        $composicao = $this->composicaoCobranca($cobranca);
+        $valorEsperadoCentavos = $decisaoIndicacao === 'nao_aplicado'
+            ? $composicao['sem_indicacao_centavos']
+            : $composicao['com_indicacao_centavos'];
+        $divergente = $valorPagoCentavos !== $valorEsperadoCentavos;
+        if($divergente && empty($dados['confirmar_valor_divergente'])){
+            throw new \DomainException('Confirme que o valor informado diverge do valor esperado antes de lançar o pagamento.');
+        }
+        $motivo = trim((string) ($dados['motivo'] ?? ''));
+        if(mb_strlen($motivo, 'UTF-8') > 500){ throw new \DomainException('A observação deve ter no máximo 500 caracteres.'); }
+        $usuarioId = (int) ($dados['usuario_id'] ?? 0) ?: null;
+
+        $this->transacao->executar(function() use ($cobrancaId, $cobranca, $valorPagoCentavos, $decisaoIndicacao, $motivo, $usuarioId, $divergente, $valorEsperadoCentavos){
+            $atualizada = $this->cobrancas->buscarParaAtualizacao($cobrancaId);
+            if(!$atualizada || !in_array(strtolower((string) $atualizada['COB_Status']), ['pendente','vencido'], true)){
+                throw new \DomainException('Não foi possível lançar o pagamento.');
+            }
+            if($decisaoIndicacao === 'aplicado'){
+                $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobrancaId);
+            }elseif($decisaoIndicacao === 'nao_aplicado'){
+                $this->liberarDescontoIndicacao($atualizada, $motivo !== '' ? $motivo : 'pagamento_manual_sem_desconto_indicacao');
+            }
+            if(!$this->cobrancas->registrarPagamentoManual($cobrancaId, [
+                'valor_pago_centavos'=>$valorPagoCentavos,
+                'decisao_indicacao'=>$decisaoIndicacao,
+                'motivo'=>$motivo,
+                'usuario_id'=>$usuarioId,
+                'valor_esperado_centavos'=>$valorEsperadoCentavos,
+                'valor_divergente'=>$divergente
+            ])){
+                throw new \RuntimeException('Não foi possível registrar a auditoria do pagamento manual.');
+            }
+            if($decisaoIndicacao !== null && class_exists(IndicacaoAuditoriaService::class)){
+                $this->servicoAuditoriaIndicacao()->registrar('cobranca', $cobrancaId, 'pagamento_manual_confirmado', null, 'pago', $motivo ?: null, $usuarioId, 'manual:' . $cobrancaId, [
+                    'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'valor_esperado_centavos'=>$valorEsperadoCentavos,
+                    'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente ? 'sim' : 'nao'
+                ]);
+            }
+            if(!$this->cobrancas->marcarPago($cobrancaId)){
+                throw new \RuntimeException('Não foi possível lançar o pagamento.');
+            }
             $this->ativarAssinaturaDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
         });
-        $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId]);
+        $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
         return ['sucesso'=>true, 'cobranca'=>$cobranca];
     }
 
@@ -108,7 +157,7 @@ class FinanceiroWorkflowService
         }
         $status = $this->statusCobrancaPorEvento($evento);
 
-        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $status){
+        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $payment, $status){
             $atualizada = $this->cobrancas->buscarParaAtualizacao($cobranca['COB_ID']);
             if(!$atualizada){ throw new \RuntimeException('Cobrança não encontrada durante o processamento.'); }
             $transicao = $this->resolverTransicaoWebhook(strtolower((string) $atualizada['COB_Status']), $evento, $status);
@@ -127,7 +176,7 @@ class FinanceiroWorkflowService
             $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], $dados);
 
             if($status === 'pago'){
-                $this->confirmarDescontoIndicacao($atualizada);
+                $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
             }elseif($status === 'vencido'){
@@ -400,10 +449,47 @@ class FinanceiroWorkflowService
         return $this->cobrancas->buscar((int) $cobranca['COB_ID']);
     }
 
-    private function confirmarDescontoIndicacao(array $cobranca): void
+    private function reconciliarDescontoIndicacaoNoPagamento(array $cobranca, array $payment): void
     {
         if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) <= 0){ return; }
-        $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobranca['COB_ID']);
+        $decisao = $this->decidirUsoDescontoIndicacao($cobranca, $payment);
+        if($decisao === 'utilizar'){
+            $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobranca['COB_ID']);
+            return;
+        }
+        if($decisao === 'liberar'){
+            $this->liberarDescontoIndicacao($cobranca, 'pagamento_sem_desconto_indicacao');
+        }
+    }
+
+    private function decidirUsoDescontoIndicacao(array $cobranca, array $payment): string
+    {
+        if(!array_key_exists('COB_ValorBaseCentavos', $cobranca) || $cobranca['COB_ValorBaseCentavos'] === null){
+            return 'indeterminado';
+        }
+
+        $valorPago = $this->valorProviderEmCentavos($payment['value'] ?? null);
+        if($valorPago === null){ return 'indeterminado'; }
+
+        $valorNominal = max(0, (int) $cobranca['COB_ValorBaseCentavos'])
+            + max(0, (int) ($cobranca['COB_AdicionaisCentavos'] ?? 0));
+        $descontoInicial = max(0, (int) ($cobranca['COB_DescontoInicialCentavos'] ?? 0));
+        $descontoIndicacao = max(0, (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0));
+        $valorComIndicacao = max(0, $valorNominal - $descontoInicial - $descontoIndicacao);
+        $valorSemIndicacao = max(0, $valorNominal - $descontoInicial);
+        $valorOriginal = array_key_exists('originalValue', $payment) && $payment['originalValue'] !== null
+            ? $this->valorProviderEmCentavos($payment['originalValue'])
+            : null;
+
+        // Asaas informa originalValue quando o valor efetivamente pago diverge do
+        // original. Sem esse par, não é seguro atribuir o desconto à indicação.
+        if($valorPago === $valorComIndicacao && $valorOriginal === $valorNominal){
+            return 'utilizar';
+        }
+        if($valorPago === $valorSemIndicacao && ($valorOriginal === null || $valorOriginal === $valorNominal)){
+            return 'liberar';
+        }
+        return 'indeterminado';
     }
 
     private function liberarDescontoIndicacao(array $cobranca, string $motivo): void
@@ -425,6 +511,44 @@ class FinanceiroWorkflowService
             throw new \DomainException('Valor inválido para cobrança.');
         }
         return ((int) $partes[1] * 100) + (int) str_pad($partes[2] ?? '', 2, '0');
+    }
+
+    private function servicoAuditoriaIndicacao()
+    {
+        if(!$this->auditoriaIndicacao){ $this->auditoriaIndicacao = new IndicacaoAuditoriaService(); }
+        return $this->auditoriaIndicacao;
+    }
+
+    private function valorManualEmCentavos($valor): int
+    {
+        if($valor === null || trim((string) $valor) === ''){ throw new \DomainException('Informe o valor efetivamente pago.'); }
+        try{ $centavos = $this->valorEmCentavos($valor); }
+        catch(\DomainException $e){ throw new \DomainException('Informe um valor pago válido.'); }
+        if($centavos <= 0){ throw new \DomainException('Informe um valor pago maior que zero.'); }
+        return $centavos;
+    }
+
+    private function composicaoCobranca(array $cobranca): array
+    {
+        $nominal = array_key_exists('COB_ValorBaseCentavos', $cobranca) && $cobranca['COB_ValorBaseCentavos'] !== null
+            ? max(0, (int) $cobranca['COB_ValorBaseCentavos']) + max(0, (int) ($cobranca['COB_AdicionaisCentavos'] ?? 0))
+            : $this->valorEmCentavos($cobranca['COB_Valor']);
+        $inicial = max(0, (int) ($cobranca['COB_DescontoInicialCentavos'] ?? 0));
+        $indicacao = max(0, (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0));
+        return ['nominal_centavos'=>$nominal, 'desconto_inicial_centavos'=>$inicial, 'desconto_indicacao_centavos'=>$indicacao,
+            'com_indicacao_centavos'=>max(0, $nominal - $inicial - $indicacao), 'sem_indicacao_centavos'=>max(0, $nominal - $inicial)];
+    }
+
+    private function valorProviderEmCentavos($valor): ?int
+    {
+        if($valor === null || $valor === ''){ return null; }
+        if(is_int($valor)){ return $valor * 100; }
+        if(is_float($valor)){ $valor = number_format($valor, 2, '.', ''); }
+        try{
+            return $this->valorEmCentavos($valor);
+        }catch(\DomainException $e){
+            return null;
+        }
     }
 
     private function centavosEmValor(int $centavos): string
@@ -576,7 +700,7 @@ class FinanceiroWorkflowService
     private function payloadProviderSeguro(array $payload, ?array $decisao = null): string
     {
         $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : $payload;
-        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
+        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','originalValue','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
     }
 
     private function log(string $evento, array $dados): void

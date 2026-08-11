@@ -14,11 +14,16 @@ cobrança recebe o benefício comercial independente de 50% e não consulta nem
 reserva créditos. Somente cobranças posteriores podem reservar créditos; valores
 adicionais permanecem integrais.
 
-Uma criação bem-sucedida no Asaas mantém as reservas em `reservada`. O pagamento
-confirmado pelo workflow (webhook idempotente ou lançamento manual) chama
-`confirmarUtilizacao()`, realizando `reservada -> utilizada`. Vencimento simples
-mantém a reserva porque a cobrança ainda aceita pagamento. Cancelamento ou falha
-definitiva de criação externa chama `liberarReservas()`, realizando
+Uma criação bem-sucedida no Asaas mantém as reservas em `reservada`. No webhook
+de pagamento, o workflow compara em centavos os snapshots congelados com
+`payment.value` e `payment.originalValue`: utiliza a reserva somente quando o
+valor pago corresponde exatamente ao desconto total congelado e `originalValue`
+confirma o valor nominal; quando o valor pago corresponde ao cenário sem a parte
+de indicação, libera a reserva. `netValue` nunca participa dessa decisão. Um
+payload sem essa evidência suficiente mantém a reserva, inclusive em lançamento
+manual, para não atribuir uso sem prova. Vencimento simples mantém a reserva
+porque a cobrança ainda aceita pagamento. Cancelamento ou falha definitiva de
+criação externa chama `liberarReservas()`, realizando
 `reservada -> liberada`. Eventos duplicados são descartados pela chave
 idempotente financeira antes da transição do domínio, que também mantém seus locks
 e sua própria idempotência.

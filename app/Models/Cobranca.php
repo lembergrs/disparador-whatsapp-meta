@@ -199,6 +199,21 @@ class Cobranca
         return $sql->execute([$id]);
     }
 
+    public function registrarPagamentoManual($id, array $dados)
+    {
+        if(!$this->colunaExiste('cobrancas', 'COB_ProviderPayload')){ return true; }
+        $payload = json_encode([
+            'source'=>'manual', 'actual_paid_centavos'=>(int) $dados['valor_pago_centavos'],
+            'referral_discount_decision'=>$dados['decisao_indicacao'], 'note'=>$dados['motivo'] ?: null,
+            'administrator_id'=>$dados['usuario_id'], 'expected_centavos'=>(int) $dados['valor_esperado_centavos'],
+            'amount_divergent'=>(bool) $dados['valor_divergente']
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $sets = ['COB_ProviderPayload = :payload'];
+        if($this->colunaExiste('cobrancas', 'COB_ProviderStatus')){ $sets[] = "COB_ProviderStatus = 'manual_confirmado'"; }
+        $sql = $this->db->prepare('UPDATE cobrancas SET ' . implode(', ', $sets) . ' WHERE COB_ID = :id');
+        return $sql->execute([':id'=>(int) $id, ':payload'=>$payload]);
+    }
+
     public function listar()
     {
         $sql = $this->db->query("
