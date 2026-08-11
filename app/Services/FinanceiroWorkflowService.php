@@ -10,6 +10,7 @@ use Models\MetaConta;
 use Models\Plano;
 use Services\Indicacao\IndicacaoDescontoService;
 use Services\Indicacao\IndicacaoAuditoriaService;
+use Services\Indicacao\IndicacaoPrimeiroPagamentoService;
 
 class FinanceiroWorkflowService
 {
@@ -23,8 +24,9 @@ class FinanceiroWorkflowService
     private $metas;
     private $descontosIndicacao;
     private $auditoriaIndicacao;
+    private $primeiroPagamentoIndicacao;
 
-    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null)
+    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null, $primeiroPagamentoIndicacao = null)
     {
         $this->clientes = $clientes ?: new Cliente();
         $this->assinaturas = $assinaturas ?: new Assinatura();
@@ -36,6 +38,7 @@ class FinanceiroWorkflowService
         $this->metas = $metas ?: new MetaConta();
         $this->descontosIndicacao = $descontosIndicacao;
         $this->auditoriaIndicacao = $auditoriaIndicacao;
+        $this->primeiroPagamentoIndicacao = $primeiroPagamentoIndicacao;
     }
 
     public function contratarPlano(int $clienteId, int $planoId, string $ciclo): array
@@ -135,6 +138,7 @@ class FinanceiroWorkflowService
             }
             $this->ativarAssinaturaDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
+            $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
         });
         $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
         return ['sucesso'=>true, 'cobranca'=>$cobranca];
@@ -179,6 +183,7 @@ class FinanceiroWorkflowService
                 $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
+                $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
             }elseif($status === 'vencido'){
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
@@ -517,6 +522,19 @@ class FinanceiroWorkflowService
     {
         if(!$this->auditoriaIndicacao){ $this->auditoriaIndicacao = new IndicacaoAuditoriaService(); }
         return $this->auditoriaIndicacao;
+    }
+
+    private function processarIndicacaoNoPrimeiroPagamento(array $cobranca, \DateTimeInterface $pagoEm): void
+    {
+        $clienteId = (int) ($cobranca['CLI_ID'] ?? 0);
+        if($clienteId <= 0 || $this->cobrancas->contarPagasPorCliente($clienteId) !== 1){
+            return;
+        }
+
+        if(!$this->primeiroPagamentoIndicacao){
+            $this->primeiroPagamentoIndicacao = new IndicacaoPrimeiroPagamentoService();
+        }
+        $this->primeiroPagamentoIndicacao->processar($clienteId, $pagoEm);
     }
 
     private function valorManualEmCentavos($valor): int

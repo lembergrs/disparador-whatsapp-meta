@@ -15,9 +15,12 @@ use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
 use Services\NotificacaoService;
 use Services\AnalyticsService;
+use Services\Indicacao\IndicacaoWorkflowService;
 
 class SiteController extends Controller
 {
+    private const SESSAO_CODIGO_INDICACAO = 'cadastro_codigo_indicacao';
+
     private function dadosWhatsappSite()
     {
         return (new ConfiguracaoSite())->obterConfiguracaoWhatsappSite();
@@ -38,6 +41,8 @@ class SiteController extends Controller
 
     public function cadastro()
     {
+        $this->capturarCodigoIndicacaoDaUrl();
+
         $this->view('site/cadastro', [
             'titulo' => 'Cadastro',
             'origensCadastro' => Cliente::ORIGENS_CADASTRO,
@@ -80,6 +85,7 @@ class SiteController extends Controller
             'origem_cadastro_outro' => $origemCadastroOutro,
             'aceiteTermos' => $_POST['aceiteTermos'] ?? null
         ];
+        $codigoIndicacao = $this->codigoIndicacaoEmCadastro();
 
         try{
             $origemValidada = Cliente::validarOrigemCadastro(
@@ -273,7 +279,24 @@ class SiteController extends Controller
 
             $usuarioId = $db->lastInsertId();
 
+            if($codigoIndicacao !== null){
+                try{
+                    (new IndicacaoWorkflowService())->registrarIndicacao(
+                        (int) $clienteId,
+                        $codigoIndicacao,
+                        'link'
+                    );
+                }catch(\DomainException $e){
+                    // A indicação é opcional. Revalidações do domínio impedem
+                    // vínculo com código que tenha se tornado inelegível.
+                }
+            }
+
             $db->commit();
+
+            if($codigoIndicacao !== null){
+                Session::remove(self::SESSAO_CODIGO_INDICACAO);
+            }
 
             AnalyticsService::registrar('sign_up', ['method'=>'public_form', 'account_type'=>'client']);
 
@@ -349,6 +372,29 @@ class SiteController extends Controller
 
         header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=site/cadastro');
         exit;
+    }
+
+    private function capturarCodigoIndicacaoDaUrl(): void
+    {
+        if(!array_key_exists('ref', $_GET)){
+            return;
+        }
+
+        try{
+            $validacao = (new IndicacaoWorkflowService())->validarCodigo($_GET['ref']);
+            Session::set(
+                self::SESSAO_CODIGO_INDICACAO,
+                (string) $validacao['codigo']['ICD_CodigoNormalizado']
+            );
+        }catch(\DomainException $e){
+            Session::remove(self::SESSAO_CODIGO_INDICACAO);
+        }
+    }
+
+    private function codigoIndicacaoEmCadastro(): ?string
+    {
+        $codigo = Session::get(self::SESSAO_CODIGO_INDICACAO);
+        return is_string($codigo) && $codigo !== '' ? $codigo : null;
     }
 
     public function politicaPrivacidade()

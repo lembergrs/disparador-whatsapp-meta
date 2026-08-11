@@ -32,6 +32,17 @@ class IndicacaoCodigo
         return $s->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public function buscarPorClienteCampanha($clienteId, $campanhaId, $forUpdate = false)
+    {
+        $sql = 'SELECT * FROM indicacao_codigos WHERE CLI_ID=? AND ICP_ID=? LIMIT 1';
+        if($forUpdate && $this->driver() === 'mysql'){
+            $sql .= ' FOR UPDATE';
+        }
+        $s = $this->db->prepare($sql);
+        $s->execute([(int) $clienteId, (int) $campanhaId]);
+        return $s->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public function criar(array $d)
     {
         $s = $this->db->prepare('INSERT INTO indicacao_codigos (CLI_ID,ICP_ID,ICD_Codigo,ICD_CodigoNormalizado,ICD_Status) VALUES (?,?,?,?,?)');
