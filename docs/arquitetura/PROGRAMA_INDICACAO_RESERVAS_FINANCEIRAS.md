@@ -16,9 +16,10 @@ adicionais permanecem integrais.
 
 Uma criação bem-sucedida no Asaas mantém as reservas em `reservada`. O pagamento
 confirmado pelo workflow (webhook idempotente ou lançamento manual) chama
-`confirmarUtilizacao()`, realizando `reservada -> utilizada`. Cancelamento,
-vencimento ou falha definitiva de criação externa chama `liberarReservas()`,
-realizando `reservada -> liberada`. Eventos duplicados são descartados pela chave
+`confirmarUtilizacao()`, realizando `reservada -> utilizada`. Vencimento simples
+mantém a reserva porque a cobrança ainda aceita pagamento. Cancelamento ou falha
+definitiva de criação externa chama `liberarReservas()`, realizando
+`reservada -> liberada`. Eventos duplicados são descartados pela chave
 idempotente financeira antes da transição do domínio, que também mantém seus locks
 e sua própria idempotência.
 
@@ -38,9 +39,10 @@ A migration incremental `20260807_create_indicacao_credito_reservas.sql` cria `i
 reservada → utilizada
 reservada → liberada
 reservada → cancelada
+liberada → reservada (retry da mesma referência e mesmos snapshots)
 ```
 
-Estados finais não retrocedem. `liberada` representa devolução normal do crédito ao FIFO; `cancelada` fica reservada para encerramentos históricos futuros sem devolução normal.
+`utilizada` e `cancelada` são estados finais. `liberada` representa devolução normal do crédito ao FIFO; no retry da mesma referência financeira, ela pode ser restabelecida como `reservada` se todos os snapshots ainda corresponderem ao desconto congelado e os créditos originais continuarem disponíveis.
 
 ## Ciclos, centavos e mensalidade equivalente
 
@@ -65,6 +67,8 @@ Preparar novamente a mesma referência devolve as mesmas linhas e snapshots, mes
 `confirmarUtilizacao()` bloqueia todas as reservas da referência e, atomicamente, muda reservas para `utilizada` e créditos para `utilizado`. Repetição é idempotente.
 
 `liberarReservas()` exige motivo e muda todas as reservas para `liberada` e todos os créditos para `liberado`. A data original `ICR_LiberadoEm` é preservada quando o crédito retorna do estado `reservado`, mantendo a posição histórica no FIFO. Repetição é idempotente; uma referência já liberada não pode ser confirmada.
+
+`garantirReservasDaReferencia()` protege retries após falha externa. Sob o mesmo lock e transação da referência, valida o total congelado, reutiliza reservas ainda ativas ou restabelece as mesmas reservas liberadas e seus créditos originais. Percentuais, bases, descontos individuais e quantidade não são recalculados. Se algum crédito não puder ser restabelecido ou o total divergir, o retry falha antes de enviar a cobrança ao Asaas.
 
 A auditoria registra `reserva_criada`, `credito_reservado`, `reserva_utilizada`, `credito_utilizado`, `reserva_liberada` e `credito_reliberado`, sem PII.
 

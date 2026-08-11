@@ -61,7 +61,7 @@ Ambos ativam a assinatura e atualizam o cliente após persistência. Esse ponto 
 
 **Integração financeira (Sprint 3B):** o benefício inicial de 50% é calculado no workflow financeiro e registrado separadamente do desconto de indicação. Ele é aplicado à primeira cobrança de todo novo cliente, indicado ou não, sem criar ou consumir `indicacao_creditos`. A partir da segunda cobrança, o workflow delega cálculo e reserva ao `IndicacaoDescontoService` antes da chamada ao Asaas.
 
-O pagamento confirmado delega a utilização das reservas ao mesmo serviço de domínio. Webhooks duplicados são descartados pela idempotência financeira existente; cancelamento, vencimento e falha definitiva de criação no Asaas liberam as reservas. Criar a cobrança externa, portanto, não equivale a consumir os créditos.
+O pagamento confirmado delega a utilização das reservas ao mesmo serviço de domínio. Webhooks duplicados são descartados pela idempotência financeira existente. Vencimento simples mantém as reservas enquanto a cobrança puder ser paga; cancelamento e falha definitiva de criação no Asaas as liberam. No retry da mesma cobrança, o domínio restabelece as reservas originais e valida o desconto congelado antes de uma nova chamada externa. Criar a cobrança externa, portanto, não equivale a consumir os créditos.
 
 ### 2.3 Ciclos e valores
 

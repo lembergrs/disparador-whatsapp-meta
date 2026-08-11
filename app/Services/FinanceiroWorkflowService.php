@@ -131,7 +131,6 @@ class FinanceiroWorkflowService
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
             }elseif($status === 'vencido'){
-                $this->liberarDescontoIndicacao($atualizada, 'cobranca_vencida');
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
                 $this->liberarDescontoIndicacao($atualizada, 'cobranca_cancelada_provider');
@@ -193,7 +192,6 @@ class FinanceiroWorkflowService
         foreach($this->cobrancas->listarPendentesVencidas() as $cobranca){
             $this->transacao->executar(function() use ($cobranca, &$resultado, &$clientes){
                 $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], ['status'=>'vencido']);
-                $this->liberarDescontoIndicacao($cobranca, 'cobranca_vencida');
                 $resultado['cobrancas_vencidas']++;
                 $clienteId = (int) $cobranca['CLI_ID'];
                 if(!isset($clientes[$clienteId])){
@@ -363,6 +361,13 @@ class FinanceiroWorkflowService
     private function prepararDescontosDaCobranca(int $clienteId, array $cobranca, string $ciclo): array
     {
         if(array_key_exists('COB_ValorBaseCentavos', $cobranca) && $cobranca['COB_ValorBaseCentavos'] !== null){
+            if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) > 0){
+                $this->servicoDescontosIndicacao()->garantirReservasDaReferencia(
+                    'cobranca',
+                    (string) $cobranca['COB_ID'],
+                    (int) $cobranca['COB_DescontoIndicacaoCentavos']
+                );
+            }
             return $cobranca;
         }
 
