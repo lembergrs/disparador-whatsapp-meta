@@ -39,7 +39,7 @@ class IndicacaoClienteReadService
 
     private function buscarCliente(int $clienteId): ?array
     {
-        $s = $this->db->prepare('SELECT CLI_ID, CLI_StatusPagamento FROM clientes WHERE CLI_ID=? LIMIT 1');
+        $s = $this->db->prepare("SELECT c.CLI_ID, EXISTS(SELECT 1 FROM cobrancas cb WHERE cb.CLI_ID=c.CLI_ID AND cb.COB_Status='pago') AS CLI_TevePagamentoConfirmado FROM clientes c WHERE c.CLI_ID=? LIMIT 1");
         $s->execute([$clienteId]);
         return $s->fetch(PDO::FETCH_ASSOC) ?: null;
     }
@@ -59,16 +59,18 @@ class IndicacaoClienteReadService
 
     private function montarCompartilhamento(array $cliente, ?array $campanha, ?array $codigo): array
     {
-        if(($cliente['CLI_StatusPagamento'] ?? null) !== 'pago'){
-            return ['disponivel'=>false, 'estado'=>'primeiro_pagamento_pendente', 'mensagem'=>'Seu código ficará disponível após a confirmação do seu primeiro pagamento.'];
-        }
         if(!$campanha){
             return ['disponivel'=>false, 'estado'=>'campanha_indisponivel', 'mensagem'=>'Não há uma campanha de indicação disponível para compartilhamento no momento.'];
         }
-        if(!$codigo){
-            return ['disponivel'=>false, 'estado'=>'codigo_nao_encontrado', 'mensagem'=>'Seu código de indicação ainda está sendo preparado.'];
+        if($codigo && $codigo['ICD_Status'] === 'ativo'){
+            return [
+                'disponivel'=>true,
+                'codigo'=>$codigo['ICD_Codigo'],
+                'campanha_nome'=>$campanha['ICP_Nome'],
+                'percentual'=>$campanha['ICP_Percentual']
+            ];
         }
-        if($codigo['ICD_Status'] !== 'ativo'){
+        if($codigo){
             $mensagens = [
                 'nao_liberado'=>'Seu código de indicação ainda não foi liberado.',
                 'suspenso'=>'Seu código de indicação está temporariamente indisponível.',
@@ -76,12 +78,10 @@ class IndicacaoClienteReadService
             ];
             return ['disponivel'=>false, 'estado'=>$codigo['ICD_Status'], 'mensagem'=>$mensagens[$codigo['ICD_Status']] ?? 'Seu código de indicação não está disponível para compartilhamento.'];
         }
-        return [
-            'disponivel'=>true,
-            'codigo'=>$codigo['ICD_Codigo'],
-            'campanha_nome'=>$campanha['ICP_Nome'],
-            'percentual'=>$campanha['ICP_Percentual']
-        ];
+        if(empty($cliente['CLI_TevePagamentoConfirmado'])){
+            return ['disponivel'=>false, 'estado'=>'primeiro_pagamento_pendente', 'mensagem'=>'Seu código ficará disponível após a confirmação do seu primeiro pagamento.'];
+        }
+        return ['disponivel'=>false, 'estado'=>'codigo_nao_encontrado', 'mensagem'=>'Seu código de indicação ainda está sendo preparado.'];
     }
 
     private function buscarResumo(int $clienteId): array

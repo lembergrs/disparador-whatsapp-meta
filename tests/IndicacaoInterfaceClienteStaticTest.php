@@ -17,6 +17,7 @@ foreach(['CPF', 'CNPJ', 'Email', 'Telefone', 'IND_ID', 'ICR_ID', 'ICRR_Referenci
 iicAssert(strpos($controller, 'site/cadastro&ref=') !== false && strpos($controller, 'rawurlencode') !== false, 'link público usa ref codificado');
 iicAssert(strpos($view, "compartilhamento['disponivel']") !== false && strpos($view, 'btn-copiar') !== false, 'CTA de cópia depende de código disponível');
 iicAssert(strpos($leitura, "SUM(IND_Status='aguardando_pagamento')") !== false && strpos($leitura, "SUM(ICR_Status='liberado')") !== false, 'totais usam estados persistidos');
+iicAssert(strpos($leitura, "COB_Status='pago'") !== false && strpos($leitura, "CLI_StatusPagamento']") === false, 'compartilhamento usa histórico de pagamentos, não status financeiro atual');
 foreach(['FIFO', 'prepararDesconto', 'IndicacaoCalculoDescontoService'] as $termo){ iicAssert(strpos($controller . $view, $termo) === false, 'UI não duplica ' . $termo); }
 iicAssert(strpos($auth, "'indicacao'") !== false && strpos($menu, 'Indique e Ganhe') !== false, 'rota e menu de cliente adicionados');
 
