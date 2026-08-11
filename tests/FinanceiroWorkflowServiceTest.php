@@ -150,11 +150,9 @@ $ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['ciclo'=>'mensal
 $w->gerarCobrancasRecorrentes();$recorrente=$cob->rows[2];
 fwAssert($recorrente['COB_Valor']==='8.50'&&$recorrente['COB_ValorBaseCentavos']===1000&&$recorrente['COB_DescontoIndicacaoCentavos']===150&&count($descontos->preparadas)===1,'segunda cobrança delega desconto e envia valor final');
 fwAssert(empty($descontos->confirmadas),'criação no Asaas mantém crédito apenas reservado');
-$w->processarPagamentoWebhook(['id'=>'evt_indicacao_vencida','event'=>'PAYMENT_OVERDUE','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'OVERDUE']]);
-fwAssert(($descontos->estados['cobranca:2']??null)==='reservada'&&empty($descontos->liberadas),'vencimento por webhook mantém reserva ativa');
-$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED']]);
-$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED']]);
-fwAssert(count($descontos->confirmadas)===1,'webhook duplicado não confirma utilização novamente');
+$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>8.50,'originalValue'=>10.00,'netValue'=>0.01]]);
+$w->processarPagamentoWebhook(['id'=>'evt_indicacao','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$recorrente['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>8.50,'originalValue'=>10.00,'netValue'=>9.99]]);
+fwAssert(($descontos->estados['cobranca:2']??null)==='utilizada'&&count($descontos->confirmadas)===1,'pagamento pontual com desconto de indicação comprovado utiliza uma única vez e ignora netValue');
 
 $descontos2=new FwDescontos();$descontos2->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos2);
 $anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';
@@ -163,9 +161,23 @@ fwAssert(($descontos2->liberadas['cobranca:2']??null)==='falha_criacao_cobranca_
 $valorCongelado=$cob->rows[2]['COB_Valor'];$asaas->falharCriacao=false;$w->gerarCobrancasRecorrentes();$w->gerarCobrancasRecorrentes();
 fwAssert(($descontos2->estados['cobranca:2']??null)==='reservada'&&count($descontos2->garantidas)===1,'retry restabelece uma única reserva ativa antes do Asaas');
 fwAssert($cob->rows[2]['COB_Valor']===$valorCongelado&&$asaas->values===[$valorCongelado,$valorCongelado],'retry preserva exatamente o valor congelado');
-$w->processarPagamentoWebhook(['id'=>'evt_retry_pago','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'CONFIRMED']]);fwAssert(($descontos2->estados['cobranca:2']??null)==='utilizada','pagamento após retry utiliza reserva restabelecida');
+$w->processarPagamentoWebhook(['id'=>'evt_retry_pago','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>8.50,'originalValue'=>10.00]]);fwAssert(($descontos2->estados['cobranca:2']??null)==='utilizada','pagamento após retry utiliza reserva restabelecida com snapshots congelados');
 
-$descontos3=new FwDescontos();$descontos3->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos3);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$cob->rows[2]['COB_Status']='vencido';$w->confirmarPagamentoManual(2);fwAssert(($descontos3->estados['cobranca:2']??null)==='utilizada','confirmação manual tardia utiliza reserva ativa');
+$descontos3=new FwDescontos();$descontos3->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos3);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$cob->rows[2]['COB_Status']='vencido';$w->confirmarPagamentoManual(2);fwAssert(($descontos3->estados['cobranca:2']??null)==='reservada','lançamento manual sem evidência do Asaas não infere utilização da indicação');
+
+$descontos5=new FwDescontos();$descontos5->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos5);
+$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';
+$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();
+$w->processarPagamentoWebhook(['id'=>'evt_late_overdue','event'=>'PAYMENT_OVERDUE','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'OVERDUE']]);
+fwAssert(($descontos5->estados['cobranca:2']??null)==='reservada','vencimento isolado não libera reserva');
+$w->processarPagamentoWebhook(['id'=>'evt_late_paid','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>10.00,'originalValue'=>null]]);
+$duplicado=$w->processarPagamentoWebhook(['id'=>'evt_late_paid','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[2]['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>10.00,'originalValue'=>null]]);
+fwAssert(($descontos5->estados['cobranca:2']??null)==='liberada'&&!empty($duplicado['duplicado'])&&count($descontos5->liberadas)===1,'pagamento tardio sem desconto libera uma única vez');
+
+$descontos6=new FwDescontos();$descontos6->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos6);
+$w->contratarPlano(1,1,'mensal');
+$w->processarPagamentoWebhook(['id'=>'evt_primeira_50','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>$cob->rows[1]['COB_ProviderPaymentId'],'status'=>'CONFIRMED','value'=>5.00,'originalValue'=>10.00]]);
+fwAssert(empty($descontos6->confirmadas)&&empty($descontos6->liberadas),'benefício inicial de 50% não movimenta créditos de indicação');
 
 $descontos4=new FwDescontos();$descontos4->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos4);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$w->cancelarCobranca(2);$w->cancelarCobranca(2);fwAssert(($descontos4->estados['cobranca:2']??null)==='liberada'&&count($descontos4->liberadas)===1,'cancelamento terminal repetido permanece idempotente');
 

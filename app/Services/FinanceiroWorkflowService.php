@@ -83,7 +83,6 @@ class FinanceiroWorkflowService
         }
         $this->transacao->executar(function() use ($cobrancaId, $cobranca){
             $this->cobrancas->marcarPago($cobrancaId);
-            $this->confirmarDescontoIndicacao($cobranca);
             $this->ativarAssinaturaDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
         });
@@ -108,7 +107,7 @@ class FinanceiroWorkflowService
         }
         $status = $this->statusCobrancaPorEvento($evento);
 
-        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $status){
+        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $payment, $status){
             $atualizada = $this->cobrancas->buscarParaAtualizacao($cobranca['COB_ID']);
             if(!$atualizada){ throw new \RuntimeException('Cobrança não encontrada durante o processamento.'); }
             $transicao = $this->resolverTransicaoWebhook(strtolower((string) $atualizada['COB_Status']), $evento, $status);
@@ -127,7 +126,7 @@ class FinanceiroWorkflowService
             $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], $dados);
 
             if($status === 'pago'){
-                $this->confirmarDescontoIndicacao($atualizada);
+                $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
             }elseif($status === 'vencido'){
@@ -400,10 +399,47 @@ class FinanceiroWorkflowService
         return $this->cobrancas->buscar((int) $cobranca['COB_ID']);
     }
 
-    private function confirmarDescontoIndicacao(array $cobranca): void
+    private function reconciliarDescontoIndicacaoNoPagamento(array $cobranca, array $payment): void
     {
         if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) <= 0){ return; }
-        $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobranca['COB_ID']);
+        $decisao = $this->decidirUsoDescontoIndicacao($cobranca, $payment);
+        if($decisao === 'utilizar'){
+            $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobranca['COB_ID']);
+            return;
+        }
+        if($decisao === 'liberar'){
+            $this->liberarDescontoIndicacao($cobranca, 'pagamento_sem_desconto_indicacao');
+        }
+    }
+
+    private function decidirUsoDescontoIndicacao(array $cobranca, array $payment): string
+    {
+        if(!array_key_exists('COB_ValorBaseCentavos', $cobranca) || $cobranca['COB_ValorBaseCentavos'] === null){
+            return 'indeterminado';
+        }
+
+        $valorPago = $this->valorProviderEmCentavos($payment['value'] ?? null);
+        if($valorPago === null){ return 'indeterminado'; }
+
+        $valorNominal = max(0, (int) $cobranca['COB_ValorBaseCentavos'])
+            + max(0, (int) ($cobranca['COB_AdicionaisCentavos'] ?? 0));
+        $descontoInicial = max(0, (int) ($cobranca['COB_DescontoInicialCentavos'] ?? 0));
+        $descontoIndicacao = max(0, (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0));
+        $valorComIndicacao = max(0, $valorNominal - $descontoInicial - $descontoIndicacao);
+        $valorSemIndicacao = max(0, $valorNominal - $descontoInicial);
+        $valorOriginal = array_key_exists('originalValue', $payment) && $payment['originalValue'] !== null
+            ? $this->valorProviderEmCentavos($payment['originalValue'])
+            : null;
+
+        // Asaas informa originalValue quando o valor efetivamente pago diverge do
+        // original. Sem esse par, não é seguro atribuir o desconto à indicação.
+        if($valorPago === $valorComIndicacao && $valorOriginal === $valorNominal){
+            return 'utilizar';
+        }
+        if($valorPago === $valorSemIndicacao && ($valorOriginal === null || $valorOriginal === $valorNominal)){
+            return 'liberar';
+        }
+        return 'indeterminado';
     }
 
     private function liberarDescontoIndicacao(array $cobranca, string $motivo): void
@@ -425,6 +461,18 @@ class FinanceiroWorkflowService
             throw new \DomainException('Valor inválido para cobrança.');
         }
         return ((int) $partes[1] * 100) + (int) str_pad($partes[2] ?? '', 2, '0');
+    }
+
+    private function valorProviderEmCentavos($valor): ?int
+    {
+        if($valor === null || $valor === ''){ return null; }
+        if(is_int($valor)){ return $valor * 100; }
+        if(is_float($valor)){ $valor = number_format($valor, 2, '.', ''); }
+        try{
+            return $this->valorEmCentavos($valor);
+        }catch(\DomainException $e){
+            return null;
+        }
     }
 
     private function centavosEmValor(int $centavos): string
@@ -576,7 +624,7 @@ class FinanceiroWorkflowService
     private function payloadProviderSeguro(array $payload, ?array $decisao = null): string
     {
         $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : $payload;
-        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
+        return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','originalValue','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
     }
 
     private function log(string $evento, array $dados): void
