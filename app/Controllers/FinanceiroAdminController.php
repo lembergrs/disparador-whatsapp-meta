@@ -181,7 +181,7 @@ class FinanceiroAdminController extends Controller
         $this->validarCsrfPost();
         Auth::admin();
         try{
-            (new Cobranca())->cancelar((int) ($_GET['id'] ?? 0));
+            (new FinanceiroWorkflowService())->cancelarCobranca((int) ($_GET['id'] ?? 0));
             Session::flash('success', 'Cobrança cancelada.');
         }catch(\Throwable $e){
             error_log('Erro ao cancelar cobrança: ' . $e->getMessage());

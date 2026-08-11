@@ -1,8 +1,37 @@
 # Reservas financeiras de créditos de indicação
 
+## Integração com o Financeiro (Sprint 3B)
+
+`FinanceiroWorkflowService` cria primeiro `cobrancas.COB_ID` e, antes de chamar o
+Asaas, delega a preparação da cobrança elegível a
+`IndicacaoDescontoService::prepararDesconto()`, usando a referência
+`cobranca:<COB_ID>`. O workflow não seleciona créditos, não calcula percentuais e
+não implementa FIFO: essas responsabilidades continuam no domínio de indicação.
+
+A composição enviada ao provedor fica congelada na cobrança (valor-base, ciclo,
+desconto inicial, desconto de indicação, adicionais e valor final). A primeira
+cobrança recebe o benefício comercial independente de 50% e não consulta nem
+reserva créditos. Somente cobranças posteriores podem reservar créditos; valores
+adicionais permanecem integrais.
+
+Na fronteira do Asaas, `value` recebe o nominal congelado (valor-base mais
+adicionais) e a soma monetária dos benefícios congelados é enviada como
+`discount.value`, com `type=FIXED` e `dueDateLimitDays=0`. `COB_Valor` preserva a
+semântica interna líquida usada pelas telas e pela NFS-e; percentuais, FIFO,
+campanha e limites por ciclo nunca são enviados ao provedor.
+
+Uma criação bem-sucedida no Asaas mantém as reservas em `reservada`. O pagamento
+confirmado pelo workflow (webhook idempotente ou lançamento manual) chama
+`confirmarUtilizacao()`, realizando `reservada -> utilizada`. Vencimento simples
+mantém a reserva porque a cobrança ainda aceita pagamento. Cancelamento ou falha
+definitiva de criação externa chama `liberarReservas()`, realizando
+`reservada -> liberada`. Eventos duplicados são descartados pela chave
+idempotente financeira antes da transição do domínio, que também mantém seus locks
+e sua própria idempotência.
+
 ## Escopo
 
-A Sprint 3A implementa um motor interno e isolado para calcular e reservar créditos antes de uma futura cobrança. Ele não cria cobrança, não conhece Asaas e não altera Financeiro, assinatura, recorrência, Scheduler, worker ou interface.
+A Sprint 3A implementou um motor interno e isolado para calcular e reservar créditos antes de uma cobrança. O motor não conhece o Asaas; a Sprint 3B apenas passou a consumi-lo pelo workflow financeiro.
 
 ## Tabela e cardinalidade
 
@@ -16,9 +45,10 @@ A migration incremental `20260807_create_indicacao_credito_reservas.sql` cria `i
 reservada → utilizada
 reservada → liberada
 reservada → cancelada
+liberada → reservada (retry da mesma referência e mesmos snapshots)
 ```
 
-Estados finais não retrocedem. `liberada` representa devolução normal do crédito ao FIFO; `cancelada` fica reservada para encerramentos históricos futuros sem devolução normal.
+`utilizada` e `cancelada` são estados finais. `liberada` representa devolução normal do crédito ao FIFO; no retry da mesma referência financeira, ela pode ser restabelecida como `reservada` se todos os snapshots ainda corresponderem ao desconto congelado e os créditos originais continuarem disponíveis.
 
 ## Ciclos, centavos e mensalidade equivalente
 
@@ -43,6 +73,8 @@ Preparar novamente a mesma referência devolve as mesmas linhas e snapshots, mes
 `confirmarUtilizacao()` bloqueia todas as reservas da referência e, atomicamente, muda reservas para `utilizada` e créditos para `utilizado`. Repetição é idempotente.
 
 `liberarReservas()` exige motivo e muda todas as reservas para `liberada` e todos os créditos para `liberado`. A data original `ICR_LiberadoEm` é preservada quando o crédito retorna do estado `reservado`, mantendo a posição histórica no FIFO. Repetição é idempotente; uma referência já liberada não pode ser confirmada.
+
+`garantirReservasDaReferencia()` protege retries após falha externa. Sob o mesmo lock e transação da referência, valida o total congelado, reutiliza reservas ainda ativas ou restabelece as mesmas reservas liberadas e seus créditos originais. Percentuais, bases, descontos individuais e quantidade não são recalculados. Se algum crédito não puder ser restabelecido ou o total divergir, o retry falha antes de enviar a cobrança ao Asaas.
 
 A auditoria registra `reserva_criada`, `credito_reservado`, `reserva_utilizada`, `credito_utilizado`, `reserva_liberada` e `credito_reliberado`, sem PII.
 

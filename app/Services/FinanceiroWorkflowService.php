@@ -8,6 +8,7 @@ use Models\Cobranca;
 use Models\FinanceiroTransacao;
 use Models\MetaConta;
 use Models\Plano;
+use Services\Indicacao\IndicacaoDescontoService;
 
 class FinanceiroWorkflowService
 {
@@ -19,8 +20,9 @@ class FinanceiroWorkflowService
     private $recorrencia;
     private $transacao;
     private $metas;
+    private $descontosIndicacao;
 
-    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null)
+    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null)
     {
         $this->clientes = $clientes ?: new Cliente();
         $this->assinaturas = $assinaturas ?: new Assinatura();
@@ -30,6 +32,7 @@ class FinanceiroWorkflowService
         $this->recorrencia = $recorrencia ?: new FinanceiroRecorrenciaService();
         $this->transacao = $transacao ?: new FinanceiroTransacao();
         $this->metas = $metas ?: new MetaConta();
+        $this->descontosIndicacao = $descontosIndicacao;
     }
 
     public function contratarPlano(int $clienteId, int $planoId, string $ciclo): array
@@ -50,7 +53,7 @@ class FinanceiroWorkflowService
             if((int) $pendente['PLA_ID'] !== $planoId){
                 throw new \DomainException('Já existe uma cobrança pendente para este cliente.');
             }
-            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano);
+            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano, $ciclo);
             return array_merge($integracao, ['cobranca_id'=>(int) $pendente['COB_ID'], 'plano'=>$plano]);
         }
 
@@ -67,7 +70,7 @@ class FinanceiroWorkflowService
             ]);
         });
 
-        $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano);
+        $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano, $ciclo);
         $this->log('contratacao', ['cliente_id'=>$clienteId, 'cobranca_id'=>$cobrancaId, 'sucesso'=>$integracao['sucesso']]);
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId, 'plano'=>$plano]);
     }
@@ -80,6 +83,7 @@ class FinanceiroWorkflowService
         }
         $this->transacao->executar(function() use ($cobrancaId, $cobranca){
             $this->cobrancas->marcarPago($cobrancaId);
+            $this->confirmarDescontoIndicacao($cobranca);
             $this->ativarAssinaturaDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
         });
@@ -123,9 +127,13 @@ class FinanceiroWorkflowService
             $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], $dados);
 
             if($status === 'pago'){
+                $this->confirmarDescontoIndicacao($atualizada);
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
             }elseif($status === 'vencido'){
+                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
+            }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
+                $this->liberarDescontoIndicacao($atualizada, 'cobranca_cancelada_provider');
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($evento === 'PAYMENT_REFUNDED'){
                 // Reembolso afeta a cobrança e a situação financeira, mas a decisão
@@ -161,7 +169,7 @@ class FinanceiroWorkflowService
                 });
                 $cobrancaId = $reserva['id'];
                 $plano = $this->planos->buscar($assinatura['PLA_ID']);
-                $integracao = $this->integrarCobrancaAsaas($assinatura['CLI_ID'], (int) $cobrancaId, $plano ?: []);
+                $integracao = $this->integrarCobrancaAsaas($assinatura['CLI_ID'], (int) $cobrancaId, $plano ?: [], $assinatura['ASS_Ciclo']);
                 if(!$integracao['sucesso']){
                     $resultado['erros']++;
                     continue;
@@ -202,11 +210,28 @@ class FinanceiroWorkflowService
     public function cancelarContrato(int $clienteId, string $motivo = ''): array
     {
         $this->transacao->executar(function() use ($clienteId){
+            foreach($this->cobrancas->listarPendentesPorCliente($clienteId) as $cobranca){
+                $this->liberarDescontoIndicacao($cobranca, 'contrato_cancelado');
+            }
             $this->assinaturas->cancelarVigentesPorCliente($clienteId);
             $this->cobrancas->cancelarPendentesPorCliente($clienteId);
             $this->clientes->atualizarEstadoFinanceiro($clienteId, ['status_pagamento'=>'pendente', 'status_cadastro'=>'suspenso']);
         });
         $this->log('cancelamento_contrato', ['cliente_id'=>$clienteId, 'motivo'=>$motivo]);
+        return ['sucesso'=>true];
+    }
+
+    public function cancelarCobranca(int $cobrancaId, string $motivo = 'cancelamento_manual'): array
+    {
+        $this->transacao->executar(function() use ($cobrancaId, $motivo){
+            $cobranca = $this->cobrancas->buscarParaAtualizacao($cobrancaId);
+            if(!$cobranca){ throw new \DomainException('Cobrança não encontrada.'); }
+            if(($cobranca['COB_Status'] ?? '') === 'cancelado'){ return; }
+            if(($cobranca['COB_Status'] ?? '') === 'pago'){ throw new \DomainException('Cobrança paga não pode ser cancelada por este fluxo.'); }
+            $this->liberarDescontoIndicacao($cobranca, $motivo);
+            $this->cobrancas->cancelar($cobrancaId);
+        });
+        $this->log('cancelamento_cobranca', ['cobranca_id'=>$cobrancaId, 'motivo'=>$motivo]);
         return ['sucesso'=>true];
     }
 
@@ -238,7 +263,7 @@ class FinanceiroWorkflowService
         $pendente = $this->cobrancas->buscarPendentePorCliente($clienteId);
         if($pendente && (int) $pendente['PLA_ID'] === (int) $plano['PLA_ID']){
             $this->garantirReativacaoPendente($clienteId, $pendente, $plano, $ciclo, $valor);
-            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano);
+            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $pendente['COB_ID'], $plano, $ciclo);
             return array_merge($integracao, ['cobranca_id'=>(int) $pendente['COB_ID']]);
         }
         $cobrancaId = $this->transacao->executar(function() use ($clienteId, $assinatura, $plano, $ciclo, $valor){
@@ -248,7 +273,7 @@ class FinanceiroWorkflowService
             $this->clientes->atualizarEstadoFinanceiro($clienteId, ['ativo'=>'S','status_cadastro'=>'suspenso','status_pagamento'=>'pendente','plano'=>$plano['PLA_ID']]);
             return $this->cobrancas->criar(['cliente'=>$clienteId,'plano'=>$plano['PLA_ID'],'assinatura'=>$atual['ASS_ID'] ?? null,'valor'=>$valor,'vencimento'=>date('Y-m-d', strtotime('+3 days')),'tipo'=>'mensalidade','provider'=>'asaas','provider_status'=>'local_pendente']);
         });
-        $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano);
+        $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano, $ciclo);
         $this->log('reativacao_contrato', ['cliente_id'=>$clienteId,'cobranca_id'=>$cobrancaId,'integrada'=>$integracao['sucesso']]);
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId]);
     }
@@ -262,9 +287,9 @@ class FinanceiroWorkflowService
         return ['sucesso'=>true];
     }
 
-    private function integrarCobrancaAsaas(int $clienteId, int $cobrancaId, array $plano): array
+    private function integrarCobrancaAsaas(int $clienteId, int $cobrancaId, array $plano, string $ciclo): array
     {
-        return $this->cobrancas->comLockIntegracao($cobrancaId, function() use ($clienteId, $cobrancaId, $plano){
+        return $this->cobrancas->comLockIntegracao($cobrancaId, function() use ($clienteId, $cobrancaId, $plano, $ciclo){
             $cliente = $this->clientes->buscar($clienteId);
             $cobranca = $this->cobrancas->buscar($cobrancaId);
             if(!$cliente || !$cobranca){ throw new \RuntimeException('Cliente ou cobrança não encontrada.'); }
@@ -279,11 +304,14 @@ class FinanceiroWorkflowService
                 return ['sucesso'=>true,'reconciliada'=>true,'mensagem'=>'Cobrança já integrada.'];
             }
 
+            $cobranca = $this->prepararDescontosDaCobranca($clienteId, $cobranca, $ciclo);
+
             $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
             if($customerId === ''){
                 $respostaCliente = $this->asaas->criarOuAtualizarCliente($cliente);
                 if(empty($respostaCliente['sucesso']) || empty($respostaCliente['response']['id'])){
                     $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_status'=>'erro_cliente','provider_payload'=>$this->payloadProviderSeguro($respostaCliente['response'] ?? [])]);
+                    $this->liberarDescontoIndicacao($cobranca, 'falha_criacao_cliente_asaas');
                     return ['sucesso'=>false,'mensagem'=>'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'];
                 }
                 $customerId = $respostaCliente['response']['id'];
@@ -317,6 +345,7 @@ class FinanceiroWorkflowService
                 if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
                     $payloadErro = array_merge(is_array($resposta['response'] ?? null) ? $resposta['response'] : [], ['externalReference'=>$referencia]);
                     $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_cobranca','provider_payload'=>$this->payloadProviderSeguro($payloadErro)]);
+                    $this->liberarDescontoIndicacao($cobranca, 'falha_criacao_cobranca_asaas');
                     return ['sucesso'=>false,'mensagem'=>'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'];
                 }
                 $pagamento = $resposta['response'];
@@ -327,6 +356,80 @@ class FinanceiroWorkflowService
             $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_payment_id'=>$pagamento['id'],'provider_status'=>$pagamento['status'] ?? null,'provider_payload'=>$this->payloadProviderSeguro($pagamento),'link_pagamento'=>$pagamento['invoiceUrl'] ?? ($pagamento['bankSlipUrl'] ?? null),'pix_copia_cola'=>$pixDados['payload'] ?? null,'qr_code'=>$pixDados['encodedImage'] ?? null,'linha_digitavel'=>$pagamento['identificationField'] ?? null,'status'=>'pendente']);
             return ['sucesso'=>true,'reconciliada'=>$reconciliada,'mensagem'=>'Plano selecionado. A cobrança foi criada e o link de pagamento está disponível.'];
         });
+    }
+
+    private function prepararDescontosDaCobranca(int $clienteId, array $cobranca, string $ciclo): array
+    {
+        if(array_key_exists('COB_ValorBaseCentavos', $cobranca) && $cobranca['COB_ValorBaseCentavos'] !== null){
+            if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) > 0){
+                $this->servicoDescontosIndicacao()->garantirReservasDaReferencia(
+                    'cobranca',
+                    (string) $cobranca['COB_ID'],
+                    (int) $cobranca['COB_DescontoIndicacaoCentavos']
+                );
+            }
+            return $cobranca;
+        }
+
+        $valorBaseCentavos = $this->valorEmCentavos($cobranca['COB_Valor']);
+        $primeiraCobranca = $this->cobrancas->contarAnterioresDoCliente($clienteId, (int) $cobranca['COB_ID']) === 0;
+        $descontoInicialCentavos = $primeiraCobranca ? intdiv($valorBaseCentavos + 1, 2) : 0;
+        $descontoIndicacaoCentavos = 0;
+
+        if(!$primeiraCobranca){
+            $resultado = $this->servicoDescontosIndicacao()->prepararDesconto(
+                $clienteId,
+                $ciclo,
+                $valorBaseCentavos,
+                'cobranca',
+                (string) $cobranca['COB_ID']
+            );
+            $descontoIndicacaoCentavos = (int) ($resultado['desconto_total_centavos'] ?? 0);
+        }
+
+        $valorFinalCentavos = max(0, $valorBaseCentavos - $descontoInicialCentavos - $descontoIndicacaoCentavos);
+        $this->cobrancas->registrarComposicaoDesconto((int) $cobranca['COB_ID'], [
+            'valor_base_centavos'=>$valorBaseCentavos,
+            'desconto_inicial_centavos'=>$descontoInicialCentavos,
+            'desconto_indicacao_centavos'=>$descontoIndicacaoCentavos,
+            'adicionais_centavos'=>0,
+            'ciclo'=>$ciclo,
+            'valor'=>$this->centavosEmValor($valorFinalCentavos)
+        ]);
+
+        return $this->cobrancas->buscar((int) $cobranca['COB_ID']);
+    }
+
+    private function confirmarDescontoIndicacao(array $cobranca): void
+    {
+        if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) <= 0){ return; }
+        $this->servicoDescontosIndicacao()->confirmarUtilizacao('cobranca', (string) $cobranca['COB_ID']);
+    }
+
+    private function liberarDescontoIndicacao(array $cobranca, string $motivo): void
+    {
+        if((int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) <= 0){ return; }
+        $this->servicoDescontosIndicacao()->liberarReservas('cobranca', (string) $cobranca['COB_ID'], $motivo);
+    }
+
+    private function servicoDescontosIndicacao()
+    {
+        if(!$this->descontosIndicacao){ $this->descontosIndicacao = new IndicacaoDescontoService(); }
+        return $this->descontosIndicacao;
+    }
+
+    private function valorEmCentavos($valor): int
+    {
+        $texto = str_replace(',', '.', trim((string) $valor));
+        if(!preg_match('/^(\d+)(?:\.(\d{1,2}))?$/', $texto, $partes)){
+            throw new \DomainException('Valor inválido para cobrança.');
+        }
+        return ((int) $partes[1] * 100) + (int) str_pad($partes[2] ?? '', 2, '0');
+    }
+
+    private function centavosEmValor(int $centavos): string
+    {
+        return intdiv($centavos, 100) . '.' . str_pad((string) ($centavos % 100), 2, '0', STR_PAD_LEFT);
     }
 
     private function primeiraCobrancaEncontrada(array $resposta): ?array

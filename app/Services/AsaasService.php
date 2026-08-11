@@ -138,16 +138,48 @@ class AsaasService
 
     public function criarCobranca($cliente, $cobranca, $externalReference = null)
     {
+        $composicao = $this->composicaoMonetariaCobranca($cobranca);
         $payload = [
             'customer' => $cliente['CLI_ProviderCustomerId'],
             'billingType' => 'UNDEFINED',
             'dueDate' => $cobranca['COB_DataVencimento'],
-            'value' => (float) $cobranca['COB_Valor'],
+            'value' => $composicao['valor_nominal'],
             'description' => $cobranca['descricao'] ?? 'Mensalidade Disparador.net',
             'externalReference' => $externalReference ?: 'cobranca_' . $cobranca['COB_ID']
         ];
 
+        if($composicao['desconto_fixo'] > 0){
+            $payload['discount'] = [
+                'value' => $composicao['desconto_fixo'],
+                'type' => 'FIXED',
+                'dueDateLimitDays' => 0
+            ];
+        }
+
         return $this->request('POST', '/payments', $payload);
+    }
+
+    private function composicaoMonetariaCobranca(array $cobranca): array
+    {
+        if(!array_key_exists('COB_ValorBaseCentavos', $cobranca) || $cobranca['COB_ValorBaseCentavos'] === null){
+            return ['valor_nominal'=>(float) $cobranca['COB_Valor'], 'desconto_fixo'=>0.0];
+        }
+
+        $valorBase = max(0, (int) $cobranca['COB_ValorBaseCentavos']);
+        $adicionais = max(0, (int) ($cobranca['COB_AdicionaisCentavos'] ?? 0));
+        $descontoInicial = max(0, (int) ($cobranca['COB_DescontoInicialCentavos'] ?? 0));
+        $descontoIndicacao = max(0, (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0));
+        $valorNominal = $valorBase + $adicionais;
+        $descontoFixo = $descontoInicial + $descontoIndicacao;
+
+        if($valorNominal <= 0 || $descontoFixo > $valorNominal){
+            throw new \DomainException('Composição monetária inválida para cobrança no Asaas.');
+        }
+
+        return [
+            'valor_nominal'=>round($valorNominal / 100, 2),
+            'desconto_fixo'=>round($descontoFixo / 100, 2)
+        ];
     }
 
     public function buscarCobrancaPorReferenciaExterna($externalReference)
