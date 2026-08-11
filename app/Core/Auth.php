@@ -624,6 +624,7 @@ class Auth
                 [
                     'dashboard',
                     'financeiro',
+                    'indicacao',
                     'conta',
                     'login',
                     'site'
