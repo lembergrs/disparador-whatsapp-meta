@@ -93,6 +93,65 @@ class MetaWebhookMessageIngestionService
         return $resultado;
     }
 
+    public function processarHistorico(array $value, array $metaConta)
+    {
+        $resultado = ['criadas'=>0, 'duplicadas'=>0, 'invalidas'=>0];
+
+        foreach(($value['history'] ?? []) as $chunk){
+            if(!empty($chunk['errors'])){
+                $this->log('history_indisponivel', [
+                    'phone_number_id'=>$value['metadata']['phone_number_id'] ?? null,
+                    'error_code'=>$chunk['errors'][0]['code'] ?? null
+                ]);
+                continue;
+            }
+
+            foreach(($chunk['threads'] ?? []) as $thread){
+                foreach(($thread['messages'] ?? []) as $message){
+                    try{
+                        $dados = $this->parseHistorico($message, $thread, $value);
+                        if(!$dados){
+                            $resultado['invalidas']++;
+                            $this->log('history_mensagem_invalida', [
+                                'phone_number_id'=>$value['metadata']['phone_number_id'] ?? null,
+                                'message_id'=>$this->identificadorSeguro($message['id'] ?? null),
+                                'type'=>$message['type'] ?? null
+                            ]);
+                            continue;
+                        }
+
+                        $persistencia = $this->conversaModel->ingerirMensagemIdempotente($metaConta['MTA_ID'], [
+                            'direcao'=>$dados['direcao'],
+                            'tipo'=>$dados['tipo'],
+                            'texto'=>$dados['texto'],
+                            'message_id'=>$dados['message_id'],
+                            'status'=>$dados['status'],
+                            'origem'=>'history',
+                            'retorno'=>$message,
+                            'data_mensagem'=>$dados['data_mensagem'],
+                            'resumo_mode'=>'history'
+                        ], function() use ($metaConta, $dados){
+                            return $this->conversaModel->buscarOuCriar(
+                                $metaConta['CLI_ID'], $metaConta['MTA_ID'], $dados['participante'], null, false
+                            );
+                        });
+
+                        empty($persistencia['created']) ? $resultado['duplicadas']++ : $resultado['criadas']++;
+                    }catch(\Throwable $e){
+                        $resultado['invalidas']++;
+                        $this->log('history_mensagem_erro', [
+                            'phone_number_id'=>$value['metadata']['phone_number_id'] ?? null,
+                            'message_id'=>$this->identificadorSeguro($message['id'] ?? null),
+                            'error_class'=>get_class($e)
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return $resultado;
+    }
+
     private function parseInbound(array $message, array $value)
     {
         $participante = $this->telefoneValido($message['from'] ?? null);
@@ -140,11 +199,51 @@ class MetaWebhookMessageIngestionService
         return $this->dadosMensagem($message, $participante, $messageId, $nome);
     }
 
-    private function dadosMensagem(array $message, $participante, $messageId, $nome)
+    private function parseHistorico(array $message, array $thread, array $value)
+    {
+        $threadId = $this->telefoneValido($thread['id'] ?? null);
+        $business = $this->telefoneValido($value['metadata']['display_phone_number'] ?? null);
+        $from = $this->telefoneValido($message['from'] ?? null);
+        $to = $this->telefoneValido($message['to'] ?? null);
+        $messageId = trim((string) ($message['id'] ?? ''));
+        $timestamp = filter_var($message['timestamp'] ?? null, FILTER_VALIDATE_INT);
+
+        if(!$threadId || !$business || !$from || $messageId === '' || !$timestamp || $timestamp <= 0){
+            return null;
+        }
+
+        $threadDigits = $this->somenteDigitos($threadId);
+        $businessDigits = $this->somenteDigitos($business);
+        $fromDigits = $this->somenteDigitos($from);
+
+        if($fromDigits === $businessDigits){
+            if(!$to || $this->somenteDigitos($to) !== $threadDigits || $threadDigits === $businessDigits){
+                return null;
+            }
+            $direcao = 'enviada';
+            $status = $this->statusHistoricoSaida($message['history_context']['status'] ?? null);
+        }elseif($fromDigits === $threadDigits && (!$to || $this->somenteDigitos($to) === $businessDigits)){
+            $direcao = 'recebida';
+            $status = 'recebida';
+        }else{
+            return null;
+        }
+
+        if(!$this->tipoHistoricoSuportado($message['type'] ?? null)) return null;
+        $dados = $this->dadosMensagem($message, $threadId, $messageId, null, true);
+        if(!$dados) return null;
+        $dados['direcao'] = $direcao;
+        $dados['status'] = $status;
+        return $dados;
+    }
+
+    private function dadosMensagem(array $message, $participante, $messageId, $nome, $timestampObrigatorio = false)
     {
         $tipo = trim((string) ($message['type'] ?? 'text')) ?: 'text';
         $texto = $this->textoMensagem($message, $tipo);
         $timestamp = filter_var($message['timestamp'] ?? null, FILTER_VALIDATE_INT);
+
+        if($timestampObrigatorio && (!$timestamp || $timestamp <= 0)) return null;
 
         return [
             'participante'=>$participante,
@@ -156,6 +255,21 @@ class MetaWebhookMessageIngestionService
                 ? date('Y-m-d H:i:s', $timestamp)
                 : date('Y-m-d H:i:s')
         ];
+    }
+
+    private function statusHistoricoSaida($status)
+    {
+        $status = strtolower(trim((string) $status));
+        return in_array($status, ['sent','delivered','read','failed'], true) ? $status : 'sent';
+    }
+
+    private function tipoHistoricoSuportado($tipo)
+    {
+        return in_array(strtolower(trim((string) $tipo)), [
+            'text', 'button', 'interactive',
+            'image', 'video', 'document', 'audio', 'sticker',
+            'location', 'contacts', 'media_placeholder'
+        ], true);
     }
 
     private function textoMensagem(array $message, $tipo)

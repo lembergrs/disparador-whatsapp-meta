@@ -176,11 +176,19 @@ class Conversa
         ]);
         $sql->execute($params);
 
-        $this->atualizarResumo(
-            $dados['conversa_id'],
-            $dados['texto'] ?? '',
-            $dados['direcao']
-        );
+        if(($dados['resumo_mode'] ?? 'normal') === 'history'){
+            $this->atualizarResumoHistorico(
+                $dados['conversa_id'],
+                $dados['texto'] ?? '',
+                $dados['data_mensagem'] ?? null
+            );
+        }else{
+            $this->atualizarResumo(
+                $dados['conversa_id'],
+                $dados['texto'] ?? '',
+                $dados['direcao']
+            );
+        }
 
         return $this->db->lastInsertId();
     }
@@ -284,6 +292,27 @@ class Conversa
         return $sql->execute([
             $ultimaMensagem,
             $conversaId
+        ]);
+    }
+
+    public function atualizarResumoHistorico($conversaId, $ultimaMensagem, $dataMensagem)
+    {
+        if(!$dataMensagem || !strtotime((string) $dataMensagem)) return false;
+
+        $sql = $this->db->prepare("
+            UPDATE conversas
+            SET CVS_UltimaMensagem = ?,
+                CVS_DataUltimaMensagem = ?,
+                CVS_DataAtualizacao = NOW()
+            WHERE CVS_ID = ?
+            AND (CVS_UltimaMensagem IS NULL OR CVS_DataUltimaMensagem IS NULL OR CVS_DataUltimaMensagem < ?)
+        ");
+
+        return $sql->execute([
+            $ultimaMensagem,
+            $dataMensagem,
+            $conversaId,
+            $dataMensagem
         ]);
     }
 
@@ -439,24 +468,20 @@ class Conversa
     public function listarMensagens($conversaId)
     {
         $sql = $this->db->prepare("
-
             SELECT *
-
-            FROM conversa_mensagens
-
-            WHERE CVS_ID = ?
-
-            ORDER BY MSG_ID DESC
-
-            LIMIT 100
-
+            FROM (
+                SELECT *
+                FROM conversa_mensagens
+                WHERE CVS_ID = ?
+                ORDER BY MSG_DataMensagem DESC, MSG_ID DESC
+                LIMIT 100
+            ) mensagens_recentes
+            ORDER BY MSG_DataMensagem ASC, MSG_ID ASC
         ");
 
         $sql->execute([$conversaId]);
 
-        $mensagens = $sql->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_reverse($mensagens);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function atualizarStatusPorMetaMessageId($messageId, $novoStatus, $dataEvento = null, array $erro = [])

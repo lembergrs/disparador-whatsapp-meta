@@ -105,7 +105,7 @@ echoAssert(strpos($webhook, "\$field === 'messages'") !== false, 'webhook roteia
 echoAssert(strpos($webhook, "\$field === 'smb_message_echoes'") !== false, 'webhook roteia echoes explicitamente');
 echoAssert(strpos($conversa, 'ingerirMensagemIdempotente') !== false && strpos($conversa, 'FOR UPDATE') !== false, 'persistência usa primitiva idempotente transacional');
 echoAssert(strpos($conversa, 'INNER JOIN conversas c') !== false && strpos($conversa, 'c.MTA_ID=?') !== false, 'deduplicação é escopada por conta Meta');
-echoAssert(strpos($webhook, "\$field === 'history'") === false && strpos($webhook, "\$field === 'smb_app_state_sync'") === false, 'Phase 2A não implementa history nem state sync');
+echoAssert(strpos($webhook, "\$field === 'history'") !== false && strpos($webhook, "\$field === 'smb_app_state_sync'") !== false, 'roteamento posterior de history/state sync não altera echoes');
 echoAssert(strpos($config, "env_valor('META_COEXISTENCE_ENABLED', 'false')") !== false, 'Coexistence permanece desabilitado por padrão');
 
 echo "Meta webhook Coexistence echo tests passed\n";

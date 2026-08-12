@@ -47,7 +47,7 @@ coexistenceAssert(strpos($controller, "? \$this->embeddedSignupFlowService()->de
 coexistenceAssert(strpos($attempt, 'onboarding_type') !== false, 'tentativa persiste o modo');
 coexistenceAssert(strpos($account, 'MTA_OnboardingType') !== false && strpos($account, 'MTA_PlatformType') !== false, 'conta persiste modo e plataforma');
 coexistenceAssert(strpos($migration, 'MTA_OnboardingType') !== false && strpos($migration, 'MTA_PlatformType') !== false && strpos($migration, 'onboarding_type') !== false, 'migration contém campos mínimos');
-coexistenceAssert(strpos($webhook, 'smb_app_state_sync') === false, 'smb_app_state_sync permanece fora da infraestrutura disponível');
+coexistenceAssert(strpos($webhook, "\$field === 'smb_app_state_sync'") !== false, 'infraestrutura posterior preserva o roteamento state sync');
 
 $calls = [];
 $service = new EmbeddedSignupFlowService(function($endpoint) use (&$calls){ $calls[] = $endpoint; return ['success'=>true]; }, '123');
