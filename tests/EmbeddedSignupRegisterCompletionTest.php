@@ -16,7 +16,11 @@ $migration = file_get_contents($root . '/database/migrations/20260717_expand_met
 $flow = file_get_contents($root . '/app/Services/EmbeddedSignupFlowService.php');
 
 registerAssert(strpos($controller, "'pendente_registro'") !== false, 'Embedded Signup define pendente_registro');
-registerAssert(strpos($controller, "'status' => 'pendente_registro'") !== false, 'persistência do Embedded usa pendente_registro');
+registerAssert(
+    strpos($controller, ": 'pendente_registro';") !== false
+    && strpos($controller, "'status' => \$statusConexao") !== false,
+    'persistência traditional continua usando pendente_registro'
+);
 registerAssert(strpos($controller, "Número vinculado com sucesso. Falta concluir o registro") !== false, 'mensagem não declara conexão concluída antes do register');
 registerAssert(strpos($controller, 'pin_confirmacao') !== false, 'endpoint valida confirmação de PIN');
 registerAssert(strpos($controller, 'registrarPhoneNumberMeta($conta[\'MTA_PhoneNumberId\'], $pin, $conta[\'MTA_Token\'])') !== false, 'register usa phone_number_id e token do banco');
