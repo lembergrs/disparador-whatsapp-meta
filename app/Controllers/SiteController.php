@@ -46,6 +46,7 @@ class SiteController extends Controller
         $this->view('site/cadastro', [
             'titulo' => 'Cadastro',
             'origensCadastro' => Cliente::ORIGENS_CADASTRO,
+            'codigoIndicacao'=>$this->codigoIndicacaoEmCadastro(),
             'whatsappSite' => $this->dadosWhatsappSite()
         ], false);
     }
@@ -73,6 +74,7 @@ class SiteController extends Controller
         $confirmarSenha = $_POST['confirmar_senha'] ?? '';
         $origemCadastro = $_POST['origem_cadastro'] ?? '';
         $origemCadastroOutro = $_POST['origem_cadastro_outro'] ?? '';
+        $codigoIndicacaoEnviado = trim((string) ($_POST['codigo_indicacao'] ?? ''));
         $dadosCadastro = [
             'tipo_pessoa' => $tipoPessoa,
             'cpf_cnpj' => $_POST['cpf_cnpj'] ?? '',
@@ -83,9 +85,12 @@ class SiteController extends Controller
             'telefone' => $_POST['telefone'] ?? '',
             'origem_cadastro' => $origemCadastro,
             'origem_cadastro_outro' => $origemCadastroOutro,
+            'codigo_indicacao'=>$codigoIndicacaoEnviado,
             'aceiteTermos' => $_POST['aceiteTermos'] ?? null
         ];
-        $codigoIndicacao = $this->codigoIndicacaoEmCadastro();
+        $codigoIndicacaoSessao = $this->codigoIndicacaoEmCadastro();
+        $codigoIndicacao = $this->validarCodigoIndicacaoEnviado($codigoIndicacaoEnviado, $dadosCadastro);
+        $origemIndicacao = $codigoIndicacao !== null && $codigoIndicacao === $codigoIndicacaoSessao ? 'link' : 'manual';
 
         try{
             $origemValidada = Cliente::validarOrigemCadastro(
@@ -280,23 +285,16 @@ class SiteController extends Controller
             $usuarioId = $db->lastInsertId();
 
             if($codigoIndicacao !== null){
-                try{
-                    (new IndicacaoWorkflowService())->registrarIndicacao(
-                        (int) $clienteId,
-                        $codigoIndicacao,
-                        'link'
-                    );
-                }catch(\DomainException $e){
-                    // A indicação é opcional. Revalidações do domínio impedem
-                    // vínculo com código que tenha se tornado inelegível.
-                }
+                (new IndicacaoWorkflowService())->registrarIndicacao(
+                    (int) $clienteId,
+                    $codigoIndicacao,
+                    $origemIndicacao
+                );
             }
 
             $db->commit();
 
-            if($codigoIndicacao !== null){
-                Session::remove(self::SESSAO_CODIGO_INDICACAO);
-            }
+            Session::remove(self::SESSAO_CODIGO_INDICACAO);
 
             AnalyticsService::registrar('sign_up', ['method'=>'public_form', 'account_type'=>'client']);
 
@@ -323,14 +321,16 @@ class SiteController extends Controller
             header('Location: ' . rtrim(BASE_URL, '/') . '/index.php?url=login');
             exit;
 
-        } catch (PDOException $e) {
+        } catch (PDOException|\DomainException $e) {
             if (isset($db) && $db->inTransaction()) {
                 $db->rollBack();
             }
 
             $this->voltarCadastroComDados(
                 $dadosCadastro ?? ($_POST ?? []),
-                'Erro ao realizar cadastro.'
+                $e instanceof \DomainException
+                    ? 'Código de indicação inválido ou indisponível.'
+                    : 'Erro ao realizar cadastro.'
             );
         }
     }
@@ -388,6 +388,27 @@ class SiteController extends Controller
             );
         }catch(\DomainException $e){
             Session::remove(self::SESSAO_CODIGO_INDICACAO);
+            Session::flash('error', 'Código de indicação inválido ou indisponível.');
+        }
+    }
+
+    private function validarCodigoIndicacaoEnviado(string $codigo, array $dadosCadastro): ?string
+    {
+        if($codigo === ''){
+            Session::remove(self::SESSAO_CODIGO_INDICACAO);
+            return null;
+        }
+
+        try{
+            $validacao = (new IndicacaoWorkflowService())->validarCodigo($codigo);
+            $normalizado = (string) $validacao['codigo']['ICD_CodigoNormalizado'];
+            Session::set(self::SESSAO_CODIGO_INDICACAO, $normalizado);
+            return $normalizado;
+        }catch(\DomainException $e){
+            $this->voltarCadastroComDados(
+                $dadosCadastro,
+                'Código de indicação inválido ou indisponível.'
+            );
         }
     }
 
