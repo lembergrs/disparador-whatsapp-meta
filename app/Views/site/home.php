@@ -697,6 +697,92 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
+<section id="programa-indicacao" class="py-5 bg-white border-bottom">
+
+    <div class="container">
+
+        <div class="text-center mb-5">
+
+            <span class="badge badge-success mb-3">Programa de indicação</span>
+
+            <h2 class="site-section-title">Indique e Ganhe</h2>
+
+            <p class="text-muted mx-auto" style="max-width: 720px;">
+                Clientes Disparador.net podem indicar outras empresas e economizar nas próximas mensalidades quando a indicação for confirmada pelas regras do programa.
+            </p>
+
+        </div>
+
+        <div class="row text-center mb-4">
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">1</div>
+                <h3 class="h5 font-weight-bold">Seja cliente</h3>
+                <p class="text-muted mb-0">Crie sua conta e conheça a plataforma do Disparador.net.</p>
+            </div>
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">2</div>
+                <h3 class="h5 font-weight-bold">Receba seu código</h3>
+                <p class="text-muted mb-0">Após a ativação e a confirmação do pagamento exigido, seu código e link ficam disponíveis.</p>
+            </div>
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">3</div>
+                <h3 class="h5 font-weight-bold">Compartilhe</h3>
+                <p class="text-muted mb-0">Envie o link ou o código para a empresa que deseja indicar.</p>
+            </div>
+
+            <div class="col-md-3">
+                <div class="site-step">4</div>
+                <h3 class="h5 font-weight-bold">A indicação é confirmada</h3>
+                <p class="text-muted mb-0">A pessoa indicada pode acessar o cadastro pelo link ou informar o código manualmente.</p>
+            </div>
+
+        </div>
+
+        <div class="row justify-content-center">
+
+            <div class="col-lg-5 mb-4 mb-lg-0">
+                <div class="card h-100 site-card-feature">
+                    <div class="card-body p-4">
+                        <div class="site-feature-icon mb-3"><i class="fas fa-gift"></i></div>
+                        <h3 class="h5 font-weight-bold">Para novos clientes</h3>
+                        <p class="font-weight-bold mb-2">50% de desconto na primeira mensalidade para novos clientes.</p>
+                        <p class="text-muted mb-0">Este benefício é válido com ou sem indicação.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card h-100 site-card-feature">
+                    <div class="card-body p-4">
+                        <div class="site-feature-icon mb-3"><i class="fas fa-share-alt"></i></div>
+                        <h3 class="h5 font-weight-bold">Para quem indica</h3>
+                        <p class="font-weight-bold mb-2">Quando uma indicação elegível é confirmada conforme as regras do programa, quem indicou recebe um crédito de 15% de desconto em mensalidades futuras elegíveis.</p>
+                        <p class="text-muted mb-0">O crédito é aplicado de acordo com as condições vigentes do programa.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="text-center mt-4">
+            <a
+            href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
+            class="btn btn-success site-btn-main"
+            data-analytics-event="select_trial"
+            data-analytics-location="referral_program"
+            data-analytics-destination="registration"
+            >
+                Criar minha conta
+            </a>
+        </div>
+
+    </div>
+
+</section>
+
 <section id="faixas-meta" class="py-5 site-meta-tiers">
 
     <div class="container">
