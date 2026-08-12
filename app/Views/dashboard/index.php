@@ -326,7 +326,7 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
             <div class="icon">
                 <i class="fas fa-address-book"></i>
             </div>
-            <a href="<?= BASE_URL; ?>/index.php?url=listacontato" class="small-box-footer">
+            <a href="<?= BASE_URL; ?>/index.php?url=listaContato" class="small-box-footer">
                 Ver listas <i class="fas fa-arrow-circle-right"></i>
             </a>
         </div>
