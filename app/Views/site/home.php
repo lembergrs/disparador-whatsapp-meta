@@ -706,6 +706,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
+<?php if(!empty($campanhaIndicacaoPublica['disponivel'])){ ?>
+<?php $percentualIndicacao = rtrim(rtrim(number_format((float) $campanhaIndicacaoPublica['percentual'], 2, ',', '.'), '0'), ','); ?>
 <section id="programa-indicacao" class="py-5 bg-white border-bottom">
 
     <div class="container">
@@ -722,7 +724,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <p class="text-muted mx-auto mb-0" style="max-width: 720px;">
                 <strong>Comece economizando e continue economizando.</strong><br>
-                Todo novo cliente tem <strong>50% de desconto no primeiro pagamento</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong>15% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
+                Todo novo cliente tem <strong>50% de desconto no primeiro pagamento</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong><?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
             </p>
 
         </div>
@@ -755,7 +757,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
         </div>
 
-        <p class="text-center text-muted mb-4">Depois que a indicação for confirmada conforme as regras do programa, você recebe o crédito de 15% para mensalidades futuras elegíveis.</p>
+        <p class="text-center text-muted mb-4">Depois que a indicação for confirmada conforme as regras do programa, você recebe o crédito de <?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% para mensalidades futuras elegíveis.</p>
 
         <div class="row justify-content-center">
 
@@ -775,7 +777,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <div class="card-body p-4">
                         <div class="site-feature-icon mb-3"><i class="fas fa-share-alt"></i></div>
                         <h3 class="h5 font-weight-bold">Para quem indica</h3>
-                        <p class="font-weight-bold mb-2">Quando uma indicação elegível é confirmada conforme as regras do programa, quem indicou recebe um crédito de 15% de desconto em mensalidades futuras elegíveis.</p>
+                        <p class="font-weight-bold mb-2">Quando uma indicação elegível é confirmada conforme as regras do programa, quem indicou recebe um crédito de <?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis.</p>
                         <p class="text-muted mb-0">O crédito é aplicado de acordo com as condições vigentes do programa.</p>
                     </div>
                 </div>
@@ -798,6 +800,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
     </div>
 
 </section>
+<?php } ?>
 
 <section id="faixas-meta" class="py-5 site-meta-tiers">
 

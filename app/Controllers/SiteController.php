@@ -10,6 +10,7 @@ use PDOException;
 use Models\Plano;
 use Models\Cliente;
 use Models\ConfiguracaoSite;
+use Models\IndicacaoCampanha;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
@@ -31,10 +32,18 @@ class SiteController extends Controller
         $planoModel = new Plano();
 
         $planos = $planoModel->listarAtivos();
+        $campanhaIndicacao = (new IndicacaoCampanha())->buscarPublicaElegivel();
+        $campanhaIndicacaoPublica = [
+            'disponivel' => $campanhaIndicacao !== null,
+            'percentual' => $campanhaIndicacao !== null
+                ? (float) $campanhaIndicacao['ICP_Percentual']
+                : null
+        ];
 
         $this->view('site/home', [
             'titulo' => 'Disparador.net WhatsApp',
             'planos' => $planos,
+            'campanhaIndicacaoPublica' => $campanhaIndicacaoPublica,
             'whatsappSite' => $this->dadosWhatsappSite()
         ], false);
     }
