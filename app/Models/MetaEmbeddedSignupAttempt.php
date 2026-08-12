@@ -4,6 +4,7 @@ namespace Models;
 
 use Core\Database;
 use PDO;
+use Services\EmbeddedSignupOnboardingMode;
 
 class MetaEmbeddedSignupAttempt
 {
@@ -19,14 +20,16 @@ class MetaEmbeddedSignupAttempt
         return hash('sha256', (string) $state);
     }
 
-    public function criar($state, $clienteId, $requestId, $ttlSeconds = 1800)
+    public function criar($state, $clienteId, $requestId, $ttlSeconds = 1800, $onboardingType = EmbeddedSignupOnboardingMode::TRADITIONAL)
     {
-        $sql = $this->db->prepare("\n            INSERT INTO meta_embedded_signup_attempts\n                (state_hash, cliente_id, request_id, created_at, expires_at)\n            VALUES\n                (?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? SECOND))\n        ");
+        $onboardingType = EmbeddedSignupOnboardingMode::normalize($onboardingType);
+        $sql = $this->db->prepare("\n            INSERT INTO meta_embedded_signup_attempts\n                (state_hash, cliente_id, request_id, onboarding_type, created_at, expires_at)\n            VALUES\n                (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? SECOND))\n        ");
 
         return $sql->execute([
             $this->stateHash($state),
             (int) $clienteId,
             $requestId,
+            $onboardingType,
             (int) $ttlSeconds
         ]);
     }
@@ -44,6 +47,8 @@ class MetaEmbeddedSignupAttempt
         if(!$attempt){
             return null;
         }
+
+        $attempt['onboarding_type'] = EmbeddedSignupOnboardingMode::normalize($attempt['onboarding_type'] ?? null);
 
         if(!empty($attempt['finish_json'])){
             $decoded = json_decode($attempt['finish_json'], true);
@@ -102,6 +107,8 @@ class MetaEmbeddedSignupAttempt
         if(!$attempt){
             return null;
         }
+
+        $attempt['onboarding_type'] = EmbeddedSignupOnboardingMode::normalize($attempt['onboarding_type'] ?? null);
 
         if(!empty($attempt['finish_json'])){
             $decoded = json_decode($attempt['finish_json'], true);

@@ -30,7 +30,7 @@ echo "TIMEOUT\n";
 exit(0);
 PHP_CHILD;
 
-$cmd = escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($readerCode) . ' ' . escapeshellarg($arquivo);
+$cmd = [PHP_BINARY, '-r', $readerCode, $arquivo];
 $proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
 $assert(is_resource($proc), 'processo leitor iniciou');
 
@@ -73,7 +73,7 @@ fclose($fh);
 echo "CONSUMED\n";
 PHP_CHILD;
 
-$cmd = escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($consumerCode) . ' ' . escapeshellarg($arquivo);
+$cmd = [PHP_BINARY, '-r', $consumerCode, $arquivo];
 $p1 = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes1);
 $p2 = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes2);
 $out1 = trim(stream_get_contents($pipes1[1]));

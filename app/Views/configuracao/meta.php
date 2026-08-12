@@ -246,7 +246,7 @@ $adminPodeAtualizarStatusMeta =
                                             <?php } ?>
 
 
-                                            <?php if(in_array(($conta['MTA_Status'] ?? ''), ['pendente_registro', 'erro_registro', 'requer_acao'], true) && !empty($conta['MTA_PhoneNumberId']) && !empty($conta['MTA_Token'])){ ?>
+                                            <?php if(($conta['MTA_OnboardingType'] ?? 'traditional') !== 'coexistence' && in_array(($conta['MTA_Status'] ?? ''), ['pendente_registro', 'erro_registro', 'requer_acao'], true) && !empty($conta['MTA_PhoneNumberId']) && !empty($conta['MTA_Token'])){ ?>
                                                 <button
                                                 type="button"
                                                 class="btn btn-warning btn-sm btnConcluirRegistroWhatsApp"
@@ -512,6 +512,7 @@ role="alert"
     let tentativaAtiva = false;
     let signupState = null;
     let signupRequestId = null;
+    let signupOnboardingMode = 'traditional';
     let finishPayload = null;
     let oauthCode = null;
     let envioFinalizacaoEmAndamento = false;
@@ -539,6 +540,7 @@ role="alert"
         tentativaAtiva = false;
         signupState = null;
         signupRequestId = null;
+        signupOnboardingMode = 'traditional';
         finishPayload = null;
         oauthCode = null;
         envioFinalizacaoEmAndamento = false;
@@ -571,7 +573,7 @@ role="alert"
             return;
         }
 
-        if(!finishPayload && !forcarPorTimeout){
+        if(!finishPayload && (!forcarPorTimeout || signupOnboardingMode === 'coexistence')){
             return;
         }
 
@@ -612,8 +614,14 @@ role="alert"
         try{ data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; }catch(e){ return; }
         if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){ return; }
 
-        if(data.event === 'FINISH'){
+        const eventoFinishEsperado = signupOnboardingMode === 'coexistence'
+            ? 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+            : 'FINISH';
+        if(data.event === eventoFinishEsperado){
             registrarFinishMeta(data);
+            return;
+        }
+        if(data.event === 'FINISH' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'){
             return;
         }
         if(data.event === 'CANCEL'){
@@ -633,6 +641,7 @@ role="alert"
     {
         signupState = resp.state;
         signupRequestId = resp.requestId;
+        signupOnboardingMode = resp.onboardingMode || 'traditional';
         finishPayload = null;
         oauthCode = null;
         envioFinalizacaoEmAndamento = false;
@@ -649,12 +658,19 @@ role="alert"
             oauthCode = loginResponse.authResponse.code;
             exibirFeedbackEmbeddedSignup('info', 'Autorização recebida. Aguardando os dados finais do cadastro.');
 
-            coordenacaoTimer = setTimeout(function(){
-                finalizarQuandoPossivel(true);
-            }, COORDENACAO_TIMEOUT_MS);
+            if(signupOnboardingMode === 'traditional'){
+                coordenacaoTimer = setTimeout(function(){
+                    finalizarQuandoPossivel(true);
+                }, COORDENACAO_TIMEOUT_MS);
+            }
 
             finalizarQuandoPossivel(false);
-        }, {
+        }, criarOpcoesFacebookLogin(resp));
+    }
+
+    function criarOpcoesFacebookLogin(resp)
+    {
+        const options = {
             config_id: resp.configurationId,
             response_type: 'code',
             override_default_response_type: true,
@@ -663,7 +679,13 @@ role="alert"
                 version: 'v4',
                 state: resp.state
             }
-        });
+        };
+
+        if((resp.onboardingMode || 'traditional') === 'coexistence'){
+            options.extras.featureType = 'whatsapp_business_app_onboarding';
+        }
+
+        return options;
     }
 
 

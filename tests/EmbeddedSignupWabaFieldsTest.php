@@ -11,7 +11,7 @@ $assert = function($condition, $message){
 
 $assert(strpos($controller, 'business{id}') === false, 'consulta da WABA não deve conter business{id}');
 $assert(
-    strpos($controller, "id,name,phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status}") !== false,
+    strpos($controller, "id,name,phone_numbers{id,display_phone_number,verified_name,quality_rating,code_verification_status,name_status,status,platform_type}") !== false,
     'consulta da WABA usa apenas fields aceitos pela Graph API v25'
 );
 $assert(

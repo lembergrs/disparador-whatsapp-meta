@@ -5,6 +5,7 @@ namespace Models;
 use Core\Database;
 use PDO;
 use PDOException;
+use Services\EmbeddedSignupOnboardingMode;
 
 class MetaConta
 {
@@ -91,6 +92,14 @@ class MetaConta
             $this->colunaExiste('MTA_AutoRespostaTexto')
             &&
             $this->colunaExiste('MTA_AutoRespostaIntervaloMinutos');
+    }
+
+    public function colunasCoexistenceExistem()
+    {
+        return
+            $this->colunaExiste('MTA_OnboardingType')
+            &&
+            $this->colunaExiste('MTA_PlatformType');
     }
 
     public function salvar($dados)
@@ -499,6 +508,11 @@ class MetaConta
         );
 
         if($existente){
+            $modoExistente = EmbeddedSignupOnboardingMode::normalize($existente['MTA_OnboardingType'] ?? null);
+            $modoRecebido = EmbeddedSignupOnboardingMode::normalize($dados['onboarding_type'] ?? null);
+            if(!empty($existente['MTA_OnboardingType']) && $modoExistente !== $modoRecebido){
+                throw new \RuntimeException('A conta já foi vinculada por outra modalidade de onboarding.');
+            }
             return $this->atualizarEmbeddedSignup((int) $existente['MTA_ID'], $dados)
                 ? (int) $existente['MTA_ID']
                 : false;
@@ -593,7 +607,9 @@ class MetaConta
             'MTA_CodeVerificationStatus' => 'code_verification_status',
             'MTA_NameStatus' => 'name_status',
             'MTA_OperationalStatus' => 'operational_status',
-            'MTA_MessagingLimit' => 'messaging_limit'
+            'MTA_MessagingLimit' => 'messaging_limit',
+            'MTA_OnboardingType' => 'onboarding_type',
+            'MTA_PlatformType' => 'platform_type'
         ] as $coluna => $chave){
             if($this->colunaExiste($coluna)){
                 $colunas[] = $coluna;
@@ -660,7 +676,9 @@ class MetaConta
             'MTA_CodeVerificationStatus' => 'code_verification_status',
             'MTA_NameStatus' => 'name_status',
             'MTA_OperationalStatus' => 'operational_status',
-            'MTA_MessagingLimit' => 'messaging_limit'
+            'MTA_MessagingLimit' => 'messaging_limit',
+            'MTA_OnboardingType' => 'onboarding_type',
+            'MTA_PlatformType' => 'platform_type'
         ] as $coluna => $chave){
             if($this->colunaExiste($coluna)){
                 $sets[] = $coluna . ' = ?';
@@ -703,7 +721,8 @@ class MetaConta
             'MTA_OperationalStatus' => 'operational_status',
             'MTA_MessagingLimit' => 'messaging_limit',
             'MTA_NumeroTelefone' => 'numero',
-            'MTA_DisplayName' => 'display_name'
+            'MTA_DisplayName' => 'display_name',
+            'MTA_PlatformType' => 'platform_type'
         ] as $coluna => $chave){
             if(!($this->colunaExiste($coluna) || in_array($coluna, ['MTA_NumeroTelefone'], true))){
                 continue;
