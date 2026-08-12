@@ -749,11 +749,13 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <div class="col-md-3">
                 <div class="site-step">4</div>
-                <h3 class="h5 font-weight-bold">A indicação é confirmada</h3>
-                <p class="text-muted mb-0">A pessoa indicada pode acessar o cadastro pelo link ou informar o código manualmente.</p>
+                <h3 class="h5 font-weight-bold">O indicado faz o cadastro</h3>
+                <p class="text-muted mb-0">A empresa indicada acessa o cadastro pelo link ou informa o código de indicação manualmente.</p>
             </div>
 
         </div>
+
+        <p class="text-center text-muted mb-4">Depois que a indicação for confirmada conforme as regras do programa, você recebe o crédito de 15% para mensalidades futuras elegíveis.</p>
 
         <div class="row justify-content-center">
 
