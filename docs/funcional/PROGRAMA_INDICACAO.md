@@ -681,6 +681,13 @@ Não mostrar CPF/CNPJ, e-mail, telefone, endereço, plano, pagamento, Meta ou da
 
 ## 17. Área administrativa
 
+O módulo administrativo **Programa de Indicação** centraliza consulta operacional
+em abas de indicações, créditos, campanhas e auditoria. Créditos, reservas,
+utilizações e snapshots de percentual são intencionalmente somente leitura:
+suas transições continuam exclusivas do domínio e do Financeiro. Campanhas
+podem ser criadas e ativadas/inativadas somente por POST com CSRF e pelos
+serviços de campanha, preservando os fatos históricos.
+
 Filtros: indicador, indicado, campanha/estado, percentual, código, indicação/crédito, cobrança, período, fraude, cancelamento, bloqueio/reserva, pontualidade, alteração de plano.
 
 Detalhes: origem, vigência, datas, pagamento qualificante, janela, créditos, cobrança de uso, valor-base do ciclo, meses do ciclo, mensal equivalente, descontos individuais e total, excedentes excluídos, mudança de plano, histórico, motivo e operador.
