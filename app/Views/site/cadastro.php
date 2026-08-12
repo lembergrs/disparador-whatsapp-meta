@@ -206,6 +206,12 @@ Session::remove('cadastro_dados');
 
                         </div>
 
+                        <div class="form-group">
+                            <label for="codigoIndicacao">Código de indicação <span class="text-muted">(opcional)</span></label>
+                            <input type="text" name="codigo_indicacao" id="codigoIndicacao" class="form-control" maxlength="32" value="<?= htmlspecialchars($dadosCadastro['codigo_indicacao'] ?? ($codigoIndicacao ?? ''), ENT_QUOTES, 'UTF-8'); ?>" aria-describedby="ajudaCodigoIndicacao">
+                            <small id="ajudaCodigoIndicacao" class="form-text text-muted">Recebeu um código de indicação? Informe aqui.</small>
+                        </div>
+
                         <div class="row">
 
                             <div class="col-md-6">
