@@ -711,6 +711,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 Clientes Disparador.net podem indicar outras empresas e economizar nas próximas mensalidades quando a indicação for confirmada pelas regras do programa.
             </p>
 
+            <p class="text-muted mx-auto mb-0" style="max-width: 720px;">
+                <strong>Comece economizando e continue economizando.</strong><br>
+                Todo novo cliente tem <strong>50% de desconto no primeiro pagamento</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong>15% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
+            </p>
+
         </div>
 
         <div class="row text-center mb-4">
@@ -894,6 +899,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         : 'primary';
 
                     $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
+                    $valorPrimeiroPagamento = $valorMensal / 2;
                     ?>
 
                     <div class="site-plano-carousel-item">
@@ -906,9 +912,17 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                     <?= htmlspecialchars($plano['PLA_Nome']); ?>
                                 </span>
 
-                                <h4 class="font-weight-bold">
-                                    R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês
-                                </h4>
+                                <p class="text-success font-weight-bold mb-1">
+                                    R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?> no primeiro pagamento
+                                </p>
+
+                                <p class="text-muted mb-1">
+                                    <del>R$ <?= number_format($valorMensal, 2, ',', '.'); ?></del>
+                                </p>
+
+                                <p class="mb-3">
+                                    A partir do 2º mês: <strong>R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês</strong>
+                                </p>
 
                                 <p class="text-muted">
                                     <?= $formatarQuantidade($plano['PLA_LimiteNumeros'] ?? 0, 'número WhatsApp', 'números WhatsApp'); ?>
