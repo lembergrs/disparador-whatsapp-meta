@@ -21,10 +21,13 @@ use Core\Database;
 use Models\Conversa;
 use Models\Notificacao;
 use Models\Contato;
+use Models\MetaConta;
 use Services\MensagemStatusService;
 use Services\MetaStatusWebhookService;
 use Services\MetaWebhookMessageIngestionService;
 use Services\MetaWebhookStateSyncService;
+use Services\MetaCoexistenceHistoryQueueService;
+use Services\MetaCoexistenceLifecycleService;
 
 $db = Database::getInstance();
 
@@ -152,6 +155,11 @@ $stateSyncService = new MetaWebhookStateSyncService(
         registrarLogWebhookMeta($acao, $dados);
     }
 );
+$historyQueueService = new MetaCoexistenceHistoryQueueService($db);
+$metaContaModel = new MetaConta();
+$lifecycleService = new MetaCoexistenceLifecycleService($metaContaModel, function($acao, array $dados){
+    registrarLogWebhookMeta($acao, $dados);
+});
 
 $entries =
     $payload['entry']
@@ -175,27 +183,29 @@ foreach($entries as $entry){
             $value['metadata']['phone_number_id']
             ?? null;
 
-        if(!$phoneNumberId){
-            continue;
-        }
-
-        $sql = $db->prepare("
-            SELECT *
-            FROM meta_contas
-            WHERE MTA_PhoneNumberId = ?
-            AND MTA_Ativo = 'S'
-            LIMIT 1
-        ");
-
-        $sql->execute([
-            $phoneNumberId
-        ]);
+        $wabaId = (string) ($entry['id'] ?? '');
+        $sql = $phoneNumberId
+            ? $db->prepare("SELECT * FROM meta_contas WHERE MTA_PhoneNumberId=? AND MTA_Ativo='S' LIMIT 1")
+            : $db->prepare("SELECT * FROM meta_contas WHERE MTA_WabaId=? AND MTA_Ativo='S' LIMIT 1");
+        $sql->execute([$phoneNumberId ?: $wabaId]);
 
         $metaConta =
             $sql->fetch(PDO::FETCH_ASSOC);
 
         if(!$metaConta){
             continue;
+        }
+
+        $errosCoexistence = $value['errors'] ?? [];
+        foreach(($value['messages'] ?? []) as $mensagemComErro){
+            foreach(($mensagemComErro['errors'] ?? []) as $erroMensagem) $errosCoexistence[] = $erroMensagem;
+        }
+        foreach($errosCoexistence as $erroMeta){
+            if((int)($erroMeta['code'] ?? 0) === 131060){
+                registrarLogWebhookMeta('coexistence_mensagem_nao_suportada', [
+                    'phone_number_id'=>$phoneNumberId, 'error_code'=>131060
+                ]);
+            }
         }
 
 
@@ -213,15 +223,17 @@ foreach($entries as $entry){
                 'invalidas'=>$resultadoEcho['invalidas']
             ]);
         }elseif($field === 'history'){
-            $resultadoHistory = $messageIngestionService->processarHistorico($value, $metaConta);
-            registrarLogWebhookMeta('history_processado', [
+            $resultadoHistory = $historyQueueService->enfileirar($value, $metaConta);
+            registrarLogWebhookMeta('history_enfileirado', [
                 'phone_number_id'=>$phoneNumberId,
-                'criadas'=>$resultadoHistory['criadas'],
-                'duplicadas'=>$resultadoHistory['duplicadas'],
-                'invalidas'=>$resultadoHistory['invalidas']
+                'enfileiradas'=>$resultadoHistory['enfileiradas']
             ]);
         }elseif($field === 'smb_app_state_sync'){
             $resultadoStateSync = $stateSyncService->processar($value, $metaConta);
+            if(colunaExiste($db, 'meta_contas', 'MTA_ContactSyncStatus')){
+                $syncUpdate = $db->prepare("UPDATE meta_contas SET MTA_ContactSyncStatus='completed',MTA_LastSyncEventAt=NOW() WHERE MTA_ID=? AND MTA_OnboardingType='coexistence'");
+                $syncUpdate->execute([(int)$metaConta['MTA_ID']]);
+            }
             registrarLogWebhookMeta('smb_app_state_sync_processado', [
                 'phone_number_id'=>$phoneNumberId,
                 'criadas'=>$resultadoStateSync['criadas'],
@@ -229,6 +241,8 @@ foreach($entries as $entry){
                 'ignoradas'=>$resultadoStateSync['ignoradas'],
                 'invalidas'=>$resultadoStateSync['invalidas']
             ]);
+        }elseif($field === 'account_update'){
+            $lifecycleService->processar($value, $metaConta);
         }
 
 

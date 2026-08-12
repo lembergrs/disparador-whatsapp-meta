@@ -111,7 +111,7 @@ $service->processarHistorico(historyValue([$new]), $account);
 historyAssert($model->conversations[$conversationId]['preview'] === 'Mais nova', 'history mais nova pode atualizar resumo');
 
 $invalidDirection = $inbound; $invalidDirection['id']='wamid.bad.direction'; $invalidDirection['from']='5511777770000';
-$invalidParticipant = $outbound; $invalidParticipant['id']='wamid.bad.participant'; unset($invalidParticipant['to']);
+$invalidParticipant = $outbound; $invalidParticipant['id']='wamid.bad.participant'; $invalidParticipant['to']='5511666660000';
 $invalidTimestamp = $inbound; $invalidTimestamp['id']='wamid.bad.time'; $invalidTimestamp['timestamp']='invalid';
 $unsupported = $inbound; $unsupported['id']='wamid.unsupported'; $unsupported['type']='revoke';
 $invalidResult = $service->processarHistorico(historyValue([$invalidDirection,$invalidParticipant,$invalidTimestamp,$unsupported]), $account);

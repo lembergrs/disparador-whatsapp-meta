@@ -61,12 +61,15 @@ Aplicar, nesta ordem, na hospedagem compartilhada:
 4. `database/migrations/20260713_expand_meta_contas_status_enum.sql`
 5. `database/migrations/20260812_add_meta_coexistence_onboarding_infra.sql`
 6. `database/migrations/20260812_add_conversa_message_origin.sql`
+7. `database/migrations/20260812_add_meta_coexistence_sync_operations.sql`
 
 A migration de 20260713 adiciona metadados operacionais do número. Ela também cria índice auxiliar não único para compatibilidade com bases que possam ter duplicidades históricas. Após auditoria/deduplicação, recomenda-se promover `CLI_ID + MTA_WabaId + MTA_PhoneNumberId` para índice único.
 
 A migration de 20260812 adiciona os metadados internos das modalidades Traditional/Coexistence: `meta_contas.MTA_OnboardingType`, `meta_contas.MTA_PlatformType` e `meta_embedded_signup_attempts.onboarding_type`.
 
 A migration de origem de mensagens adiciona `conversa_mensagens.MSG_Origem`, com os valores `api`, `business_app` e `history`. Ela não cria índice `UNIQUE`, pois bases existentes podem conter `MSG_MetaMessageId` históricos duplicados.
+
+A migration operacional Coexistence registra os `request_id`, estado/progresso do sync, lifecycle sanitizado e a fila transitória de chunks de histórico. O payload é necessário apenas enquanto o job está pendente e é apagado depois do processamento.
 
 
 
@@ -98,7 +101,7 @@ Mensagens normais e ecos usam deduplicação por `MTA_ID + MSG_MetaMessageId`. A
 
 ## Phase 2B — histórico e estado do aplicativo
 
-O campo `history` é uma sincronização passiva. Somente mensagens com wamid, timestamp válido, thread telefônica, direção comprovada e tipo suportado são importadas. Os tipos aceitos são texto, botão/interativo, imagem, vídeo, documento, áudio, sticker, localização, contatos e `media_placeholder`; tipos desconhecidos, edit/revoke e variantes ambíguas são adiados. Uma mensagem é inbound quando `from` corresponde ao participante da thread; é outbound quando `from` corresponde ao número da empresa e `to` corresponde à thread.
+O campo `history` é uma sincronização passiva. Somente mensagens com wamid, timestamp válido, thread telefônica, direção comprovada e tipo suportado são importadas. Os tipos aceitos são texto, botão/interativo, imagem, vídeo, documento, áudio, sticker, localização, contatos e `media_placeholder`; tipos desconhecidos, edit/revoke e variantes ambíguas são adiados. Uma mensagem é inbound quando `from` corresponde ao participante da thread; é outbound quando `from` corresponde ao número da empresa. Para outbound, `to` é opcional no histórico normal e, quando presente, deve corresponder à thread.
 
 Mensagens históricas novas usam `MSG_Origem=history`, preservam o timestamp Meta e não criam contatos, não incrementam não lidas, não chamam auto resposta, não geram notificações e não participam de consumo, campanhas ou faturamento. A deduplicação por conta/wamid preserva integralmente direção, origem e status de mensagens já existentes da API, inbound ou Business App.
 
@@ -108,9 +111,27 @@ O campo `smb_app_state_sync` não é tratado como mensagem. Nesta fase, somente 
 
 Nenhuma migration adicional é necessária na Phase 2B; `MSG_Origem=history` já foi criado na Phase 2A e contatos/conversas existentes cobrem os dados suportados.
 
+## Phase 2C — alinhamento com a documentação oficial
+
+Depois de um onboarding Coexistence conectado, a aplicação solicita `POST /{phone_number_id}/smb_app_data` primeiro com `sync_type=smb_app_state_sync` e depois com `sync_type=history`. A solicitação deve ocorrer dentro de 24 horas do onboarding. Cada operação é one-time por ciclo da conta: `request_id` e estado são persistidos, e uma resposta aceita significa apenas solicitação recebida, não sincronização concluída. O fluxo tradicional nunca chama esse endpoint.
+
+History é assíncrono. O webhook valida assinatura e conta, persiste cada chunk numa fila transacional e responde sem importar milhares de mensagens inline. O worker existente reserva jobs individualmente; chunks fora de ordem são seguros porque a correção depende de timestamp e idempotência, não de sequência. `phase`, `chunk_order`, `progress` e timestamp do evento servem para monitoramento; `progress=100` marca conclusão geral.
+
+No histórico, uma saída é comprovada por `thread.id` do cliente e `from` igual ao número empresarial; `to` pode faltar e, quando presente, deve coincidir com a thread. Status oficiais mapeiam assim: `PENDING→pending`, `SENT→sent`, `DELIVERED→delivered`, `READ→read`, `PLAYED→read` (sem criar UI nova) e `ERROR→failed`. Estados desconhecidos são adiados. Deduplicação não rebaixa status. A única atualização de duplicata permitida é `media_placeholder` de origem history para mídia real documentada com o mesmo wamid; preservam-se ID, conversa, direção e origem.
+
+O erro `2593109` significa compartilhamento de histórico recusado/desabilitado: history fica `declined`, sem desconectar a conta nem repetir indefinidamente; state sync continua independente. O erro `131060` é reconhecido e registrado como limitação esperada, sem desconexão automática.
+
+`PARTNER_REMOVED`, `ACCOUNT_OFFBOARDED` e `ACCOUNT_RECONNECTED` são tratados como lifecycle de conta, nunca como mensagens. Motivo e `initiated_by` de remoção são sanitizados; não há deregister, faturamento, referral ou outro efeito colateral.
+
+Ao vincular uma conta WhatsApp Business App existente, dispositivos companheiros conectados são desconectados e dispositivos compatíveis podem precisar ser vinculados novamente. A experiência futura de onboarding deverá avisar isso antes da abertura da Meta.
+
+O limite oficial de Coexistence é 20 mensagens por segundo. O Disparador já limita globalmente o worker a 5 envios por segundo, portanto esta fase documenta o limite e não altera throttling de contas tradicionais. Se o limite global for elevado no futuro, o controle deverá considerar `MTA_OnboardingType`.
+
 ## Bloqueio para produção
 
 As três famílias de webhook de Coexistence possuem infraestrutura defensiva, mas `META_COEXISTENCE_ENABLED=false` permanece obrigatório até homologação com número real. Ainda precisam ser comprovados em ambiente Meta real: formatos e ações efetivamente emitidos, ordem/retry dos chunks, variantes de mídia, usernames/BSUID sem telefone, volumes e concorrência, entrega ao webhook correto e consistência de wamids entre onboarding e novas sincronizações.
+
+Também permanecem bloqueadores reais: timing do `FINISH`, metadados Graph, aceitação e prazo das solicitações de sync, volume/ordem reais dos chunks, payload de enriquecimento de mídia, variantes de contatos, comportamento de dispositivos vinculados, disconnect/reconnect e uso simultâneo do Business App com a Cloud API.
 
 ## Diagnóstico
 
