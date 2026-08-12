@@ -96,9 +96,21 @@ Ecos válidos são persistidos como `MSG_Direcao=enviada`, `MSG_Status=sent` e `
 
 Mensagens normais e ecos usam deduplicação por `MTA_ID + MSG_MetaMessageId`. A aplicação bloqueia a linha da conta Meta em transação antes de consultar e inserir, evitando retries concorrentes. Se uma mensagem enviada pela API já existir com o mesmo wamid, ela é preservada sem duplicação nem troca de origem. Um índice único fica adiado até auditoria/deduplicação dos dados históricos.
 
+## Phase 2B — histórico e estado do aplicativo
+
+O campo `history` é uma sincronização passiva. Somente mensagens com wamid, timestamp válido, thread telefônica, direção comprovada e tipo suportado são importadas. Os tipos aceitos são texto, botão/interativo, imagem, vídeo, documento, áudio, sticker, localização, contatos e `media_placeholder`; tipos desconhecidos, edit/revoke e variantes ambíguas são adiados. Uma mensagem é inbound quando `from` corresponde ao participante da thread; é outbound quando `from` corresponde ao número da empresa e `to` corresponde à thread.
+
+Mensagens históricas novas usam `MSG_Origem=history`, preservam o timestamp Meta e não criam contatos, não incrementam não lidas, não chamam auto resposta, não geram notificações e não participam de consumo, campanhas ou faturamento. A deduplicação por conta/wamid preserva integralmente direção, origem e status de mensagens já existentes da API, inbound ou Business App.
+
+O resumo da conversa só é atualizado quando o timestamp histórico é posterior ao resumo existente. A listagem das mensagens usa `MSG_DataMensagem` e `MSG_ID`, garantindo ordem cronológica mesmo quando chunks chegam fora de ordem.
+
+O campo `smb_app_state_sync` não é tratado como mensagem. Nesta fase, somente estados `contact` com ações add/create/update são aplicados: o telefone é normalizado no cliente proprietário da conta Meta, contatos ausentes são criados e contatos existentes são preservados sem alterar nome ou dados locais. Remoções, tipos não-contact e qualquer estado de chat/leitura são deliberadamente adiados por não haver equivalência segura no domínio atual.
+
+Nenhuma migration adicional é necessária na Phase 2B; `MSG_Origem=history` já foi criado na Phase 2A e contatos/conversas existentes cobrem os dados suportados.
+
 ## Bloqueio para produção
 
-Phase 2A processa `smb_message_echoes`, mas ainda não implementa `history` nem `smb_app_state_sync`. Coexistence permanece desabilitado em produção até Phase 2B e homologação com um número real.
+As três famílias de webhook de Coexistence possuem infraestrutura defensiva, mas `META_COEXISTENCE_ENABLED=false` permanece obrigatório até homologação com número real. Ainda precisam ser comprovados em ambiente Meta real: formatos e ações efetivamente emitidos, ordem/retry dos chunks, variantes de mídia, usernames/BSUID sem telefone, volumes e concorrência, entrega ao webhook correto e consistência de wamids entre onboarding e novas sincronizações.
 
 ## Diagnóstico
 

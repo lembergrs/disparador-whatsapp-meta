@@ -20,9 +20,11 @@ spl_autoload_register(function($class){
 use Core\Database;
 use Models\Conversa;
 use Models\Notificacao;
+use Models\Contato;
 use Services\MensagemStatusService;
 use Services\MetaStatusWebhookService;
 use Services\MetaWebhookMessageIngestionService;
+use Services\MetaWebhookStateSyncService;
 
 $db = Database::getInstance();
 
@@ -144,6 +146,12 @@ $messageIngestionService = new MetaWebhookMessageIngestionService(
         registrarLogWebhookMeta($acao, $dados);
     }
 );
+$stateSyncService = new MetaWebhookStateSyncService(
+    new Contato(),
+    function($acao, array $dados){
+        registrarLogWebhookMeta($acao, $dados);
+    }
+);
 
 $entries =
     $payload['entry']
@@ -203,6 +211,23 @@ foreach($entries as $entry){
                 'criadas'=>$resultadoEcho['criadas'],
                 'duplicadas'=>$resultadoEcho['duplicadas'],
                 'invalidas'=>$resultadoEcho['invalidas']
+            ]);
+        }elseif($field === 'history'){
+            $resultadoHistory = $messageIngestionService->processarHistorico($value, $metaConta);
+            registrarLogWebhookMeta('history_processado', [
+                'phone_number_id'=>$phoneNumberId,
+                'criadas'=>$resultadoHistory['criadas'],
+                'duplicadas'=>$resultadoHistory['duplicadas'],
+                'invalidas'=>$resultadoHistory['invalidas']
+            ]);
+        }elseif($field === 'smb_app_state_sync'){
+            $resultadoStateSync = $stateSyncService->processar($value, $metaConta);
+            registrarLogWebhookMeta('smb_app_state_sync_processado', [
+                'phone_number_id'=>$phoneNumberId,
+                'criadas'=>$resultadoStateSync['criadas'],
+                'existentes'=>$resultadoStateSync['existentes'],
+                'ignoradas'=>$resultadoStateSync['ignoradas'],
+                'invalidas'=>$resultadoStateSync['invalidas']
             ]);
         }
 
