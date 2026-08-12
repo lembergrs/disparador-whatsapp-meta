@@ -60,10 +60,13 @@ Aplicar, nesta ordem, na hospedagem compartilhada:
 3. `database/migrations/20260713_finalize_embedded_signup_meta_fields.sql`
 4. `database/migrations/20260713_expand_meta_contas_status_enum.sql`
 5. `database/migrations/20260812_add_meta_coexistence_onboarding_infra.sql`
+6. `database/migrations/20260812_add_conversa_message_origin.sql`
 
 A migration de 20260713 adiciona metadados operacionais do número. Ela também cria índice auxiliar não único para compatibilidade com bases que possam ter duplicidades históricas. Após auditoria/deduplicação, recomenda-se promover `CLI_ID + MTA_WabaId + MTA_PhoneNumberId` para índice único.
 
 A migration de 20260812 adiciona os metadados internos das modalidades Traditional/Coexistence: `meta_contas.MTA_OnboardingType`, `meta_contas.MTA_PlatformType` e `meta_embedded_signup_attempts.onboarding_type`.
+
+A migration de origem de mensagens adiciona `conversa_mensagens.MSG_Origem`, com os valores `api`, `business_app` e `history`. Ela não cria índice `UNIQUE`, pois bases existentes podem conter `MSG_MetaMessageId` históricos duplicados.
 
 
 
@@ -85,9 +88,17 @@ No fluxo tradicional, o Disparador solicita ao cliente um PIN de seis dígitos d
 
 No fluxo Coexistence, o endpoint de PIN é proibido no frontend e no backend e `/{phone_number_id}/register` não é chamado.
 
+## Phase 2A — ecos do WhatsApp Business App
+
+O webhook roteia explicitamente `messages` e `smb_message_echoes`. Em ecos, `message_echoes[].from` é validado como o número da empresa e `message_echoes[].to` é o participante da conversa. Variantes ambíguas são apenas registradas com contexto seguro e não criam conversa.
+
+Ecos válidos são persistidos como `MSG_Direcao=enviada`, `MSG_Status=sent` e `MSG_Origem=business_app`. Esse caminho não cria contato inbound, não incrementa não lidas e não pode chamar a auto resposta.
+
+Mensagens normais e ecos usam deduplicação por `MTA_ID + MSG_MetaMessageId`. A aplicação bloqueia a linha da conta Meta em transação antes de consultar e inserir, evitando retries concorrentes. Se uma mensagem enviada pela API já existir com o mesmo wamid, ela é preservada sem duplicação nem troca de origem. Um índice único fica adiado até auditoria/deduplicação dos dados históricos.
+
 ## Bloqueio para produção
 
-Esta fase não processa `history`, `smb_app_state_sync` nem `smb_message_echoes`; `public/webhook/meta.php` permanece inalterado. Sem os ecos, mensagens enviadas pelo WhatsApp Business App não podem ser sincronizadas corretamente com as conversas do Disparador. Isso bloqueia a ativação da flag em produção.
+Phase 2A processa `smb_message_echoes`, mas ainda não implementa `history` nem `smb_app_state_sync`. Coexistence permanece desabilitado em produção até Phase 2B e homologação com um número real.
 
 ## Diagnóstico
 

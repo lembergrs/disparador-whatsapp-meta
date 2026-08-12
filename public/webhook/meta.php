@@ -22,6 +22,7 @@ use Models\Conversa;
 use Models\Notificacao;
 use Services\MensagemStatusService;
 use Services\MetaStatusWebhookService;
+use Services\MetaWebhookMessageIngestionService;
 
 $db = Database::getInstance();
 
@@ -134,6 +135,15 @@ $statusWebhookService = new MetaStatusWebhookService(
         return !empty($resultado['atualizada']);
     }
 );
+$messageIngestionService = new MetaWebhookMessageIngestionService(
+    $conversaModel,
+    function(array $metaConta, $conversaId, $numero) use ($db, $conversaModel){
+        processarAutoResposta($db, $conversaModel, $metaConta, $conversaId, $numero);
+    },
+    function($acao, array $dados){
+        registrarLogWebhookMeta($acao, $dados);
+    }
+);
 
 $entries =
     $payload['entry']
@@ -146,6 +156,8 @@ foreach($entries as $entry){
         ?? [];
 
     foreach($changes as $change){
+
+        $field = (string) ($change['field'] ?? '');
 
         $value =
             $change['value']
@@ -182,117 +194,16 @@ foreach($entries as $entry){
 
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Mensagens recebidas
-        |--------------------------------------------------------------------------
-        */
-        if(!empty($value['messages'])){
-
-            foreach($value['messages'] as $msg){
-
-                $numero =
-                    $msg['from']
-                    ?? null;
-
-                if(!$numero){
-                    continue;
-                }
-
-                $tipo =
-                    $msg['type']
-                    ?? 'text';
-
-                $texto = '';
-
-                if($tipo == 'text'){
-
-                    $texto =
-                        $msg['text']['body']
-                        ?? '';
-
-                }elseif($tipo == 'button'){
-
-                    $texto =
-                        $msg['button']['text']
-                        ?? '[Botão]';
-
-                }elseif($tipo == 'interactive'){
-
-                    $texto =
-                        $msg['interactive']['button_reply']['title']
-                        ??
-                        $msg['interactive']['list_reply']['title']
-                        ??
-                        '[Interativo]';
-
-                }else{
-
-                    $texto =
-                        '[' . strtoupper($tipo) . ']';
-
-                }
-
-                $nomeContato =
-                    $value['contacts'][0]['profile']['name']
-                    ?? null;
-
-                $messageId =
-                    $msg['id']
-                    ?? null;
-
-                $dataMensagem =
-                    !empty($msg['timestamp'])
-                    ? date('Y-m-d H:i:s', $msg['timestamp'])
-                    : date('Y-m-d H:i:s');
-
-                $conversaId =
-                    $conversaModel->buscarOuCriar(
-                        $metaConta['CLI_ID'],
-                        $metaConta['MTA_ID'],
-                        $numero,
-                        $nomeContato
-                    );
-
-                $conversaModel->salvarMensagem([
-
-                    'conversa_id' =>
-                        $conversaId,
-
-                    'direcao' =>
-                        'recebida',
-
-                    'tipo' =>
-                        $tipo,
-
-                    'texto' =>
-                        $texto,
-
-                    'message_id' =>
-                        $messageId,
-
-                    'status' =>
-                        'recebida',
-
-                    'retorno' =>
-                        $msg,
-
-                    'data_mensagem' =>
-                        $dataMensagem
-
-                ]);
-
-
-                processarAutoResposta(
-                    $db,
-                    $conversaModel,
-                    $metaConta,
-                    $conversaId,
-                    $numero
-                );
-
-            }
-
+        if($field === 'messages'){
+            $messageIngestionService->processarInbound($value, $metaConta);
+        }elseif($field === 'smb_message_echoes'){
+            $resultadoEcho = $messageIngestionService->processarEchoes($value, $metaConta);
+            registrarLogWebhookMeta('smb_message_echoes_processado', [
+                'phone_number_id'=>$phoneNumberId,
+                'criadas'=>$resultadoEcho['criadas'],
+                'duplicadas'=>$resultadoEcho['duplicadas'],
+                'invalidas'=>$resultadoEcho['invalidas']
+            ]);
         }
 
 
@@ -304,7 +215,7 @@ foreach($entries as $entry){
         | Status das mensagens enviadas
         |--------------------------------------------------------------------------
         */
-        if(!empty($value['statuses'])){
+        if($field === 'messages' && !empty($value['statuses'])){
             $statusWebhookService->processarLote($value['statuses']);
 
         }

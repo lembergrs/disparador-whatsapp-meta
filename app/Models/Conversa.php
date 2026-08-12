@@ -69,17 +69,19 @@ class Conversa
         return (int) $sql->fetchColumn();
     }
 
-    public function buscarOuCriar($clienteId, $metaId, $numero, $nome = null)
+    public function buscarOuCriar($clienteId, $metaId, $numero, $nome = null, $criarContato = true)
     {
         $normalizado = TelefoneService::normalizar($numero);
-        try{
-            (new Contato())->salvar([
-                'cliente_id' => $clienteId,
-                'nome' => $nome ?: $numero,
-                'telefone' => $numero,
-                'dados_json' => json_encode([]),
-            ]);
-        }catch(\Throwable $e){}
+        if($criarContato){
+            try{
+                (new Contato())->salvar([
+                    'cliente_id' => $clienteId,
+                    'nome' => $nome ?: $numero,
+                    'telefone' => $numero,
+                    'dados_json' => json_encode([]),
+                ]);
+            }catch(\Throwable $e){}
+        }
 
         $variantes = TelefoneService::variantes($numero);
         $placeholders = implode(',', array_fill(0, count($variantes), '?'));
@@ -133,11 +135,19 @@ class Conversa
 
     public function salvarMensagem($dados)
     {
+        return $this->inserirMensagem($dados);
+    }
+
+    private function inserirMensagem($dados)
+    {
+        $temOrigem = $this->colunaConversaMensagemExiste('MSG_Origem');
+        $colunaOrigem = $temOrigem ? ",\n                MSG_Origem" : '';
+        $placeholderOrigem = $temOrigem ? ', ?' : '';
         $sql = $this->db->prepare("
             INSERT INTO conversa_mensagens
             (
                 CVS_ID,
-                MSG_Direcao,
+                MSG_Direcao{$colunaOrigem},
                 MSG_Tipo,
                 MSG_Texto,
                 MSG_MetaMessageId,
@@ -147,13 +157,16 @@ class Conversa
             )
             VALUES
             (
-                ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?{$placeholderOrigem}, ?, ?, ?, ?, ?, ?
             )
         ");
 
-        $sql->execute([
+        $params = [
             $dados['conversa_id'],
-            $dados['direcao'],
+            $dados['direcao']
+        ];
+        if($temOrigem) $params[] = $dados['origem'] ?? 'api';
+        $params = array_merge($params, [
             $dados['tipo'] ?? 'text',
             $dados['texto'] ?? null,
             $dados['message_id'] ?? null,
@@ -161,6 +174,7 @@ class Conversa
             json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
             $dados['data_mensagem'] ?? date('Y-m-d H:i:s')
         ]);
+        $sql->execute($params);
 
         $this->atualizarResumo(
             $dados['conversa_id'],
@@ -169,6 +183,67 @@ class Conversa
         );
 
         return $this->db->lastInsertId();
+    }
+
+    public function buscarMensagemPorMetaIdConta($metaId, $messageId)
+    {
+        if((int) $metaId <= 0 || trim((string) $messageId) === '') return null;
+        $sql = $this->db->prepare("SELECT m.* FROM conversa_mensagens m INNER JOIN conversas c ON c.CVS_ID=m.CVS_ID WHERE c.MTA_ID=? AND m.MSG_MetaMessageId=? ORDER BY m.MSG_ID ASC LIMIT 1");
+        $sql->execute([(int) $metaId, (string) $messageId]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function salvarMensagemIdempotente(array $dados, $metaId)
+    {
+        return $this->ingerirMensagemIdempotente($metaId, $dados, function() use ($dados){
+            return $dados['conversa_id'] ?? null;
+        });
+    }
+
+    public function ingerirMensagemIdempotente($metaId, array $dados, callable $resolverConversa)
+    {
+        $messageId = trim((string) ($dados['message_id'] ?? ''));
+        if($messageId === '' || (int) $metaId <= 0){
+            return ['id'=>null, 'created'=>false];
+        }
+
+        $iniciouTransacao = !$this->db->inTransaction();
+        if($iniciouTransacao) $this->db->beginTransaction();
+
+        try{
+            $lock = $this->db->prepare('SELECT MTA_ID FROM meta_contas WHERE MTA_ID=? FOR UPDATE');
+            $lock->execute([(int) $metaId]);
+            if(!$lock->fetchColumn()) throw new \RuntimeException('Conta Meta não encontrada para persistência da mensagem.');
+
+            $existente = $this->buscarMensagemPorMetaIdConta($metaId, $messageId);
+            if($existente){
+                if($iniciouTransacao) $this->db->commit();
+                return ['id'=>(int) $existente['MSG_ID'], 'created'=>false];
+            }
+
+            $conversaId = (int) call_user_func($resolverConversa);
+            if($conversaId <= 0) throw new \RuntimeException('Conversa não pôde ser resolvida para persistência da mensagem.');
+            $dados['conversa_id'] = $conversaId;
+            $id = (int) $this->inserirMensagem($dados);
+            if($iniciouTransacao) $this->db->commit();
+            return ['id'=>$id, 'created'=>true];
+        }catch(\Throwable $e){
+            if($iniciouTransacao && $this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    private function colunaConversaMensagemExiste($coluna)
+    {
+        static $cache = [];
+        if(array_key_exists($coluna, $cache)) return $cache[$coluna];
+        try{
+            $sql = $this->db->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='conversa_mensagens' AND COLUMN_NAME=?");
+            $sql->execute([$coluna]);
+            return $cache[$coluna] = ((int) $sql->fetchColumn() > 0);
+        }catch(\Throwable $e){
+            return $cache[$coluna] = false;
+        }
     }
 
     public function atualizarResumo($conversaId, $ultimaMensagem, $direcao)
