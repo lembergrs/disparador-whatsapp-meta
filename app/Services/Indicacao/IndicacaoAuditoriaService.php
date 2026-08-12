@@ -3,7 +3,7 @@ namespace Services\Indicacao;
 use Models\IndicacaoAuditoria;
 class IndicacaoAuditoriaService{
     private $model;
-    private const CHAVES=['origem','campanha_id','cliente_id','indicador_id','indicado_id','percentual','codigo_prefixo','valor_pago_centavos','valor_esperado_centavos','decisao_indicacao','valor_divergente'];
+    private const CHAVES=['origem','campanha_id','cliente_id','indicador_id','indicado_id','percentual','codigo_prefixo','valor_pago_centavos','valor_esperado_centavos','decisao_indicacao','valor_divergente','campanha_nome_anterior','campanha_nome_novo','percentual_anterior','percentual_novo','inicio_anterior','inicio_novo','fim_anterior','fim_novo','publica_anterior','publica_novo'];
     public function __construct(IndicacaoAuditoria $model=null){$this->model=$model?:new IndicacaoAuditoria();}
     public function registrar($entidade,$id,$acao,$anterior=null,$novo=null,$motivo=null,$usuarioId=null,$correlacao=null,array $dados=[]):void{
         $seguros=[];foreach(self::CHAVES as $k){if(array_key_exists($k,$dados))$seguros[$k]=$this->sanitizar($dados[$k]);}
