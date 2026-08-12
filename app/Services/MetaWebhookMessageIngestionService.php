@@ -95,7 +95,7 @@ class MetaWebhookMessageIngestionService
 
     public function processarHistorico(array $value, array $metaConta)
     {
-        $resultado = ['criadas'=>0, 'duplicadas'=>0, 'invalidas'=>0];
+        $resultado = ['criadas'=>0, 'duplicadas'=>0, 'enriquecidas'=>0, 'invalidas'=>0];
 
         foreach(($value['history'] ?? []) as $chunk){
             if(!empty($chunk['errors'])){
@@ -129,14 +129,17 @@ class MetaWebhookMessageIngestionService
                             'origem'=>'history',
                             'retorno'=>$message,
                             'data_mensagem'=>$dados['data_mensagem'],
-                            'resumo_mode'=>'history'
+                            'resumo_mode'=>'history',
+                            'permitir_enriquecimento_history'=>true
                         ], function() use ($metaConta, $dados){
                             return $this->conversaModel->buscarOuCriar(
                                 $metaConta['CLI_ID'], $metaConta['MTA_ID'], $dados['participante'], null, false
                             );
                         });
 
-                        empty($persistencia['created']) ? $resultado['duplicadas']++ : $resultado['criadas']++;
+                        if(!empty($persistencia['created'])) $resultado['criadas']++;
+                        elseif(!empty($persistencia['enriched'])) $resultado['enriquecidas']++;
+                        else $resultado['duplicadas']++;
                     }catch(\Throwable $e){
                         $resultado['invalidas']++;
                         $this->log('history_mensagem_erro', [
@@ -217,11 +220,12 @@ class MetaWebhookMessageIngestionService
         $fromDigits = $this->somenteDigitos($from);
 
         if($fromDigits === $businessDigits){
-            if(!$to || $this->somenteDigitos($to) !== $threadDigits || $threadDigits === $businessDigits){
+            if(($to && $this->somenteDigitos($to) !== $threadDigits) || $threadDigits === $businessDigits){
                 return null;
             }
             $direcao = 'enviada';
             $status = $this->statusHistoricoSaida($message['history_context']['status'] ?? null);
+            if(!$status) return null;
         }elseif($fromDigits === $threadDigits && (!$to || $this->somenteDigitos($to) === $businessDigits)){
             $direcao = 'recebida';
             $status = 'recebida';
@@ -260,7 +264,11 @@ class MetaWebhookMessageIngestionService
     private function statusHistoricoSaida($status)
     {
         $status = strtolower(trim((string) $status));
-        return in_array($status, ['sent','delivered','read','failed'], true) ? $status : 'sent';
+        $map = [
+            'pending'=>'pending', 'sent'=>'sent', 'delivered'=>'delivered',
+            'read'=>'read', 'played'=>'read', 'error'=>'failed'
+        ];
+        return $map[$status] ?? null;
     }
 
     private function tipoHistoricoSuportado($tipo)

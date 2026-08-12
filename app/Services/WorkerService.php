@@ -15,6 +15,7 @@ class WorkerService
     private $lockCompartilhado = false;
     private $campanhaQueue;
     private $disparoManualQueue;
+    private $historyQueue;
 
     public function __construct(array $opcoes = [])
     {
@@ -28,6 +29,7 @@ class WorkerService
         $validator = new WorkerOperationalValidatorService();
         $this->campanhaQueue = new CampanhaQueueService($this->modoTeste, $validator);
         $this->disparoManualQueue = new DisparoManualQueueService($this->modoTeste);
+        $this->historyQueue = $opcoes['history_queue'] ?? new MetaCoexistenceHistoryQueueService();
     }
 
     public function __destruct()
@@ -77,6 +79,7 @@ class WorkerService
                 'campanhas' => 0,
                 'total' => 0
             ],
+            'coexistence_history' => ['recuperados'=>0,'reservados'=>0,'processados'=>0,'erros'=>0],
             'excecoes' => [],
             'lock_compartilhado' => 'nao_adquirido'
         ];
@@ -133,6 +136,12 @@ class WorkerService
             ];
         }catch(\Throwable $e){
             $this->registrarExcecao($resumo, 'campanhas', $e);
+        }
+
+        try{
+            $resumo['coexistence_history'] = $this->historyQueue->processarPendentes(5, $this->workerId);
+        }catch(\Throwable $e){
+            $this->registrarExcecao($resumo, 'coexistence_history', $e);
         }
 
         $this->liberarLockCompartilhado();

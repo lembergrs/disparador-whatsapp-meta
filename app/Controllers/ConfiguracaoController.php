@@ -704,6 +704,19 @@ class ConfiguracaoController extends Controller
         if($onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && $statusConexao === 'conectado'){
             $conta = $this->metaContaModel->buscarPorCliente($contaId, $clienteId) ?: [];
             $this->atualizarStatusOperacionalConta($clienteId, $conta, array_merge($dadosWhatsApp, ['status' => 'conectado']));
+            try{
+                $sync = $this->embeddedSignupFlowService()->iniciarSincronizacaoCoexistence($conta, $this->metaContaModel);
+                $this->logMetaEmbeddedSignup([
+                    'data'=>date('Y-m-d H:i:s'), 'cliente_id'=>$clienteId, 'conta_id'=>$contaId,
+                    'etapa'=>'coexistence_sync_solicitado', 'contact_request_id'=>$sync['contact_request_id'] ?? null,
+                    'history_request_id'=>$sync['history_request_id'] ?? null, 'resultado'=>'aceito'
+                ]);
+            }catch(\Throwable $e){
+                $this->logMetaEmbeddedSignup([
+                    'data'=>date('Y-m-d H:i:s'), 'cliente_id'=>$clienteId, 'conta_id'=>$contaId,
+                    'etapa'=>'coexistence_sync_solicitacao', 'erro'=>$this->sanitizeMetaMessage($e->getMessage()), 'resultado'=>'erro'
+                ]);
+            }
         }
 
         return [

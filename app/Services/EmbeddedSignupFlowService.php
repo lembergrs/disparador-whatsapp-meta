@@ -154,4 +154,10 @@ class EmbeddedSignupFlowService
 
         return $this->definirStatusConexao($dadosWhatsApp);
     }
+
+    public function iniciarSincronizacaoCoexistence(array $conta, $repository)
+    {
+        $service = new MetaCoexistenceSyncService($this->graphRequest, $repository);
+        return $service->iniciar($conta);
+    }
 }

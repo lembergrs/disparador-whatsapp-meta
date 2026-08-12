@@ -102,6 +102,52 @@ class MetaConta
             $this->colunaExiste('MTA_PlatformType');
     }
 
+    public function reservarSyncUmaVez($id, $tipo)
+    {
+        $coluna = $tipo === 'contact' ? 'MTA_ContactSyncStatus' : 'MTA_HistorySyncStatus';
+        if(!$this->colunaExiste($coluna)) throw new \RuntimeException('Migration operacional Coexistence não aplicada.');
+        $sql = $this->db->prepare("UPDATE meta_contas SET {$coluna}='requesting', MTA_LastSyncEventAt=NOW() WHERE MTA_ID=? AND MTA_OnboardingType='coexistence' AND {$coluna} IS NULL");
+        $sql->execute([(int)$id]);
+        return $sql->rowCount() === 1;
+    }
+
+    public function confirmarSyncSolicitado($id, $tipo, $requestId)
+    {
+        $requestColuna = $tipo === 'contact' ? 'MTA_ContactSyncRequestId' : 'MTA_HistorySyncRequestId';
+        $statusColuna = $tipo === 'contact' ? 'MTA_ContactSyncStatus' : 'MTA_HistorySyncStatus';
+        $sql = $this->db->prepare("UPDATE meta_contas SET {$requestColuna}=?, {$statusColuna}='requested', MTA_LastSyncEventAt=NOW() WHERE MTA_ID=? AND MTA_OnboardingType='coexistence' AND {$statusColuna}='requesting'");
+        return $sql->execute([(string)$requestId,(int)$id]);
+    }
+
+    public function marcarSyncFalho($id, $tipo)
+    {
+        $coluna = $tipo === 'contact' ? 'MTA_ContactSyncStatus' : 'MTA_HistorySyncStatus';
+        $sql = $this->db->prepare("UPDATE meta_contas SET {$coluna}='request_failed', MTA_LastSyncEventAt=NOW() WHERE MTA_ID=? AND {$coluna}='requesting'");
+        return $sql->execute([(int)$id]);
+    }
+
+    public function buscarPorWabaIdAtiva($wabaId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM meta_contas WHERE MTA_WabaId=? AND MTA_Ativo='S' ORDER BY MTA_ID DESC LIMIT 1");
+        $sql->execute([(string)$wabaId]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function atualizarLifecycleCoexistence($id, $evento, array $dados = [])
+    {
+        $map = [
+            'PARTNER_REMOVED'=>['desconectado','DISCONNECTED'],
+            'ACCOUNT_OFFBOARDED'=>['desconectado','DISCONNECTED'],
+            'ACCOUNT_RECONNECTED'=>['conectado','CONNECTED']
+        ];
+        if(!isset($map[$evento])) return false;
+        [$status,$operacional] = $map[$evento];
+        $reason = mb_substr(preg_replace('/[\r\n\t]+/', ' ', trim((string)($dados['reason'] ?? ''))), 0, 255, 'UTF-8');
+        $initiated = mb_substr(preg_replace('/[^A-Za-z0-9_. -]/', '', (string)($dados['initiated_by'] ?? '')), 0, 100, 'UTF-8');
+        $sql = $this->db->prepare("UPDATE meta_contas SET MTA_Status=?,MTA_OperationalStatus=?,MTA_DisconnectReason=?,MTA_DisconnectInitiatedBy=?,MTA_LifecycleUpdatedAt=NOW() WHERE MTA_ID=? AND MTA_OnboardingType='coexistence'");
+        return $sql->execute([$status,$operacional,$reason ?: null,$initiated ?: null,(int)$id]);
+    }
+
     public function salvar($dados)
     {
         $sql = $this->db->prepare("

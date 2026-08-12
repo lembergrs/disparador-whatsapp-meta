@@ -225,8 +225,12 @@ class Conversa
 
             $existente = $this->buscarMensagemPorMetaIdConta($metaId, $messageId);
             if($existente){
+                $enriched = false;
+                if(($dados['permitir_enriquecimento_history'] ?? false) === true){
+                    $enriched = $this->enriquecerPlaceholderHistorico($existente, $dados);
+                }
                 if($iniciouTransacao) $this->db->commit();
-                return ['id'=>(int) $existente['MSG_ID'], 'created'=>false];
+                return ['id'=>(int) $existente['MSG_ID'], 'created'=>false, 'enriched'=>$enriched];
             }
 
             $conversaId = (int) call_user_func($resolverConversa);
@@ -239,6 +243,24 @@ class Conversa
             if($iniciouTransacao && $this->db->inTransaction()) $this->db->rollBack();
             throw $e;
         }
+    }
+
+    public function enriquecerPlaceholderHistorico(array $existente, array $dados)
+    {
+        $tiposMidia = ['image','video','document','audio','sticker'];
+        if(($existente['MSG_Origem'] ?? null) !== 'history' || ($existente['MSG_Tipo'] ?? null) !== 'media_placeholder' || !in_array($dados['tipo'] ?? null, $tiposMidia, true)){
+            return false;
+        }
+
+        $statusAtual = $existente['MSG_Status'] ?? null;
+        $statusNovo = $dados['status'] ?? null;
+        $statusFinal = MensagemStatusService::podeAvancar($statusAtual, $statusNovo) ? $statusNovo : $statusAtual;
+        $sql = $this->db->prepare("UPDATE conversa_mensagens SET MSG_Tipo=?,MSG_Texto=?,MSG_Retorno=?,MSG_Status=?,MSG_AtualizadoEm=NOW() WHERE MSG_ID=? AND MSG_Origem='history' AND MSG_Tipo='media_placeholder'");
+        $sql->execute([
+            $dados['tipo'], $dados['texto'] ?? '', json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
+            $statusFinal, (int)$existente['MSG_ID']
+        ]);
+        return $sql->rowCount() === 1;
     }
 
     private function colunaConversaMensagemExiste($coluna)

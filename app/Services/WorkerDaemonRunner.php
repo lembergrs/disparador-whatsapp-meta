@@ -273,11 +273,13 @@ class WorkerDaemonRunner
         $manual = $summary['lotes_manuais'] ?? [];
         $campanhas = $summary['campanhas'] ?? [];
         $recuperados = $summary['recuperados'] ?? [];
+        $history = $summary['coexistence_history'] ?? [];
 
         $fields = [
             [$manual, ['processados', 'reservados', 'enviados', 'erros', 'bloqueados']],
             [$campanhas, ['campanhas_encontradas', 'processadas', 'reservados', 'enviados', 'erros_temporarios', 'erros_definitivos', 'bloqueados', 'excecoes']],
-            [$recuperados, ['manual', 'campanhas', 'total']]
+            [$recuperados, ['manual', 'campanhas', 'total']],
+            [$history, ['recuperados', 'reservados', 'processados', 'erros']]
         ];
 
         foreach($fields as $group){
