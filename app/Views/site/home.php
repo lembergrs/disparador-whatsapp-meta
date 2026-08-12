@@ -136,6 +136,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         cursor: not-allowed;
     }
 
+    .site-valor-primeiro-pagamento {
+        font-size: 2.125rem;
+        line-height: 1;
+    }
+
     @media (max-width: 991.98px) {
         .site-plano-carousel-item {
             flex-basis: calc((100% - 1.5rem) / 2);
@@ -146,6 +151,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         .site-plano-carousel-item {
             flex-basis: 100%;
             min-width: 100%;
+        }
+
+        .site-valor-primeiro-pagamento {
+            font-size: 1.875rem;
         }
     }
     </style>
@@ -913,7 +922,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                 </span>
 
                                 <p class="text-success font-weight-bold mb-1">
-                                    R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?> no primeiro pagamento
+                                    <span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?></span><span> no primeiro pagamento</span>
                                 </p>
 
                                 <p class="text-muted mb-1">
