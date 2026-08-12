@@ -25,6 +25,11 @@ class IndicacaoCampanha
         return $s->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
+    public function listar()
+    {
+        return $this->db->query('SELECT * FROM indicacao_campanhas ORDER BY ICP_CriadoEm DESC, ICP_ID DESC')->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function buscarPublicaAtiva($forUpdate = false)
     {
         $sql = "SELECT * FROM indicacao_campanhas WHERE ICP_Ativo='S' AND ICP_Publica='S' LIMIT 1";

@@ -278,6 +278,12 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 </li>
 
 <li class="nav-item">
+    <a href="<?= BASE_URL; ?>/index.php?url=indicacaoAdmin" class="nav-link <?= str_contains($url, 'indicacaoAdmin') ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-share-alt"></i><p>Programa de Indicação</p>
+    </a>
+</li>
+
+<li class="nav-item">
 
     <a
     href="<?= BASE_URL; ?>/index.php?url=nfse"

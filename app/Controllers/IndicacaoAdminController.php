@@ -1,0 +1,9 @@
+<?php
+namespace Controllers;
+use Core\{Auth,Controller,Session};
+use Services\Indicacao\{IndicacaoAdminReadService,IndicacaoCampanhaService};
+class IndicacaoAdminController extends Controller{
+ public function index(){Auth::admin();$this->view('indicacao_admin/index',['titulo'=>'Programa de Indicação','dados'=>(new IndicacaoAdminReadService())->obter()]);}
+ public function criarCampanha(){ $this->validarCsrfPost();Auth::admin();try{(new IndicacaoCampanhaService())->criar(['nome'=>trim($_POST['nome']??''),'descricao'=>trim($_POST['descricao']??''),'percentual'=>$_POST['percentual']??0,'data_inicio'=>$_POST['data_inicio']?:null,'data_fim'=>$_POST['data_fim']?:null,'ativo'=>($_POST['ativo']??'N')==='S'?'S':'N','publica'=>($_POST['publica']??'N')==='S'?'S':'N','usuario_id'=>Auth::usuario()['id']??null]);Session::flash('success','Campanha criada.');}catch(\Throwable $e){Session::flash('error',$e instanceof \InvalidArgumentException?$e->getMessage():'Não foi possível criar a campanha.');}$this->redirect('indicacaoAdmin');}
+ public function alterarAtivacao(){ $this->validarCsrfPost();Auth::admin();try{(new IndicacaoCampanhaService())->alterarAtivacao((int)($_POST['id']??0),($_POST['ativo']??'N')==='S'?'S':'N',($_POST['publica']??'N')==='S'?'S':'N',Auth::usuario()['id']??null);Session::flash('success','Status da campanha atualizado.');}catch(\Throwable $e){Session::flash('error',$e instanceof \InvalidArgumentException?$e->getMessage():'Não foi possível atualizar a campanha.');}$this->redirect('indicacaoAdmin');}
+}
