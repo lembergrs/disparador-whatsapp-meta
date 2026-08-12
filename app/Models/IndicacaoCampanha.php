@@ -75,6 +75,19 @@ class IndicacaoCampanha
         return $s->execute($args);
     }
 
+    public function atualizarConfiguracao($id, array $dados)
+    {
+        $s = $this->db->prepare('UPDATE indicacao_campanhas SET ICP_Nome=?, ICP_Percentual=?, ICP_DataInicio=?, ICP_DataFim=?, ICP_Publica=? WHERE ICP_ID=?');
+        return $s->execute([
+            $dados['nome'],
+            $dados['percentual'],
+            $dados['data_inicio'],
+            $dados['data_fim'],
+            $dados['publica'],
+            (int) $id
+        ]);
+    }
+
     private function driver()
     {
         return $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);

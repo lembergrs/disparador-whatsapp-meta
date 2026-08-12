@@ -5,9 +5,33 @@ use InvalidArgumentException;
 use Models\IndicacaoCampanha;
 class IndicacaoCampanhaService{
     private $model;private $audit;private $db;
-    public function __construct(IndicacaoCampanha $model=null,IndicacaoAuditoriaService $audit=null){$this->model=$model?:new IndicacaoCampanha();$this->audit=$audit?:new IndicacaoAuditoriaService();$this->db=Database::getInstance();}
+    public function __construct(IndicacaoCampanha $model=null,IndicacaoAuditoriaService $audit=null,\PDO $db=null){$this->model=$model?:new IndicacaoCampanha();$this->audit=$audit?:new IndicacaoAuditoriaService();$this->db=$db?:Database::getInstance();}
     public function criar(array $d):int{$d=$this->validarDadosCriacao($d);$p=(float)$d['percentual'];$publica=$d['publica']==='S';$ativa=$d['ativo']==='S';$this->db->beginTransaction();try{if($publica&&$ativa&&$this->model->buscarPublicaAtiva(true))throw new InvalidArgumentException('Já existe campanha pública ativa.');$id=$this->model->criar($d);$this->audit->registrar('campanha',$id,'criada',null,$ativa?'ativa':'inativa',null,$d['usuario_id']??null,null,['percentual'=>$p]);$this->db->commit();return $id;}catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}}
     public function alterarAtivacao($id,$ativo,$publica=null,$usuarioId=null):void{$camp=$this->model->buscar($id);if(!$camp)throw new InvalidArgumentException('Campanha não encontrada.');$this->db->beginTransaction();try{if($ativo==='S'&&($publica??$camp['ICP_Publica'])==='S'){$atual=$this->model->buscarPublicaAtiva(true);if($atual&&(int)$atual['ICP_ID']!==(int)$id)throw new InvalidArgumentException('Já existe campanha pública ativa.');}$this->model->atualizarStatus($id,$ativo,$publica);$this->audit->registrar('campanha',$id,$ativo==='S'?'ativada':'inativada',$camp['ICP_Ativo'],$ativo,null,$usuarioId);$this->db->commit();}catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}}
+    public function editar($id,array $dados,$usuarioId=null):void{
+        $campanha=$this->model->buscar($id);
+        if(!$campanha)throw new InvalidArgumentException('Campanha não encontrada.');
+        $dados['ativo']=$campanha['ICP_Ativo'];
+        $dados=$this->validarDadosCriacao($dados);
+        $this->db->beginTransaction();
+        try{
+            $campanha=$this->model->buscar($id,true);
+            if(!$campanha)throw new InvalidArgumentException('Campanha não encontrada.');
+            if($campanha['ICP_Ativo']==='S'&&$dados['publica']==='S'){
+                $atual=$this->model->buscarPublicaAtiva(true);
+                if($atual&&(int)$atual['ICP_ID']!==(int)$id)throw new InvalidArgumentException('Já existe campanha pública ativa.');
+            }
+            $this->model->atualizarConfiguracao($id,$dados);
+            $this->audit->registrar('campanha',$id,'configuracao_editada',$campanha['ICP_Ativo'],$campanha['ICP_Ativo'],null,$usuarioId,null,[
+                'campanha_nome_anterior'=>$campanha['ICP_Nome'],'campanha_nome_novo'=>$dados['nome'],
+                'percentual_anterior'=>$campanha['ICP_Percentual'],'percentual_novo'=>$dados['percentual'],
+                'inicio_anterior'=>$campanha['ICP_DataInicio'],'inicio_novo'=>$dados['data_inicio'],
+                'fim_anterior'=>$campanha['ICP_DataFim'],'fim_novo'=>$dados['data_fim'],
+                'publica_anterior'=>$campanha['ICP_Publica'],'publica_novo'=>$dados['publica']
+            ]);
+            $this->db->commit();
+        }catch(\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
+    }
     private function validarDadosCriacao(array $d):array{$nome=trim((string)($d['nome']??''));if($nome==='')throw new InvalidArgumentException('Nome da campanha é obrigatório.');if(mb_strlen($nome,'UTF-8')>120)throw new InvalidArgumentException('Nome da campanha deve possuir no máximo 120 caracteres.');$p=(float)($d['percentual']??0);if($p<=0||$p>100)throw new InvalidArgumentException('Percentual inválido.');$inicio=$this->normalizarData($d['data_inicio']??null,'Data de início inválida.');$fim=$this->normalizarData($d['data_fim']??null,'Data de término inválida.');if($inicio&&$fim&&$inicio>$fim)throw new InvalidArgumentException('A data de início deve ser anterior ou igual à data de término.');$d['nome']=$nome;$d['percentual']=number_format($p,2,'.','');$d['data_inicio']=$inicio;$d['data_fim']=$fim;$d['ativo']=($d['ativo']??'N')==='S'?'S':'N';$d['publica']=($d['publica']??'N')==='S'?'S':'N';return $d;}
     private function normalizarData($valor,string $mensagem):?string{$valor=trim((string)$valor);if($valor==='')return null;$data=\DateTimeImmutable::createFromFormat('!Y-m-d\\TH:i',$valor);$erros=\DateTimeImmutable::getLastErrors();if(!$data||($erros!==false&&($erros['warning_count']||$erros['error_count']))||$data->format('Y-m-d\\TH:i')!==$valor)throw new InvalidArgumentException($mensagem);return $data->format('Y-m-d H:i:s');}
 }

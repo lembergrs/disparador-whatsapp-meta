@@ -136,6 +136,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         cursor: not-allowed;
     }
 
+    .site-valor-primeiro-pagamento {
+        font-size: 2.125rem;
+        line-height: 1;
+    }
+
     @media (max-width: 991.98px) {
         .site-plano-carousel-item {
             flex-basis: calc((100% - 1.5rem) / 2);
@@ -146,6 +151,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         .site-plano-carousel-item {
             flex-basis: 100%;
             min-width: 100%;
+        }
+
+        .site-valor-primeiro-pagamento {
+            font-size: 1.875rem;
         }
     }
     </style>
@@ -697,6 +706,102 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
+<?php if(!empty($campanhaIndicacaoPublica['disponivel'])){ ?>
+<?php $percentualIndicacao = rtrim(rtrim(number_format((float) $campanhaIndicacaoPublica['percentual'], 2, ',', '.'), '0'), ','); ?>
+<section id="programa-indicacao" class="py-5 bg-white border-bottom">
+
+    <div class="container">
+
+        <div class="text-center mb-5">
+
+            <span class="badge badge-success mb-3">Programa de indicação</span>
+
+            <h2 class="site-section-title">Indique e Ganhe</h2>
+
+            <p class="text-muted mx-auto" style="max-width: 720px;">
+                Clientes Disparador.net podem indicar outras empresas e economizar nas próximas mensalidades quando a indicação for confirmada pelas regras do programa.
+            </p>
+
+            <p class="text-muted mx-auto mb-0" style="max-width: 720px;">
+                <strong>Comece economizando e continue economizando.</strong><br>
+                Todo novo cliente tem <strong>50% de desconto no primeiro pagamento</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong><?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
+            </p>
+
+        </div>
+
+        <div class="row text-center mb-4">
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">1</div>
+                <h3 class="h5 font-weight-bold">Seja cliente</h3>
+                <p class="text-muted mb-0">Crie sua conta e conheça a plataforma do Disparador.net.</p>
+            </div>
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">2</div>
+                <h3 class="h5 font-weight-bold">Receba seu código</h3>
+                <p class="text-muted mb-0">Após a ativação e a confirmação do pagamento exigido, seu código e link ficam disponíveis.</p>
+            </div>
+
+            <div class="col-md-3 mb-4 mb-md-0">
+                <div class="site-step">3</div>
+                <h3 class="h5 font-weight-bold">Compartilhe</h3>
+                <p class="text-muted mb-0">Envie o link ou o código para a empresa que deseja indicar.</p>
+            </div>
+
+            <div class="col-md-3">
+                <div class="site-step">4</div>
+                <h3 class="h5 font-weight-bold">O indicado faz o cadastro</h3>
+                <p class="text-muted mb-0">A empresa indicada acessa o cadastro pelo link ou informa o código de indicação manualmente.</p>
+            </div>
+
+        </div>
+
+        <p class="text-center text-muted mb-4">Depois que a indicação for confirmada conforme as regras do programa, você recebe o crédito de <?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% para mensalidades futuras elegíveis.</p>
+
+        <div class="row justify-content-center">
+
+            <div class="col-lg-5 mb-4 mb-lg-0">
+                <div class="card h-100 site-card-feature">
+                    <div class="card-body p-4">
+                        <div class="site-feature-icon mb-3"><i class="fas fa-gift"></i></div>
+                        <h3 class="h5 font-weight-bold">Para novos clientes</h3>
+                        <p class="font-weight-bold mb-2">50% de desconto na primeira mensalidade para novos clientes.</p>
+                        <p class="text-muted mb-0">Este benefício é válido com ou sem indicação.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card h-100 site-card-feature">
+                    <div class="card-body p-4">
+                        <div class="site-feature-icon mb-3"><i class="fas fa-share-alt"></i></div>
+                        <h3 class="h5 font-weight-bold">Para quem indica</h3>
+                        <p class="font-weight-bold mb-2">Quando uma indicação elegível é confirmada conforme as regras do programa, quem indicou recebe um crédito de <?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis.</p>
+                        <p class="text-muted mb-0">O crédito é aplicado de acordo com as condições vigentes do programa.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="text-center mt-4">
+            <a
+            href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
+            class="btn btn-success site-btn-main"
+            data-analytics-event="select_trial"
+            data-analytics-location="referral_program"
+            data-analytics-destination="registration"
+            >
+                Criar minha conta
+            </a>
+        </div>
+
+    </div>
+
+</section>
+<?php } ?>
+
 <section id="faixas-meta" class="py-5 site-meta-tiers">
 
     <div class="container">
@@ -808,6 +913,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         : 'primary';
 
                     $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
+                    $valorPrimeiroPagamento = $valorMensal / 2;
                     ?>
 
                     <div class="site-plano-carousel-item">
@@ -820,9 +926,17 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                     <?= htmlspecialchars($plano['PLA_Nome']); ?>
                                 </span>
 
-                                <h4 class="font-weight-bold">
-                                    R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês
-                                </h4>
+                                <p class="text-success font-weight-bold mb-1">
+                                    <span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?></span><span> no primeiro pagamento</span>
+                                </p>
+
+                                <p class="text-muted mb-1">
+                                    <del>R$ <?= number_format($valorMensal, 2, ',', '.'); ?></del>
+                                </p>
+
+                                <p class="mb-3">
+                                    A partir do 2º mês: <strong>R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês</strong>
+                                </p>
 
                                 <p class="text-muted">
                                     <?= $formatarQuantidade($plano['PLA_LimiteNumeros'] ?? 0, 'número WhatsApp', 'números WhatsApp'); ?>
