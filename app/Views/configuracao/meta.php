@@ -73,6 +73,7 @@ $adminPodeAtualizarStatusMeta =
                         type="button"
                         class="btn btn-success btn-sm"
                         id="btnConectarWhatsApp"
+                        data-onboarding-mode="traditional"
                         >
                             <i class="fab fa-whatsapp"></i>
                             <?= !empty($limiteNumeros['pre_trial_primeiro_numero'])
@@ -112,6 +113,24 @@ $adminPodeAtualizarStatusMeta =
                     <?php } ?>
                 </div>
 
+                <?php if(!empty($coexistenceDisponivel) && $podeConectarNumero){ ?>
+                    <div class="alert alert-warning">
+                        <strong>Recurso em homologação.</strong>
+                        Use somente o número destinado aos testes.
+                        <div class="mt-2">
+                            <button
+                            type="button"
+                            class="btn btn-outline-warning btn-sm"
+                            id="btnConectarWhatsAppCoexistence"
+                            data-onboarding-mode="coexistence"
+                            >
+                                <i class="fab fa-whatsapp"></i>
+                                Conectar WhatsApp Business App (homologação)
+                            </button>
+                        </div>
+                    </div>
+                <?php } ?>
+
                 <?php if(!$podeConectarNumero){ ?>
 
                     <div class="alert alert-warning">
@@ -150,6 +169,7 @@ $adminPodeAtualizarStatusMeta =
                             type="button"
                             class="btn btn-success"
                             id="btnConectarWhatsAppVazio"
+                            data-onboarding-mode="traditional"
                             >
                                 <i class="fab fa-whatsapp"></i>
                                 Conectar WhatsApp
@@ -530,7 +550,7 @@ role="alert"
 
     function setBotoesConexao(disabled)
     {
-        document.querySelectorAll('#btnConectarWhatsApp,#btnConectarWhatsAppVazio').forEach(function(botao){
+        document.querySelectorAll('[data-onboarding-mode]').forEach(function(botao){
             botao.disabled = disabled;
         });
     }
@@ -757,7 +777,8 @@ role="alert"
     });
 
     document.addEventListener('click', function(e){
-        if(!e.target.closest('#btnConectarWhatsApp') && !e.target.closest('#btnConectarWhatsAppVazio')){ return; }
+        const botaoOnboarding = e.target.closest('[data-onboarding-mode]');
+        if(!botaoOnboarding){ return; }
         e.preventDefault();
         if(tentativaAtiva){ return; }
 
@@ -770,7 +791,9 @@ role="alert"
         setBotoesConexao(true);
         exibirFeedbackEmbeddedSignup('info', 'Abrindo a Meta para iniciar o cadastro do WhatsApp...');
 
-        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {})
+        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {
+            onboarding_mode: botaoOnboarding.dataset.onboardingMode || 'traditional'
+        })
             .then(function(configuracao){
                 if(!inicioMetaRastreado){
                     inicioMetaRastreado = true;

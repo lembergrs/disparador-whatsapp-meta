@@ -12,6 +12,7 @@ use Services\EmbeddedSignupFlowService;
 use Services\MetaService;
 use Services\EmbeddedSignupAttemptCoordinator;
 use Services\EmbeddedSignupOnboardingMode;
+use Services\MetaCoexistenceEligibility;
 use Services\AnalyticsService;
 use Services\EventoNotificacao;
 use Services\CanalNotificacao;
@@ -160,6 +161,24 @@ class ConfiguracaoController extends Controller
         return 'es_' . bin2hex(random_bytes(12));
     }
 
+    private function coexistenceEligibility()
+    {
+        return new MetaCoexistenceEligibility(
+            META_COEXISTENCE_ENABLED,
+            META_COEXISTENCE_TEST_CLIENT_IDS
+        );
+    }
+
+    private function exigirCoexistenceDisponivel($clienteId, $onboardingType)
+    {
+        if(
+            $onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE
+            && !$this->coexistenceEligibility()->availableForClient($clienteId)
+        ){
+            throw new Exception('Coexistence não está disponível para este cliente.');
+        }
+    }
+
     private function avaliarPermissaoConexao($clienteId)
     {
         $numerosAtivos = $this->metaContaModel->contarAtivasPorCliente($clienteId);
@@ -288,9 +307,7 @@ class ConfiguracaoController extends Controller
 
         try{
             $onboardingType = EmbeddedSignupOnboardingMode::normalize($_POST['onboarding_mode'] ?? null);
-            if($onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && !META_COEXISTENCE_ENABLED){
-                throw new Exception('Coexistence não está habilitado neste ambiente.');
-            }
+            $this->exigirCoexistenceDisponivel($clienteId, $onboardingType);
             if($onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && !$this->metaContaModel->colunasCoexistenceExistem()){
                 throw new Exception('A migration de infraestrutura Coexistence ainda não foi aplicada.');
             }
@@ -342,6 +359,15 @@ class ConfiguracaoController extends Controller
 
         if(!empty($tentativa['used_at'])){
             $this->jsonResponse(['ok'=>false,'message'=>'Tentativa já consumida pelo callback.'], 409);
+        }
+
+        try{
+            $this->exigirCoexistenceDisponivel(
+                $clienteId,
+                EmbeddedSignupOnboardingMode::normalize($tentativa['onboarding_type'] ?? null)
+            );
+        }catch(Exception $e){
+            $this->jsonResponse(['ok'=>false,'message'=>$this->sanitizeMetaMessage($e->getMessage())], 403);
         }
 
         if(!is_array($payload) || !EmbeddedSignupOnboardingMode::acceptsFinishEvent($tentativa['onboarding_type'] ?? null, $payload['event'] ?? null)){
@@ -646,6 +672,7 @@ class ConfiguracaoController extends Controller
         $this->exigirPermissaoConexao($clienteId);
         $tentativa = $this->aguardarTentativaEmbeddedParaCallback($state, $clienteId);
         $onboardingType = EmbeddedSignupOnboardingMode::normalize($tentativa['onboarding_type'] ?? null);
+        $this->exigirCoexistenceDisponivel($clienteId, $onboardingType);
         if($onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && empty($tentativa['finish'])){
             throw new Exception('A conclusão do onboarding Coexistence não foi confirmada pela Meta.');
         }
@@ -757,6 +784,14 @@ class ConfiguracaoController extends Controller
         $tentativa = $this->getTentativaEmbedded($state, $clienteId);
         if(!$tentativa){
             $this->jsonResponse(['ok'=>false,'message'=>'Tentativa expirada ou inválida.'], 403);
+        }
+        try{
+            $this->exigirCoexistenceDisponivel(
+                $clienteId,
+                EmbeddedSignupOnboardingMode::normalize($tentativa['onboarding_type'] ?? null)
+            );
+        }catch(Exception $e){
+            $this->jsonResponse(['ok'=>false,'message'=>$this->sanitizeMetaMessage($e->getMessage())], 403);
         }
         if(is_array($payload) && !empty($payload['event']) && !EmbeddedSignupOnboardingMode::acceptsFinishEvent($tentativa['onboarding_type'] ?? null, $payload['event'])){
             $this->jsonResponse(['ok'=>false,'message'=>'Evento de conclusão incompatível com a modalidade do onboarding.'], 422);
@@ -1034,7 +1069,8 @@ class ConfiguracaoController extends Controller
             [
                 'titulo' => 'Números WhatsApp',
                 'contas' => $contas,
-                'limiteNumeros' => $limiteNumeros
+                'limiteNumeros' => $limiteNumeros,
+                'coexistenceDisponivel' => $this->coexistenceEligibility()->availableForClient((int) $usuario['CLI_ID'])
             ]
         );
     }
