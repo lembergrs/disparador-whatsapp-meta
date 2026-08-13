@@ -158,4 +158,10 @@ class EmbeddedSignupFlowService
         $service = new MetaCoexistenceSyncService($this->graphRequest, $repository);
         return $service->iniciar($conta);
     }
+
+    public function repetirSincronizacaoCoexistence(array $conta, $repository, $tipo, callable $aoReservar = null)
+    {
+        $service = new MetaCoexistenceSyncService($this->graphRequest, $repository);
+        return $service->repetir($conta, $tipo, $aoReservar);
+    }
 }

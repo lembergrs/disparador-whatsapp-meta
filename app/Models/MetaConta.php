@@ -111,6 +111,48 @@ class MetaConta
         return $sql->rowCount() === 1;
     }
 
+    public function reservarRetrySync($id, $tipo)
+    {
+        if(!in_array($tipo, ['contact', 'history'], true)){
+            throw new \InvalidArgumentException('Tipo de sincronização Coexistence inválido.');
+        }
+
+        $statusColuna = $tipo === 'contact' ? 'MTA_ContactSyncStatus' : 'MTA_HistorySyncStatus';
+        $requestColuna = $tipo === 'contact' ? 'MTA_ContactSyncRequestId' : 'MTA_HistorySyncRequestId';
+        if(!$this->colunaExiste($statusColuna)) throw new \RuntimeException('Migration operacional Coexistence não aplicada.');
+
+        $this->db->beginTransaction();
+        try{
+            $select = $this->db->prepare("SELECT MTA_OnboardingType, {$statusColuna} AS sync_status, {$requestColuna} AS request_id, MTA_LastSyncEventAt FROM meta_contas WHERE MTA_ID=? FOR UPDATE");
+            $select->execute([(int) $id]);
+            $estado = $select->fetch(PDO::FETCH_ASSOC);
+
+            if(
+                !$estado
+                || ($estado['MTA_OnboardingType'] ?? null) !== 'coexistence'
+                || !in_array($estado['sync_status'] ?? null, ['requested', 'request_failed'], true)
+                || empty($estado['MTA_LastSyncEventAt'])
+                || strtotime((string) $estado['MTA_LastSyncEventAt']) > time() - 900
+            ){
+                $this->db->rollBack();
+                return null;
+            }
+
+            $update = $this->db->prepare("UPDATE meta_contas SET {$statusColuna}='requesting', MTA_LastSyncEventAt=NOW() WHERE MTA_ID=? AND MTA_OnboardingType='coexistence' AND {$statusColuna} IN ('requested','request_failed') AND MTA_LastSyncEventAt <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
+            $update->execute([(int) $id]);
+            if($update->rowCount() !== 1){
+                $this->db->rollBack();
+                return null;
+            }
+
+            $this->db->commit();
+            return ['previous_request_id'=>(string) ($estado['request_id'] ?? '')];
+        }catch(\Throwable $e){
+            if($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     public function confirmarSyncSolicitado($id, $tipo, $requestId)
     {
         $requestColuna = $tipo === 'contact' ? 'MTA_ContactSyncRequestId' : 'MTA_HistorySyncRequestId';
