@@ -440,12 +440,17 @@ class ConfiguracaoController extends Controller
         }
 
         $curl = curl_init($url);
+        $rateLimitHeaders = [];
         $curlOptions = [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 30,
             CURLOPT_CONNECTTIMEOUT => 10,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_HEADERFUNCTION => function($curl, $headerLine) use (&$rateLimitHeaders){
+                $this->captureMetaRateLimitHeader($rateLimitHeaders, $headerLine);
+                return strlen($headerLine);
+            }
         ];
 
         if($method === 'POST'){
@@ -471,10 +476,85 @@ class ConfiguracaoController extends Controller
         }
 
         if($httpCode >= 400 || isset($json['error'])){
+            $diagnostic = $this->buildMetaRateLimitDiagnostic($endpoint, $httpCode, $json, $rateLimitHeaders);
+            if($diagnostic !== null){
+                $this->logMetaEmbeddedSignup($diagnostic);
+            }
             throw new Exception('Erro da Meta HTTP ' . $httpCode . ': ' . $this->sanitizeMetaMessage(($json['error']['message'] ?? ($json['error']['code'] ?? 'erro_meta'))));
         }
 
         return $json;
+    }
+
+    private function captureMetaRateLimitHeader(array &$headers, $headerLine)
+    {
+        if(strpos((string) $headerLine, ':') === false){
+            return;
+        }
+
+        [$rawName, $rawValue] = explode(':', (string) $headerLine, 2);
+        $name = strtolower(trim($rawName));
+        $canonicalNames = [
+            'x-app-usage' => 'X-App-Usage',
+            'x-business-use-case-usage' => 'X-Business-Use-Case-Usage',
+            'retry-after' => 'Retry-After'
+        ];
+        if(!isset($canonicalNames[$name])){
+            return;
+        }
+
+        $value = trim($rawValue);
+        if($name === 'retry-after'){
+            if(!preg_match('/^(?:[0-9]{1,10}|[A-Za-z]{3}, [0-9]{2} [A-Za-z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT)$/D', $value)){
+                return;
+            }
+        }else{
+            $decoded = json_decode($value, true);
+            if(!is_array($decoded)){
+                return;
+            }
+            $value = json_encode($this->sanitizeMetaUsageHeaderValue($decoded), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+
+        $headers[$canonicalNames[$name]] = mb_substr($value, 0, 2000, 'UTF-8');
+    }
+
+    private function sanitizeMetaUsageHeaderValue(array $value)
+    {
+        $safe = [];
+        foreach($value as $key => $item){
+            if(is_string($key) && preg_match('/token|secret|authorization|cookie/i', $key)){
+                continue;
+            }
+            $safe[$key] = is_array($item) ? $this->sanitizeMetaUsageHeaderValue($item) : $item;
+        }
+        return $safe;
+    }
+
+    private function buildMetaRateLimitDiagnostic($endpoint, $httpCode, array $json, array $headers)
+    {
+        $error = isset($json['error']) && is_array($json['error']) ? $json['error'] : [];
+        $metaCode = isset($error['code']) && is_numeric($error['code']) ? (int) $error['code'] : null;
+        $message = strtolower((string) ($error['message'] ?? ''));
+        $rateLimitRelated = in_array($metaCode, [4, 80007], true)
+            || strpos($message, 'rate limit') !== false
+            || strpos($message, 'request limit') !== false
+            || strpos($message, 'too many request') !== false;
+
+        if(empty($headers) && !$rateLimitRelated){
+            return null;
+        }
+
+        return [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'etapa' => 'meta_graph_rate_limit',
+            'http_code' => (int) $httpCode,
+            'meta_error_code' => $metaCode,
+            'endpoint' => strtok(ltrim((string) $endpoint, '/'), '?'),
+            'X-App-Usage' => $headers['X-App-Usage'] ?? null,
+            'X-Business-Use-Case-Usage' => $headers['X-Business-Use-Case-Usage'] ?? null,
+            'Retry-After' => $headers['Retry-After'] ?? null
+        ];
     }
 
     private function trocarCodePorToken($code, $usarRedirectUri = true)
