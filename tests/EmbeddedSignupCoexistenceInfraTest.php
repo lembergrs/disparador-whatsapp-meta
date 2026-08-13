@@ -37,7 +37,7 @@ coexistenceAssert(strpos($config, "env_valor('META_COEXISTENCE_ENABLED', 'false'
 coexistenceAssert(strpos($view, 'whatsapp_business_app_onboarding') !== false, 'payload Coexistence inclui featureType');
 coexistenceAssert(strpos($view, "options.extras.featureType = 'whatsapp_business_app_onboarding'") !== false, 'featureType é condicional');
 coexistenceAssert(strpos($view, "signupOnboardingMode === 'traditional'") !== false, 'somente traditional usa fallback por timeout');
-coexistenceAssert(strpos($view, 'btnConectarWhatsAppCoexistence') === false, 'não existe opção pública de Coexistence');
+coexistenceAssert(strpos($view, 'btnConectarWhatsAppCoexistence') !== false, 'opção de homologação existe para renderização elegível');
 coexistenceAssert(strpos($view, "MTA_OnboardingType'] ?? 'traditional') !== 'coexistence'") !== false, 'PIN fica oculto para Coexistence');
 coexistenceAssert(strpos($controller, 'EmbeddedSignupOnboardingMode::acceptsFinishEvent') !== false, 'backend valida FINISH pelo modo persistido');
 coexistenceAssert(strpos($controller, 'colunasCoexistenceExistem') !== false, 'Coexistence exige a migration de conta antes de iniciar');

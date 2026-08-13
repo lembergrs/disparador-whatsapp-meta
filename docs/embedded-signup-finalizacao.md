@@ -28,7 +28,9 @@ O objeto tradicional do `FB.login()` mantém `sessionInfoVersion: 3`, `version: 
 
 Somente esta modalidade acrescenta `extras.featureType = whatsapp_business_app_onboarding`. O status fica `conectado` apenas quando a Meta retorna `operational_status=CONNECTED` sem outro metadado impeditivo; na ausência dessa evidência, fica `requer_acao`, nunca `pendente_registro`, e o trial não é iniciado.
 
-Coexistence é protegido por `META_COEXISTENCE_ENABLED`, cujo padrão é `false`. Não existe opção na UI de clientes. A flag **não pode ser habilitada em produção** antes da fase de webhook/conversas e homologação com um número Coexistence real.
+Coexistence é protegido por uma decisão centralizada: fica disponível quando `META_COEXISTENCE_ENABLED=true` ou quando o `CLI_ID` está explicitamente listado em `META_COEXISTENCE_TEST_CLIENT_IDS`. O padrão global permanece `false`, e a allowlist fica vazia por padrão. A opção e o aviso de homologação aparecem somente para clientes elegíveis, e todas as etapas de início e conclusão também validam a elegibilidade no backend.
+
+Na primeira homologação real, `META_COEXISTENCE_TEST_CLIENT_IDS=14` libera somente o `CLI_ID 14`. Essa associação é temporária e existe apenas como ambiente do teste: o cliente 14 não é o proprietário definitivo do número. Ainda não existe modelo de propriedade administrativa/global, transferência de conta ou reassociação de conversas. Após a homologação, uma fase separada deverá implementar o modelo definitivo de propriedade pelo sistema/admin; esta etapa não antecipa essa arquitetura.
 
 ## Variáveis obrigatórias
 
@@ -39,6 +41,7 @@ Coexistence é protegido por `META_COEXISTENCE_ENABLED`, cujo padrão é `false`
 - `META_EMBEDDED_SIGNUP_REDIRECT_URI`
 - `META_VERIFY_TOKEN`
 - `META_COEXISTENCE_ENABLED=false` para manter a infraestrutura desativada
+- `META_COEXISTENCE_TEST_CLIENT_IDS=14` para liberar somente o cliente inicial de homologação (aceita IDs positivos separados por vírgula)
 - `BASE_URL` calculado pela aplicação
 
 O `META_EMBEDDED_SIGNUP_REDIRECT_URI` deve permanecer HTTPS e cadastrado na Meta como fallback/compatibilidade, mas o caminho principal usa o `code` retornado por `FB.login()` na página original.
