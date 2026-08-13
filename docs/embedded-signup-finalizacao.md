@@ -82,11 +82,15 @@ No fluxo principal, `code` e `FINISH` são coordenados na página original do Di
 
 ## Estados de conexão
 
-- `conectado`: validações obrigatórias concluídas, assinatura da WABA confirmada com `success=true` e os campos operacionais retornados pela Meta não indicam pendência, bloqueio ou rejeição.
-- `requer_acao`: validações obrigatórias e assinatura foram concluídas, mas algum campo retornado pela Meta indica ação pendente ou bloqueio, por exemplo `PENDING`, `PENDING_REVIEW`, `FLAGGED`, `REJECTED`, `DISCONNECTED`, `UNVERIFIED`, `NOT_VERIFIED` ou `EXPIRED` em `status`, `code_verification_status` ou `name_status`.
+No onboarding tradicional, `code_verification_status` e `name_status` podem impedir a conexão: valores como `PENDING`, `PENDING_REVIEW`, `FLAGGED`, `REJECTED`, `DISCONNECTED`, `UNVERIFIED`, `NOT_VERIFIED` ou `EXPIRED` mantêm a conta em `requer_acao` quando presentes nos campos operacionais avaliados por esse fluxo.
+
+No onboarding Coexistence, a prontidão operacional é determinada exclusivamente por `MTA_OperationalStatus`: o valor normalizado `CONNECTED` resulta em `conectado`; qualquer outro valor, inclusive ausente, resulta em `requer_acao`. Essa exceção é específica de Coexistence e não altera a validação tradicional de `code_verification_status` ou `name_status`.
+
+- `conectado`: as validações obrigatórias e a assinatura da WABA foram concluídas, e a regra operacional da modalidade foi satisfeita.
+- `requer_acao`: as validações obrigatórias e a assinatura foram concluídas, mas a regra operacional da modalidade ainda não foi satisfeita.
 - `erro`: falha impeditiva antes da persistência final, como token inválido, WABA fora dos `target_ids`, telefone não pertencente à WABA, falha na assinatura do app ou resposta inesperada da Graph API.
 
-Campos opcionais ausentes na resposta da Graph API não bloqueiam a conexão por si só; eles só mudam o status quando presentes e indicam pendência/bloqueio.
+Campos opcionais ausentes na resposta da Graph API não bloqueiam a conexão por si só. No fluxo tradicional, eles só mudam o status quando presentes e indicam pendência ou bloqueio; no Coexistence, prevalece exclusivamente o `operational_status` descrito acima.
 
 ## Registro/ativação do Phone Number
 

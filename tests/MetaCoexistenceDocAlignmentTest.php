@@ -60,6 +60,8 @@ $traditional=$sync->iniciar(['MTA_ID'=>1,'MTA_OnboardingType'=>'traditional']); 
 $co=$sync->iniciar(['MTA_ID'=>2,'MTA_OnboardingType'=>'coexistence','MTA_PhoneNumberId'=>'123','MTA_Token'=>'secret']);
 c2cAssert($calls===['smb_app_state_sync','history'],'sync ocorre contatos primeiro e histórico depois');
 c2cAssert($co['contact_request_id']==='req-smb_app_state_sync' && $co['history_request_id']==='req-history','request ids retornados/persistidos');
+$controller=file_get_contents(dirname(__DIR__).'/app/Controllers/ConfiguracaoController.php');
+c2cAssert(strpos($controller, '$onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && $statusConexao === \'conectado\'')!==false,'Coexistence conectado aciona a orquestração existente');
 $sync->iniciar(['MTA_ID'=>2,'MTA_OnboardingType'=>'coexistence','MTA_PhoneNumberId'=>'123','MTA_Token'=>'secret']); c2cAssert(count($calls)===2,'solicitações são one-time');
 
 class C2CLifecycleRepo { public $events=[]; public function atualizarLifecycleCoexistence($id,$event,array $data=[]){$this->events[]=[$id,$event,$data];return true;} }
