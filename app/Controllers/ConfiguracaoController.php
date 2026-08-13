@@ -1021,6 +1021,66 @@ class ConfiguracaoController extends Controller
         }
     }
 
+    public function repetirSyncCoexistenceAjax()
+    {
+        \Core\Csrf::exigirPost();
+        $usuario = Auth::usuario();
+        if(($usuario['nivel'] ?? null) !== 'admin'){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Acesso negado.'], 403);
+        }
+
+        $contaId = (int) ($_POST['conta_id'] ?? 0);
+        $tipo = trim((string) ($_POST['tipo'] ?? ''));
+        $conta = $this->metaContaModel->buscarPorIdAdmin($contaId);
+        if(!$conta || ($conta['MTA_Ativo'] ?? 'N') !== 'S'){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta não encontrada ou inativa.'], 404);
+        }
+        if(empty($conta['MTA_PhoneNumberId']) || empty($conta['MTA_Token'])){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta sem token ou Phone Number ID para sincronização.'], 422);
+        }
+
+        try{
+            $resultado = $this->embeddedSignupFlowService()->repetirSincronizacaoCoexistence(
+                $conta,
+                $this->metaContaModel,
+                $tipo,
+                function($requestIdAnterior) use ($conta, $tipo, $usuario){
+                    $requestIdAnterior = preg_replace('/[^A-Za-z0-9_.-]/', '', (string) $requestIdAnterior);
+                    $this->logMetaEmbeddedSignup([
+                        'data'=>date('Y-m-d H:i:s'),
+                        'cliente_id'=>$conta['CLI_ID'] ?? null,
+                        'conta_id'=>$conta['MTA_ID'] ?? null,
+                        'usuario_id'=>$usuario['id'] ?? null,
+                        'etapa'=>'admin_coexistence_sync_retry_reservado',
+                        'sync_type'=>$tipo,
+                        'previous_request_id'=>mb_substr($requestIdAnterior, 0, 100),
+                        'resultado'=>'reservado'
+                    ]);
+                }
+            );
+            if(empty($resultado['iniciado'])){
+                $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Sync não elegível para retry ou já reservado por outra operação.'], 409);
+            }
+            $this->logMetaEmbeddedSignup([
+                'data'=>date('Y-m-d H:i:s'), 'cliente_id'=>$conta['CLI_ID'] ?? null,
+                'conta_id'=>$conta['MTA_ID'] ?? null, 'usuario_id'=>$usuario['id'] ?? null,
+                'etapa'=>'admin_coexistence_sync_retry_solicitado', 'sync_type'=>$tipo,
+                'request_id'=>$resultado['request_id'] ?? null, 'resultado'=>'ok'
+            ]);
+            $this->jsonResponse(['ok'=>true,'status'=>'success','mensagem'=>'Retry Coexistence solicitado com sucesso.','request_id'=>$resultado['request_id']]);
+        }catch(\InvalidArgumentException $e){
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>$e->getMessage()], 422);
+        }catch(\Throwable $e){
+            $this->logMetaEmbeddedSignup([
+                'data'=>date('Y-m-d H:i:s'), 'cliente_id'=>$conta['CLI_ID'] ?? null,
+                'conta_id'=>$conta['MTA_ID'] ?? null, 'usuario_id'=>$usuario['id'] ?? null,
+                'etapa'=>'admin_coexistence_sync_retry', 'sync_type'=>$tipo,
+                'erro'=>$this->sanitizeMetaMessage($e->getMessage()), 'resultado'=>'erro'
+            ]);
+            $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Não foi possível repetir a sincronização Coexistence.'], 400);
+        }
+    }
+
     public function atualizarStatusNumeroWhatsApp()
     {
         \Core\Csrf::exigirPost();

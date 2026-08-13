@@ -47,4 +47,37 @@ class MetaCoexistenceSyncService
 
         return $resultado;
     }
+
+    public function repetir(array $conta, $tipo, callable $aoReservar = null)
+    {
+        if(!in_array($tipo, ['contact', 'history'], true)){
+            throw new \InvalidArgumentException('Tipo de sincronização Coexistence inválido.');
+        }
+        if(EmbeddedSignupOnboardingMode::normalize($conta['MTA_OnboardingType'] ?? null) !== EmbeddedSignupOnboardingMode::COEXISTENCE){
+            return ['iniciado'=>false, 'motivo'=>'traditional'];
+        }
+
+        $reserva = $this->repository->reservarRetrySync((int) $conta['MTA_ID'], $tipo);
+        if(!$reserva){
+            return ['iniciado'=>false, 'motivo'=>'indisponivel'];
+        }
+        if($aoReservar){
+            call_user_func($aoReservar, $reserva['previous_request_id'] ?? null);
+        }
+
+        $syncType = $tipo === 'contact' ? 'smb_app_state_sync' : 'history';
+        try{
+            $resposta = call_user_func($this->graphRequest, $conta['MTA_PhoneNumberId'] . '/smb_app_data', [
+                'messaging_product'=>'whatsapp',
+                'sync_type'=>$syncType
+            ], $conta['MTA_Token'], 'POST');
+            $requestId = trim((string) ($resposta['request_id'] ?? ''));
+            if($requestId === '') throw new \RuntimeException('A Meta não retornou request_id para o retry Coexistence.');
+            $this->repository->confirmarSyncSolicitado((int) $conta['MTA_ID'], $tipo, $requestId);
+            return ['iniciado'=>true, 'request_id'=>$requestId];
+        }catch(\Throwable $e){
+            $this->repository->marcarSyncFalho((int) $conta['MTA_ID'], $tipo);
+            throw $e;
+        }
+    }
 }
