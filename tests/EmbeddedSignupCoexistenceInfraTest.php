@@ -53,6 +53,16 @@ $calls = [];
 $service = new EmbeddedSignupFlowService(function($endpoint) use (&$calls){ $calls[] = $endpoint; return ['success'=>true]; }, '123');
 coexistenceAssert($service->definirStatusCoexistencia([]) === 'requer_acao', 'metadata insuficiente usa estado intermediário sem PIN');
 coexistenceAssert($service->definirStatusCoexistencia(['operational_status'=>'CONNECTED']) === 'conectado', 'CONNECTED comprovado pode conectar');
+$realMetaState = [
+    'operational_status' => 'CONNECTED',
+    'platform_type' => 'CLOUD_API',
+    'name_status' => 'AVAILABLE_WITHOUT_REVIEW',
+    'code_verification_status' => 'NOT_VERIFIED'
+];
+coexistenceAssert($service->definirStatusCoexistencia($realMetaState) === 'conectado', 'Coexistence CONNECTED permanece operacional com NOT_VERIFIED');
+coexistenceAssert($service->definirStatusCoexistencia(['operational_status'=>'PENDING']) === 'requer_acao', 'Coexistence sem CONNECTED requer ação');
+coexistenceAssert($service->definirStatusCoexistencia(['operational_status'=>'']) === 'requer_acao', 'Coexistence com status operacional vazio requer ação');
+coexistenceAssert($service->definirStatusConexao($realMetaState) === 'requer_acao', 'traditional preserva bloqueio por NOT_VERIFIED');
 coexistenceAssert($calls === [], 'estratégia de status Coexistence nunca chama register');
 
 echo "Embedded signup Coexistence infrastructure tests passed\n";

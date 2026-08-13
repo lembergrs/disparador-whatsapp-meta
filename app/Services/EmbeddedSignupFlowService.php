@@ -148,11 +148,9 @@ class EmbeddedSignupFlowService
     public function definirStatusCoexistencia(array $dadosWhatsApp)
     {
         $operationalStatus = strtoupper(trim((string) ($dadosWhatsApp['operational_status'] ?? '')));
-        if($operationalStatus !== 'CONNECTED'){
-            return 'requer_acao';
-        }
-
-        return $this->definirStatusConexao($dadosWhatsApp);
+        return $operationalStatus === 'CONNECTED'
+            ? 'conectado'
+            : 'requer_acao';
     }
 
     public function iniciarSincronizacaoCoexistence(array $conta, $repository)
