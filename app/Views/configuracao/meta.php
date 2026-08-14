@@ -117,6 +117,9 @@ $adminPodeAtualizarStatusMeta =
                     <div class="alert alert-light border">
                         Você pode conectar um número já utilizado no WhatsApp Business ou configurar um novo número para uso com o Disparador. As opções disponíveis serão apresentadas pela Meta durante a conexão.
                     </div>
+                    <div class="alert alert-info" role="note">
+                        <strong>Importante:</strong> ao conectar um número que já utiliza no WhatsApp Business, dispositivos vinculados, como WhatsApp Web e WhatsApp Desktop, poderão ser desconectados pela Meta durante a integração. Após finalizar, você poderá vinculá-los novamente.
+                    </div>
                 <?php } ?>
 
                 <?php if(!$podeConectarNumero){ ?>

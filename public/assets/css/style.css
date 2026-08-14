@@ -630,7 +630,73 @@ footer a:focus-visible{
     padding: 70px 0;
 }
 
+.whatsapp-business-hero{
+    min-height: 680px;
+    display: flex;
+    align-items: center;
+}
+
+.whatsapp-business-benefit-card p{
+    padding: 14px 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.whatsapp-business-benefit-card p:last-child{
+    border-bottom: 0;
+}
+
+.whatsapp-business-diagram{
+    position: relative;
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.whatsapp-business-number{
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto 54px;
+    padding: 16px 28px;
+    border-radius: 999px;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--disp-green), var(--disp-blue));
+    box-shadow: 0 10px 28px rgba(8,166,63,.2);
+}
+
+.whatsapp-business-number i{
+    margin-right: 10px;
+}
+
+.whatsapp-business-branches{
+    position: absolute;
+    top: 55px;
+    left: 25%;
+    right: 25%;
+    height: 40px;
+    border-top: 2px solid #b7dec5;
+    border-left: 2px solid #b7dec5;
+    border-right: 2px solid #b7dec5;
+}
+
+.whatsapp-business-device-card{
+    border: 1px solid #b7dec5;
+    border-radius: 22px;
+    box-shadow: 0 12px 35px rgba(15,23,42,.06);
+}
+
 @media(max-width: 767px){
+    .whatsapp-business-hero{
+        min-height: 0;
+    }
+
+    .whatsapp-business-number{
+        margin-bottom: 28px;
+    }
+
+    .whatsapp-business-branches{
+        display: none;
+    }
+
     .site-hero-title{
         font-size: 34px;
     }
