@@ -11,6 +11,12 @@ class Router
         if($url === 'whatsapp-business'){
             $url = 'site/whatsappBusiness';
         }
+        if($url === 'limites-whatsapp'){
+            $url = 'site/limitesWhatsapp';
+        }
+        if($url === 'precos-whatsapp-meta'){
+            $url = 'site/precosWhatsappMeta';
+        }
 
         $url = explode('/', $url);
 

@@ -284,6 +284,12 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 </li>
 
 <li class="nav-item">
+    <a href="<?= BASE_URL; ?>/index.php?url=depoimentoAdmin" class="nav-link <?= str_contains($url, 'depoimentoAdmin') ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-quote-left"></i><p>Depoimentos</p>
+    </a>
+</li>
+
+<li class="nav-item">
 
     <a
     href="<?= BASE_URL; ?>/index.php?url=nfse"
@@ -424,6 +430,12 @@ $usuario = Auth::usuario();
     </a>
 </li>
 <?php } ?>
+
+<li class="nav-item">
+    <a href="<?= BASE_URL; ?>/index.php?url=depoimento" class="nav-link <?= $url === 'depoimento' ? 'active' : ''; ?>">
+        <i class="nav-icon fas fa-comment-dots"></i><p>Meu depoimento</p>
+    </a>
+</li>
 
 <li class="nav-item">
 

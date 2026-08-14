@@ -1,0 +1,20 @@
+<section id="planos" class="py-5">
+<div class="container"><div class="text-center mb-4"><span class="badge badge-success mb-3">Planos simples</span><h2 class="site-section-title">Planos para cada fase da sua empresa</h2><p class="text-muted">Comece simples e aumente conforme sua operação crescer.</p></div>
+<div class="alert alert-light border text-center mb-4"><strong>Todos os planos incluem:</strong> campanhas, central de atendimento, listas de contatos, templates oficiais e integração com WhatsApp Business quando elegível.</div>
+<?php
+$planos = is_array($planos ?? null) ? $planos : [];
+$coresPermitidas = ['primary','secondary','success','danger','warning','info','light','dark'];
+$formatarQuantidade = function($quantidade,$singular,$plural){ $quantidade=(int)$quantidade; return number_format($quantidade,0,',','.') . ' ' . ($quantidade===1?$singular:$plural); };
+?>
+<?php if(!empty($planos)){ ?><div class="site-planos-header-acoes" aria-label="Navegação dos planos"><button type="button" class="btn btn-outline-success site-planos-carousel-controle" id="sitePlanosAnterior" aria-label="Plano anterior"><i class="fas fa-chevron-left"></i></button><button type="button" class="btn btn-outline-success site-planos-carousel-controle" id="sitePlanosProximo" aria-label="Próximo plano"><i class="fas fa-chevron-right"></i></button></div>
+<div class="site-planos-carousel mt-4" id="sitePlanosCarousel">
+<?php foreach($planos as $plano){ $corPlano=in_array($plano['PLA_Cor']??'',$coresPermitidas,true)?$plano['PLA_Cor']:'primary'; $valorMensal=\Models\Plano::valorPorCiclo($plano,'mensal'); $valorPrimeiroPagamento=$valorMensal/2; $recomendado=stripos((string)$plano['PLA_Nome'],'profissional')!==false; ?>
+<div class="site-plano-carousel-item"><div class="card border-<?= $corPlano; ?> h-100"><div class="card-body p-4 text-center">
+<?php if($recomendado){ ?><span class="badge badge-success d-block mb-2">Recomendado</span><?php } ?><span class="badge badge-<?= $corPlano; ?> mb-3"><?= htmlspecialchars($plano['PLA_Nome']); ?></span>
+<p class="text-success font-weight-bold mb-1"><span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento,2,',','.'); ?></span><span> no primeiro pagamento</span></p><p class="text-muted mb-1"><del>R$ <?= number_format($valorMensal,2,',','.'); ?></del></p><p class="mb-3">A partir do 2º mês: <strong>R$ <?= number_format($valorMensal,2,',','.'); ?>/mês</strong></p>
+<p class="text-muted"><?= $formatarQuantidade($plano['PLA_LimiteNumeros']??0,'número WhatsApp','números WhatsApp'); ?></p><hr><p><i class="fas fa-users text-success"></i> <?= $formatarQuantidade($plano['PLA_LimiteUsuarios']??0,'usuário','usuários'); ?></p><p><i class="fas fa-paper-plane text-primary"></i> <?= $formatarQuantidade($plano['PLA_LimiteMensagens']??0,'mensagem/mês','mensagens/mês'); ?></p><p><i class="fas fa-check text-success"></i> Campanhas, listas, templates e conversas</p>
+<a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-outline-success btn-block" data-analytics-event="select_trial" data-analytics-location="pricing" data-analytics-destination="registration" data-analytics-plan="<?= htmlspecialchars($plano['PLA_Nome'],ENT_QUOTES,'UTF-8'); ?>">Começar teste grátis</a>
+</div></div></div><?php } ?></div>
+<?php }else{ ?><div class="alert alert-light border text-center">Os planos estão sendo atualizados. Solicite acesso para receber uma proposta adequada à sua operação.</div><?php } ?>
+<p class="text-center text-muted mt-3 mb-0">Valores e limites podem ser ajustados conforme a necessidade da operação.</p><div class="alert alert-light border text-center mt-3"><strong>A franquia corresponde ao uso do Disparador.net.</strong> Tarifas cobradas pela Meta não estão incluídas e seguem a política oficial vigente.</div><div class="text-center"><h3 class="h4 font-weight-bold">Seu negócio nunca para</h3><p class="text-muted">Todos os planos incluem uma franquia de mensagens. Se ela for ultrapassada, o envio continua e as mensagens excedentes são cobradas conforme o consumo.</p></div>
+</div></section>
