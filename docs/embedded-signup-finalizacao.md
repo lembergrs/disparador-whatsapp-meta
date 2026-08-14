@@ -4,8 +4,8 @@
 
 1. A tela `configuracao/meta` chama `configuracao/iniciarEmbeddedSignup` por POST com CSRF.
 2. O backend valida cliente autenticado, variáveis Meta, HTTPS do redirect URI e limite do plano. Em seguida cria `state` aleatório de uso único, `requestId` e uma tentativa temporária na tabela `meta_embedded_signup_attempts` com expiração de 30 minutos.
-3. O frontend usa o Facebook JavaScript SDK já inicializado com `META_APP_ID`/`META_GRAPH_VERSION` e chama `FB.login()` com `config_id`, `response_type: code`, `override_default_response_type: true` e `extras.sessionInfoVersion`. O modo padrão é `traditional` e seu payload não contém `featureType`.
-4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH`, a própria página original do Disparador recebe o `window.message` e mantém os IDs em memória para finalizar o fluxo no backend. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
+3. O frontend usa o Facebook JavaScript SDK já inicializado com `META_APP_ID`/`META_GRAPH_VERSION` e chama `FB.login()` com `config_id`, `response_type: code`, `override_default_response_type: true` e `extras.sessionInfoVersion`. Quando Coexistence está habilitado para o cliente, o mesmo fluxo inclui `featureType=whatsapp_business_app_onboarding`, e a Meta apresenta as opções disponíveis sem seleção prévia no Disparador.
+4. Quando a Meta envia `WA_EMBEDDED_SIGNUP` com `FINISH` ou `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`, a própria página original do Disparador recebe o `window.message` e mantém os IDs em memória para finalizar o fluxo no backend. O backend valida CSRF, cliente autenticado, `state`, expiração e grava somente os IDs úteis (`waba_id`, `phone_number_id`, `business_id`) e a modalidade detectada na tentativa temporária, desde que ela ainda não tenha sido consumida definitivamente pelo callback.
 5. O callback de `FB.login()` recebe `authResponse.code`; o frontend coordena `code` e `FINISH` em qualquer ordem e chama `configuracao/finalizarEmbeddedSignup` com `state`, `code`, CSRF e `sessionInfo`.
 6. Quando o `FINISH` trouxe IDs, o backend consulta exatamente a WABA e o Phone Number selecionados e confirma que o telefone pertence à WABA e que a WABA está nos `target_ids` do token. Sem IDs, o fallback só é aceito quando há exatamente uma WABA e um telefone possível.
 7. O backend chama `/{waba_id}/subscribed_apps` via POST, de forma idempotente, e exige resposta `success=true` para confirmar a assinatura do app na WABA.
@@ -14,21 +14,21 @@
 
 ## Modalidades de onboarding
 
-O contrato interno aceita somente `traditional` e `coexistence`. O modo fica persistido na tentativa antes da abertura da Meta e depois em `meta_contas`; valores nulos de contas antigas são tratados como `traditional`.
+O contrato interno aceita somente `traditional` e `coexistence`. O modo é detectado pelo evento final da Meta (`FINISH` ou `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING`), persistido na tentativa e depois em `meta_contas`; valores nulos de contas antigas são tratados como `traditional`.
 
 ### Traditional
 
 `FINISH` → OAuth/code → WABA + Phone Number → `subscribed_apps` → `pendente_registro` → PIN de 6 dígitos → `POST /{phone_number_id}/register` → sincronização → `conectado`.
 
-O objeto tradicional do `FB.login()` mantém `sessionInfoVersion: 3`, `version: v4` e `state`, sem `featureType`.
+O caminho tradicional mantém `sessionInfoVersion: 3`, `version: v4` e `state`; quando o recurso unificado está habilitado, o payload também pode oferecer as opções da Meta, mas o evento `FINISH` mantém todo o processamento tradicional, incluindo registro por PIN.
 
 ### Coexistence
 
 `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING` → OAuth/code → WABA + Phone Number → `subscribed_apps` → persistência sem PIN e sem `/{phone_number_id}/register`.
 
-Somente esta modalidade acrescenta `extras.featureType = whatsapp_business_app_onboarding`. O status fica `conectado` apenas quando a Meta retorna `operational_status=CONNECTED` sem outro metadado impeditivo; na ausência dessa evidência, fica `requer_acao`, nunca `pendente_registro`, e o trial não é iniciado.
+O evento `FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING` identifica esta modalidade no fluxo unificado. O status fica `conectado` apenas quando a Meta retorna `operational_status=CONNECTED`; na ausência dessa evidência, fica `requer_acao`, nunca `pendente_registro`, e o trial não é iniciado.
 
-Coexistence é protegido por uma decisão centralizada: fica disponível quando `META_COEXISTENCE_ENABLED=true` ou quando o `CLI_ID` está explicitamente listado em `META_COEXISTENCE_TEST_CLIENT_IDS`. O padrão global permanece `false`, e a allowlist fica vazia por padrão. A opção e o aviso de homologação aparecem somente para clientes elegíveis, e todas as etapas de início e conclusão também validam a elegibilidade no backend.
+Coexistence é protegido por uma decisão centralizada: fica disponível quando `META_COEXISTENCE_ENABLED=true` ou quando o `CLI_ID` está explicitamente listado em `META_COEXISTENCE_TEST_CLIENT_IDS`. O padrão seguro permanece `false`, e a allowlist fica vazia por padrão. Em produção, a liberação geral exige configurar explicitamente `META_COEXISTENCE_ENABLED=true`; a allowlist continua disponível apenas para rollouts controlados. Todas as etapas de conclusão validam a elegibilidade no backend.
 
 Na primeira homologação real, `META_COEXISTENCE_TEST_CLIENT_IDS=14` libera somente o `CLI_ID 14`. Essa associação é temporária e existe apenas como ambiente do teste: o cliente 14 não é o proprietário definitivo do número. Ainda não existe modelo de propriedade administrativa/global, transferência de conta ou reassociação de conversas. Após a homologação, uma fase separada deverá implementar o modelo definitivo de propriedade pelo sistema/admin; esta etapa não antecipa essa arquitetura.
 
@@ -40,8 +40,8 @@ Na primeira homologação real, `META_COEXISTENCE_TEST_CLIENT_IDS=14` libera som
 - `META_GRAPH_VERSION`
 - `META_EMBEDDED_SIGNUP_REDIRECT_URI`
 - `META_VERIFY_TOKEN`
-- `META_COEXISTENCE_ENABLED=false` para manter a infraestrutura desativada
-- `META_COEXISTENCE_TEST_CLIENT_IDS=14` para liberar somente o cliente inicial de homologação (aceita IDs positivos separados por vírgula)
+- `META_COEXISTENCE_ENABLED=true` para disponibilizar o fluxo unificado aos clientes em produção (`false` continua sendo o padrão fail-safe)
+- `META_COEXISTENCE_TEST_CLIENT_IDS=` vazio na liberação geral; aceita IDs positivos separados por vírgula somente para rollout controlado
 - `BASE_URL` calculado pela aplicação
 
 O `META_EMBEDDED_SIGNUP_REDIRECT_URI` deve permanecer HTTPS e cadastrado na Meta como fallback/compatibilidade, mas o caminho principal usa o `code` retornado por `FB.login()` na página original.
@@ -122,6 +122,8 @@ Nenhuma migration adicional é necessária na Phase 2B; `MSG_Origem=history` já
 
 Depois de um onboarding Coexistence conectado, a aplicação solicita `POST /{phone_number_id}/smb_app_data` primeiro com `sync_type=smb_app_state_sync` e depois com `sync_type=history`. A solicitação deve ocorrer dentro de 24 horas do onboarding. Cada operação é one-time por ciclo da conta: `request_id` e estado são persistidos, e uma resposta aceita significa apenas solicitação recebida, não sincronização concluída. O fluxo tradicional nunca chama esse endpoint.
 
+Reconexões reutilizam a conta existente pelo mesmo cliente + WABA + Phone Number e atualizam a modalidade detectada, token e estado, sem criar duplicidade. Os estados de sync já persistidos impedem que uma reconexão repita automaticamente solicitações anteriores; `completed` e `declined` permanecem terminais. Falha, ausência ou recusa do histórico não altera `MTA_Status` nem invalida uma conta operacional.
+
 Uma sincronização órfã pode ser recuperada explicitamente por administrador com `POST configuracao/repetirSyncCoexistenceAjax`, informando `conta_id` e `tipo=contact|history`, além do CSRF. O retry só é reservado para conta Coexistence com estado `requested` ou `request_failed` sem evento há pelo menos 15 minutos. `completed` e `declined` são terminais e nunca repetem. A reserva é transacional, mantém o `request_id` anterior até a nova resposta e o registra sanitizado no log de auditoria; sucesso substitui o ID e volta a `requested`, enquanto erro passa a `request_failed` sem apagar o ID anterior. Contatos e histórico são recuperados de forma independente. Nesta fase não existe retry automático no worker.
 
 History é assíncrono. O webhook valida assinatura e conta, persiste cada chunk numa fila transacional e responde sem importar milhares de mensagens inline. O worker existente reserva jobs individualmente; chunks fora de ordem são seguros porque a correção depende de timestamp e idempotência, não de sequência. `phase`, `chunk_order`, `progress` e timestamp do evento servem para monitoramento; `progress=100` marca conclusão geral.
@@ -136,11 +138,11 @@ Ao vincular uma conta WhatsApp Business App existente, dispositivos companheiros
 
 O limite oficial de Coexistence é 20 mensagens por segundo. O Disparador já limita globalmente o worker a 5 envios por segundo, portanto esta fase documenta o limite e não altera throttling de contas tradicionais. Se o limite global for elevado no futuro, o controle deverá considerar `MTA_OnboardingType`.
 
-## Bloqueio para produção
+## Operação em produção e riscos
 
-As três famílias de webhook de Coexistence possuem infraestrutura defensiva, mas `META_COEXISTENCE_ENABLED=false` permanece obrigatório até homologação com número real. Ainda precisam ser comprovados em ambiente Meta real: formatos e ações efetivamente emitidos, ordem/retry dos chunks, variantes de mídia, usernames/BSUID sem telefone, volumes e concorrência, entrega ao webhook correto e consistência de wamids entre onboarding e novas sincronizações.
+As três famílias de webhook de Coexistence possuem infraestrutura defensiva. A liberação em produção é controlada por `META_COEXISTENCE_ENABLED`; permanecem como riscos operacionais a acompanhar: variantes emitidas pela Meta, ordem/retry dos chunks, mídias, usernames/BSUID sem telefone, volumes e concorrência, entrega ao webhook correto e consistência de wamids entre onboarding e novas sincronizações.
 
-Também permanecem bloqueadores reais: timing do `FINISH`, metadados Graph, aceitação e prazo das solicitações de sync, volume/ordem reais dos chunks, payload de enriquecimento de mídia, variantes de contatos, comportamento de dispositivos vinculados, disconnect/reconnect e uso simultâneo do Business App com a Cloud API.
+Permanecem como pontos de monitoramento: timing do `FINISH`, metadados Graph, aceitação e prazo das solicitações de sync, volume/ordem reais dos chunks, payload de enriquecimento de mídia, variantes de contatos, comportamento de dispositivos vinculados, disconnect/reconnect e uso simultâneo do Business App com a Cloud API.
 
 ## Diagnóstico
 

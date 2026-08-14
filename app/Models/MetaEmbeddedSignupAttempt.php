@@ -60,12 +60,14 @@ class MetaEmbeddedSignupAttempt
         return $attempt;
     }
 
-    public function salvarFinish($state, $clienteId, array $finish)
+    public function salvarFinish($state, $clienteId, array $finish, $onboardingType = EmbeddedSignupOnboardingMode::TRADITIONAL)
     {
-        $sql = $this->db->prepare("\n            UPDATE meta_embedded_signup_attempts\n            SET finish_json = ?,\n                updated_at = NOW()\n            WHERE state_hash = ?\n            AND cliente_id = ?\n            AND used_at IS NULL\n            AND finish_json IS NULL\n            AND expires_at > NOW()\n        ");
+        $onboardingType = EmbeddedSignupOnboardingMode::normalize($onboardingType);
+        $sql = $this->db->prepare("\n            UPDATE meta_embedded_signup_attempts\n            SET finish_json = ?,\n                onboarding_type = ?,\n                updated_at = NOW()\n            WHERE state_hash = ?\n            AND cliente_id = ?\n            AND used_at IS NULL\n            AND finish_json IS NULL\n            AND expires_at > NOW()\n        ");
 
         $sql->execute([
             json_encode($finish, JSON_UNESCAPED_UNICODE),
+            $onboardingType,
             $this->stateHash($state),
             (int) $clienteId
         ]);
@@ -75,7 +77,10 @@ class MetaEmbeddedSignupAttempt
         }
 
         $attempt = $this->buscarValida($state, $clienteId);
-        return $attempt && empty($attempt['used_at']) && !empty($attempt['finish']);
+        return $attempt
+            && empty($attempt['used_at'])
+            && !empty($attempt['finish'])
+            && ($attempt['onboarding_type'] ?? null) === $onboardingType;
     }
 
     public function consumir($state, $clienteId)
