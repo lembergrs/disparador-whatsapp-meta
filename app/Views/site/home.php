@@ -300,7 +300,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
                     <span class="mr-3">
                         <i class="fas fa-check text-success"></i>
-                        Sem WhatsApp Web
+                        Integração oficial
                     </span>
 
                     <span class="mr-3">
@@ -310,10 +310,16 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
                     <span>
                         <i class="fas fa-check text-success"></i>
-                        Sem celular conectado
+                        Operação em nuvem
                     </span>
 
                 </div>
+
+                <p class="mt-3 mb-0 small">
+                    <a href="<?= BASE_URL; ?>/whatsapp-business" class="text-success font-weight-bold">
+                        Já possui WhatsApp Business? Conecte seu número ao Disparador e continue utilizando o aplicativo no celular.
+                    </a>
+                </p>
 
             </div>
 
@@ -430,6 +436,36 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
+<section class="py-5 bg-white border-top border-bottom" id="whatsapp-business">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7 mb-4 mb-lg-0">
+                <span class="badge badge-success mb-3">WhatsApp Business + Disparador.net</span>
+                <h2 class="site-section-title">Conecte seu WhatsApp Business ao Disparador.net</h2>
+                <p class="lead text-muted">
+                    Você não precisa escolher entre usar o WhatsApp Business no celular ou os recursos do Disparador.
+                </p>
+                <p class="text-muted">
+                    Com a integração oficial da Meta, números elegíveis podem ser conectados ao Disparador e continuar funcionando no aplicativo WhatsApp Business.
+                </p>
+                <a href="<?= BASE_URL; ?>/whatsapp-business" class="btn btn-success site-btn-main">
+                    Saiba como funciona
+                </a>
+            </div>
+            <div class="col-lg-5">
+                <div class="card site-feature-card h-100">
+                    <div class="card-body p-4">
+                        <p><i class="fas fa-mobile-alt text-success mr-2"></i> Continue utilizando o WhatsApp Business no celular.</p>
+                        <p><i class="fas fa-random text-success mr-2"></i> Use o mesmo número no Disparador.net.</p>
+                        <p><i class="fab fa-whatsapp text-success mr-2"></i> Integração pela API Oficial da Meta.</p>
+                        <p class="mb-0"><i class="fas fa-layer-group text-success mr-2"></i> Acrescente campanhas, contatos, atendimento e gestão à sua operação.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <section class="py-5 bg-white border-top border-bottom">
 
     <div class="container">
@@ -446,7 +482,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <p class="text-muted mx-auto" style="max-width: 750px;">
 
-                O Disparador.net utiliza a API Oficial do WhatsApp Business Platform para campanhas, atendimento e templates oficiais, sem WhatsApp Web e sem celular conectado.
+                O Disparador.net utiliza a API Oficial do WhatsApp Business Platform para campanhas, atendimento e templates oficiais, com opções de conexão apresentadas pela Meta conforme a elegibilidade de cada número.
 
             </p>
 

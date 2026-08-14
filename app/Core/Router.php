@@ -8,6 +8,10 @@ class Router
     {
         $url = $_GET['url'] ?? 'site';
 
+        if($url === 'whatsapp-business'){
+            $url = 'site/whatsappBusiness';
+        }
+
         $url = explode('/', $url);
 
         $controller =

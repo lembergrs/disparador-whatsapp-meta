@@ -11,6 +11,7 @@ class SitemapController
         header('Content-Type: application/xml; charset=UTF-8');
         $urls = [
             ['loc'=>'https://disparador.net/', 'lastmod'=>null],
+            ['loc'=>'https://disparador.net/whatsapp-business', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/blog', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/site/cadastro', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/site/termosUso', 'lastmod'=>null],

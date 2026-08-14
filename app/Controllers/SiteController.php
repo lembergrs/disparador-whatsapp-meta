@@ -60,6 +60,14 @@ class SiteController extends Controller
         ], false);
     }
 
+    public function whatsappBusiness()
+    {
+        $this->view('site/whatsapp_business', [
+            'titulo' => 'Use seu WhatsApp Business junto com o Disparador.net',
+            'whatsappSite' => $this->dadosWhatsappSite()
+        ], false);
+    }
+
     public function salvar()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
