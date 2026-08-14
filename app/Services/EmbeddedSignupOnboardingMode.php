@@ -34,4 +34,16 @@ class EmbeddedSignupOnboardingMode
     {
         return hash_equals(self::expectedFinishEvent($mode), (string) $event);
     }
+
+    public static function fromFinishEvent($event)
+    {
+        $event = trim((string) $event);
+        if($event === 'FINISH'){
+            return self::TRADITIONAL;
+        }
+        if($event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'){
+            return self::COEXISTENCE;
+        }
+        throw new InvalidArgumentException('Evento de conclusão inválido para o onboarding Meta.');
+    }
 }

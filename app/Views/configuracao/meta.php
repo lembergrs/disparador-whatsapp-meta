@@ -73,12 +73,12 @@ $adminPodeAtualizarStatusMeta =
                         type="button"
                         class="btn btn-success btn-sm"
                         id="btnConectarWhatsApp"
-                        data-onboarding-mode="traditional"
+                        data-embedded-signup
                         >
                             <i class="fab fa-whatsapp"></i>
                             <?= !empty($limiteNumeros['pre_trial_primeiro_numero'])
                                 ? 'Conectar WhatsApp'
-                                : 'Conectar novo número'; ?>
+                                : 'Conectar WhatsApp'; ?>
                         </button>
 
                     <?php }else{ ?>
@@ -113,21 +113,9 @@ $adminPodeAtualizarStatusMeta =
                     <?php } ?>
                 </div>
 
-                <?php if(!empty($coexistenceDisponivel) && $podeConectarNumero){ ?>
-                    <div class="alert alert-warning">
-                        <strong>Recurso em homologação.</strong>
-                        Use somente o número destinado aos testes.
-                        <div class="mt-2">
-                            <button
-                            type="button"
-                            class="btn btn-outline-warning btn-sm"
-                            id="btnConectarWhatsAppCoexistence"
-                            data-onboarding-mode="coexistence"
-                            >
-                                <i class="fab fa-whatsapp"></i>
-                                Conectar WhatsApp Business App (homologação)
-                            </button>
-                        </div>
+                <?php if(!empty($coexistenceDisponivel)){ ?>
+                    <div class="alert alert-light border">
+                        Você pode conectar um número já utilizado no WhatsApp Business ou configurar um novo número para uso com o Disparador. As opções disponíveis serão apresentadas pela Meta durante a conexão.
                     </div>
                 <?php } ?>
 
@@ -169,7 +157,7 @@ $adminPodeAtualizarStatusMeta =
                             type="button"
                             class="btn btn-success"
                             id="btnConectarWhatsAppVazio"
-                            data-onboarding-mode="traditional"
+                            data-embedded-signup
                             >
                                 <i class="fab fa-whatsapp"></i>
                                 Conectar WhatsApp
@@ -533,6 +521,7 @@ role="alert"
     let signupState = null;
     let signupRequestId = null;
     let signupOnboardingMode = 'traditional';
+    let signupRequiresFinish = false;
     let finishPayload = null;
     let oauthCode = null;
     let envioFinalizacaoEmAndamento = false;
@@ -550,7 +539,7 @@ role="alert"
 
     function setBotoesConexao(disabled)
     {
-        document.querySelectorAll('[data-onboarding-mode]').forEach(function(botao){
+        document.querySelectorAll('[data-embedded-signup]').forEach(function(botao){
             botao.disabled = disabled;
         });
     }
@@ -561,6 +550,7 @@ role="alert"
         signupState = null;
         signupRequestId = null;
         signupOnboardingMode = 'traditional';
+        signupRequiresFinish = false;
         finishPayload = null;
         oauthCode = null;
         envioFinalizacaoEmAndamento = false;
@@ -593,7 +583,7 @@ role="alert"
             return;
         }
 
-        if(!finishPayload && (!forcarPorTimeout || signupOnboardingMode === 'coexistence')){
+        if(!finishPayload && (!forcarPorTimeout || signupOnboardingMode === 'coexistence' || signupRequiresFinish)){
             return;
         }
 
@@ -634,14 +624,11 @@ role="alert"
         try{ data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data; }catch(e){ return; }
         if(!data || data.type !== 'WA_EMBEDDED_SIGNUP'){ return; }
 
-        const eventoFinishEsperado = signupOnboardingMode === 'coexistence'
-            ? 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
-            : 'FINISH';
-        if(data.event === eventoFinishEsperado){
-            registrarFinishMeta(data);
-            return;
-        }
         if(data.event === 'FINISH' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'){
+            signupOnboardingMode = data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'
+                ? 'coexistence'
+                : 'traditional';
+            registrarFinishMeta(data);
             return;
         }
         if(data.event === 'CANCEL'){
@@ -661,7 +648,8 @@ role="alert"
     {
         signupState = resp.state;
         signupRequestId = resp.requestId;
-        signupOnboardingMode = resp.onboardingMode || 'traditional';
+        signupOnboardingMode = 'traditional';
+        signupRequiresFinish = resp.coexistenceAvailable === true;
         finishPayload = null;
         oauthCode = null;
         envioFinalizacaoEmAndamento = false;
@@ -678,7 +666,7 @@ role="alert"
             oauthCode = loginResponse.authResponse.code;
             exibirFeedbackEmbeddedSignup('info', 'Autorização recebida. Aguardando os dados finais do cadastro.');
 
-            if(signupOnboardingMode === 'traditional'){
+            if(!signupRequiresFinish){
                 coordenacaoTimer = setTimeout(function(){
                     finalizarQuandoPossivel(true);
                 }, COORDENACAO_TIMEOUT_MS);
@@ -701,7 +689,7 @@ role="alert"
             }
         };
 
-        if((resp.onboardingMode || 'traditional') === 'coexistence'){
+        if(resp.coexistenceAvailable === true){
             options.extras.featureType = 'whatsapp_business_app_onboarding';
         }
 
@@ -777,7 +765,7 @@ role="alert"
     });
 
     document.addEventListener('click', function(e){
-        const botaoOnboarding = e.target.closest('[data-onboarding-mode]');
+        const botaoOnboarding = e.target.closest('[data-embedded-signup]');
         if(!botaoOnboarding){ return; }
         e.preventDefault();
         if(tentativaAtiva){ return; }
@@ -791,9 +779,7 @@ role="alert"
         setBotoesConexao(true);
         exibirFeedbackEmbeddedSignup('info', 'Abrindo a Meta para iniciar o cadastro do WhatsApp...');
 
-        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {
-            onboarding_mode: botaoOnboarding.dataset.onboardingMode || 'traditional'
-        })
+        postForm(BASE_URL + '/index.php?url=configuracao/iniciarEmbeddedSignup', {})
             .then(function(configuracao){
                 if(!inicioMetaRastreado){
                     inicioMetaRastreado = true;

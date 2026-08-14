@@ -5,7 +5,6 @@ namespace Models;
 use Core\Database;
 use PDO;
 use PDOException;
-use Services\EmbeddedSignupOnboardingMode;
 
 class MetaConta
 {
@@ -351,6 +350,13 @@ class MetaConta
         return (int) $sql->fetchColumn();
     }
 
+    public function temContaDesconectadaPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT 1 FROM meta_contas WHERE CLI_ID=? AND MTA_Ativo='S' AND MTA_Status='desconectado' LIMIT 1");
+        $sql->execute([(int) $clienteId]);
+        return (bool) $sql->fetchColumn();
+    }
+
     public function avaliarLimiteNumerosPorCliente(
         $clienteId,
         $ignorarContaId = null,
@@ -596,11 +602,6 @@ class MetaConta
         );
 
         if($existente){
-            $modoExistente = EmbeddedSignupOnboardingMode::normalize($existente['MTA_OnboardingType'] ?? null);
-            $modoRecebido = EmbeddedSignupOnboardingMode::normalize($dados['onboarding_type'] ?? null);
-            if(!empty($existente['MTA_OnboardingType']) && $modoExistente !== $modoRecebido){
-                throw new \RuntimeException('A conta já foi vinculada por outra modalidade de onboarding.');
-            }
             return $this->atualizarEmbeddedSignup((int) $existente['MTA_ID'], $dados)
                 ? (int) $existente['MTA_ID']
                 : false;

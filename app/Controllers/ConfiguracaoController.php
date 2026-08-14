@@ -175,28 +175,40 @@ class ConfiguracaoController extends Controller
             $onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE
             && !$this->coexistenceEligibility()->availableForClient($clienteId)
         ){
-            throw new Exception('Coexistence não está disponível para este cliente.');
+            throw new Exception('Esta modalidade de conexão não está disponível para este cliente.');
         }
     }
 
-    private function avaliarPermissaoConexao($clienteId)
+    private function avaliarPermissaoConexao($clienteId, $ignorarContaId = null)
     {
-        $numerosAtivos = $this->metaContaModel->contarAtivasPorCliente($clienteId);
+        $numerosAtivos = $this->metaContaModel->contarAtivasPorCliente($clienteId, $ignorarContaId);
         $preTrialElegivel = Auth::podeConectarPrimeiroNumero(
             $clienteId,
             $numerosAtivos
         );
 
-        return $this->metaContaModel->avaliarLimiteNumerosPorCliente(
+        $limite = $this->metaContaModel->avaliarLimiteNumerosPorCliente(
             $clienteId,
-            null,
+            $ignorarContaId,
             $preTrialElegivel
         );
+
+        if(
+            empty($limite['permitido'])
+            && empty($ignorarContaId)
+            && $this->metaContaModel->temContaDesconectadaPorCliente($clienteId)
+        ){
+            $limite['permitido'] = true;
+            $limite['reconexao'] = true;
+            $limite['mensagem'] = null;
+        }
+
+        return $limite;
     }
 
-    private function exigirPermissaoConexao($clienteId)
+    private function exigirPermissaoConexao($clienteId, $ignorarContaId = null)
     {
-        $limite = $this->avaliarPermissaoConexao($clienteId);
+        $limite = $this->avaliarPermissaoConexao($clienteId, $ignorarContaId);
 
         if(empty($limite['permitido'])){
             throw new Exception($limite['mensagem'] ?? 'Limite de números do plano atingido.');
@@ -306,9 +318,8 @@ class ConfiguracaoController extends Controller
         $requestId = $this->requestId();
 
         try{
-            $onboardingType = EmbeddedSignupOnboardingMode::normalize($_POST['onboarding_mode'] ?? null);
-            $this->exigirCoexistenceDisponivel($clienteId, $onboardingType);
-            if($onboardingType === EmbeddedSignupOnboardingMode::COEXISTENCE && !$this->metaContaModel->colunasCoexistenceExistem()){
+            $coexistenceDisponivel = $this->coexistenceEligibility()->availableForClient($clienteId);
+            if($coexistenceDisponivel && !$this->metaContaModel->colunasCoexistenceExistem()){
                 throw new Exception('A migration de infraestrutura Coexistence ainda não foi aplicada.');
             }
             $this->validarConfiguracaoEmbeddedSignup();
@@ -318,7 +329,7 @@ class ConfiguracaoController extends Controller
             $tentativa = [
                 'request_id' => $requestId,
                 'cliente_id' => $clienteId,
-                'onboarding_type' => $onboardingType,
+                'onboarding_type' => EmbeddedSignupOnboardingMode::TRADITIONAL,
                 'created_at' => time(),
                 'expires_at' => time() + 1800,
                 'finish' => null,
@@ -336,7 +347,7 @@ class ConfiguracaoController extends Controller
                 'configurationId' => META_CONFIGURATION_ID,
                 'redirectUri' => META_EMBEDDED_SIGNUP_REDIRECT_URI,
                 'graphVersion' => META_GRAPH_VERSION,
-                'onboardingMode' => $onboardingType
+                'coexistenceAvailable' => $coexistenceDisponivel
             ]);
         }catch(Exception $e){
             $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'etapa'=>'inicio','request_id'=>$requestId,'erro'=>$this->sanitizeMetaMessage($e->getMessage()),'resultado'=>'erro']);
@@ -362,16 +373,12 @@ class ConfiguracaoController extends Controller
         }
 
         try{
-            $this->exigirCoexistenceDisponivel(
-                $clienteId,
-                EmbeddedSignupOnboardingMode::normalize($tentativa['onboarding_type'] ?? null)
-            );
+            $onboardingType = EmbeddedSignupOnboardingMode::fromFinishEvent($payload['event'] ?? null);
+            $this->exigirCoexistenceDisponivel($clienteId, $onboardingType);
+        }catch(\InvalidArgumentException $e){
+            $this->jsonResponse(['ok'=>false,'message'=>'Evento de conclusão incompatível com o onboarding Meta.'], 422);
         }catch(Exception $e){
             $this->jsonResponse(['ok'=>false,'message'=>$this->sanitizeMetaMessage($e->getMessage())], 403);
-        }
-
-        if(!is_array($payload) || !EmbeddedSignupOnboardingMode::acceptsFinishEvent($tentativa['onboarding_type'] ?? null, $payload['event'] ?? null)){
-            $this->jsonResponse(['ok'=>false,'message'=>'Evento de conclusão incompatível com a modalidade do onboarding.'], 422);
         }
 
         $ids = $this->extrairSessionInfoIds($payload);
@@ -380,7 +387,7 @@ class ConfiguracaoController extends Controller
             'ids' => $ids
         ];
 
-        if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish)){
+        if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish, $onboardingType)){
             $this->jsonResponse(['ok'=>false,'message'=>'Tentativa já consumida pelo callback.'], 409);
         }
 
@@ -784,10 +791,17 @@ class ConfiguracaoController extends Controller
             'operational_status' => $dadosWhatsApp['operational_status'] ?? null
         ];
 
+        $contaExistente = $this->metaContaModel->buscarPorClienteWabaPhone(
+            $clienteId,
+            $dadosWhatsApp['waba_id'],
+            $dadosWhatsApp['phone_number_id']
+        );
+        $contaExistenteId = (int) ($contaExistente['MTA_ID'] ?? 0);
+
         $contaId = $this->metaContaModel->salvarOuAtualizarEmbeddedSignupComBloqueio(
             $dadosPersistencia,
-            function() use ($clienteId){
-                $this->exigirPermissaoConexao($clienteId);
+            function() use ($clienteId, $contaExistenteId){
+                $this->exigirPermissaoConexao($clienteId, $contaExistenteId ?: null);
             }
         );
 
@@ -865,21 +879,18 @@ class ConfiguracaoController extends Controller
         if(!$tentativa){
             $this->jsonResponse(['ok'=>false,'message'=>'Tentativa expirada ou inválida.'], 403);
         }
-        try{
-            $this->exigirCoexistenceDisponivel(
-                $clienteId,
-                EmbeddedSignupOnboardingMode::normalize($tentativa['onboarding_type'] ?? null)
-            );
-        }catch(Exception $e){
-            $this->jsonResponse(['ok'=>false,'message'=>$this->sanitizeMetaMessage($e->getMessage())], 403);
-        }
-        if(is_array($payload) && !empty($payload['event']) && !EmbeddedSignupOnboardingMode::acceptsFinishEvent($tentativa['onboarding_type'] ?? null, $payload['event'])){
-            $this->jsonResponse(['ok'=>false,'message'=>'Evento de conclusão incompatível com a modalidade do onboarding.'], 422);
-        }
-        if(is_array($payload) && EmbeddedSignupOnboardingMode::acceptsFinishEvent($tentativa['onboarding_type'] ?? null, $payload['event'] ?? null)){
+        if(is_array($payload) && !empty($payload['event'])){
+            try{
+                $onboardingType = EmbeddedSignupOnboardingMode::fromFinishEvent($payload['event']);
+                $this->exigirCoexistenceDisponivel($clienteId, $onboardingType);
+            }catch(\InvalidArgumentException $e){
+                $this->jsonResponse(['ok'=>false,'message'=>'Evento de conclusão incompatível com o onboarding Meta.'], 422);
+            }catch(Exception $e){
+                $this->jsonResponse(['ok'=>false,'message'=>$this->sanitizeMetaMessage($e->getMessage())], 403);
+            }
             $ids = $this->extrairSessionInfoIds($payload);
             $finish = ['received_at' => time(), 'ids' => $ids];
-            if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish)){
+            if(!$this->embeddedAttemptModel->salvarFinish($state, $clienteId, $finish, $onboardingType)){
                 $this->jsonResponse(['ok'=>false,'message'=>'Tentativa já consumida pelo callback.'], 409);
             }
         }
@@ -898,7 +909,7 @@ class ConfiguracaoController extends Controller
                 'status' => $resultado['status'],
                 'requestId' => $resultado['request_id'],
                 'message' => $coexistence
-                    ? ($connected ? 'Número Coexistence conectado com sucesso.' : 'Número Coexistence vinculado. Aguardando confirmação operacional da Meta.')
+                    ? ($connected ? 'Número conectado com sucesso.' : 'Número vinculado. Aguardando confirmação operacional da Meta.')
                     : 'Número vinculado com sucesso. Falta concluir o registro.'
             ]);
         }catch(Exception $e){
@@ -952,8 +963,8 @@ class ConfiguracaoController extends Controller
 
             $mensagem = ($resultado['onboarding_type'] ?? null) === EmbeddedSignupOnboardingMode::COEXISTENCE
                 ? ($resultado['status'] === 'conectado'
-                    ? 'Número Coexistence conectado com sucesso.'
-                    : 'Número Coexistence vinculado. Aguardando confirmação operacional da Meta.')
+                    ? 'Número conectado com sucesso.'
+                    : 'Número vinculado. Aguardando confirmação operacional da Meta.')
                 : 'Número vinculado com sucesso. Falta concluir o registro no Disparador.net informando o PIN de 6 dígitos.';
             $this->renderMetaCallbackPage(true, $mensagem, $resultado['request_id'] ?? null);
         }catch(Exception $e){
@@ -992,7 +1003,7 @@ class ConfiguracaoController extends Controller
         }
 
         if(($conta['MTA_OnboardingType'] ?? EmbeddedSignupOnboardingMode::TRADITIONAL) === EmbeddedSignupOnboardingMode::COEXISTENCE){
-            Session::flash('error', 'Contas Coexistence não usam registro por PIN.');
+            Session::flash('error', 'Este número não utiliza registro por PIN no Disparador.');
             $this->redirect('configuracao/meta');
         }
 

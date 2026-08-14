@@ -19,6 +19,8 @@ coexistenceAssert(EmbeddedSignupOnboardingMode::acceptsFinishEvent('traditional'
 coexistenceAssert(!EmbeddedSignupOnboardingMode::acceptsFinishEvent('traditional', 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'), 'traditional rejeita FINISH Coexistence');
 coexistenceAssert(EmbeddedSignupOnboardingMode::acceptsFinishEvent('coexistence', 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING'), 'Coexistence aceita seu FINISH');
 coexistenceAssert(!EmbeddedSignupOnboardingMode::acceptsFinishEvent('coexistence', 'FINISH'), 'Coexistence rejeita FINISH tradicional');
+coexistenceAssert(EmbeddedSignupOnboardingMode::fromFinishEvent('FINISH') === 'traditional', 'FINISH detecta traditional');
+coexistenceAssert(EmbeddedSignupOnboardingMode::fromFinishEvent('FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') === 'coexistence', 'evento WhatsApp Business App detecta Coexistence');
 
 try{
     EmbeddedSignupOnboardingMode::normalize('arbitrary');
@@ -36,13 +38,13 @@ $webhook = file_get_contents(__DIR__ . '/../public/webhook/meta.php');
 coexistenceAssert(strpos($config, "env_valor('META_COEXISTENCE_ENABLED', 'false')") !== false, 'flag deve vir desabilitada por padrão');
 coexistenceAssert(strpos($view, 'whatsapp_business_app_onboarding') !== false, 'payload Coexistence inclui featureType');
 coexistenceAssert(strpos($view, "options.extras.featureType = 'whatsapp_business_app_onboarding'") !== false, 'featureType é condicional');
-coexistenceAssert(strpos($view, "signupOnboardingMode === 'traditional'") !== false, 'somente traditional usa fallback por timeout');
-coexistenceAssert(strpos($view, 'btnConectarWhatsAppCoexistence') !== false, 'opção de homologação existe para renderização elegível');
+coexistenceAssert(strpos($view, 'signupRequiresFinish') !== false, 'fluxo unificado aguarda evento para detectar a modalidade');
+coexistenceAssert(strpos($view, 'btnConectarWhatsAppCoexistence') === false, 'não existe escolha prévia de Coexistence');
 coexistenceAssert(strpos($view, "MTA_OnboardingType'] ?? 'traditional') !== 'coexistence'") !== false, 'PIN fica oculto para Coexistence');
-coexistenceAssert(strpos($controller, 'EmbeddedSignupOnboardingMode::acceptsFinishEvent') !== false, 'backend valida FINISH pelo modo persistido');
+coexistenceAssert(strpos($controller, 'EmbeddedSignupOnboardingMode::fromFinishEvent') !== false, 'backend detecta modalidade pelo FINISH da Meta');
 coexistenceAssert(strpos($controller, 'colunasCoexistenceExistem') !== false, 'Coexistence exige a migration de conta antes de iniciar');
 coexistenceAssert(strpos($controller, "empty(\$tentativa['finish'])") !== false, 'Coexistence sem FINISH não pode cair no fallback');
-coexistenceAssert(strpos($controller, 'Contas Coexistence não usam registro por PIN.') !== false, 'endpoint PIN rejeita Coexistence');
+coexistenceAssert(strpos($controller, 'Este número não utiliza registro por PIN no Disparador.') !== false, 'endpoint PIN rejeita Coexistence sem expor termo técnico');
 coexistenceAssert(strpos($controller, "? \$this->embeddedSignupFlowService()->definirStatusCoexistencia") !== false, 'Coexistence usa status próprio');
 coexistenceAssert(strpos($attempt, 'onboarding_type') !== false, 'tentativa persiste o modo');
 coexistenceAssert(strpos($account, 'MTA_OnboardingType') !== false && strpos($account, 'MTA_PlatformType') !== false, 'conta persiste modo e plataforma');
