@@ -12,6 +12,8 @@ class SitemapController
         $urls = [
             ['loc'=>'https://disparador.net/', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/whatsapp-business', 'lastmod'=>null],
+            ['loc'=>'https://disparador.net/limites-whatsapp', 'lastmod'=>null],
+            ['loc'=>'https://disparador.net/precos-whatsapp-meta', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/blog', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/site/cadastro', 'lastmod'=>null],
             ['loc'=>'https://disparador.net/site/termosUso', 'lastmod'=>null],

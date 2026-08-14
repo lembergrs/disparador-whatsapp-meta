@@ -11,6 +11,7 @@ use Models\Plano;
 use Models\Cliente;
 use Models\ConfiguracaoSite;
 use Models\IndicacaoCampanha;
+use Models\DepoimentoCliente;
 use Services\DocumentoFiscalValidator;
 use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
@@ -40,6 +41,13 @@ class SiteController extends Controller
                 : null
         ];
 
+        try{
+            $depoimentosPublicados = (new DepoimentoCliente())->listarPublicados(6);
+        }catch(\Throwable $e){
+            $depoimentosPublicados = [];
+            error_log('Depoimentos públicos indisponíveis: ' . $e->getMessage());
+        }
+
         $this->view('site/home', [
             'titulo' => 'Disparador.net WhatsApp',
             'planos' => $planos,
@@ -64,8 +72,19 @@ class SiteController extends Controller
     {
         $this->view('site/whatsapp_business', [
             'titulo' => 'Use seu WhatsApp Business junto com o Disparador.net',
-            'whatsappSite' => $this->dadosWhatsappSite()
+            'whatsappSite' => $this->dadosWhatsappSite(),
+            'depoimentosPublicados' => $depoimentosPublicados
         ], false);
+    }
+
+    public function limitesWhatsapp()
+    {
+        $this->view('site/limites_whatsapp', ['titulo' => 'Limites de envio do WhatsApp', 'whatsappSite' => $this->dadosWhatsappSite()], false);
+    }
+
+    public function precosWhatsappMeta()
+    {
+        $this->view('site/precos_whatsapp_meta', ['titulo' => 'Tarifas do WhatsApp cobradas pela Meta', 'whatsappSite' => $this->dadosWhatsappSite()], false);
     }
 
     public function salvar()
