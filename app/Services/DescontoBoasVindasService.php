@@ -3,9 +3,26 @@
 namespace Services;
 
 use Models\Plano;
+use Models\Cobranca;
 
 class DescontoBoasVindasService
 {
+    private $cobrancas;
+
+    public function __construct($cobrancas = null)
+    {
+        $this->cobrancas = $cobrancas;
+    }
+
+    public function clienteElegivel(int $clienteId, ?int $cobrancaAtualId = null): bool
+    {
+        if(!$this->cobrancas){ $this->cobrancas = new Cobranca(); }
+
+        // Canceladas não consomem o benefício. Quando há uma cobrança candidata,
+        // somente cobranças válidas anteriores a ela compõem o histórico.
+        return $this->cobrancas->contarAnterioresDoCliente($clienteId, $cobrancaAtualId) === 0;
+    }
+
     public function calcular(array $plano, string $ciclo, ?int $valorBaseCentavos = null): array
     {
         if(!Plano::cicloValido($ciclo)){

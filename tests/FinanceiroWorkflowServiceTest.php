@@ -42,8 +42,7 @@ class FwCobrancas {
     public $rows=[]; public $events=[]; public $next=1; public $falharPersistencia=false;
     public function buscarPendentePorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['COB_Status']==='pendente')return $r;}return null;}
     public function listarPendentesPorCliente($c){return array_values(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']==='pendente'));}
-    public function contarAnterioresDoCliente($c,$id){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_ID']<$id&&$r['COB_Status']!=='cancelado'));}
-    public function contarNaoCanceladasPorCliente($c){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']!=='cancelado'));}
+    public function contarAnterioresDoCliente($c,$id=null){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&($id===null||$r['COB_ID']<$id)&&$r['COB_Status']!=='cancelado'));}
     public function contarPagasPorCliente($c){return count(array_filter($this->rows,fn($r)=>$r['CLI_ID']==$c&&$r['COB_Status']==='pago'));}
     public function registrarComposicaoDesconto($id,$d){foreach(['valor'=>'COB_Valor','valor_base_centavos'=>'COB_ValorBaseCentavos','desconto_inicial_centavos'=>'COB_DescontoInicialCentavos','desconto_indicacao_centavos'=>'COB_DescontoIndicacaoCentavos','adicionais_centavos'=>'COB_AdicionaisCentavos','ciclo'=>'COB_Ciclo'] as $k=>$f)$this->rows[$id][$f]=$d[$k];return true;}
     public function criar($d){$id=$this->next++;$this->rows[$id]=array_merge(['COB_ID'=>$id,'CLI_ID'=>$d['cliente'],'PLA_ID'=>$d['plano'],'ASS_ID'=>$d['assinatura']??null,'COB_Status'=>'pendente','COB_Valor'=>$d['valor'],'COB_DataVencimento'=>$d['vencimento']],$d);return $id;}
@@ -97,6 +96,21 @@ function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null,&$primeiroPagame
 $w=novoWorkflow($cli,$ass,$cob,$asaas,null,$primeiroPagamento);
 $oferta=$w->ofertasParaContratacao(1,[(new FwPlanos())->p]);
 fwAssert($oferta[1]['mensal']['elegivel']&&$oferta[1]['mensal']['primeiro_pagamento_centavos']===500&&$oferta[1]['mensal']['valor_normal_centavos']===1000,'cliente elegível vê valor promocional e recorrente calculados pela regra financeira');
+
+$wCancelada=novoWorkflow($cliCancelada,$assCancelada,$cobCancelada,$asaasCancelada);
+$idCancelada=$cobCancelada->criar(['cliente'=>1,'plano'=>1,'assinatura'=>null,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);
+$cobCancelada->rows[$idCancelada]['COB_Status']='cancelado';
+$ofertaCancelada=$wCancelada->ofertasParaContratacao(1,[(new FwPlanos())->p]);
+fwAssert($ofertaCancelada[1]['mensal']['elegivel'],'cliente com somente cobrança cancelada continua elegível ao desconto de boas-vindas');
+
+$descontosPendente=new FwDescontos();$wPendente=novoWorkflow($cliPendente,$assPendente,$cobPendente,$asaasPendente,$descontosPendente);
+$idPendente=$cobPendente->criar(['cliente'=>1,'plano'=>1,'assinatura'=>null,'valor'=>'120.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);
+$cobPendente->rows[$idPendente]['COB_Ciclo']='anual';
+$ofertaPendenteLocal=$wPendente->ofertasParaContratacao(1,[(new FwPlanos())->p],$cobPendente->rows[$idPendente]);
+fwAssert($ofertaPendenteLocal[1]['anual']['elegivel']&&$ofertaPendenteLocal[1]['anual']['primeiro_pagamento_centavos']===11500,'cobrança pendente candidata não é tratada como histórico anterior');
+$contratoPendente=$wPendente->contratarPlano(1,1,'anual');
+fwAssert($contratoPendente['sucesso']&&$ofertaPendenteLocal[1]['anual']['primeiro_pagamento_centavos']===(int)round($cobPendente->rows[$idPendente]['COB_Valor']*100),'valor exibido para cobrança pendente é exatamente o valor efetivamente cobrado');
+
 $contrato=$w->contratarPlano(1,1,'mensal');
 fwAssert($contrato['sucesso']&&$asaas->posts===1,'contratação integra uma cobrança');
 fwAssert($cob->rows[1]['COB_Valor']==='5.00'&&$cob->rows[1]['COB_DescontoInicialCentavos']===500&&$cob->rows[1]['COB_DescontoIndicacaoCentavos']===0,'primeira mensalidade recebe somente 50%');
@@ -104,7 +118,7 @@ $ofertaPendente=$w->ofertasParaContratacao(1,[(new FwPlanos())->p],$cob->rows[1]
 fwAssert($ofertaPendente[1]['mensal']['primeiro_pagamento_centavos']===500,'prévia de cobrança pendente preserva o mesmo valor congelado que será cobrado');
 $w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert($cob->rows[1]['COB_Status']==='pago'&&count($primeiroPagamento->chamadas)===1,'pagamento manual simples confirma cobrança e dispara o marco de indicação');
 $ofertaSemPromocao=$w->ofertasParaContratacao(1,[(new FwPlanos())->p]);
-fwAssert(!$ofertaSemPromocao[1]['mensal']['elegivel']&&$ofertaSemPromocao[1]['mensal']['primeiro_pagamento_centavos']===1000,'cliente com cobrança anterior não vê promoção inicial novamente');
+fwAssert(!$ofertaSemPromocao[1]['mensal']['elegivel']&&$ofertaSemPromocao[1]['mensal']['primeiro_pagamento_centavos']===1000,'cliente com cobrança paga não vê promoção inicial novamente');
 
 $descontosAnual=new FwDescontos();$wAnual=novoWorkflow($cliAnual,$assAnual,$cobAnual,$asaasAnual,$descontosAnual);
 $contratoAnual=$wAnual->contratarPlano(1,1,'anual');

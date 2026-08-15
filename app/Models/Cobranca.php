@@ -39,17 +39,13 @@ class Cobranca
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function contarAnterioresDoCliente($clienteId, $cobrancaId)
+    public function contarAnterioresDoCliente($clienteId, $cobrancaId = null)
     {
-        $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ? AND COB_ID < ? AND COB_Status <> 'cancelado'");
-        $sql->execute([(int) $clienteId, (int) $cobrancaId]);
-        return (int) $sql->fetchColumn();
-    }
-
-    public function contarNaoCanceladasPorCliente($clienteId)
-    {
-        $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ? AND COB_Status <> 'cancelado'");
-        $sql->execute([(int) $clienteId]);
+        $filtroId = $cobrancaId === null ? '' : ' AND COB_ID < ?';
+        $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ?{$filtroId} AND COB_Status <> 'cancelado'");
+        $params = [(int) $clienteId];
+        if($cobrancaId !== null){ $params[] = (int) $cobrancaId; }
+        $sql->execute($params);
         return (int) $sql->fetchColumn();
     }
 
