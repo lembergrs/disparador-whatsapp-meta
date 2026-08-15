@@ -47,6 +47,12 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             );
 
+        $ofertasPlanos = (new FinanceiroWorkflowService())->ofertasParaContratacao(
+            (int) $usuario['CLI_ID'],
+            $planos,
+            $cobranca ?: null
+        );
+
         $this->view(
             'financeiro/index',
             [
@@ -56,7 +62,8 @@ class FinanceiroController extends Controller
                 'faturasPerPageDefault' => 5,
                 'excedente' => $excedente,
                 'numerosAtivos' => $numerosAtivos,
-                'assinaturaAtual' => $assinaturaAtual
+                'assinaturaAtual' => $assinaturaAtual,
+                'ofertasPlanos' => $ofertasPlanos
             ]
         );
     }

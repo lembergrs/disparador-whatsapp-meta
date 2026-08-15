@@ -81,6 +81,39 @@ class FinanceiroWorkflowService
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId, 'plano'=>$plano]);
     }
 
+    public function ofertasParaContratacao(int $clienteId, array $planos, ?array $cobrancaPendente = null): array
+    {
+        $ofertas = [];
+        $semCobrancaAnterior = $this->cobrancas->contarNaoCanceladasPorCliente($clienteId) === 0;
+
+        foreach($planos as $plano){
+            $planoId = (int) ($plano['PLA_ID'] ?? 0);
+            foreach(array_keys(Plano::CICLOS) as $ciclo){
+                $valorBaseCentavos = $this->valorEmCentavos(Plano::valorPorCiclo($plano, $ciclo));
+                $descontoInicialCentavos = 0;
+
+                if($semCobrancaAnterior){
+                    $descontoInicialCentavos = $this->calcularDescontoInicialCentavos($valorBaseCentavos);
+                }elseif(
+                    !empty($cobrancaPendente)
+                    && (int) ($cobrancaPendente['PLA_ID'] ?? 0) === $planoId
+                    && (string) ($cobrancaPendente['COB_Ciclo'] ?? '') === $ciclo
+                ){
+                    $descontoInicialCentavos = max(0, (int) ($cobrancaPendente['COB_DescontoInicialCentavos'] ?? 0));
+                }
+
+                $ofertas[$planoId][$ciclo] = [
+                    'elegivel'=>$descontoInicialCentavos > 0,
+                    'valor_normal_centavos'=>$valorBaseCentavos,
+                    'desconto_inicial_centavos'=>$descontoInicialCentavos,
+                    'primeiro_pagamento_centavos'=>max(0, $valorBaseCentavos - $descontoInicialCentavos)
+                ];
+            }
+        }
+
+        return $ofertas;
+    }
+
     public function confirmarPagamentoManual(int $cobrancaId, array $dados = []): array
     {
         $cobranca = $this->cobrancas->buscar($cobrancaId);
@@ -427,7 +460,7 @@ class FinanceiroWorkflowService
 
         $valorBaseCentavos = $this->valorEmCentavos($cobranca['COB_Valor']);
         $primeiraCobranca = $this->cobrancas->contarAnterioresDoCliente($clienteId, (int) $cobranca['COB_ID']) === 0;
-        $descontoInicialCentavos = $primeiraCobranca ? intdiv($valorBaseCentavos + 1, 2) : 0;
+        $descontoInicialCentavos = $primeiraCobranca ? $this->calcularDescontoInicialCentavos($valorBaseCentavos) : 0;
         $descontoIndicacaoCentavos = 0;
 
         if(!$primeiraCobranca){
@@ -452,6 +485,11 @@ class FinanceiroWorkflowService
         ]);
 
         return $this->cobrancas->buscar((int) $cobranca['COB_ID']);
+    }
+
+    private function calcularDescontoInicialCentavos(int $valorBaseCentavos): int
+    {
+        return intdiv(max(0, $valorBaseCentavos) + 1, 2);
     }
 
     private function reconciliarDescontoIndicacaoNoPagamento(array $cobranca, array $payment): void

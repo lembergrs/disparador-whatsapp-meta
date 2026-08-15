@@ -46,6 +46,13 @@ class Cobranca
         return (int) $sql->fetchColumn();
     }
 
+    public function contarNaoCanceladasPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ? AND COB_Status <> 'cancelado'");
+        $sql->execute([(int) $clienteId]);
+        return (int) $sql->fetchColumn();
+    }
+
     public function contarPagasPorCliente($clienteId)
     {
         $sql = $this->db->prepare("SELECT COUNT(*) FROM cobrancas WHERE CLI_ID = ? AND COB_Status = 'pago'");
