@@ -17,6 +17,7 @@ use Services\SenhaForteValidator;
 use Services\EventoNotificacao;
 use Services\NotificacaoService;
 use Services\AnalyticsService;
+use Services\DescontoBoasVindasService;
 use Services\Indicacao\IndicacaoWorkflowService;
 
 class SiteController extends Controller
@@ -33,6 +34,7 @@ class SiteController extends Controller
         $planoModel = new Plano();
 
         $planos = $planoModel->listarAtivos();
+        $ofertasPublicasPlanos = (new DescontoBoasVindasService())->calcularPlanos($planos);
         $campanhaIndicacao = (new IndicacaoCampanha())->buscarPublicaElegivel();
         $campanhaIndicacaoPublica = [
             'disponivel' => $campanhaIndicacao !== null,
@@ -51,6 +53,7 @@ class SiteController extends Controller
         $this->view('site/home', [
             'titulo' => 'Disparador.net WhatsApp',
             'planos' => $planos,
+            'ofertasPublicasPlanos' => $ofertasPublicasPlanos,
             'campanhaIndicacaoPublica' => $campanhaIndicacaoPublica,
             'whatsappSite' => $this->dadosWhatsappSite()
         ], false);

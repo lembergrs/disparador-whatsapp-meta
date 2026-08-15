@@ -63,6 +63,6 @@ Os dados adicionais continuam sujeitos à whitelist e sanitização da fundaçã
 ## Fora do escopo
 
 Não há dashboard/área de indicação, landing page, regulamento, notificação,
-WhatsApp ou Analytics. O benefício inicial de 50%, os descontos posteriores,
+WhatsApp ou Analytics. O benefício inicial de 50% da primeira mensalidade, os descontos posteriores,
 reservas e o Scheduler mantêm seus fluxos próprios. Não há migration nova nem
 alteração da migration aplicada da Sprint 1.

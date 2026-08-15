@@ -347,6 +347,13 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                 $valorTrimestralPlano = valorPlanoCicloFinanceiro($plano, 'trimestral');
                 $valorSemestralPlano = valorPlanoCicloFinanceiro($plano, 'semestral');
                 $valorAnualPlano = valorPlanoCicloFinanceiro($plano, 'anual');
+                $ofertasCiclosPlano = $ofertasPlanos[(int) $plano['PLA_ID']] ?? [];
+                $ofertaMensalPlano = $ofertasCiclosPlano['mensal'] ?? [
+                    'elegivel' => false,
+                    'valor_normal_centavos' => (int) round($valorMensalPlano * 100),
+                    'desconto_inicial_centavos' => 0,
+                    'primeiro_pagamento_centavos' => (int) round($valorMensalPlano * 100)
+                ];
                 ?>
 
                 <div class="planos-carousel-item mb-3">
@@ -359,11 +366,20 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                                 <?= htmlspecialchars($plano['PLA_Nome']); ?>
                             </h4>
 
-                            <h2 class="text-success">
-                                R$ <span class="valor-plano-ciclo">
-                                    <?= number_format($valorMensalPlano, 2, ',', '.'); ?>
-                                </span>
-                            </h2>
+                            <div class="preco-promocional-plano" <?= empty($ofertaMensalPlano['elegivel']) ? 'style="display:none;"' : ''; ?>>
+                                <h2 class="text-success mb-0">
+                                    R$ <span class="valor-primeiro-pagamento"><?= number_format($ofertaMensalPlano['primeiro_pagamento_centavos'] / 100, 2, ',', '.'); ?></span>
+                                </h2>
+                                <p class="font-weight-bold mb-1">na primeira cobrança</p>
+                                <p class="text-muted small mb-1">Inclui R$ <span class="valor-desconto-boas-vindas"><?= number_format($ofertaMensalPlano['desconto_inicial_centavos'] / 100, 2, ',', '.'); ?></span> de desconto: 50% da primeira mensalidade.</p>
+                                <p class="mb-3">Renovação: <strong>R$ <span class="valor-plano-ciclo"><?= number_format($ofertaMensalPlano['valor_normal_centavos'] / 100, 2, ',', '.'); ?></span><span class="periodicidade-plano">/mês</span></strong></p>
+                            </div>
+
+                            <div class="preco-normal-plano" <?= !empty($ofertaMensalPlano['elegivel']) ? 'style="display:none;"' : ''; ?>>
+                                <h2 class="text-success">
+                                    R$ <span class="valor-plano-ciclo"><?= number_format($ofertaMensalPlano['valor_normal_centavos'] / 100, 2, ',', '.'); ?></span><small class="periodicidade-plano">/mês</small>
+                                </h2>
+                            </div>
 
                             <p>
                                 <i class="fab fa-whatsapp text-success"></i>
@@ -434,6 +450,11 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                                     data-trimestral="<?= $valorTrimestralPlano; ?>"
                                     data-semestral="<?= $valorSemestralPlano; ?>"
                                     data-anual="<?= $valorAnualPlano; ?>"
+                                    <?php foreach($ofertasCiclosPlano as $cicloOferta => $ofertaCiclo){ ?>
+                                        data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-primeiro="<?= number_format($ofertaCiclo['primeiro_pagamento_centavos'] / 100, 2, '.', ''); ?>"
+                                        data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-desconto="<?= number_format($ofertaCiclo['desconto_inicial_centavos'] / 100, 2, '.', ''); ?>"
+                                        data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-elegivel="<?= !empty($ofertaCiclo['elegivel']) ? '1' : '0'; ?>"
+                                    <?php } ?>
                                     >
                                         <option value="mensal">Mensal</option>
                                         <option value="trimestral">Trimestral</option>
@@ -713,13 +734,39 @@ document.addEventListener('DOMContentLoaded', function(){
         select.addEventListener('change', function(){
             const card = select.closest('.card-body');
             const valor = parseFloat(select.dataset[select.value] || '0');
-            const alvo = card ? card.querySelector('.valor-plano-ciclo') : null;
+            const primeiro = parseFloat(select.dataset[select.value + 'Primeiro'] || String(valor));
+            const desconto = parseFloat(select.dataset[select.value + 'Desconto'] || '0');
+            const elegivel = select.dataset[select.value + 'Elegivel'] === '1';
+            const periodicidades = {mensal: '/mês', trimestral: '/trimestre', semestral: '/semestre', anual: '/ano'};
 
-            if(alvo){
-                alvo.textContent = valor.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+            if(card){
+                card.querySelectorAll('.valor-plano-ciclo').forEach(function(alvo){
+                    alvo.textContent = valor.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
                 });
+                card.querySelectorAll('.periodicidade-plano').forEach(function(alvo){
+                    alvo.textContent = periodicidades[select.value] || '';
+                });
+                const alvoPrimeiro = card.querySelector('.valor-primeiro-pagamento');
+                if(alvoPrimeiro){
+                    alvoPrimeiro.textContent = primeiro.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+                const alvoDesconto = card.querySelector('.valor-desconto-boas-vindas');
+                if(alvoDesconto){
+                    alvoDesconto.textContent = desconto.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+                const promocional = card.querySelector('.preco-promocional-plano');
+                const normal = card.querySelector('.preco-normal-plano');
+                if(promocional){ promocional.style.display = elegivel ? '' : 'none'; }
+                if(normal){ normal.style.display = elegivel ? 'none' : ''; }
             }
         });
     });

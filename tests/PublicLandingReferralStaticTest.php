@@ -12,11 +12,11 @@ $assert = function($condition, $message){
 };
 
 $assert(substr_count($home, '<h1') === 1, 'Home deve manter somente um H1');
-$assert(strpos($home, '$valorPrimeiroPagamento = $valorMensal / 2;') !== false, 'valor do primeiro pagamento deve derivar do preço mensal');
-$assert(strpos($home, '<span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento, 2, \',\', \'.\'); ?></span><span> no primeiro pagamento</span>') !== false, 'preço promocional do primeiro pagamento ausente');
+$assert(strpos($home, "ofertasPublicasPlanos") !== false, 'landing deve receber a oferta calculada pelo backend');
+$assert(strpos($home, '50% da primeira mensalidade') !== false, 'landing deve explicar a base do desconto');
 $assert(strpos($home, '.site-valor-primeiro-pagamento') !== false && strpos($home, 'font-size: 2.125rem;') !== false, 'valor promocional deve ter destaque visual moderado');
-$assert(strpos($home, '<del>R$ <?= number_format($valorMensal, 2, \',\', \'.\'); ?></del>') !== false, 'preço mensal regular deve permanecer visível');
-$assert(strpos($home, 'A partir do 2º mês: <strong>R$ <?= number_format($valorMensal, 2, \',\', \'.\'); ?>/mês</strong>') !== false, 'preço mensal a partir do segundo mês ausente');
+$assert(strpos($home, 'Economia de R$ <?= number_format($valorDesconto, 2, \',\', \'.\'); ?>: 50% da primeira mensalidade') !== false, 'economia da primeira mensalidade deve permanecer visível');
+$assert(strpos($home, 'Renovação: <strong>R$ <?= number_format($valorMensal, 2, \',\', \'.\'); ?>/mês</strong>') !== false, 'preço integral da renovação ausente');
 $assert(strpos($home, '50% de desconto na primeira mensalidade para novos clientes.') !== false, 'benefício inicial de 50% ausente');
 $assert(strpos($home, 'Este benefício é válido com ou sem indicação.') !== false, 'benefício inicial deve ser independente de indicação');
 $assert(strpos($home, 'O indicado faz o cadastro') !== false, 'passo quatro deve descrever o cadastro do indicado');

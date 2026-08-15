@@ -779,7 +779,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <p class="text-muted mx-auto mb-0" style="max-width: 720px;">
                 <strong>Comece economizando e continue economizando.</strong><br>
-                Todo novo cliente tem <strong>50% de desconto no primeiro pagamento</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong><?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
+                Todo novo cliente tem <strong>50% de desconto na primeira mensalidade</strong>. Depois, como cliente, você pode indicar novas empresas e receber <strong><?= htmlspecialchars($percentualIndicacao, ENT_QUOTES, 'UTF-8'); ?>% de desconto em mensalidades futuras elegíveis</strong> por indicação confirmada, conforme as condições do programa.
             </p>
 
         </div>
@@ -979,7 +979,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         : 'primary';
 
                     $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
-                    $valorPrimeiroPagamento = $valorMensal / 2;
+                    $ofertaMensal = $ofertasPublicasPlanos[(int) $plano['PLA_ID']]['mensal'] ?? [];
+                    $valorPrimeiroPagamento = ((int) ($ofertaMensal['primeira_cobranca_centavos'] ?? 0)) / 100;
+                    $valorDesconto = ((int) ($ofertaMensal['desconto_centavos'] ?? 0)) / 100;
                     ?>
 
                     <div class="site-plano-carousel-item">
@@ -993,15 +995,15 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                                 </span>
 
                                 <p class="text-success font-weight-bold mb-1">
-                                    <span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?></span><span> no primeiro pagamento</span>
+                                    <span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento, 2, ',', '.'); ?></span><span> na primeira cobrança mensal</span>
                                 </p>
 
                                 <p class="text-muted mb-1">
-                                    <del>R$ <?= number_format($valorMensal, 2, ',', '.'); ?></del>
+                                    Economia de R$ <?= number_format($valorDesconto, 2, ',', '.'); ?>: 50% da primeira mensalidade
                                 </p>
 
                                 <p class="mb-3">
-                                    A partir do 2º mês: <strong>R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês</strong>
+                                    Renovação: <strong>R$ <?= number_format($valorMensal, 2, ',', '.'); ?>/mês</strong>
                                 </p>
 
                                 <p class="text-muted">

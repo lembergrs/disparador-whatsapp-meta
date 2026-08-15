@@ -55,7 +55,7 @@ $resumo = $indicacao['resumo'];
 <div class="card mb-3">
     <div class="card-header"><h3 class="card-title">Como funciona</h3></div>
     <div class="card-body">
-        <p class="mb-2">Todo novo cliente recebe 50% de desconto na primeira cobrança, independentemente de indicação.</p>
+        <p class="mb-2">Todo novo cliente elegível recebe 50% de desconto na primeira mensalidade, independentemente do ciclo contratado ou de indicação.</p>
         <p class="mb-0">Quando uma indicação é confirmada, ela gera crédito promocional de <?= !empty($compartilhamento['percentual']) ? $e($compartilhamento['percentual']) : '15'; ?>% para cobranças futuras elegíveis. A aplicação segue as regras vigentes do programa.</p>
     </div>
 </div>
