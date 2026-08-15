@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../app/Services/FinanceiroWorkflowService.php';
 require_once __DIR__ . '/../app/Models/Plano.php';
+require_once __DIR__ . '/../app/Services/DescontoBoasVindasService.php';
 
 use Services\FinanceiroWorkflowService;
 
@@ -63,7 +64,7 @@ class FwCobrancas {
     public function cancelarPendentesPorCliente($c){foreach($this->rows as &$r){if($r['CLI_ID']==$c&&$r['COB_Status']==='pendente')$r['COB_Status']='cancelado';}return true;}
     public function listarPendentesVencidas(){return [];}
 }
-class FwPlanos { public $p=['PLA_ID'=>1,'PLA_Nome'=>'Plano','PLA_Valor'=>10,'PLA_ValorMensal'=>10,'PLA_Periodicidade'=>'mensal','PLA_LimiteNumeros'=>2];public function buscar($id){return $id===1?$this->p:null;} }
+class FwPlanos { public $p=['PLA_ID'=>1,'PLA_Nome'=>'Plano','PLA_Valor'=>10,'PLA_ValorMensal'=>10,'PLA_ValorTrimestral'=>30,'PLA_ValorSemestral'=>60,'PLA_ValorAnual'=>120,'PLA_Periodicidade'=>'mensal','PLA_LimiteNumeros'=>2];public function buscar($id){return $id===1?$this->p:null;} }
 class FwAsaas {
     public $payments=[]; public $posts=0; public $falharCriacao=false; public $values=[];
     public function criarOuAtualizarCliente($c){return ['sucesso'=>true,'response'=>['id'=>'cus_1']];}
@@ -104,6 +105,13 @@ fwAssert($ofertaPendente[1]['mensal']['primeiro_pagamento_centavos']===500,'pré
 $w->confirmarPagamentoManual(1,['valor_pago'=>'5.00']);fwAssert($cob->rows[1]['COB_Status']==='pago'&&count($primeiroPagamento->chamadas)===1,'pagamento manual simples confirma cobrança e dispara o marco de indicação');
 $ofertaSemPromocao=$w->ofertasParaContratacao(1,[(new FwPlanos())->p]);
 fwAssert(!$ofertaSemPromocao[1]['mensal']['elegivel']&&$ofertaSemPromocao[1]['mensal']['primeiro_pagamento_centavos']===1000,'cliente com cobrança anterior não vê promoção inicial novamente');
+
+$descontosAnual=new FwDescontos();$wAnual=novoWorkflow($cliAnual,$assAnual,$cobAnual,$asaasAnual,$descontosAnual);
+$contratoAnual=$wAnual->contratarPlano(1,1,'anual');
+fwAssert($contratoAnual['sucesso']&&$cobAnual->rows[1]['COB_Valor']==='115.00'&&$cobAnual->rows[1]['COB_DescontoInicialCentavos']===500&&$assAnual->rows[1]['ASS_Valor']==120,'ciclo anual desconta somente metade da mensalidade e preserva assinatura integral');
+fwAssert($asaasAnual->values[0]==='115.00','gateway recebe o mesmo valor anual mostrado e congelado');
+$wAnual->confirmarPagamentoManual(1,['valor_pago'=>'115.00']);$assAnual->rows[1]['ASS_DataProximaCobranca']=date('Y-m-d');$wAnual->gerarCobrancasRecorrentes();
+fwAssert((float)$cobAnual->rows[2]['COB_Valor']===120.0&&$cobAnual->rows[2]['COB_DescontoInicialCentavos']===0&&(float)$asaasAnual->values[1]===120.0,'renovação anual usa o valor integral sem desconto de boas-vindas');
 
 $cob->rows[1]['COB_ProviderPaymentId']='pay_1';
 $w->processarPagamentoWebhook(['id'=>'evt_confirmado','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_1','status'=>'CONFIRMED']]);

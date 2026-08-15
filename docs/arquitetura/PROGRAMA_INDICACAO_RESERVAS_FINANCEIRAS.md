@@ -10,7 +10,7 @@ não implementa FIFO: essas responsabilidades continuam no domínio de indicaç�
 
 A composição enviada ao provedor fica congelada na cobrança (valor-base, ciclo,
 desconto inicial, desconto de indicação, adicionais e valor final). A primeira
-cobrança recebe o benefício comercial independente de 50% e não consulta nem
+cobrança recebe o benefício comercial independente de 50% da primeira mensalidade e não consulta nem
 reserva créditos. Somente cobranças posteriores podem reservar créditos; valores
 adicionais permanecem integrais.
 

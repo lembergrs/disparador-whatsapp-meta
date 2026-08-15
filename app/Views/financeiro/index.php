@@ -351,6 +351,7 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                 $ofertaMensalPlano = $ofertasCiclosPlano['mensal'] ?? [
                     'elegivel' => false,
                     'valor_normal_centavos' => (int) round($valorMensalPlano * 100),
+                    'desconto_inicial_centavos' => 0,
                     'primeiro_pagamento_centavos' => (int) round($valorMensalPlano * 100)
                 ];
                 ?>
@@ -369,8 +370,9 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                                 <h2 class="text-success mb-0">
                                     R$ <span class="valor-primeiro-pagamento"><?= number_format($ofertaMensalPlano['primeiro_pagamento_centavos'] / 100, 2, ',', '.'); ?></span>
                                 </h2>
-                                <p class="font-weight-bold mb-1">no primeiro pagamento</p>
-                                <p class="mb-3">Depois <strong>R$ <span class="valor-plano-ciclo"><?= number_format($ofertaMensalPlano['valor_normal_centavos'] / 100, 2, ',', '.'); ?></span><span class="periodicidade-plano">/mês</span></strong></p>
+                                <p class="font-weight-bold mb-1">na primeira cobrança</p>
+                                <p class="text-muted small mb-1">Inclui R$ <span class="valor-desconto-boas-vindas"><?= number_format($ofertaMensalPlano['desconto_inicial_centavos'] / 100, 2, ',', '.'); ?></span> de desconto: 50% da primeira mensalidade.</p>
+                                <p class="mb-3">Renovação: <strong>R$ <span class="valor-plano-ciclo"><?= number_format($ofertaMensalPlano['valor_normal_centavos'] / 100, 2, ',', '.'); ?></span><span class="periodicidade-plano">/mês</span></strong></p>
                             </div>
 
                             <div class="preco-normal-plano" <?= !empty($ofertaMensalPlano['elegivel']) ? 'style="display:none;"' : ''; ?>>
@@ -450,6 +452,7 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
                                     data-anual="<?= $valorAnualPlano; ?>"
                                     <?php foreach($ofertasCiclosPlano as $cicloOferta => $ofertaCiclo){ ?>
                                         data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-primeiro="<?= number_format($ofertaCiclo['primeiro_pagamento_centavos'] / 100, 2, '.', ''); ?>"
+                                        data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-desconto="<?= number_format($ofertaCiclo['desconto_inicial_centavos'] / 100, 2, '.', ''); ?>"
                                         data-<?= htmlspecialchars($cicloOferta, ENT_QUOTES, 'UTF-8'); ?>-elegivel="<?= !empty($ofertaCiclo['elegivel']) ? '1' : '0'; ?>"
                                     <?php } ?>
                                     >
@@ -732,6 +735,7 @@ document.addEventListener('DOMContentLoaded', function(){
             const card = select.closest('.card-body');
             const valor = parseFloat(select.dataset[select.value] || '0');
             const primeiro = parseFloat(select.dataset[select.value + 'Primeiro'] || String(valor));
+            const desconto = parseFloat(select.dataset[select.value + 'Desconto'] || '0');
             const elegivel = select.dataset[select.value + 'Elegivel'] === '1';
             const periodicidades = {mensal: '/mês', trimestral: '/trimestre', semestral: '/semestre', anual: '/ano'};
 
@@ -748,6 +752,13 @@ document.addEventListener('DOMContentLoaded', function(){
                 const alvoPrimeiro = card.querySelector('.valor-primeiro-pagamento');
                 if(alvoPrimeiro){
                     alvoPrimeiro.textContent = primeiro.toLocaleString('pt-BR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+                const alvoDesconto = card.querySelector('.valor-desconto-boas-vindas');
+                if(alvoDesconto){
+                    alvoDesconto.textContent = desconto.toLocaleString('pt-BR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });

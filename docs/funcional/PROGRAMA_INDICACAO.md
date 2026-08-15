@@ -59,7 +59,7 @@ A contratação usa `FinanceiroWorkflowService::contratarPlano()`: valida o cicl
 
 Ambos ativam a assinatura e atualizam o cliente após persistência. Esse ponto comum de sucesso deverá futuramente liberar o código no primeiro pagamento e iniciar a janela da indicação, sem depender apenas do webhook.
 
-**Integração financeira (Sprint 3B):** o benefício inicial de 50% é calculado no workflow financeiro e registrado separadamente do desconto de indicação. Ele é aplicado à primeira cobrança de todo novo cliente, indicado ou não, sem criar ou consumir `indicacao_creditos`. A partir da segunda cobrança, o workflow delega cálculo e reserva ao `IndicacaoDescontoService` antes da chamada ao Asaas.
+**Integração financeira (Sprint 3B):** o benefício inicial corresponde a 50% de `PLA_ValorMensal`, independentemente do ciclo contratado. Ele é calculado no workflow financeiro, registrado separadamente do desconto de indicação e aplicado somente à primeira cobrança de todo novo cliente elegível, indicado ou não, sem criar ou consumir `indicacao_creditos`. A partir da segunda cobrança, o workflow delega cálculo e reserva ao `IndicacaoDescontoService` antes da chamada ao Asaas.
 
 O pagamento confirmado pelo webhook só delega a utilização das reservas quando a conciliação do Asaas prova, pelos valores `value` e `originalValue` comparados aos snapshots congelados em centavos, que a parte de indicação foi efetivamente concedida. Se o pagamento corresponder ao valor sem a parte de indicação, as reservas são liberadas; `netValue` não é usado, pois representa a liquidação do provedor. Sem evidência suficiente — inclusive em lançamento manual — a reserva permanece ativa para não inferir uso indevidamente. Webhooks duplicados são descartados pela idempotência financeira existente. Vencimento simples mantém as reservas enquanto a cobrança puder ser paga; cancelamento e falha definitiva de criação no Asaas as liberam. No retry da mesma cobrança, o domínio restabelece as reservas originais e valida o desconto congelado antes de uma nova chamada externa. Criar a cobrança externa, portanto, não equivale a consumir os créditos.
 
@@ -95,7 +95,7 @@ A solução não pode ser presumida. Deve avaliar recursos nativos do Asaas (des
 
 ### 3.1 Benefício de entrada
 
-Todo novo cliente, indicado ou não, recebe 50% de desconto no primeiro pagamento. A partir da segunda cobrança elegível, aplica-se o valor normal, salvo crédito de indicação ou promoção compatível futura.
+Todo novo cliente elegível, indicado ou não, recebe na primeira cobrança um desconto equivalente a 50% da primeira mensalidade. Em ciclos maiores, o restante do ciclo permanece integral. A partir da segunda cobrança elegível, aplica-se o valor normal do ciclo, salvo crédito de indicação ou promoção compatível futura.
 
 O desconto inicial:
 
@@ -108,7 +108,7 @@ O desconto inicial:
 
 Prioridade aprovada:
 
-1. primeira cobrança: desconto inicial de 50%;
+1. primeira cobrança: desconto inicial de 50% de `PLA_ValorMensal`;
 2. cobranças seguintes: podem utilizar até um crédito de indicação por mês representado no ciclo, respeitando créditos disponíveis, FIFO e regras de elegibilidade;
 3. excedentes e adicionais: sempre integrais.
 
@@ -224,7 +224,7 @@ O campo é opcional; pode receber entrada manual ou `ref`. Se informado:
 
 **Decisão funcional adotada nesta especificação:** código informado e inválido impede a conclusão do cadastro até ser corrigido ou removido. Isso evita atribuição inesperada e atende à recomendação aprovada. Ausência de código nunca impede cadastro comum.
 
-O indicado segue exatamente o mesmo trial, desconto inicial de 50%, cobrança normal subsequente e liberação do próprio código após primeiro pagamento.
+O indicado segue exatamente o mesmo trial, desconto inicial de 50% da primeira mensalidade, cobrança normal subsequente e liberação do próprio código após primeiro pagamento.
 
 ## 7. Indicação e crédito
 
@@ -387,7 +387,7 @@ Pagamento atrasado não causa multa/juros pelo programa, não utiliza os crédit
 ```text
 Cadastro
 → trial iniciado pela conexão operacional da conta Meta
-→ contratação e primeiro pagamento com 50%
+→ contratação com 50% de desconto na primeira mensalidade
 → pagamento confirmado pelo fluxo financeiro
 → código liberado na campanha ativa
 → participação ativa no programa
@@ -401,7 +401,7 @@ Acesso por link `ref` ou código manual
 → cadastro transacional
 → vínculo imutável com indicador e campanha
 → trial normal
-→ primeiro pagamento com 50%
+→ primeira cobrança com 50% de desconto na primeira mensalidade
 → confirmação financeira
 → período de sete dias completos
 → revalidação de elegibilidade
@@ -724,7 +724,7 @@ URL sugerida: `/programa-indicacao/regulamento`. Deve cobrir elegibilidade, camp
 
 ### 18.3 Texto-base público resumido
 
-> O primeiro pagamento possui 50% de desconto. Após a confirmação desse pagamento, o cliente elegível recebe seu código de indicação. Cada indicação aprovada, após pagamento e permanência ativa por sete dias, gera um crédito com o percentual da campanha — 15% na campanha inicial. Cada crédito é aplicado sobre uma fração mensal equivalente do valor-base do ciclo. Em cobranças trimestrais, semestrais e anuais, podem ser usados até 3, 6 e 12 créditos, respectivamente, sempre limitados aos créditos disponíveis; os excedentes permanecem para cobranças futuras. O desconto não alcança mensagens excedentes ou adicionais. O pagamento deve ocorrer até o vencimento; em atraso, todos os créditos reservados retornam ao FIFO. Créditos são promocionais, automáticos, intransferíveis e não podem ser convertidos em dinheiro.
+> A primeira cobrança possui desconto equivalente a 50% da primeira mensalidade, independentemente do ciclo contratado. Após a confirmação desse pagamento, o cliente elegível recebe seu código de indicação. Cada indicação aprovada, após pagamento e permanência ativa por sete dias, gera um crédito com o percentual da campanha — 15% na campanha inicial. Cada crédito é aplicado sobre uma fração mensal equivalente do valor-base do ciclo. Em cobranças trimestrais, semestrais e anuais, podem ser usados até 3, 6 e 12 créditos, respectivamente, sempre limitados aos créditos disponíveis; os excedentes permanecem para cobranças futuras. O desconto não alcança mensagens excedentes ou adicionais. O pagamento deve ocorrer até o vencimento; em atraso, todos os créditos reservados retornam ao FIFO. Créditos são promocionais, automáticos, intransferíveis e não podem ser convertidos em dinheiro.
 
 ## 19. Analytics futuros (não implementar nesta etapa)
 
@@ -790,7 +790,7 @@ Usar a infraestrutura GA4/GTM existente. Nunca enviar nome, e-mail, telefone, CP
 
 11. cadastro não gera crédito;
 12. trial igual para indicado/não indicado;
-13. primeiro pagamento aplica somente 50%;
+13. primeira cobrança aplica somente 50% de `PLA_ValorMensal` como benefício inicial;
 14. erro/pendência não libera código;
 15. webhook e pagamento manual liberam código uma única vez;
 16. indicado sem pagamento permanece aguardando;
