@@ -335,6 +335,12 @@ class="nav-link <?= str_contains($url, 'notificacao') ? 'active' : ''; ?>"
 </li>
 
 <li class="nav-item">
+<a href="<?= BASE_URL; ?>/index.php?url=metaPricingReport" class="nav-link <?= str_contains($url, 'metaPricingReport') ? 'active' : ''; ?>">
+<i class="nav-icon fas fa-tags"></i><p>Pricing Meta</p>
+</a>
+</li>
+
+<li class="nav-item">
 
 <a
 href="<?= BASE_URL; ?>/index.php?url=metaConta"
