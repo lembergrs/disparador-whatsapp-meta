@@ -28,6 +28,7 @@ class DashboardController extends Controller
         $assinaturasVencidas = 0;
         $assinaturasCanceladas = 0;
         $metaConta = null;
+        $metaPagamentoConta = null;
         $ultimasCampanhas = [];
         $ultimasConversas = [];
         $cliente = null;
@@ -202,6 +203,8 @@ class DashboardController extends Controller
             $sql->execute([$cliId]);
             $metaConta = $sql->fetch();
 
+            $metaPagamentoConta=(new \Models\MetaConta())->buscarPagamentoMetaPendentePorCliente($cliId);
+
             $sql = $db->prepare("
                 SELECT *
                 FROM campanhas
@@ -241,6 +244,7 @@ class DashboardController extends Controller
                 'campanhas' => $campanhas,
                 'mensagensRecebidas' => $mensagensRecebidas,
                 'metaConta' => $metaConta,
+                'metaPagamentoConta' => $metaPagamentoConta,
                 'ultimasCampanhas' => $ultimasCampanhas,
                 'ultimasConversas' => $ultimasConversas,
                 'consumo' => $consumo,

@@ -809,6 +809,10 @@ class ConfiguracaoController extends Controller
             throw new Exception('Falha ao salvar conta Meta no banco.');
         }
 
+        if(!$contaExistenteId){
+            $this->metaContaModel->marcarPagamentoMetaPendenteOnboarding($contaId,$clienteId);
+        }
+
         $this->logMetaEmbeddedSignup([
             'data' => date('Y-m-d H:i:s'),
             'cliente_id' => $clienteId,
@@ -846,6 +850,17 @@ class ConfiguracaoController extends Controller
             'request_id' => $tentativa['request_id'] ?? null,
             'onboarding_type' => $onboardingType
         ];
+    }
+
+    public function confirmarPagamentoMeta()
+    {
+        \Core\Csrf::exigirPost();
+        $usuario=Auth::usuario(); $clienteId=(int)($usuario['CLI_ID']??0); $contaId=(int)($_POST['conta_id']??0);
+        $conta=$this->metaContaModel->buscarPorCliente($contaId,$clienteId);
+        if(!$conta){ http_response_code(403); Session::flash('error','Conta WhatsApp não encontrada para o seu cliente.'); $this->redirect('configuracao/meta'); }
+        $confirmou=$this->metaContaModel->confirmarPagamentoMetaPorCliente($contaId,$clienteId);
+        Session::flash($confirmou?'success':'error',$confirmou?'Confirmação registrada. Você informou que a forma de pagamento da Meta já foi configurada.':'Não foi possível registrar a confirmação.');
+        $this->redirect('configuracao/meta');
     }
 
     private function dispararMetaConectada($clienteId, $canal)
