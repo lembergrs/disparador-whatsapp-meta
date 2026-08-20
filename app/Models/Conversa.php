@@ -506,21 +506,52 @@ class Conversa
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function atualizarStatusPorMetaMessageId($messageId, $novoStatus, $dataEvento = null, array $erro = [])
+    public function atualizarStatusPorMetaMessageId($messageId, $novoStatus, $dataEvento = null, array $erro = [], $metaId = null)
     {
         $novoStatus = MensagemStatusService::normalizar($novoStatus);
+        $metaId = (int) $metaId;
         $permitidos = MensagemStatusService::statusAtuaisPermitidos($novoStatus);
         $aceitos = MensagemStatusService::statusAtuaisAceitosNoWebhook($novoStatus);
-        if(!$novoStatus || !$permitidos || !$aceitos || trim((string)$messageId) === '') return false;
+        if(!$novoStatus || !$permitidos || !$aceitos || trim((string)$messageId) === '' || $metaId <= 0) return false;
         $placeholdersPermitidos = implode(',', array_fill(0, count($permitidos), '?'));
         $placeholdersAceitos = implode(',', array_fill(0, count($aceitos), '?'));
         $campoData = ['sent'=>'MSG_EnviadaEm','delivered'=>'MSG_EntregueEm','read'=>'MSG_LidaEm','failed'=>'MSG_FalhouEm'][$novoStatus] ?? null;
-        $setData = $campoData ? ", {$campoData}=COALESCE({$campoData}, ?)" : '';
-        $sql = $this->db->prepare("UPDATE conversa_mensagens SET MSG_Status=CASE WHEN MSG_Status IS NULL OR MSG_Status IN ({$placeholdersPermitidos}) THEN ? ELSE MSG_Status END, MSG_CodigoErro=CASE WHEN ?='failed' THEN ? ELSE MSG_CodigoErro END, MSG_MensagemErro=CASE WHEN ?='failed' THEN ? ELSE MSG_MensagemErro END{$setData}, MSG_AtualizadoEm=CASE WHEN MSG_Status IS NULL OR MSG_Status IN ({$placeholdersPermitidos})" . ($campoData ? " OR {$campoData} IS NULL" : '') . " THEN NOW() ELSE MSG_AtualizadoEm END WHERE MSG_MetaMessageId=? AND MSG_Direcao='enviada' AND (MSG_Status IS NULL OR MSG_Status IN ({$placeholdersAceitos}))");
+        $setData = $campoData ? ", m.{$campoData}=COALESCE(m.{$campoData}, ?)" : '';
+        $sql = $this->db->prepare("UPDATE conversa_mensagens m INNER JOIN conversas c ON c.CVS_ID=m.CVS_ID SET m.MSG_Status=CASE WHEN m.MSG_Status IS NULL OR m.MSG_Status IN ({$placeholdersPermitidos}) THEN ? ELSE m.MSG_Status END, m.MSG_CodigoErro=CASE WHEN ?='failed' THEN ? ELSE m.MSG_CodigoErro END, m.MSG_MensagemErro=CASE WHEN ?='failed' THEN ? ELSE m.MSG_MensagemErro END{$setData}, m.MSG_AtualizadoEm=CASE WHEN m.MSG_Status IS NULL OR m.MSG_Status IN ({$placeholdersPermitidos})" . ($campoData ? " OR m.{$campoData} IS NULL" : '') . " THEN NOW() ELSE m.MSG_AtualizadoEm END WHERE m.MSG_MetaMessageId=? AND c.MTA_ID=? AND m.MSG_Direcao='enviada' AND (m.MSG_Status IS NULL OR m.MSG_Status IN ({$placeholdersAceitos}))");
         $params = array_merge($permitidos, [$novoStatus, $novoStatus, $erro['codigo'] ?? null, $novoStatus, MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null)]);
         if($campoData) $params[] = $dataEvento ?: date('Y-m-d H:i:s');
-        $params = array_merge($params, $permitidos, [$messageId], $aceitos);
-        $sql->execute($params); return $sql->rowCount() > 0;
+        $params = array_merge($params, $permitidos, [$messageId, $metaId], $aceitos);
+        $sql->execute($params);
+        return $sql->rowCount() > 0;
+    }
+
+    public function atualizarPricingPorMetaMessageId($messageId, array $pricing, $metaId = null)
+    {
+        $metaId = (int) $metaId;
+        if(trim((string)$messageId) === '' || $metaId <= 0 || !$pricing) return false;
+        $camposPricing = [
+            'category'=>'MSG_MetaCategoria',
+            'billable'=>'MSG_PricingBillable',
+            'model'=>'MSG_PricingModel',
+            'type'=>'MSG_PricingType',
+            'market'=>'MSG_PricingMarket',
+            'currency'=>'MSG_PricingCurrency'
+        ];
+        $sets = [];
+        $paramsPricing = [];
+        foreach($camposPricing as $chave=>$coluna){
+            if(!array_key_exists($chave, $pricing)) continue;
+            $sets[] = "{$coluna}=?";
+            $paramsPricing[] = $chave === 'billable' ? ($pricing[$chave] ? 1 : 0) : $pricing[$chave];
+        }
+        if($sets){
+            $paramsPricing[] = $messageId;
+            $paramsPricing[] = $metaId;
+            $pricingSql = $this->db->prepare('UPDATE conversa_mensagens m INNER JOIN conversas c ON c.CVS_ID=m.CVS_ID SET m.' . implode(',m.', $sets) . ',m.MSG_AtualizadoEm=NOW() WHERE m.MSG_MetaMessageId=? AND c.MTA_ID=? AND m.MSG_Direcao=\'enviada\'');
+            $pricingSql->execute($paramsPricing);
+            return $pricingSql->rowCount() > 0;
+        }
+        return false;
     }
 
     public function listarStatusMensagens($conversaId)
