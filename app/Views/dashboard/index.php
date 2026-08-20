@@ -791,3 +791,5 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
 
 </div>
 <?php } ?>
+
+<?php if($metaPagamentoConta){ ?><div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap"><div><strong>Ação necessária: confirme a configuração de pagamento da Meta.</strong><br>As tarifas das mensagens são cobradas diretamente pela Meta. Configure a forma de pagamento da sua conta do WhatsApp para evitar problemas no envio.</div><a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="btn btn-warning btn-sm">Configurar pagamento</a></div><?php } ?>

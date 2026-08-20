@@ -210,9 +210,16 @@ $adminPodeAtualizarStatusMeta =
                                                     <div class="small text-muted">Última atualização: <span class="js-meta-ultima-verificacao"><?= htmlspecialchars($conta['MTA_UltimaVerificacao']); ?></span></div>
                                                 <?php } ?>
                                             <?php } ?>
+                                            <?php $pagamentoStatus=$conta['MTA_PagamentoMetaStatus']??null; ?>
+                                            <div class="mt-2"><strong>Forma de pagamento Meta:</strong>
+                                                <?php if($pagamentoStatus==='confirmado_cliente'){ ?><span class="badge badge-success">Confirmada pelo cliente</span><div class="small text-muted mt-1">Você informou que a forma de pagamento da Meta já foi configurada.</div>
+                                                <?php }else{ ?><span class="badge badge-warning"><?= $pagamentoStatus==='pendente_confirmacao'?'Pendente de confirmação':'Ainda não confirmada'; ?></span><div class="alert alert-warning py-2 mt-2">As tarifas das mensagens do WhatsApp são cobradas diretamente pela Meta. Configure uma forma de pagamento na sua conta do WhatsApp e, depois, confirme abaixo.</div><?php } ?>
+                                            </div>
                                         </td>
 
                                         <td>
+                                            <?php if(($conta['MTA_PagamentoMetaStatus']??null)!=='confirmado_cliente'){ ?><a class="btn btn-warning btn-sm" target="_blank" rel="noopener noreferrer" href="https://business.facebook.com/wa/manage/home/"><i class="fas fa-external-link-alt"></i> Configurar na Meta</a>
+                                            <form method="POST" action="<?= BASE_URL; ?>/index.php?url=configuracao/confirmarPagamentoMeta" class="d-inline"><?= \Core\Csrf::input(); ?><input type="hidden" name="conta_id" value="<?= (int)$conta['MTA_ID']; ?>"><button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Já configurei</button></form><?php } ?>
                                             <?php if(($conta['MTA_Status'] ?? '') === 'conectado'){ ?>
                                                 <div class="alert alert-success py-1 mb-2">WhatsApp conectado e pronto para uso.</div>
                                             <?php }elseif(in_array(($conta['MTA_Status'] ?? ''), ['pendente_registro', 'erro_registro'], true)){ ?>

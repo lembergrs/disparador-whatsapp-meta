@@ -10,10 +10,10 @@ class MetaConta
 {
     private $db;
 
-    public function __construct()
+    public function __construct($db = null)
     {
         $this->db =
-            Database::getInstance();
+            $db ?: Database::getInstance();
     }
 
 
@@ -310,6 +310,31 @@ class MetaConta
         ]);
 
         return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function marcarPagamentoMetaPendenteOnboarding($id, $clienteId)
+    {
+        $sql=$this->db->prepare("UPDATE meta_contas SET MTA_PagamentoMetaStatus='pendente_confirmacao',MTA_PagamentoMetaConfirmadoEm=NULL WHERE MTA_ID=? AND CLI_ID=? AND MTA_Ativo='S' AND (MTA_PagamentoMetaStatus IS NULL OR MTA_PagamentoMetaStatus<>'confirmado_cliente')");
+        $sql->execute([(int)$id,(int)$clienteId]);
+        return $sql->rowCount()>0;
+    }
+
+    public function confirmarPagamentoMetaPorCliente($id, $clienteId)
+    {
+        $sql=$this->db->prepare("UPDATE meta_contas SET MTA_PagamentoMetaStatus='confirmado_cliente',MTA_PagamentoMetaConfirmadoEm=NOW() WHERE MTA_ID=? AND CLI_ID=? AND MTA_Ativo='S'");
+        $sql->execute([(int)$id,(int)$clienteId]);
+        if($sql->rowCount()>0) return true;
+
+        $confirmada=$this->db->prepare("SELECT COUNT(*) FROM meta_contas WHERE MTA_ID=? AND CLI_ID=? AND MTA_Ativo='S' AND MTA_PagamentoMetaStatus='confirmado_cliente'");
+        $confirmada->execute([(int)$id,(int)$clienteId]);
+        return (int)$confirmada->fetchColumn()>0;
+    }
+
+    public function buscarPagamentoMetaPendentePorCliente($clienteId)
+    {
+        $sql=$this->db->prepare("SELECT MTA_ID,MTA_PagamentoMetaStatus FROM meta_contas WHERE CLI_ID=? AND MTA_Ativo='S' AND MTA_Status='conectado' AND (MTA_PagamentoMetaStatus='pendente_confirmacao' OR MTA_PagamentoMetaStatus IS NULL) ORDER BY MTA_ID DESC LIMIT 1");
+        $sql->execute([(int)$clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     public function contarAtivasPorCliente(

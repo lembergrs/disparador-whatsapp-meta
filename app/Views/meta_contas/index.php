@@ -129,6 +129,7 @@ Crie as colunas para salvar a configuração de auto resposta.
 <th>Quality</th>
 <th>Última sincronização</th>
 <th>Limite Meta</th>
+<th>Pagamento Meta</th>
 <th>Ações</th>
 
 </tr>
@@ -158,6 +159,8 @@ Crie as colunas para salvar a configuração de auto resposta.
 <td class="js-meta-ultima-verificacao"><?= metaContaUltimaSincronizacao($conta['MTA_UltimaVerificacao'] ?? null); ?></td>
 
 <td class="js-meta-messaging-limit" data-toggle="tooltip" title="Limite de conversas iniciadas pela empresa informado e controlado pela Meta."><?= htmlspecialchars(\Services\MetaService::formatarLimiteConversasMeta($conta['MTA_MessagingLimit'] ?? null), ENT_QUOTES, 'UTF-8'); ?></td>
+
+<td><?php $pagamento=$conta['MTA_PagamentoMetaStatus']??null; echo $pagamento==='confirmado_cliente'?'<span class="badge badge-success">Confirmada pelo cliente</span>':($pagamento==='pendente_confirmacao'?'<span class="badge badge-warning">Pendente de confirmação</span>':'<span class="badge badge-light">Ainda não confirmada</span>'); ?></td>
 
 <td class="text-nowrap">
 
