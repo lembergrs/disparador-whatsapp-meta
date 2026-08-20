@@ -138,6 +138,9 @@ $statusWebhookService = new MetaStatusWebhookService(
     function($messageId, $status, array $erro, $dataEvento = null) use ($notificacaoModel){
         $resultado = $notificacaoModel->atualizarStatusWhatsAppPorWamid($messageId, $status, $dataEvento, $erro);
         return !empty($resultado['atualizada']);
+    },
+    function($acao, array $dados){
+        registrarLogWebhookMeta($acao, $dados);
     }
 );
 $messageIngestionService = new MetaWebhookMessageIngestionService(
@@ -255,7 +258,7 @@ foreach($entries as $entry){
         |--------------------------------------------------------------------------
         */
         if($field === 'messages' && !empty($value['statuses'])){
-            $statusWebhookService->processarLote($value['statuses']);
+            $statusWebhookService->processarLote($value['statuses'], (int)$metaConta['MTA_ID']);
 
         }
 
