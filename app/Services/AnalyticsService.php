@@ -7,6 +7,7 @@ class AnalyticsService
     private const SESSION_KEY = 'analytics_eventos_pendentes';
     private const PARAMETROS = [
         'sign_up' => ['method', 'account_type'],
+        'cadastro_concluido' => [],
         'login' => ['method'],
         'start_trial' => ['trial_duration_days', 'trial_message_limit', 'trigger'],
         'connect_meta' => ['connection_type', 'first_connection', 'source_area'],
