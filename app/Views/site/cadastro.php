@@ -485,11 +485,16 @@ Session::remove('cadastro_dados');
 $(function(){
 
     let inicioCadastroRastreado = false;
+    const chaveInicioCadastro = 'disparador.analytics.inicio_cadastro';
 
     function rastrearInicioCadastro()
     {
-        if(inicioCadastroRastreado){ return; }
+        let jaRastreado = inicioCadastroRastreado;
+        try{ jaRastreado = jaRastreado || sessionStorage.getItem(chaveInicioCadastro) === '1'; }catch(e){}
+        if(jaRastreado){ return; }
         inicioCadastroRastreado = true;
+        try{ sessionStorage.setItem(chaveInicioCadastro, '1'); }catch(e){}
+        window.Disparador.analytics.push('inicio_cadastro');
         window.Disparador.analytics.push('sign_up_start', {
             form_name: 'public_registration',
             source_area: 'public_site'

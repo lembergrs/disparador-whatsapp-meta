@@ -336,6 +336,7 @@ class SiteController extends Controller
             Session::remove(self::SESSAO_CODIGO_INDICACAO);
 
             AnalyticsService::registrar('sign_up', ['method'=>'public_form', 'account_type'=>'client']);
+            AnalyticsService::registrar('cadastro_concluido');
 
             $resultadoBoasVindas = $this->enviarEmailBoasVindasCadastro([
                 'CLI_ID' => $clienteId,
