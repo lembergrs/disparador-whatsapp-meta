@@ -4,6 +4,11 @@ $mensagensUsadasDisparador = isset($consumoMes['CMS_Mensagens']) ? (int) $consum
 $mensagensDisponiveisDisparador = $limitePlanoDisparador !== null ? max(0, $limitePlanoDisparador - $mensagensUsadasDisparador) : null;
 $limiteMetaLabel = \Services\MetaService::formatarLimiteConversasMeta($metaContaLimite['MTA_MessagingLimit'] ?? null);
 $avisoLimiteMeta = \Services\MetaService::avisoDesatualizacaoMeta($metaContaLimite['MTA_UltimaVerificacao'] ?? null);
+$diagnosticosMetaEnvio = [];
+foreach(($contasMeta ?? []) as $contaMetaDiagnostico){
+    $diagnosticosMetaEnvio[(int) $contaMetaDiagnostico['MTA_ID']] = \Services\MetaHealthService::consultarConta($contaMetaDiagnostico);
+}
+$metaAlertaContainerId = 'metaSendHealthAlertCampanha';
 ?>
 <div class="mb-3">
 
@@ -76,6 +81,8 @@ style="display:none;"
         </div>
     </div>
 </div>
+
+<?php require dirname(__DIR__) . '/components/meta_send_block_alert.php'; ?>
 
 <div class="card">
 
@@ -275,6 +282,7 @@ required
 
 <option
 value="<?= $template['TMP_ID']; ?>"
+data-meta-id="<?= (int) ($template['MTA_ID'] ?? 0); ?>"
 data-componentes="<?= htmlspecialchars(base64_encode($template['TMP_Componentes']), ENT_QUOTES); ?>"
 data-header-tipo="<?= htmlspecialchars($template['TMP_HeaderTipo'] ?? '', ENT_QUOTES); ?>"
 data-header-midia-url-exemplo="<?= htmlspecialchars($template['TMP_HeaderMidiaUrlExemplo'] ?? '', ENT_QUOTES); ?>"
@@ -427,6 +435,20 @@ document.addEventListener('click', function(e){
         card.style.display = 'none';
     }
 
+});
+
+document.addEventListener('DOMContentLoaded', function(){
+    var seletorTemplate = document.getElementById('templateCampanha');
+    if(!seletorTemplate || !window.DisparadorMetaHealth){ return; }
+
+    function atualizarAlertaMetaCampanha(){
+        var opcao = seletorTemplate.options[seletorTemplate.selectedIndex];
+        var metaId = opcao ? opcao.getAttribute('data-meta-id') : '';
+        window.DisparadorMetaHealth.exibirParaConta('metaSendHealthAlertCampanha', metaId);
+    }
+
+    seletorTemplate.addEventListener('change', atualizarAlertaMetaCampanha);
+    atualizarAlertaMetaCampanha();
 });
 
 </script>
