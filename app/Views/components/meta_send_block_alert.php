@@ -24,9 +24,11 @@ $diagnosticosMetaEnvio = $diagnosticosMetaEnvio ?? [];
                 <i class="fas fa-exclamation-triangle mr-2 mt-1"></i>
                 <div class="flex-fill">
                     <strong>
-                        <?= $canSend === 'BLOCKED'
-                            ? 'A Meta está bloqueando o envio de mensagens desta conta.'
-                            : 'A Meta informou uma limitação para o envio de mensagens desta conta.'; ?>
+                        <?php if($canSend === 'BLOCKED'){ ?>
+                            A Meta está bloqueando o envio de mensagens desta conta.
+                        <?php }else{ ?>
+                            A Meta informou uma limitação para o envio de mensagens desta conta.
+                        <?php } ?>
                     </strong>
 
                     <?php if(!empty($erros)){ ?>
@@ -63,7 +65,7 @@ $diagnosticosMetaEnvio = $diagnosticosMetaEnvio ?? [];
                                 <?php } ?>
                             </div>
                         <?php } ?>
-                    <?php else{ ?>
+                    <?php }else{ ?>
                         <div class="small mt-1">
                             Consulte o WhatsApp Manager antes de iniciar novos envios.
                         </div>
