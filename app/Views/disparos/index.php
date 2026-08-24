@@ -4,6 +4,11 @@ $mensagensUsadasDisparador = isset($consumoMes['CMS_Mensagens']) ? (int) $consum
 $mensagensDisponiveisDisparador = $limitePlanoDisparador !== null ? max(0, $limitePlanoDisparador - $mensagensUsadasDisparador) : null;
 $limiteMetaLabel = \Services\MetaService::formatarLimiteConversasMeta($metaContaLimite['MTA_MessagingLimit'] ?? null);
 $avisoLimiteMeta = \Services\MetaService::avisoDesatualizacaoMeta($metaContaLimite['MTA_UltimaVerificacao'] ?? null);
+$diagnosticosMetaEnvio = [];
+foreach(($contas ?? []) as $contaMetaDiagnostico){
+    $diagnosticosMetaEnvio[(int) $contaMetaDiagnostico['MTA_ID']] = \Services\MetaHealthService::consultarConta($contaMetaDiagnostico);
+}
+$metaAlertaContainerId = 'metaSendHealthAlertDisparo';
 ?>
 <div class="mb-3 d-flex flex-wrap align-items-center justify-content-between">
     <div class="btn-group mb-2 mb-md-0" role="group" aria-label="Navegação de disparos">
@@ -37,6 +42,8 @@ $avisoLimiteMeta = \Services\MetaService::avisoDesatualizacaoMeta($metaContaLimi
         </div>
     </div>
 </div>
+
+<?php require dirname(__DIR__) . '/components/meta_send_block_alert.php'; ?>
 
 <div class="card">
     <div class="card-header">
@@ -341,4 +348,16 @@ $avisoLimiteMeta = \Services\MetaService::avisoDesatualizacaoMeta($metaContaLimi
 <script>
 window.TEMPLATES_DISPARO = <?= json_encode($templates, JSON_UNESCAPED_UNICODE); ?>;
 window.TOTAL_CONTAS_META = <?= count($contas); ?>;
+
+document.addEventListener('DOMContentLoaded', function(){
+    var seletorConta = document.getElementById('meta');
+    if(!seletorConta || !window.DisparadorMetaHealth){ return; }
+
+    function atualizarAlertaMetaDisparo(){
+        window.DisparadorMetaHealth.exibirParaConta('metaSendHealthAlertDisparo', seletorConta.value);
+    }
+
+    seletorConta.addEventListener('change', atualizarAlertaMetaDisparo);
+    atualizarAlertaMetaDisparo();
+});
 </script>
