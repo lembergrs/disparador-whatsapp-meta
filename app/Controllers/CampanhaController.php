@@ -82,6 +82,7 @@ class CampanhaController extends Controller
                 'listas' => $listas,
                 'clientePlano' => $clientePlano,
                 'consumoMes' => $consumoMes,
+                'contasMeta' => $contasMeta,
                 'metaContaLimite' => $metaContaLimite
             ]
         );
