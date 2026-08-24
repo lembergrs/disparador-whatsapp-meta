@@ -17,33 +17,33 @@ $statusMeta = $statusMetaLabel[$canSendMeta] ?? null;
     <div class="d-flex align-items-center justify-content-between flex-wrap">
         <strong>Diagnóstico da Meta</strong>
 
-        <?php if($statusMeta){ ?>
+        <?php if($statusMeta): ?>
             <span class="badge badge-<?= $statusMeta['classe']; ?>">
                 <?= htmlspecialchars($statusMeta['texto'], ENT_QUOTES, 'UTF-8'); ?>
             </span>
-        <?php } ?>
+        <?php endif; ?>
     </div>
 
-    <?php if(!empty($errosMeta)){ ?>
-        <?php foreach($errosMeta as $erroMeta){ ?>
+    <?php if(!empty($errosMeta)): ?>
+        <?php foreach($errosMeta as $erroMeta): ?>
             <div class="alert alert-<?= htmlspecialchars($erroMeta['nivel'] ?? 'warning', ENT_QUOTES, 'UTF-8'); ?> py-2 px-3 mt-2 mb-2">
                 <div>
                     <strong><?= htmlspecialchars($erroMeta['titulo'] ?? 'Atenção necessária na Meta', ENT_QUOTES, 'UTF-8'); ?></strong>
-                    <?php if(!empty($erroMeta['codigo'])){ ?>
+                    <?php if(!empty($erroMeta['codigo'])): ?>
                         <span class="badge badge-light ml-1">Código <?= htmlspecialchars($erroMeta['codigo'], ENT_QUOTES, 'UTF-8'); ?></span>
-                    <?php } ?>
+                    <?php endif; ?>
                 </div>
 
                 <div class="small mt-1">
                     <?= htmlspecialchars($erroMeta['descricao'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
                 </div>
 
-                <?php if(!empty($erroMeta['solucao'])){ ?>
+                <?php if(!empty($erroMeta['solucao'])): ?>
                     <div class="small mt-1">
                         <strong>Como resolver:</strong>
                         <?= htmlspecialchars($erroMeta['solucao'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
-                <?php } ?>
+                <?php endif; ?>
 
                 <div class="mt-2">
                     <a
@@ -57,17 +57,17 @@ $statusMeta = $statusMetaLabel[$canSendMeta] ?? null;
                     </a>
                 </div>
             </div>
-        <?php } ?>
-    <?php elseif(!empty($diagnosticoMeta['disponivel'])){ ?>
+        <?php endforeach; ?>
+    <?php elseif(!empty($diagnosticoMeta['disponivel'])): ?>
         <div class="alert alert-success py-2 px-3 mt-2 mb-2">
             <i class="fas fa-check-circle"></i>
             A Meta não informou nenhuma pendência de saúde para esta conta.
         </div>
-    <?php else{ ?>
+    <?php else: ?>
         <div class="small text-muted mt-2">
             <?= htmlspecialchars($diagnosticoMeta['mensagem'] ?? 'Diagnóstico da Meta indisponível.', ENT_QUOTES, 'UTF-8'); ?>
         </div>
-    <?php } ?>
+    <?php endif; ?>
 
     <a
     href="<?= \Services\MetaHealthService::META_WHATSAPP_MANAGER_URL; ?>"
