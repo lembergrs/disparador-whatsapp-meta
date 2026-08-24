@@ -727,69 +727,6 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
     </div>
 
 </div>
-
-<div class="card">
-
-    <div class="card-header">
-        <h3 class="card-title">
-            Últimas Conversas
-        </h3>
-    </div>
-
-    <div class="card-body table-responsive p-0">
-
-        <table class="table table-hover table-striped mb-0">
-
-            <thead>
-                <tr>
-                    <th>Contato</th>
-                    <th>Telefone</th>
-                    <th>Última mensagem</th>
-                    <th>Data</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-            <?php if(empty($ultimasConversas)){ ?>
-
-                <tr>
-                    <td colspan="4" class="text-center text-muted">
-                        Nenhuma conversa encontrada.
-                    </td>
-                </tr>
-
-            <?php } ?>
-
-            <?php foreach($ultimasConversas as $conversa){ ?>
-
-                <tr>
-                    <td>
-                        <?= htmlspecialchars($conversa['CVS_Nome'] ?: 'Sem nome'); ?>
-                    </td>
-
-                    <td>
-                        <?= formatarTelefoneDashboard($conversa['CVS_Numero']); ?>
-                    </td>
-
-                    <td>
-                        <?= htmlspecialchars($conversa['CVS_UltimaMensagem']); ?>
-                    </td>
-
-                    <td>
-                        <?= formatarDataDashboard($conversa['CVS_DataUltimaMensagem']); ?>
-                    </td>
-                </tr>
-
-            <?php } ?>
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
 <?php } ?>
 
 <?php if($metaPagamentoConta){ ?><div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap"><div><strong>Ação necessária: confirme a configuração de pagamento da Meta.</strong><br>As tarifas das mensagens são cobradas diretamente pela Meta. Configure a forma de pagamento da sua conta do WhatsApp para evitar problemas no envio.</div><a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="btn btn-warning btn-sm">Configurar pagamento</a></div><?php } ?>
