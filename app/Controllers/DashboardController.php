@@ -30,7 +30,6 @@ class DashboardController extends Controller
         $metaConta = null;
         $metaPagamentoConta = null;
         $ultimasCampanhas = [];
-        $ultimasConversas = [];
         $cliente = null;
         $consumo = null;
         $excedente = null;
@@ -107,14 +106,6 @@ class DashboardController extends Controller
                 FROM campanhas
                 ORDER BY CAM_ID DESC
                 LIMIT 5
-            ")->fetchAll();
-
-            $ultimasConversas = $db->query("
-                SELECT *
-                FROM conversas
-                WHERE CVS_Ativo = 'S'
-                ORDER BY CVS_DataUltimaMensagem DESC
-                LIMIT 10
             ")->fetchAll();
 
         }else{
@@ -215,17 +206,6 @@ class DashboardController extends Controller
             $sql->execute([$cliId]);
             $ultimasCampanhas = $sql->fetchAll();
 
-            $sql = $db->prepare("
-                SELECT *
-                FROM conversas
-                WHERE CLI_ID = ?
-                AND CVS_Ativo = 'S'
-                ORDER BY CVS_DataUltimaMensagem DESC
-                LIMIT 10
-            ");
-            $sql->execute([$cliId]);
-            $ultimasConversas = $sql->fetchAll();
-
             $onboardingChecklist = (new \Services\OnboardingChecklistService())->calcular($cliId);
         }
 
@@ -246,7 +226,6 @@ class DashboardController extends Controller
                 'metaConta' => $metaConta,
                 'metaPagamentoConta' => $metaPagamentoConta,
                 'ultimasCampanhas' => $ultimasCampanhas,
-                'ultimasConversas' => $ultimasConversas,
                 'consumo' => $consumo,
                 'excedente' => $excedente,
                 'assinaturasAtivas' => $assinaturasAtivas,
