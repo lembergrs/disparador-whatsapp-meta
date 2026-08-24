@@ -215,6 +215,7 @@ $adminPodeAtualizarStatusMeta =
                                                 <?php if($pagamentoStatus==='confirmado_cliente'){ ?><span class="badge badge-success">Confirmada pelo cliente</span><div class="small text-muted mt-1">Você informou que a forma de pagamento da Meta já foi configurada.</div>
                                                 <?php }else{ ?><span class="badge badge-warning"><?= $pagamentoStatus==='pendente_confirmacao'?'Pendente de confirmação':'Ainda não confirmada'; ?></span><div class="alert alert-warning py-2 mt-2">As tarifas das mensagens do WhatsApp são cobradas diretamente pela Meta. Configure uma forma de pagamento na sua conta do WhatsApp e, depois, confirme abaixo.</div><?php } ?>
                                             </div>
+                                            <?php require __DIR__ . '/_meta_health.php'; ?>
                                         </td>
 
                                         <td>
