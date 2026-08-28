@@ -149,11 +149,13 @@ class FinanceiroNotificacaoService
         $vencimento = $this->vencimento($cobranca);
         $dias = max(0, (int)$this->data($vencimento)->diff($this->hoje())->format('%r%a'));
         $contextos = ['regular'=>'Pagamento confirmado com sucesso.','tolerancia'=>'Pagamento confirmado e situação financeira regularizada.','suspenso'=>'Pagamento confirmado; a situação foi regularizada e o acesso operacional será restabelecido automaticamente.'];
+        $linkFinanceiro = rtrim(BASE_URL, '/') . '/index.php?url=financeiro';
+        $linkPagamento = trim((string)($cobranca['COB_LinkPagamento'] ?? ''));
         return [
             'plano'=>$plano['PLA_Nome'] ?? ($cobranca['PLA_Nome'] ?? ''), 'valor'=>number_format((float)($cobranca['COB_Valor'] ?? 0), 2, ',', '.'),
             'vencimento'=>date('d/m/Y', strtotime($vencimento)), 'dias_atraso'=>$dias,
             'dias'=>max(0, (int)$this->hoje()->diff($this->data($vencimento))->format('%r%a')),
-            'link'=>trim((string)($cobranca['COB_LinkPagamento'] ?? '')) ?: rtrim(BASE_URL, '/') . '/index.php?url=financeiro',
+            'link'=>$evento === EventoNotificacao::PAGAMENTO_CONFIRMADO ? $linkFinanceiro : ($linkPagamento ?: $linkFinanceiro),
             'contexto_pagamento'=>$contextos[$persistidos['situacao_anterior'] ?? 'regular'] ?? $contextos['regular'],
             'situacao_anterior'=>$persistidos['situacao_anterior'] ?? 'regular', 'evento'=>$evento,
         ];
