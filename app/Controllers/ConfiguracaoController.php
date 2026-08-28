@@ -70,21 +70,19 @@ class ConfiguracaoController extends Controller
         return $dados;
     }
 
+    private function exigirGerenciamentoProprioMeta()
+    {
+        if(!Auth::podeGerenciarPropriaConfiguracaoMeta()){
+            die('Acesso negado');
+        }
+    }
+
     public function salvarAutoResposta()
     {
+        $this->exigirGerenciamentoProprioMeta();
         $this->validarCsrfPost();
 
         $usuario = Auth::usuario();
-
-        if(
-            !in_array(
-                $usuario['nivel'] ?? null,
-                ['cliente', 'cliente_admin'],
-                true
-            )
-        ){
-            die('Acesso negado');
-        }
 
         if(!$this->metaContaModel->colunasAutoRespostaExistem()){
             Session::flash(
@@ -312,6 +310,7 @@ class ConfiguracaoController extends Controller
 
     public function iniciarEmbeddedSignup()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
@@ -357,6 +356,7 @@ class ConfiguracaoController extends Controller
 
     public function registrarEmbeddedSignupFinish()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
@@ -854,6 +854,7 @@ class ConfiguracaoController extends Controller
 
     public function confirmarPagamentoMeta()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario=Auth::usuario(); $clienteId=(int)($usuario['CLI_ID']??0); $contaId=(int)($_POST['conta_id']??0);
         $conta=$this->metaContaModel->buscarPorCliente($contaId,$clienteId);
@@ -879,6 +880,7 @@ class ConfiguracaoController extends Controller
 
     public function finalizarEmbeddedSignup()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
@@ -935,6 +937,7 @@ class ConfiguracaoController extends Controller
 
     public function metaCallback()
     {
+        $this->exigirGerenciamentoProprioMeta();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
 
@@ -998,6 +1001,7 @@ class ConfiguracaoController extends Controller
 
     public function registrarNumeroWhatsApp()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
@@ -1189,6 +1193,7 @@ class ConfiguracaoController extends Controller
 
     public function atualizarStatusNumeroWhatsApp()
     {
+        $this->exigirGerenciamentoProprioMeta();
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
@@ -1216,6 +1221,7 @@ class ConfiguracaoController extends Controller
 
     public function meta()
     {
+        $this->exigirGerenciamentoProprioMeta();
         $usuario =
             Auth::usuario();
 

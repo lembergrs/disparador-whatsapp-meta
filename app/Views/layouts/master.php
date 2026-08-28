@@ -355,6 +355,15 @@ class="nav-link <?= str_contains($url, 'metaConta') ? 'active' : ''; ?>"
 
 </li>
 
+<?php if(Auth::podeGerenciarPropriaConfiguracaoMeta($usuario)){ ?>
+<li class="nav-item">
+<a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="nav-link <?= str_contains($url, 'configuracao/meta') ? 'active' : ''; ?>">
+<i class="nav-icon fab fa-whatsapp"></i>
+<p>Números WhatsApp</p>
+</a>
+</li>
+<?php } ?>
+
 <li class="nav-item">
 
 <a
