@@ -32,6 +32,16 @@ class Cobranca
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarObrigacaoAbertaPorAssinatura($clienteId, $assinaturaId)
+    {
+        $vencimento = $this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')
+            ? 'COALESCE(c.COB_DataVencimentoEfetivo, c.COB_DataVencimento)'
+            : 'c.COB_DataVencimento';
+        $sql = $this->db->prepare("SELECT c.*, p.PLA_Nome, {$vencimento} AS COB_VencimentoFinanceiro FROM cobrancas c LEFT JOIN planos p ON p.PLA_ID = c.PLA_ID WHERE c.CLI_ID = ? AND c.ASS_ID = ? AND c.COB_Status IN ('pendente','vencido') ORDER BY {$vencimento} ASC, c.COB_ID ASC LIMIT 1");
+        $sql->execute([(int) $clienteId, (int) $assinaturaId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function listarPendentesPorCliente($clienteId)
     {
         $sql = $this->db->prepare("SELECT * FROM cobrancas WHERE CLI_ID = ? AND COB_Status = 'pendente' ORDER BY COB_ID");

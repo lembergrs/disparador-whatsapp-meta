@@ -372,6 +372,32 @@ class FinanceiroWorkflowService
         return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId]);
     }
 
+    public function recuperarIntegracaoCobranca(int $clienteId, int $cobrancaId): array
+    {
+        $cobranca = $this->cobrancas->buscar($cobrancaId);
+        if(!$cobranca || (int) ($cobranca['CLI_ID'] ?? 0) !== $clienteId){
+            throw new \DomainException('Cobrança não disponível para este cliente.');
+        }
+        if(!in_array((string) ($cobranca['COB_Status'] ?? ''), ['pendente','vencido'], true)){
+            throw new \DomainException('Cobrança não está aberta.');
+        }
+        $assinatura = $this->assinaturas->buscarVigentePorCliente($clienteId);
+        if(!$assinatura || (int) ($cobranca['ASS_ID'] ?? 0) !== (int) $assinatura['ASS_ID']){
+            throw new \DomainException('Cobrança não pertence à assinatura vigente.');
+        }
+        $plano = $this->planos->buscar((int) $cobranca['PLA_ID']);
+        if(!$plano){ throw new \DomainException('Plano da cobrança não está disponível.'); }
+        $ciclo = (string) ($cobranca['COB_Ciclo'] ?? ($assinatura['ASS_Ciclo'] ?? $plano['PLA_Periodicidade']));
+        $resultado = $this->integrarCobrancaAsaas($clienteId, $cobrancaId, $plano, $ciclo);
+        $this->log('recuperacao_cobranca_cliente', ['cliente_id'=>$clienteId,'cobranca_id'=>$cobrancaId,'sucesso'=>!empty($resultado['sucesso']),'reconciliada'=>!empty($resultado['reconciliada'])]);
+        if(!empty($resultado['sucesso'])){
+            $resultado['mensagem'] = 'Link de pagamento disponível. Você já pode continuar a regularização.';
+        }else{
+            $resultado['mensagem'] = 'Não foi possível gerar o link de pagamento. Tente novamente ou entre em contato com o suporte.';
+        }
+        return $resultado;
+    }
+
     public function cancelarAssinatura(int $assinaturaId, ?string $motivo = null): array
     {
         $assinatura = $this->assinaturas->buscarPorId($assinaturaId);
@@ -394,12 +420,23 @@ class FinanceiroWorkflowService
                 $referencia = $reprocessamento['referencia'];
                 $cobranca = $this->cobrancas->buscar($cobrancaId);
             }
-            if(!empty($cobranca['COB_ProviderPaymentId'])){
+            if(!empty($cobranca['COB_ProviderPaymentId']) && $this->linkPagamentoValido($cobranca['COB_LinkPagamento'] ?? null)){
                 return ['sucesso'=>true,'reconciliada'=>true,'mensagem'=>'Cobrança já integrada.'];
             }
-
             $cobranca = $this->prepararDescontosDaCobranca($clienteId, $cobranca, $plano, $ciclo);
             $vencimentoRecuperacao = $this->recorrencia->vencimentoEfetivoGateway($cobranca['COB_DataVencimento']);
+
+            $pagamento = null;
+            $providerPaymentId = trim((string) ($cobranca['COB_ProviderPaymentId'] ?? ''));
+            if($providerPaymentId !== ''){
+                $consultaPorId = $this->asaas->consultarCobranca($providerPaymentId);
+                if(!empty($consultaPorId['sucesso']) && !empty($consultaPorId['response']['id'])){
+                    $pagamento = $consultaPorId['response'];
+                }elseif((int) ($consultaPorId['http_code'] ?? 0) !== 404){
+                    $this->registrarFalhaGateway($cobrancaId, 'erro_reconciliacao', $consultaPorId, $referencia);
+                    return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança. Tente novamente em instantes.'];
+                }
+            }
 
             $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
             if($customerId === ''){
@@ -414,12 +451,15 @@ class FinanceiroWorkflowService
                 $cliente['CLI_ProviderCustomerId'] = $customerId;
             }
 
-            $consulta = $this->asaas->buscarCobrancaPorReferenciaExterna($referencia);
-            if(empty($consulta['sucesso'])){
-                $this->registrarFalhaGateway($cobrancaId, 'erro_reconciliacao', $consulta, $referencia, $customerId);
-                return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança no Asaas. Tente novamente em instantes.'];
+            $consulta = ['sucesso'=>true,'response'=>['data'=>[]]];
+            if(!$pagamento){
+                $consulta = $this->asaas->buscarCobrancaPorReferenciaExterna($referencia);
+                if(empty($consulta['sucesso'])){
+                    $this->registrarFalhaGateway($cobrancaId, 'erro_reconciliacao', $consulta, $referencia, $customerId);
+                    return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança no Asaas. Tente novamente em instantes.'];
+                }
+                $pagamento = $this->primeiraCobrancaEncontrada($consulta);
             }
-            $pagamento = $this->primeiraCobrancaEncontrada($consulta);
             while($pagamento && $this->pagamentoExternoCancelado($pagamento)){
                 $tentativa = $this->numeroTentativa($referencia) + 1;
                 $referencia = 'cobranca_' . $cobrancaId . '_tentativa_' . $tentativa;
@@ -705,6 +745,15 @@ class FinanceiroWorkflowService
     private function pagamentoExternoCancelado(array $pagamento): bool
     {
         return in_array(strtoupper((string) ($pagamento['status'] ?? '')), ['DELETED','REFUNDED','CANCELLED'], true);
+    }
+
+    private function linkPagamentoValido($link): bool
+    {
+        $partes = parse_url(trim((string) $link));
+        return is_array($partes)
+            && in_array(strtolower((string) ($partes['scheme'] ?? '')), ['http','https'], true)
+            && !empty($partes['host'])
+            && (bool) filter_var($link, FILTER_VALIDATE_URL);
     }
 
     private function reconciliarProximaCobranca(array $assinatura, string $cicloProcessado): void
