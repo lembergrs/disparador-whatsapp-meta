@@ -45,7 +45,7 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             );
 
-        $assinaturaVigente = $assinaturaModel->buscarVigentePorCliente($usuario['CLI_ID']);
+        $assinaturaVigente = $assinaturaModel->buscarParaRegularizacaoFinanceira($usuario['CLI_ID']);
         $cobranca = $assinaturaVigente
             ? $cobrancaModel->buscarObrigacaoAbertaPorAssinatura($usuario['CLI_ID'], $assinaturaVigente['ASS_ID'])
             : false;
@@ -119,7 +119,7 @@ class FinanceiroController extends Controller
                 $perPage,
                 $offset
             );
-            $assinaturaVigente = (new Assinatura())->buscarVigentePorCliente($clienteId);
+            $assinaturaVigente = (new Assinatura())->buscarParaRegularizacaoFinanceira($clienteId);
             $obrigacaoAtual = $assinaturaVigente
                 ? $cobrancaModel->buscarObrigacaoAbertaPorAssinatura($clienteId, $assinaturaVigente['ASS_ID'])
                 : false;

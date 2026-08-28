@@ -381,9 +381,9 @@ class FinanceiroWorkflowService
         if(!in_array((string) ($cobranca['COB_Status'] ?? ''), ['pendente','vencido'], true)){
             throw new \DomainException('Cobrança não está aberta.');
         }
-        $assinatura = $this->assinaturas->buscarVigentePorCliente($clienteId);
+        $assinatura = $this->assinaturas->buscarParaRegularizacaoFinanceira($clienteId);
         if(!$assinatura || (int) ($cobranca['ASS_ID'] ?? 0) !== (int) $assinatura['ASS_ID']){
-            throw new \DomainException('Cobrança não pertence à assinatura vigente.');
+            throw new \DomainException('Cobrança não pertence ao contexto financeiro atual.');
         }
         $plano = $this->planos->buscar((int) $cobranca['PLA_ID']);
         if(!$plano){ throw new \DomainException('Plano da cobrança não está disponível.'); }

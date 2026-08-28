@@ -36,6 +36,7 @@ class FwAssinaturas {
         if(($this->rows[$id]['ASS_DataProximaCobranca']??null)===$ciclo){$this->rows[$id]['ASS_DataProximaCobranca']=$proxima;return true;}return false;
     }
     public function buscarVigentePorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&in_array($r['ASS_Status'],['ativa','pendente']))return $r;}return null;}
+    public function buscarParaRegularizacaoFinanceira($c){foreach(array_reverse($this->rows,true) as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='ativa')return $r;}foreach(array_reverse($this->rows,true) as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='pendente')return $r;}return null;}
     public function buscarAtivaPorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='ativa')return $r;}return null;}
     public function marcarVencida($id){$this->rows[$id]['ASS_Status']='vencida';return true;}
 }
@@ -269,5 +270,13 @@ $w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new F
 fwAssert($resultado['sucesso']&&!empty($resultado['reconciliada'])&&$asaas->posts===0&&$cob->rows[$id]['COB_ProviderPaymentId']==='pay_existente'&&$cob->rows[$id]['COB_LinkPagamento']==='https://teste.local/existente','pagamento existente por externalReference é reconciliado sem nova criação');
 
 $negada=false;try{$w->recuperarIntegracaoCobranca(2,$id);}catch(DomainException $e){$negada=true;}fwAssert($negada&&$asaas->posts===0,'cliente não recupera cobrança pertencente a outro cliente');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'pendente');$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$resultado=$w->recuperarIntegracaoCobranca(1,$id);
+fwAssert($resultado['sucesso']&&$ass->rows[1]['ASS_Status']==='pendente'&&$asaas->posts===1,'assinatura pendente legítima do primeiro pagamento pode recuperar sua cobrança de ativação');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas,new FwDescontos());$ass->rows[1]=['ASS_ID'=>1,'CLI_ID'=>1,'PLA_ID'=>1,'ASS_Status'=>'pendente','ASS_Ciclo'=>'mensal'];$ass->rows[2]=['ASS_ID'=>2,'CLI_ID'=>1,'PLA_ID'=>1,'ASS_Status'=>'ativa','ASS_Ciclo'=>'mensal'];$idPendente=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$idAtiva=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>2,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);
+fwAssert($ass->buscarParaRegularizacaoFinanceira(1)['ASS_ID']===2,'assinatura ativa tem prioridade sobre candidata pendente');
+$residualNegada=false;try{$w->recuperarIntegracaoCobranca(1,$idPendente);}catch(DomainException $e){$residualNegada=true;}fwAssert($residualNegada&&$asaas->posts===0,'recuperação não opera sobre assinatura pendente residual quando existe ativa');
+$resultado=$w->recuperarIntegracaoCobranca(1,$idAtiva);fwAssert($resultado['sucesso']&&$asaas->posts===1,'cobrança da assinatura ativa permanece a obrigação recorrente recuperável');
 
 echo "FinanceiroWorkflowServiceTest OK\n";
