@@ -11,6 +11,7 @@ use Models\MetaConta;
 use Models\Assinatura;
 use Models\NfseEmissao;
 use Services\FinanceiroWorkflowService;
+use Services\FinanceiroAccessPolicyService;
 
 class FinanceiroController extends Controller
 {
@@ -31,9 +32,6 @@ class FinanceiroController extends Controller
                 $usuario['CLI_ID']
             );
 
-        $cobranca = $cobrancaModel
-            ->buscarPendentePorCliente($usuario['CLI_ID']);
-
         $excedenteModel =
             new \Models\ExcedenteMensal();
 
@@ -46,6 +44,12 @@ class FinanceiroController extends Controller
             $assinaturaModel->buscarAtualPorCliente(
                 $usuario['CLI_ID']
             );
+
+        $assinaturaVigente = $assinaturaModel->buscarVigentePorCliente($usuario['CLI_ID']);
+        $cobranca = $assinaturaVigente
+            ? $cobrancaModel->buscarObrigacaoAbertaPorAssinatura($usuario['CLI_ID'], $assinaturaVigente['ASS_ID'])
+            : false;
+        $situacaoFinanceira = (new FinanceiroAccessPolicyService())->avaliar((int) $usuario['CLI_ID']);
 
         $ofertasPlanos = (new FinanceiroWorkflowService())->ofertasParaContratacao(
             (int) $usuario['CLI_ID'],
@@ -63,7 +67,8 @@ class FinanceiroController extends Controller
                 'excedente' => $excedente,
                 'numerosAtivos' => $numerosAtivos,
                 'assinaturaAtual' => $assinaturaAtual,
-                'ofertasPlanos' => $ofertasPlanos
+                'ofertasPlanos' => $ofertasPlanos,
+                'situacaoFinanceira' => $situacaoFinanceira
             ]
         );
     }
@@ -114,6 +119,10 @@ class FinanceiroController extends Controller
                 $perPage,
                 $offset
             );
+            $assinaturaVigente = (new Assinatura())->buscarVigentePorCliente($clienteId);
+            $obrigacaoAtual = $assinaturaVigente
+                ? $cobrancaModel->buscarObrigacaoAbertaPorAssinatura($clienteId, $assinaturaVigente['ASS_ID'])
+                : false;
             $nfsePorCobranca = (new NfseEmissao())->buscarVigentesPorCobrancas(
                 array_column($faturas, 'COB_ID'),
                 $clienteId
@@ -121,7 +130,7 @@ class FinanceiroController extends Controller
 
             echo json_encode([
                 'sucesso' => true,
-                'html' => $this->renderFaturasRows($faturas, $nfsePorCobranca),
+                'html' => $this->renderFaturasRows($faturas, $nfsePorCobranca, (int) ($obrigacaoAtual['COB_ID'] ?? 0)),
                 'paginacao_html' => $this->renderFaturasPaginacao($page, $totalPaginas),
                 'contador_html' => $this->renderFaturasContador($page, $perPage, $totalRegistros),
                 'pagina_atual' => $page,
@@ -151,7 +160,7 @@ class FinanceiroController extends Controller
         ));
     }
 
-    private function renderFaturasRows(array $faturas, array $nfsePorCobranca = [])
+    private function renderFaturasRows(array $faturas, array $nfsePorCobranca = [], $obrigacaoAtualId = 0)
     {
         if(empty($faturas)){
             return '<tr><td colspan="8" class="text-center text-muted py-4">Nenhuma fatura encontrada.</td></tr>';
@@ -165,7 +174,7 @@ class FinanceiroController extends Controller
             $nfse = $nfsePorCobranca[(int) ($fatura['COB_ID'] ?? 0)] ?? null;
 
             $html .= '<tr>';
-            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataVencimento'] ?? null) . '</td>';
+            $html .= '<td>' . $this->formatarDataFatura($fatura['COB_DataVencimentoEfetivo'] ?? ($fatura['COB_DataVencimento'] ?? null)) . '</td>';
             $html .= '<td>R$ ' . number_format((float) ($fatura['COB_Valor'] ?? 0), 2, ',', '.') . '</td>';
             $html .= '<td><span class="badge badge-' . $this->badgeFatura($statusFatura) . '">' . $this->e($this->statusFatura($statusFatura)) . '</span></td>';
             $html .= '<td>' . $this->e($fatura['COB_Forma'] ?? '-') . '</td>';
@@ -174,7 +183,7 @@ class FinanceiroController extends Controller
             $html .= '<td>' . $this->renderNfseDocumentosCliente($nfse) . '</td>';
             $html .= '<td>';
 
-            if($statusFatura === 'pendente' && $this->linkPagamentoValido($linkPagamento)){
+            if((int) ($fatura['COB_ID'] ?? 0) === (int) $obrigacaoAtualId && in_array($statusFatura, ['pendente','vencido'], true) && $this->linkPagamentoValido($linkPagamento)){
                 $html .= '<button type="button" class="btn btn-sm btn-success btn-pagar-agora" data-link-pagamento="' . $this->e($linkPagamento) . '">Pagar agora</button>';
             }else{
                 $html .= '<span class="text-muted">-</span>';
@@ -387,6 +396,28 @@ class FinanceiroController extends Controller
             Session::flash('error', $e->getMessage());
         }catch(\Throwable $e){
             Session::flash('error', 'Erro ao gerar cobrança.');
+        }
+
+        $this->redirect('financeiro');
+    }
+
+    public function recuperarCobranca()
+    {
+        $this->validarCsrfPost();
+        Auth::clienteAdmin();
+
+        try{
+            $usuario = Auth::usuario();
+            $resultado = (new FinanceiroWorkflowService())->recuperarIntegracaoCobranca(
+                (int) ($usuario['CLI_ID'] ?? 0),
+                (int) ($_POST['cobranca_id'] ?? 0)
+            );
+            Session::flash($resultado['sucesso'] ? 'success' : 'warning', $resultado['mensagem']);
+        }catch(\DomainException $e){
+            Session::flash('error', 'Não foi possível recuperar esta cobrança.');
+        }catch(\Throwable $e){
+            error_log('[financeiro/recuperarCobranca] ' . $e->getMessage());
+            Session::flash('error', 'Não foi possível gerar o link de pagamento. Tente novamente ou entre em contato com o suporte.');
         }
 
         $this->redirect('financeiro');

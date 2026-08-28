@@ -43,11 +43,25 @@ if(!function_exists('dataFinanceiro')){
         return $data ? date('d/m/Y', strtotime($data)) : '-';
     }
 }
+if(!function_exists('linkPagamentoValidoFinanceiro')){
+    function linkPagamentoValidoFinanceiro($link)
+    {
+        $partes = parse_url(trim((string) $link));
+        return is_array($partes)
+            && in_array(strtolower((string) ($partes['scheme'] ?? '')), ['http','https'], true)
+            && !empty($partes['host'])
+            && filter_var($link, FILTER_VALIDATE_URL);
+    }
+}
 ?>
 <?php
 
 $avaliacao = \Core\Auth::dadosAvaliacaoCliente();
 $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?? '') === 'ativa';
+$vencimentoObrigacao = $cobranca['COB_DataVencimentoEfetivo'] ?? ($cobranca['COB_DataVencimento'] ?? null);
+$linkObrigacao = trim((string) ($cobranca['COB_LinkPagamento'] ?? ''));
+$linkObrigacaoValido = linkPagamentoValidoFinanceiro($linkObrigacao);
+$situacaoObrigacao = (string) ($situacaoFinanceira['situacao'] ?? 'regular');
 
 ?>
 
@@ -77,6 +91,35 @@ $assinaturaAtiva = !empty($assinaturaAtual) && ($assinaturaAtual['ASS_Status'] ?
 
     </div>
 
+<?php } ?>
+
+<?php if(!empty($cobranca)){ ?>
+<div class="card card-outline <?= $situacaoObrigacao === 'suspenso' ? 'card-danger' : 'card-warning'; ?> mb-3" id="obrigacaoFinanceiraAtual">
+    <div class="card-header"><h3 class="card-title">Pagamento em aberto</h3></div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-3 mb-2"><small class="text-muted d-block">Valor</small><strong>R$ <?= number_format((float) $cobranca['COB_Valor'], 2, ',', '.'); ?></strong></div>
+            <div class="col-md-3 mb-2"><small class="text-muted d-block">Vencimento para pagamento</small><strong><?= dataFinanceiro($vencimentoObrigacao); ?></strong></div>
+            <div class="col-md-3 mb-2"><small class="text-muted d-block">Situação</small><strong><?php
+                if($situacaoObrigacao === 'suspenso'){ echo 'Suspensa por inadimplência'; }
+                elseif($situacaoObrigacao === 'tolerancia'){ echo 'Vencida / em tolerância'; }
+                else{ echo ($cobranca['COB_Status'] ?? '') === 'vencido' ? 'Vencida' : 'Pendente'; }
+            ?></strong></div>
+            <div class="col-md-3 mb-2">
+                <?php if($linkObrigacaoValido){ ?>
+                    <button type="button" class="btn btn-success btn-block btn-pagar-agora" data-link-pagamento="<?= htmlspecialchars($linkObrigacao, ENT_QUOTES, 'UTF-8'); ?>">Pagar agora</button>
+                <?php }else{ ?>
+                    <form method="post" action="<?= BASE_URL; ?>/index.php?url=financeiro/recuperarCobranca">
+                        <?= \Core\Csrf::input(); ?>
+                        <input type="hidden" name="cobranca_id" value="<?= (int) $cobranca['COB_ID']; ?>">
+                        <button type="submit" class="btn btn-outline-primary btn-block">Gerar link de pagamento</button>
+                    </form>
+                <?php } ?>
+            </div>
+        </div>
+        <?php if(!$linkObrigacaoValido){ ?><p class="text-muted mb-0 mt-2">Não foi possível gerar o link de pagamento. Você pode tentar novamente. Se o problema continuar, entre em contato com o suporte.</p><?php } ?>
+    </div>
+</div>
 <?php } ?>
 
 
@@ -596,6 +639,14 @@ document.addEventListener('DOMContentLoaded', function(){
             window.jQuery(modalConfirmacaoPagamento).modal('show');
         });
     }
+
+    document.addEventListener('click', function(event){
+        const botaoPagamento = event.target.closest('.btn-pagar-agora');
+        if(!botaoPagamento || (faturasTabelaCorpo && faturasTabelaCorpo.contains(botaoPagamento)) || pagamentoEmAbertura){ return; }
+        event.preventDefault();
+        linkPagamentoSelecionado = botaoPagamento.dataset.linkPagamento || '';
+        if(linkPagamentoSelecionado && modalConfirmacaoPagamento && window.jQuery){ window.jQuery(modalConfirmacaoPagamento).modal('show'); }
+    });
 
     if(btnConfirmarPagamento){
         btnConfirmarPagamento.addEventListener('click', function(){
