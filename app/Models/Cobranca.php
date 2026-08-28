@@ -307,6 +307,15 @@ class Cobranca
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listarAbertasParaComunicacao()
+    {
+        $vencimento = $this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')
+            ? 'COALESCE(c.COB_DataVencimentoEfetivo, c.COB_DataVencimento)'
+            : 'c.COB_DataVencimento';
+        $sql = $this->db->query("SELECT c.*, {$vencimento} AS COB_VencimentoFinanceiro FROM cobrancas c WHERE c.ASS_ID IS NOT NULL AND c.COB_Status IN ('pendente','vencido') ORDER BY {$vencimento} ASC, c.COB_ID ASC");
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function buscarObrigacaoVencidaPorAssinatura($clienteId, $assinaturaId, $dataReferencia)
     {
         $vencimento = $this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')

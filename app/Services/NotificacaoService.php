@@ -41,6 +41,32 @@ class NotificacaoService
         return ['evento'=>$evento, 'sucesso'=>!empty($resultado['sucesso']), 'resultados'=>[$canal=>$resultado]];
     }
 
+    public function canaisAtivos($evento): array
+    {
+        return array_values($this->config['eventos'][$evento] ?? []);
+    }
+
+    public function entregarCanalReservado($evento, $canal, array $cliente, array $dados = []): array
+    {
+        if(!in_array($canal, $this->canaisAtivos($evento), true)){
+            return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'canal_desativado','mensagem'=>'Canal desativado para este evento.'];
+        }
+        if(empty($this->canais[$canal])){
+            return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'canal_indisponivel','mensagem'=>'Canal indisponível.'];
+        }
+        $contexto=$this->contexto($cliente,$dados);
+        try{
+            if($canal===CanalNotificacao::WHATSAPP){
+                $preparado=$this->canais[$canal]->preparar($evento,$contexto);
+                return empty($preparado['sucesso'])?$preparado:$this->canais[$canal]->enviarPreparado($preparado);
+            }
+            $preparado=$this->canais[$canal]->preparar($evento,$contexto);
+            return isset($preparado['sucesso'])&&!$preparado['sucesso']?$preparado:$this->canais[$canal]->enviar($contexto['email'],$contexto['nome'],$preparado['assunto'],$preparado['html'],$preparado['texto']);
+        }catch(\Throwable $e){
+            return ['sucesso'=>false,'status'=>'erro_temporario','error_code'=>'falha_controlada_canal','mensagem'=>'Falha controlada no canal.'];
+        }
+    }
+
     private function processarCanal($evento, $canal, array $contexto, array $dados)
     {
         if(empty($this->canais[$canal])) return ['sucesso'=>false,'status'=>'erro_definitivo','error_code'=>'canal_indisponivel'];

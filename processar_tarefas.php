@@ -6,6 +6,7 @@ require __DIR__ . '/vendor/autoload.php';
 
 use Models\TarefaAgendada;
 use Services\FinanceiroSchedulerBootstrapService;
+use Services\FinanceiroNotificacaoSchedulerBootstrapService;
 use Services\TaskSchedulerService;
 use Services\Tasks\TaskDispatcher;
 use Services\Tasks\TaskExecutionService;
@@ -38,6 +39,7 @@ try{
     $repositorio = new TarefaAgendada();
     $registry = new TaskRegistry();
     (new FinanceiroSchedulerBootstrapService(new TaskSchedulerService($repositorio, $registry)))->garantirExecucaoDiaria();
+    (new FinanceiroNotificacaoSchedulerBootstrapService(new TaskSchedulerService($repositorio, $registry)))->garantirExecucaoDiaria();
     $processador = new TaskProcessor($repositorio,new TaskDispatcher($registry),null,TASK_SCHEDULER_LEASE_MINUTES,$logger);
     $execucao = new TaskExecutionService($processador, TASK_SCHEDULER_BATCH_SIZE);
     $resumo = $execucao->processarSobDemanda(TASK_SCHEDULER_BATCH_SIZE);

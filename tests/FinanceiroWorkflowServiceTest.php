@@ -88,13 +88,18 @@ class FwPrimeiroPagamentoIndicacao {
     public $chamadas=[];
     public function processar($clienteId,$pagoEm){$this->chamadas[]=['cliente_id'=>$clienteId,'pago_em'=>$pagoEm];return [];}
 }
+class FwNotificacoesFinanceiras {
+    public $agendadas=[];
+    public function situacaoAntesPagamento($clienteId){return 'regular';}
+    public function agendarPagamentoConfirmado($cobrancaId,$situacao){$this->agendadas[]=compact('cobrancaId','situacao');return 1;}
+}
 class FwRollbackTransacao {
     private $cli;private $ass;private $cob;
     public function __construct($cli,$ass,$cob){$this->cli=$cli;$this->ass=$ass;$this->cob=$cob;}
     public function executar(callable $c){$cr=$this->cli->rows;$ar=$this->ass->rows;$br=$this->cob->rows;$ev=$this->cob->events;try{return $c();}catch(Throwable $e){$this->cli->rows=$cr;$this->ass->rows=$ar;$this->cob->rows=$br;$this->cob->events=$ev;throw $e;}}
 }
 
-function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null,&$primeiroPagamento=null){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();$primeiroPagamento=new FwPrimeiroPagamentoIndicacao();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas(),$descontos,null,$primeiroPagamento);}
+function novoWorkflow(&$cli,&$ass,&$cob,&$asaas,$descontos=null,&$primeiroPagamento=null){$cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();$primeiroPagamento=new FwPrimeiroPagamentoIndicacao();return new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwTransacao(),new FwMetas(),$descontos,null,$primeiroPagamento,null,new FwNotificacoesFinanceiras());}
 
 $w=novoWorkflow($cli,$ass,$cob,$asaas,null,$primeiroPagamento);
 $oferta=$w->ofertasParaContratacao(1,[(new FwPlanos())->p]);
@@ -184,7 +189,7 @@ $w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new F
 $w->reativarContrato(1);$vinculada=$cob->rows[$id]['ASS_ID'];$quantidadeAssinaturas=count($ass->rows);$w->reativarContrato(1);fwAssert($vinculada>0&&$ass->rows[$vinculada]['ASS_Status']==='pendente'&&count($ass->rows)===$quantidadeAssinaturas&&count($cob->rows)===1,'retry sem ASS_ID cria e reutiliza uma única assinatura pendente');
 
 $cli=new FwClientes();$ass=new FwAssinaturas();$cob=new FwCobrancas();$asaas=new FwAsaas();$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>null,'valor'=>10,'vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$cob->rows[$id]['COB_ProviderPaymentId']='pay_sem_assinatura';
-$w=new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwRollbackTransacao($cli,$ass,$cob),new FwMetas());$falhou=false;try{$w->processarPagamentoWebhook(['id'=>'evt_sem_assinatura','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_sem_assinatura','status'=>'CONFIRMED']]);}catch(LogicException $e){$falhou=true;}
+$w=new FinanceiroWorkflowService($cli,$ass,$cob,new FwPlanos(),$asaas,new FwRecorrencia(),new FwRollbackTransacao($cli,$ass,$cob),new FwMetas(),null,null,null,null,new FwNotificacoesFinanceiras());$falhou=false;try{$w->processarPagamentoWebhook(['id'=>'evt_sem_assinatura','event'=>'PAYMENT_CONFIRMED','payment'=>['id'=>'pay_sem_assinatura','status'=>'CONFIRMED']]);}catch(LogicException $e){$falhou=true;}
 fwAssert($falhou&&$cob->rows[$id]['COB_Status']==='pendente'&&$cli->rows[1]['CLI_StatusPagamento']==='pendente','pagamento sem assinatura válida falha e sofre rollback');
 
 $descontos=new FwDescontos();$descontos->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos);

@@ -84,6 +84,7 @@ defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLE
 defined('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA') || define('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA', max(0, (int) env_valor('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA', 7)));
 // Prazo real concedido quando uma competência atrasada ainda não chegou ao gateway.
 defined('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO') || define('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO', max(1, (int) env_valor('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO', 3)));
+defined('FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS') || define('FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS', env_valor('FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS', ''));
 
 // App Secret usado para validar X-Hub-Signature-256 do webhook da Meta.
 defined('META_APP_ID') || define('META_APP_ID', env_valor('META_APP_ID', ''));
@@ -106,6 +107,13 @@ defined('WHATSAPP_INSTITUCIONAL_ACCESS_TOKEN') || define('WHATSAPP_INSTITUCIONAL
 defined('WHATSAPP_INSTITUCIONAL_API_VERSION') || define('WHATSAPP_INSTITUCIONAL_API_VERSION', env_valor('WHATSAPP_INSTITUCIONAL_API_VERSION', META_GRAPH_VERSION ?: 'v23.0'));
 defined('WHATSAPP_INSTITUCIONAL_IDIOMA') || define('WHATSAPP_INSTITUCIONAL_IDIOMA', env_valor('WHATSAPP_INSTITUCIONAL_IDIOMA', 'pt_BR'));
 defined('WHATSAPP_INSTITUCIONAL_TIMEOUT') || define('WHATSAPP_INSTITUCIONAL_TIMEOUT', max(1, (int) env_valor('WHATSAPP_INSTITUCIONAL_TIMEOUT', 15)));
+foreach([
+    'COBRANCA_DISPONIVEL','LEMBRETE_VENCIMENTO_D3','COBRANCA_VENCIDA_D1','LEMBRETE_VENCIDA_D3',
+    'AVISO_SUSPENSAO_D5','SUSPENSAO_INADIMPLENCIA_D7','PAGAMENTO_CONFIRMADO'
+] as $eventoFinanceiro){
+    $constante = 'WHATSAPP_TEMPLATE_FINANCEIRO_' . $eventoFinanceiro;
+    defined($constante) || define($constante, env_valor($constante, ''));
+}
 
 $uploadsPublicPath = rtrim(env_valor('UPLOADS_PUBLIC_PATH', '/uploads'), '/');
 if($uploadsPublicPath === ''){

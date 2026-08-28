@@ -12,6 +12,8 @@ class TaskRegistry
             'teste_scheduler'=>TesteSchedulerHandler::class,
             'indicacao_confirmacao'=>IndicacaoConfirmacaoHandler::class,
             'financeiro_gerar_cobrancas_recorrentes'=>FinanceiroGerarCobrancasRecorrentesHandler::class,
+            'financeiro_planejar_comunicacoes'=>FinanceiroPlanejarComunicacoesHandler::class,
+            'financeiro_enviar_comunicacao'=>FinanceiroEnviarComunicacaoHandler::class,
         ];
     }
 
