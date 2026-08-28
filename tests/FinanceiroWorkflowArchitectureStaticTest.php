@@ -6,6 +6,7 @@ $recorrencia = file_get_contents($root . '/app/Services/FinanceiroRecorrenciaSer
 $cobranca = file_get_contents($root . '/app/Models/Cobranca.php');
 $asaas = file_get_contents($root . '/app/Services/AsaasService.php');
 $migration = file_get_contents($root . '/database/migrations/20260719_add_financeiro_idempotency_indexes.sql');
+$migrationVencimento = file_get_contents($root . '/database/migrations/20260828_add_cobranca_vencimento_efetivo.sql');
 $controllers = [
     'FinanceiroController.php',
     'FinanceiroAdminController.php',
@@ -41,6 +42,9 @@ arquiteturaAssert(strpos($cobranca, "getCode() === '23000'") !== false, 'model t
 arquiteturaAssert(preg_match("/catch\(PDOException.*?buscarPorCompetencia\(/s", $cobranca), 'violação 23000 busca pela chave completa inclusive canceladas');
 arquiteturaAssert(strpos($asaas, 'buscarCobrancaPorReferenciaExterna') !== false, 'Asaas permite reconciliação por referência');
 arquiteturaAssert(strpos($workflow, '_tentativa_') !== false, 'reprocessamento externo cancelado usa referência versionada determinística');
+arquiteturaAssert(strpos($migrationVencimento, 'COB_DataVencimentoEfetivo DATE NULL') !== false, 'migration separa vencimento efetivo sem alterar competência histórica');
+arquiteturaAssert(strpos($cobranca, 'COALESCE(COB_DataVencimentoEfetivo, COB_DataVencimento)') !== false, 'vencimentos usam data efetiva com fallback retrocompatível');
+arquiteturaAssert(strpos($workflow, 'definirVencimentoEfetivo') !== false && strpos($asaas, "'COB_DataVencimentoEfetivo'") !== false, 'vencimento efetivo é persistido antes de ser enviado ao gateway');
 arquiteturaAssert(strpos($workflow, 'cancelarAssinatura') !== false && strpos($workflow, 'cancelarContratoPorAssinatura') === false, 'cancelamento pontual é separado do contrato');
 
 echo "FinanceiroWorkflowArchitectureStaticTest OK\n";

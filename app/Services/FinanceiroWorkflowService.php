@@ -73,7 +73,7 @@ class FinanceiroWorkflowService
             $assinatura = $this->assinaturas->buscarParaPagamento($clienteId, $plano['PLA_ID']);
             return $this->cobrancas->criar([
                 'cliente'=>$clienteId, 'plano'=>$plano['PLA_ID'], 'assinatura'=>$assinatura['ASS_ID'] ?? null,
-                'valor'=>$valor, 'vencimento'=>date('Y-m-d', strtotime('+3 days')), 'tipo'=>'mensalidade',
+                'valor'=>$valor, 'vencimento'=>date('Y-m-d', strtotime('+3 days')), 'vencimento_efetivo'=>date('Y-m-d', strtotime('+3 days')), 'tipo'=>'mensalidade',
                 'provider'=>'asaas', 'provider_status'=>'local_pendente'
             ]);
         });
@@ -258,7 +258,7 @@ class FinanceiroWorkflowService
                     : $this->transacao->executar(function() use ($assinatura, $vencimento){
                     return $this->cobrancas->criarRecorrenteIdempotente([
                         'cliente'=>$assinatura['CLI_ID'], 'plano'=>$assinatura['PLA_ID'], 'assinatura'=>$assinatura['ASS_ID'],
-                        'valor'=>$assinatura['ASS_Valor'], 'vencimento'=>$vencimento, 'tipo'=>'mensalidade',
+                        'valor'=>$assinatura['ASS_Valor'], 'vencimento'=>$vencimento, 'vencimento_efetivo'=>$vencimento, 'tipo'=>'mensalidade',
                         'provider'=>'asaas', 'provider_status'=>'local_pendente'
                     ]);
                 });
@@ -366,7 +366,8 @@ class FinanceiroWorkflowService
             $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'pendente', ['ciclo'=>$ciclo,'valor'=>$valor,'proxima_cobranca'=>date('Y-m-d', strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months'))]);
             $atual = $this->assinaturas->buscarParaPagamento($clienteId, $plano['PLA_ID']);
             $this->clientes->atualizarEstadoFinanceiro($clienteId, ['ativo'=>'S','status_cadastro'=>'suspenso','status_pagamento'=>'pendente','plano'=>$plano['PLA_ID']]);
-            return $this->cobrancas->criar(['cliente'=>$clienteId,'plano'=>$plano['PLA_ID'],'assinatura'=>$atual['ASS_ID'] ?? null,'valor'=>$valor,'vencimento'=>date('Y-m-d', strtotime('+3 days')),'tipo'=>'mensalidade','provider'=>'asaas','provider_status'=>'local_pendente']);
+            $vencimento = date('Y-m-d', strtotime('+3 days'));
+            return $this->cobrancas->criar(['cliente'=>$clienteId,'plano'=>$plano['PLA_ID'],'assinatura'=>$atual['ASS_ID'] ?? null,'valor'=>$valor,'vencimento'=>$vencimento,'vencimento_efetivo'=>$vencimento,'tipo'=>'mensalidade','provider'=>'asaas','provider_status'=>'local_pendente']);
         });
         $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano, $ciclo);
         $this->log('reativacao_contrato', ['cliente_id'=>$clienteId,'cobranca_id'=>$cobrancaId,'integrada'=>$integracao['sucesso']]);
@@ -400,7 +401,7 @@ class FinanceiroWorkflowService
             }
 
             $cobranca = $this->prepararDescontosDaCobranca($clienteId, $cobranca, $plano, $ciclo);
-            $cobranca['provider_due_date'] = $this->recorrencia->vencimentoEfetivoGateway($cobranca['COB_DataVencimento']);
+            $vencimentoRecuperacao = $this->recorrencia->vencimentoEfetivoGateway($cobranca['COB_DataVencimento']);
 
             $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
             if($customerId === ''){
@@ -434,6 +435,8 @@ class FinanceiroWorkflowService
             }
             $reconciliada = (bool) $pagamento;
             if(!$pagamento){
+                $this->persistirVencimentoEfetivo($cobrancaId, $vencimentoRecuperacao);
+                $cobranca['COB_DataVencimentoEfetivo'] = $vencimentoRecuperacao;
                 $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
                 $resposta = $this->asaas->criarCobranca($cliente, $cobranca, $referencia);
                 if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
@@ -442,6 +445,10 @@ class FinanceiroWorkflowService
                     return ['sucesso'=>false,'mensagem'=>'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'];
                 }
                 $pagamento = $resposta['response'];
+            }else{
+                $vencimentoEfetivo = $this->vencimentoEfetivoReconciliado($pagamento, $cobranca, $vencimentoRecuperacao);
+                $this->persistirVencimentoEfetivo($cobrancaId, $vencimentoEfetivo);
+                $cobranca['COB_DataVencimentoEfetivo'] = $vencimentoEfetivo;
             }
 
             $pix = $this->asaas->buscarPixQrCode($pagamento['id']);
@@ -777,6 +784,25 @@ class FinanceiroWorkflowService
         if($customerId !== null){ $dados['provider_customer_id'] = $customerId; }
         $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, $dados);
         $this->log('erro_gateway', ['cobranca_id'=>$cobrancaId,'provider'=>'asaas','status'=>$status,'http_code'=>$diagnostico['http_code'],'endpoint'=>$diagnostico['endpoint'],'method'=>$diagnostico['method'],'erro'=>$diagnostico['erro'],'external_reference'=>$referencia]);
+    }
+
+    private function persistirVencimentoEfetivo(int $cobrancaId, string $data): void
+    {
+        if(!$this->cobrancas->definirVencimentoEfetivo($cobrancaId, $data)){
+            throw new \RuntimeException('Não foi possível persistir o vencimento efetivo da cobrança.');
+        }
+    }
+
+    private function vencimentoEfetivoReconciliado(array $pagamento, array $cobranca, string $fallback): string
+    {
+        foreach([$pagamento['dueDate'] ?? null, $cobranca['COB_DataVencimentoEfetivo'] ?? null, $fallback] as $data){
+            $data = trim((string) $data);
+            if(preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)){
+                [$ano,$mes,$dia] = array_map('intval', explode('-', $data));
+                if(checkdate($mes, $dia, $ano)){ return $data; }
+            }
+        }
+        throw new \RuntimeException('O gateway não informou um vencimento efetivo válido.');
     }
 
     private function sanitizarDadosGateway(array $dados, int $nivel = 0): array

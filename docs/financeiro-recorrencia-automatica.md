@@ -30,9 +30,11 @@ Uma cobrança local pendente sem `COB_ProviderPaymentId` permanece associada à 
 
 ## Recuperação de competência atrasada
 
-Não foi criada migration. A competência original permanece identificável por `ASS_DataProximaCobranca`, `ASS_ID` e `COB_DataVencimento`.
+Foi adicionada uma migration mínima e retrocompatível com `COB_DataVencimentoEfetivo DATE NULL`. A competência original permanece identificável por `ASS_DataProximaCobranca`, `ASS_ID` e `COB_DataVencimento`.
 
-Quando essa data já passou e a cobrança ainda não possui pagamento no gateway, somente o payload enviado ao Asaas usa um vencimento efetivo de recuperação, calculado por `FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO` (padrão: hoje + 3 dias). O calendário contratual e a chave local de idempotência não são alterados.
+Quando essa data já passou e a cobrança ainda não possui pagamento no gateway, `COB_DataVencimentoEfetivo` recebe o prazo de recuperação calculado por `FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO` (padrão: hoje + 3 dias) antes da chamada externa. O Asaas e `processarVencimentos()` usam essa mesma data efetiva. O calendário contratual e a chave local de idempotência não são alterados.
+
+Cobranças anteriores à migration mantêm o campo nulo e usam `COB_DataVencimento` por `COALESCE`, preservando o comportamento histórico sem backfill destrutivo ou interpretação de JSON.
 
 ## Diagnóstico seguro
 
@@ -42,7 +44,7 @@ Falhas de cliente, reconciliação ou criação persistem e registram `http_code
 
 Após o deploy, validar:
 
-1. que a migration de `tarefas_agendadas` e sua unique key estão aplicadas;
+1. que as migrations de `tarefas_agendadas`, idempotência financeira e vencimento efetivo estão aplicadas;
 2. que o cron por minuto está ativo em uma única instalação;
 3. que uma tarefa financeira é criada e concluída por dia;
 4. logs `task-scheduler.log` e `financeiro-workflow.log` em caso de retry;

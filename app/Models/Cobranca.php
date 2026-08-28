@@ -157,6 +157,7 @@ class Cobranca
 
         $camposOpcionais = [
             'ASS_ID' => 'assinatura',
+            'COB_DataVencimentoEfetivo' => 'vencimento_efetivo',
             'COB_Provider' => 'provider',
             'COB_ProviderCustomerId' => 'provider_customer_id',
             'COB_ProviderPaymentId' => 'provider_payment_id',
@@ -289,8 +290,20 @@ class Cobranca
 
     public function listarPendentesVencidas()
     {
-        $sql = $this->db->query("SELECT * FROM cobrancas WHERE COB_Status = 'pendente' AND COB_DataVencimento < CURDATE() ORDER BY COB_DataVencimento ASC, COB_ID ASC");
+        $vencimento = $this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')
+            ? 'COALESCE(COB_DataVencimentoEfetivo, COB_DataVencimento)'
+            : 'COB_DataVencimento';
+        $sql = $this->db->query("SELECT * FROM cobrancas WHERE COB_Status = 'pendente' AND {$vencimento} < CURDATE() ORDER BY {$vencimento} ASC, COB_ID ASC");
         return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function definirVencimentoEfetivo($id, $data)
+    {
+        if(!$this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')){
+            return false;
+        }
+        $sql = $this->db->prepare('UPDATE cobrancas SET COB_DataVencimentoEfetivo = ? WHERE COB_ID = ?');
+        return $sql->execute([$data, (int) $id]);
     }
 
     public function existeRecorrente($clienteId, $planoId, $vencimento, $tipo = 'mensalidade', $assinaturaId = null)
