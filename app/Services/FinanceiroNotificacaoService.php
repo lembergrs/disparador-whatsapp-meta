@@ -20,8 +20,9 @@ class FinanceiroNotificacaoService
     private $scheduler;
     private $policy;
     private $agora;
+    private $cobrancasPermitidas;
 
-    public function __construct($cobrancas = null, $assinaturas = null, $clientes = null, $planos = null, $notificacoes = null, $entregas = null, $scheduler = null, $policy = null, callable $agora = null)
+    public function __construct($cobrancas = null, $assinaturas = null, $clientes = null, $planos = null, $notificacoes = null, $entregas = null, $scheduler = null, $policy = null, callable $agora = null, $cobrancasPermitidas = null)
     {
         $this->cobrancas = $cobrancas ?: new Cobranca();
         $this->assinaturas = $assinaturas ?: new Assinatura();
@@ -32,6 +33,7 @@ class FinanceiroNotificacaoService
         $this->scheduler = $scheduler ?: new TaskSchedulerService();
         $this->policy = $policy ?: new FinanceiroAccessPolicyService($this->assinaturas, $this->cobrancas, $agora);
         $this->agora = $agora ?: function(){ return new \DateTimeImmutable('today'); };
+        $this->cobrancasPermitidas = $this->normalizarCobrancasPermitidas($cobrancasPermitidas);
     }
 
     public function planejar(): array
@@ -39,6 +41,7 @@ class FinanceiroNotificacaoService
         $resultado = ['analisadas'=>0, 'reservadas'=>0];
         foreach($this->cobrancas->listarAbertasParaComunicacao() as $cobranca){
             $resultado['analisadas']++;
+            if(!$this->cobrancaPermitida((int)$cobranca['COB_ID'])){ continue; }
             $evento = $this->eventoElegivel($cobranca);
             if($evento){ $resultado['reservadas'] += $this->reservarEvento($cobranca, $evento); }
         }
@@ -53,6 +56,7 @@ class FinanceiroNotificacaoService
 
     public function agendarPagamentoConfirmado(int $cobrancaId, string $situacaoAnterior = 'regular'): int
     {
+        if(!$this->cobrancaPermitida($cobrancaId)){ return 0; }
         $cobranca = $this->cobrancas->buscar($cobrancaId);
         if(!$cobranca || ($cobranca['COB_Status'] ?? '') !== 'pago'){ return 0; }
         return $this->reservarEvento($cobranca, EventoNotificacao::PAGAMENTO_CONFIRMADO, $situacaoAnterior);
@@ -62,6 +66,10 @@ class FinanceiroNotificacaoService
     {
         $registro = $this->notificacoes->buscar($notificacaoId);
         if(!$registro || in_array($registro['NOT_Status'] ?? '', ['enviada','entregue','lida','ignorada','erro_definitivo'], true)){ return; }
+        if(!$this->cobrancaPermitida((int)($registro['COB_ID'] ?? 0))){
+            $this->notificacoes->marcarIgnorada($notificacaoId, 'cobranca_fora_da_homologacao');
+            return;
+        }
         $cobranca = $this->cobrancas->buscar((int) ($registro['COB_ID'] ?? 0));
         if(!$cobranca || !$this->registroContinuaElegivel($registro, $cobranca)){
             $this->notificacoes->marcarIgnorada($notificacaoId, 'contexto_financeiro_nao_elegivel');
@@ -171,6 +179,28 @@ class FinanceiroNotificacaoService
     {
         $link = trim((string)($cobranca['COB_LinkPagamento'] ?? ''));
         return ($link !== '' && filter_var($link, FILTER_VALIDATE_URL)) || trim((string)($cobranca['COB_PixCopiaCola'] ?? '')) !== '' || trim((string)($cobranca['COB_LinhaDigitavel'] ?? '')) !== '';
+    }
+
+    private function normalizarCobrancasPermitidas($configuracao): ?array
+    {
+        if($configuracao === null){
+            $configuracao = defined('FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS')
+                ? FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS
+                : (getenv('FINANCEIRO_NOTIFICACOES_COBRANCAS_PERMITIDAS') ?: '');
+        }
+        $configuracao = trim((string)$configuracao);
+        if($configuracao === ''){ return null; }
+        $ids = [];
+        foreach(explode(',', $configuracao) as $valor){
+            $valor = trim($valor);
+            if(preg_match('/^[1-9]\d*$/', $valor)){ $ids[(int)$valor] = true; }
+        }
+        return $ids;
+    }
+
+    private function cobrancaPermitida(int $cobrancaId): bool
+    {
+        return $this->cobrancasPermitidas === null || isset($this->cobrancasPermitidas[$cobrancaId]);
     }
 
     private function vencimento(array $cobranca): string { return (string)($cobranca['COB_VencimentoFinanceiro'] ?? $cobranca['COB_DataVencimentoEfetivo'] ?? $cobranca['COB_DataVencimento'] ?? ''); }

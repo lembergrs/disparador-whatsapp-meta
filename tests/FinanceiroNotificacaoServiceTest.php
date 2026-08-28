@@ -42,7 +42,7 @@ class FnNotificacoes {
 class FnScheduler {public $tarefas=[];public function agendarAgora($tipo,$payload,$chave,$prioridade,$max){$this->tarefas[$chave]=compact('tipo','payload');return ['id'=>count($this->tarefas)];}}
 
 function fnCobranca($id,$vencimento,$status='pendente',$ass=10,$efetivo=null){return ['COB_ID'=>$id,'CLI_ID'=>1,'ASS_ID'=>$ass,'PLA_ID'=>1,'COB_Status'=>$status,'COB_Valor'=>'49.90','COB_DataVencimento'=>$vencimento,'COB_DataVencimentoEfetivo'=>$efetivo,'COB_VencimentoFinanceiro'=>$efetivo?:$vencimento,'COB_LinkPagamento'=>'https://teste.local/pagar'];}
-function fnServico($cob,$ass,$not,$ent,$sch,$pol,$hoje='2026-08-28'){return new FinanceiroNotificacaoService($cob,$ass,new FnClientes(),new FnPlanos(),$not,$ent,$sch,$pol,fn()=>new DateTimeImmutable($hoje));}
+function fnServico($cob,$ass,$not,$ent,$sch,$pol,$hoje='2026-08-28',$permitidas=''){return new FinanceiroNotificacaoService($cob,$ass,new FnClientes(),new FnPlanos(),$not,$ent,$sch,$pol,fn()=>new DateTimeImmutable($hoje),$permitidas);}
 
 $casos=[
     ['2026-09-04',EventoNotificacao::COBRANCA_DISPONIVEL,'regular'],
@@ -68,6 +68,11 @@ $c=new FnCobrancas();$c->rows[1]=fnCobranca(1,'2026-08-21','pago');$n=new FnNoti
 
 $c=new FnCobrancas();$c->rows[1]=fnCobranca(1,'2026-09-04');$n=new FnNotificacoes();$e=new FnEntregas();$e->resultado=['sucesso'=>false,'status'=>'erro_temporario'];$svc=fnServico($c,new FnAssinaturas(),$n,$e,new FnScheduler(),new FnPolicy());$svc->planejar();$retry=false;try{$svc->enviar(1);}catch(Services\Tasks\TaskRetryException $ex){$retry=true;}fnAssert($retry&&$n->rows[1]['NOT_Status']==='erro_temporario','falha temporária deve delegar retry ao scheduler');$e->resultado=['sucesso'=>true,'status'=>'enviada'];$svc->enviar(1);fnAssert($n->rows[1]['NOT_Status']==='enviada','retry posterior deve concluir o mesmo canal reservado');
 $c=new FnCobrancas();$c->rows[1]=fnCobranca(1,'2026-09-04');$n=new FnNotificacoes();$e=new FnEntregas();$e->resultado=['sucesso'=>false,'status'=>'erro_definitivo'];$svc=fnServico($c,new FnAssinaturas(),$n,$e,new FnScheduler(),new FnPolicy());$svc->planejar();$svc->enviar(1);fnAssert($n->rows[1]['NOT_Status']==='erro_definitivo','falha permanente deve encerrar sem retry');
+
+$c=new FnCobrancas();$c->rows[38]=fnCobranca(38,'2026-09-04');$n=new FnNotificacoes();$s=new FnScheduler();fnServico($c,new FnAssinaturas(),$n,new FnEntregas(),$s,new FnPolicy(),'2026-08-28','')->planejar();fnAssert(count($n->rows)===1&&count($s->tarefas)===1,'whitelist vazia deve manter o comportamento normal');
+$c=new FnCobrancas();$c->rows[38]=fnCobranca(38,'2026-09-04');$n=new FnNotificacoes();$s=new FnScheduler();fnServico($c,new FnAssinaturas(),$n,new FnEntregas(),$s,new FnPolicy(),'2026-08-28','38')->planejar();fnAssert(count($n->rows)===1&&count($s->tarefas)===1&&(int)reset($n->rows)['COB_ID']===38,'whitelist deve permitir a COB 38');
+$c=new FnCobrancas();$c->rows[40]=fnCobranca(40,'2026-09-04');$n=new FnNotificacoes();$s=new FnScheduler();fnServico($c,new FnAssinaturas(),$n,new FnEntregas(),$s,new FnPolicy(),'2026-08-28','38')->planejar();fnAssert(count($n->rows)===0&&count($s->tarefas)===0,'outra cobrança elegível fora da whitelist não deve criar notificação ou tarefa');
+$c=new FnCobrancas();$c->rows[40]=fnCobranca(40,'2026-08-21','pago');$n=new FnNotificacoes();$s=new FnScheduler();$reservadas=fnServico($c,new FnAssinaturas(),$n,new FnEntregas(),$s,new FnPolicy(),'2026-08-28','38')->agendarPagamentoConfirmado(40,'suspenso');fnAssert($reservadas===0&&count($n->rows)===0&&count($s->tarefas)===0,'pagamento confirmado fora da whitelist não deve criar notificação ou tarefa');
 
 $texto=file_get_contents(__DIR__.'/../database/migrations/20260828_add_financeiro_notificacoes.sql');$modelo=file_get_contents(__DIR__.'/../app/Models/Notificacao.php');fnAssert(strpos($texto,'NOT_ReservadaEm')!==false&&strpos($texto,"'ignorada'")!==false&&strpos($modelo,'DATE_SUB(NOW()')!==false,'migration e modelo devem suportar lease expirado recuperável e descarte explícito');
 echo "FinanceiroNotificacaoServiceTest OK\n";
