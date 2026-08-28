@@ -90,6 +90,13 @@ class Assinatura
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarParaRegularizacaoFinanceira($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT a.* FROM assinaturas a WHERE a.CLI_ID = ? AND (a.ASS_Status = 'ativa' OR (a.ASS_Status = 'pendente' AND EXISTS (SELECT 1 FROM cobrancas c WHERE c.CLI_ID = a.CLI_ID AND c.ASS_ID = a.ASS_ID AND c.COB_Status IN ('pendente','vencido')))) ORDER BY CASE a.ASS_Status WHEN 'ativa' THEN 1 ELSE 2 END, a.ASS_ID DESC LIMIT 1");
+        $sql->execute([(int) $clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function listarParaRecorrencia($diasAntecedencia = 0)
     {
         $diasAntecedencia = max(0, min(60, (int) $diasAntecedencia));

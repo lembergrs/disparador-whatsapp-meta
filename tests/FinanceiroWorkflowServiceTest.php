@@ -36,6 +36,8 @@ class FwAssinaturas {
         if(($this->rows[$id]['ASS_DataProximaCobranca']??null)===$ciclo){$this->rows[$id]['ASS_DataProximaCobranca']=$proxima;return true;}return false;
     }
     public function buscarVigentePorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&in_array($r['ASS_Status'],['ativa','pendente']))return $r;}return null;}
+    public function buscarParaRegularizacaoFinanceira($c){foreach(array_reverse($this->rows,true) as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='ativa')return $r;}foreach(array_reverse($this->rows,true) as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='pendente')return $r;}return null;}
+    public function buscarAtivaPorCliente($c){foreach($this->rows as $r){if($r['CLI_ID']==$c&&$r['ASS_Status']==='ativa')return $r;}return null;}
     public function marcarVencida($id){$this->rows[$id]['ASS_Status']='vencida';return true;}
 }
 class FwCobrancas {
@@ -56,7 +58,7 @@ class FwCobrancas {
     public function marcarPago($id){$this->rows[$id]['COB_Status']='pago';return true;}
     public function registrarPagamentoManual($id,$d){$this->rows[$id]['manual']=$d;return true;}
     public function cancelar($id){$this->rows[$id]['COB_Status']='cancelado';return true;}
-    public function atualizarIntegracaoProvider($id,$d){if($this->falharPersistencia&&!empty($d['provider_payment_id'])){$this->falharPersistencia=false;throw new RuntimeException('falha simulada');}foreach(['status'=>'COB_Status','provider_payment_id'=>'COB_ProviderPaymentId','provider_status'=>'COB_ProviderStatus','provider_payload'=>'COB_ProviderPayload'] as $k=>$f){if(array_key_exists($k,$d))$this->rows[$id][$f]=$d[$k];}return true;}
+    public function atualizarIntegracaoProvider($id,$d){if($this->falharPersistencia&&!empty($d['provider_payment_id'])){$this->falharPersistencia=false;throw new RuntimeException('falha simulada');}foreach(['status'=>'COB_Status','provider_payment_id'=>'COB_ProviderPaymentId','provider_status'=>'COB_ProviderStatus','provider_payload'=>'COB_ProviderPayload','link_pagamento'=>'COB_LinkPagamento','provider_customer_id'=>'COB_ProviderCustomerId'] as $k=>$f){if(array_key_exists($k,$d))$this->rows[$id][$f]=$d[$k];}return true;}
     public function definirVencimentoEfetivo($id,$data){$this->rows[$id]['COB_DataVencimentoEfetivo']=$data;return true;}
     public function buscarPorProviderPaymentId($p,$id){foreach($this->rows as $r){if(($r['COB_ProviderPaymentId']??'')===$id)return $r;}return null;}
     public function registrarEventoProvider($id,$p,$eid,$e,$s,$payload){if(isset($this->events[$eid]))return 'duplicado';$this->events[$eid]=compact('id','e','s','payload');return true;}
@@ -258,5 +260,23 @@ fwAssert(strpos($cob->rows[1]['COB_ProviderPayload'],'segredo')===false&&strpos(
 
 $workflowFonte=file_get_contents(__DIR__.'/../app/Services/FinanceiroWorkflowService.php');
 fwAssert(strpos($workflowFonte,'selecionarDisponiveisFifo')===false&&strpos($workflowFonte,'ICR_Percentual')===false,'Financeiro não duplica FIFO nem cálculo percentual do domínio');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d',strtotime('-10 days'));$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$competencia]);$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>$competencia,'vencimento_efetivo'=>$competencia,'tipo'=>'mensalidade']);$cob->rows[$id]['COB_Status']='vencido';$resultado=$w->recuperarIntegracaoCobranca(1,$id);$efetivo=date('Y-m-d',strtotime('+3 days'));
+fwAssert($resultado['sucesso']&&$asaas->posts===1&&!empty($cob->rows[$id]['COB_ProviderPaymentId'])&&!empty($cob->rows[$id]['COB_LinkPagamento']),'recuperação cria uma única cobrança externa e persiste ID e link');
+fwAssert($cob->rows[$id]['COB_DataVencimento']===$competencia&&$cob->rows[$id]['COB_DataVencimentoEfetivo']===$efetivo&&$asaas->dueDates[0]===$efetivo,'recuperação vencida preserva competência e concede novo vencimento efetivo');
+$w->recuperarIntegracaoCobranca(1,$id);fwAssert($asaas->posts===1,'repetição da recuperação reconcilia sem duplicar no gateway');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa');$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$asaas->payments['cobranca_'.$id]=['id'=>'pay_existente','status'=>'PENDING','dueDate'=>date('Y-m-d'),'invoiceUrl'=>'https://teste.local/existente','externalReference'=>'cobranca_'.$id];$resultado=$w->recuperarIntegracaoCobranca(1,$id);
+fwAssert($resultado['sucesso']&&!empty($resultado['reconciliada'])&&$asaas->posts===0&&$cob->rows[$id]['COB_ProviderPaymentId']==='pay_existente'&&$cob->rows[$id]['COB_LinkPagamento']==='https://teste.local/existente','pagamento existente por externalReference é reconciliado sem nova criação');
+
+$negada=false;try{$w->recuperarIntegracaoCobranca(2,$id);}catch(DomainException $e){$negada=true;}fwAssert($negada&&$asaas->posts===0,'cliente não recupera cobrança pertencente a outro cliente');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'pendente');$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$resultado=$w->recuperarIntegracaoCobranca(1,$id);
+fwAssert($resultado['sucesso']&&$ass->rows[1]['ASS_Status']==='pendente'&&$asaas->posts===1,'assinatura pendente legítima do primeiro pagamento pode recuperar sua cobrança de ativação');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas,new FwDescontos());$ass->rows[1]=['ASS_ID'=>1,'CLI_ID'=>1,'PLA_ID'=>1,'ASS_Status'=>'pendente','ASS_Ciclo'=>'mensal'];$ass->rows[2]=['ASS_ID'=>2,'CLI_ID'=>1,'PLA_ID'=>1,'ASS_Status'=>'ativa','ASS_Ciclo'=>'mensal'];$idPendente=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);$idAtiva=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>2,'valor'=>'10.00','vencimento'=>date('Y-m-d'),'tipo'=>'mensalidade']);
+fwAssert($ass->buscarParaRegularizacaoFinanceira(1)['ASS_ID']===2,'assinatura ativa tem prioridade sobre candidata pendente');
+$residualNegada=false;try{$w->recuperarIntegracaoCobranca(1,$idPendente);}catch(DomainException $e){$residualNegada=true;}fwAssert($residualNegada&&$asaas->posts===0,'recuperação não opera sobre assinatura pendente residual quando existe ativa');
+$resultado=$w->recuperarIntegracaoCobranca(1,$idAtiva);fwAssert($resultado['sucesso']&&$asaas->posts===1,'cobrança da assinatura ativa permanece a obrigação recorrente recuperável');
 
 echo "FinanceiroWorkflowServiceTest OK\n";
