@@ -212,6 +212,15 @@ class Auth
         }
     }
 
+    public static function podeGerenciarPropriaConfiguracaoMeta($usuario = null)
+    {
+        $usuario = $usuario ?: self::usuario();
+
+        return $usuario
+            && in_array($usuario['nivel'] ?? null, ['cliente', 'cliente_admin', 'admin'], true)
+            && (int) ($usuario['CLI_ID'] ?? 0) > 0;
+    }
+
     public static function cliente()
     {
         self::check();
