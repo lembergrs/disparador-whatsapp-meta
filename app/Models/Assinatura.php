@@ -98,6 +98,13 @@ class Assinatura
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function buscarAtivaPorCliente($clienteId)
+    {
+        $sql = $this->db->prepare("SELECT * FROM assinaturas WHERE CLI_ID = ? AND ASS_Status = 'ativa' ORDER BY ASS_ID DESC LIMIT 1");
+        $sql->execute([(int) $clienteId]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function atualizarProximaCobranca($id, $data)
     {
         return $this->db->prepare("UPDATE assinaturas SET ASS_DataProximaCobranca = ?, ASS_DataAtualizacao = NOW() WHERE ASS_ID = ? AND ASS_Status = 'ativa'")->execute([$data, $id]);

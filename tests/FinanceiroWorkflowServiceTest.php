@@ -245,6 +245,10 @@ fwAssert($cob->rows[1]['COB_DataVencimento']===$competencia&&$cob->rows[1]['COB_
 $w->processarVencimentos();
 fwAssert($cob->rows[1]['COB_Status']==='pendente'&&$ass->rows[1]['ASS_Status']==='ativa','cobrança recuperada não vence antes do prazo efetivo concedido');
 
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$ontem=date('Y-m-d',strtotime('-1 day'));$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$ontem]);$id=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>10,'vencimento'=>$ontem,'vencimento_efetivo'=>$ontem,'tipo'=>'mensalidade']);$resultadoVencimento=$w->processarVencimentos();
+fwAssert($cob->rows[$id]['COB_Status']==='vencido'&&$ass->rows[1]['ASS_Status']==='ativa'&&$resultadoVencimento['assinaturas_vencidas']===0,'D+1 vence cobrança sem vencer assinatura comercial');
+fwAssert(count($ass->listarParaRecorrencia(7))===1,'assinatura ativa continua elegível à recorrência mesmo com cobrança vencida');
+
 $w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d');$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['ciclo'=>'trimestral','proxima_cobranca'=>$competencia]);$w->gerarCobrancasRecorrentes();
 fwAssert($ass->rows[1]['ASS_DataProximaCobranca']===date('Y-m-d',strtotime('+3 months',strtotime($competencia))),'trimestral avança três meses desde a competência');
 

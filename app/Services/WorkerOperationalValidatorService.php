@@ -2,28 +2,26 @@
 
 namespace Services;
 
-use Core\Database;
 use Models\Cliente;
 use Models\ConsumoMensal;
 use Models\MetaConta;
-use PDO;
 
 class WorkerOperationalValidatorService
 {
     private const DIAS_AVALIACAO = 7;
     private const LIMITE_MENSAGENS_AVALIACAO = 200;
 
-    private $db;
     private $clienteModel;
     private $metaModel;
     private $consumoModel;
+    private $financeiroAccessPolicy;
 
-    public function __construct()
+    public function __construct($clienteModel = null, $metaModel = null, $consumoModel = null, $financeiroAccessPolicy = null)
     {
-        $this->db = Database::getInstance();
-        $this->clienteModel = new Cliente();
-        $this->metaModel = new MetaConta();
-        $this->consumoModel = new ConsumoMensal();
+        $this->clienteModel = $clienteModel ?: new Cliente();
+        $this->metaModel = $metaModel ?: new MetaConta();
+        $this->consumoModel = $consumoModel ?: new ConsumoMensal();
+        $this->financeiroAccessPolicy = $financeiroAccessPolicy ?: new FinanceiroAccessPolicyService();
     }
 
     public function validarEnvio(int $clienteId, int $metaId, string $numero = ''): array
@@ -86,6 +84,14 @@ class WorkerOperationalValidatorService
 
     private function validarFinanceiroTrial(array $cliente): array
     {
+        $situacao = $this->financeiroAccessPolicy->avaliar((int) $cliente['CLI_ID']);
+        if(!empty($situacao['vinculo_ativo'])){
+            if(empty($situacao['acesso_operacional'])){
+                return $this->resultado('bloqueio_temporario', 'financeiro_inadimplente_d7', 'Cliente suspenso por inadimplência.', ['financeiro'=>$situacao]);
+            }
+            return $this->resultado('permitido', null, null, ['financeiro'=>$situacao]);
+        }
+
         $statusPagamento = $cliente['CLI_StatusPagamento'] ?? null;
 
         if($statusPagamento === 'pago'){
@@ -94,10 +100,6 @@ class WorkerOperationalValidatorService
 
         if($statusPagamento !== 'pendente'){
             return $this->resultado('bloqueio_temporario', 'financeiro_pendente', 'Cliente sem pagamento regularizado.');
-        }
-
-        if($this->clienteEmToleranciaFinanceira((int) $cliente['CLI_ID'])){
-            return $this->resultado('permitido');
         }
 
         $dataLiberacao = $cliente['CLI_DataLiberacao'] ?? null;
@@ -144,27 +146,6 @@ class WorkerOperationalValidatorService
         }
 
         return $this->resultado('permitido');
-    }
-
-    private function clienteEmToleranciaFinanceira(int $clienteId): bool
-    {
-        $diasTolerancia = defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO')
-            ? (int) FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO
-            : 5;
-
-        $sql = $this->db->prepare("
-            SELECT COB_ID
-            FROM cobrancas
-            WHERE CLI_ID = ?
-            AND COB_Status = 'vencido'
-            AND COB_DataVencimento >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-            ORDER BY COB_DataVencimento DESC
-            LIMIT 1
-        ");
-
-        $sql->execute([$clienteId, $diasTolerancia]);
-
-        return (bool) $sql->fetch(PDO::FETCH_ASSOC);
     }
 
     private function resultado(string $status, ?string $codigo = null, ?string $mensagem = null, array $extra = []): array

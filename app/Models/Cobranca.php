@@ -297,6 +297,16 @@ class Cobranca
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function buscarObrigacaoVencidaPorAssinatura($clienteId, $assinaturaId, $dataReferencia)
+    {
+        $vencimento = $this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')
+            ? 'COALESCE(COB_DataVencimentoEfetivo, COB_DataVencimento)'
+            : 'COB_DataVencimento';
+        $sql = $this->db->prepare("SELECT *, {$vencimento} AS COB_VencimentoFinanceiro FROM cobrancas WHERE CLI_ID = ? AND ASS_ID = ? AND COB_Status IN ('pendente','vencido') AND {$vencimento} < ? ORDER BY {$vencimento} ASC, COB_ID ASC LIMIT 1");
+        $sql->execute([(int) $clienteId, (int) $assinaturaId, $dataReferencia]);
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function definirVencimentoEfetivo($id, $data)
     {
         if(!$this->colunaExiste('cobrancas', 'COB_DataVencimentoEfetivo')){

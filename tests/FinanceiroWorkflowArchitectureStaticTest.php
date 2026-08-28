@@ -7,6 +7,10 @@ $cobranca = file_get_contents($root . '/app/Models/Cobranca.php');
 $asaas = file_get_contents($root . '/app/Services/AsaasService.php');
 $migration = file_get_contents($root . '/database/migrations/20260719_add_financeiro_idempotency_indexes.sql');
 $migrationVencimento = file_get_contents($root . '/database/migrations/20260828_add_cobranca_vencimento_efetivo.sql');
+$accessPolicy = file_get_contents($root . '/app/Services/FinanceiroAccessPolicyService.php');
+$auth = file_get_contents($root . '/app/Core/Auth.php');
+$workerValidator = file_get_contents($root . '/app/Services/WorkerOperationalValidatorService.php');
+$config = file_get_contents($root . '/config/config.php');
 $controllers = [
     'FinanceiroController.php',
     'FinanceiroAdminController.php',
@@ -45,6 +49,11 @@ arquiteturaAssert(strpos($workflow, '_tentativa_') !== false, 'reprocessamento e
 arquiteturaAssert(strpos($migrationVencimento, 'COB_DataVencimentoEfetivo DATE NULL') !== false, 'migration separa vencimento efetivo sem alterar competência histórica');
 arquiteturaAssert(strpos($cobranca, 'COALESCE(COB_DataVencimentoEfetivo, COB_DataVencimento)') !== false, 'vencimentos usam data efetiva com fallback retrocompatível');
 arquiteturaAssert(strpos($workflow, 'definirVencimentoEfetivo') !== false && strpos($asaas, "'COB_DataVencimentoEfetivo'") !== false, 'vencimento efetivo é persistido antes de ser enviado ao gateway');
+arquiteturaAssert(strpos($accessPolicy, 'buscarObrigacaoVencidaPorAssinatura') !== false && strpos($accessPolicy, "'suspenso'") !== false, 'política central decide inadimplência pelo vínculo atual');
+arquiteturaAssert(strpos($auth, 'FinanceiroAccessPolicyService') !== false && strpos($workerValidator, 'FinanceiroAccessPolicyService') !== false, 'Auth e worker compartilham a política financeira');
+arquiteturaAssert(strpos($auth, 'clienteEmToleranciaFinanceira') === false && strpos($workerValidator, 'clienteEmToleranciaFinanceira') === false, 'não restam tolerâncias financeiras duplicadas');
+arquiteturaAssert(strpos(substr($workflow, strpos($workflow, 'public function processarVencimentos'), 1300), 'marcarVencida') === false, 'vencimento da cobrança não vence assinatura comercial');
+arquiteturaAssert(strpos($config, "env_valor('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 7)") !== false, 'limite central possui padrão D+7 configurável');
 arquiteturaAssert(strpos($workflow, 'cancelarAssinatura') !== false && strpos($workflow, 'cancelarContratoPorAssinatura') === false, 'cancelamento pontual é separado do contrato');
 
 echo "FinanceiroWorkflowArchitectureStaticTest OK\n";
