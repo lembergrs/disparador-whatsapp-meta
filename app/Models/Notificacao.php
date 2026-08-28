@@ -33,21 +33,22 @@ class Notificacao
 
     public function reservarIdempotente(array $dados)
     {
-        $sql = $this->db->prepare("INSERT INTO notificacoes (CLI_ID, NOT_Tipo, NOT_Canal, NOT_Assunto, NOT_Destino, NOT_Status, NOT_Dados, NOT_ChaveIdempotencia, NOT_Template) VALUES (:cli, :tipo, :canal, :assunto, :destino, 'pendente', :dados, :chave, :template) ON DUPLICATE KEY UPDATE NOT_ID = LAST_INSERT_ID(NOT_ID)");
+        $sql = $this->db->prepare("INSERT INTO notificacoes (CLI_ID, COB_ID, NOT_Tipo, NOT_Canal, NOT_Assunto, NOT_Destino, NOT_Status, NOT_Dados, NOT_DataReferencia, NOT_ChaveIdempotencia, NOT_Template) VALUES (:cli, :cobranca, :tipo, :canal, :assunto, :destino, 'pendente', :dados, :data_referencia, :chave, :template) ON DUPLICATE KEY UPDATE NOT_ID = LAST_INSERT_ID(NOT_ID)");
         $sql->execute([
-            ':cli'=>(int)$dados['cliente_id'], ':tipo'=>$dados['tipo'], ':canal'=>$dados['canal'],
+            ':cli'=>(int)$dados['cliente_id'], ':cobranca'=>!empty($dados['cobranca_id']) ? (int)$dados['cobranca_id'] : null, ':tipo'=>$dados['tipo'], ':canal'=>$dados['canal'],
             ':assunto'=>$dados['assunto'] ?? null, ':destino'=>$dados['destino'] ?? null,
             ':dados'=>json_encode($dados['dados'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            ':chave'=>$dados['chave'], ':template'=>$dados['template'] ?? null,
+            ':data_referencia'=>$dados['data_referencia'] ?? null, ':chave'=>$dados['chave'], ':template'=>$dados['template'] ?? null,
         ]);
         $id = (int)$this->db->lastInsertId();
         $consulta = $this->db->prepare('SELECT * FROM notificacoes WHERE NOT_ID = ? LIMIT 1');
         $consulta->execute([$id]); return $consulta->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function marcarProcessando($id, $maxTentativas = 5)
+    public function marcarProcessando($id, $maxTentativas = 5, $leaseMinutos = 15)
     {
-        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status='processando', NOT_Tentativas=NOT_Tentativas+1, NOT_Erro=NULL WHERE NOT_ID=? AND NOT_Status IN ('pendente','erro_temporario') AND NOT_Tentativas < ?");
+        $leaseMinutos = max(1, (int)$leaseMinutos);
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status='processando', NOT_Tentativas=NOT_Tentativas+1, NOT_Erro=NULL, NOT_ReservadaEm=NOW() WHERE NOT_ID=? AND (NOT_Status IN ('pendente','erro_temporario') OR (NOT_Status='processando' AND NOT_ReservadaEm < DATE_SUB(NOW(), INTERVAL {$leaseMinutos} MINUTE))) AND NOT_Tentativas < ?");
         $sql->execute([(int)$id, max(1, (int)$maxTentativas)]); return $sql->rowCount() === 1;
     }
 
@@ -56,7 +57,7 @@ class Notificacao
         $sucesso = !empty($resultado['sucesso']);
         $status = $sucesso ? 'enviada' : ($resultado['status'] ?? 'erro_temporario');
         if(!in_array($status, ['enviada','erro_temporario','erro_definitivo'], true)) $status = 'erro_temporario';
-        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=:status, NOT_Erro=:erro, NOT_CodigoErro=:codigo, NOT_ProviderMessageId=:message_id, NOT_DataEnvio=CASE WHEN :ok=1 THEN NOW() ELSE NOT_DataEnvio END WHERE NOT_ID=:id AND NOT_Status='processando'");
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status=:status, NOT_Erro=:erro, NOT_CodigoErro=:codigo, NOT_ProviderMessageId=:message_id, NOT_DataEnvio=CASE WHEN :ok=1 THEN NOW() ELSE NOT_DataEnvio END, NOT_ReservadaEm=NULL WHERE NOT_ID=:id AND NOT_Status='processando'");
         return $sql->execute([':status'=>$status, ':erro'=>$this->sanitizar($resultado['mensagem'] ?? null), ':codigo'=>$this->sanitizar($resultado['error_code'] ?? null), ':message_id'=>$this->sanitizar($resultado['message_id'] ?? null), ':ok'=>$sucesso ? 1 : 0, ':id'=>(int)$id]);
     }
 
@@ -100,13 +101,35 @@ class Notificacao
             $status = 'erro_temporario';
         }
 
-        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status = :status, NOT_Tentativas = NOT_Tentativas + 1, NOT_Erro = :erro, NOT_DataEnvio = CASE WHEN :ok = 1 THEN NOW() ELSE NOT_DataEnvio END WHERE NOT_ID = :id");
+        $sql = $this->db->prepare("UPDATE notificacoes SET NOT_Status = :status, NOT_Tentativas = NOT_Tentativas + 1, NOT_Erro = :erro, NOT_DataEnvio = CASE WHEN :ok = 1 THEN NOW() ELSE NOT_DataEnvio END, NOT_ReservadaEm=NULL WHERE NOT_ID = :id");
         return $sql->execute([
             ':status' => $status,
             ':erro' => $this->sanitizar($resultado['mensagem'] ?? $resultado['error_code'] ?? null),
             ':ok' => $sucesso ? 1 : 0,
             ':id' => (int) $id,
         ]);
+    }
+
+    public function buscar($id)
+    {
+        $sql=$this->db->prepare('SELECT * FROM notificacoes WHERE NOT_ID=? LIMIT 1');
+        $sql->execute([(int)$id]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function marcarResultadoFinanceiro($id, array $resultado)
+    {
+        $sucesso=!empty($resultado['sucesso']);
+        $status=$sucesso?'enviada':($resultado['status']??'erro_temporario');
+        if(!in_array($status,['enviada','erro_temporario','erro_definitivo'],true)){$status='erro_temporario';}
+        $sql=$this->db->prepare("UPDATE notificacoes SET NOT_Status=?,NOT_Erro=?,NOT_CodigoErro=?,NOT_ProviderMessageId=?,NOT_DataEnvio=CASE WHEN ?=1 THEN NOW() ELSE NOT_DataEnvio END,NOT_ReservadaEm=NULL WHERE NOT_ID=? AND NOT_Status='processando'");
+        return $sql->execute([$status,$this->sanitizar($resultado['mensagem']??null),$this->sanitizar($resultado['error_code']??null),$this->sanitizar($resultado['message_id']??null),$sucesso?1:0,(int)$id]);
+    }
+
+    public function marcarIgnorada($id, $motivo)
+    {
+        $sql=$this->db->prepare("UPDATE notificacoes SET NOT_Status='ignorada',NOT_Erro=?,NOT_ReservadaEm=NULL WHERE NOT_ID=? AND NOT_Status NOT IN ('enviada','entregue','lida')");
+        return $sql->execute([$this->sanitizar($motivo),(int)$id]);
     }
 
 

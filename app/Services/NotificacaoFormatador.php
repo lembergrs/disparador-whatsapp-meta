@@ -14,6 +14,13 @@ class NotificacaoFormatador
         EventoNotificacao::PAGAMENTO_APROVADO => 'Pagamento aprovado',
         EventoNotificacao::PAGAMENTO_PENDENTE => 'Pagamento pendente',
         EventoNotificacao::CONTA_REATIVADA => 'Conta reativada',
+        EventoNotificacao::COBRANCA_DISPONIVEL => 'Cobrança disponível',
+        EventoNotificacao::LEMBRETE_VENCIMENTO_D3 => 'Vencimento em 3 dias',
+        EventoNotificacao::COBRANCA_VENCIDA_D1 => 'Cobrança vencida — D+1',
+        EventoNotificacao::LEMBRETE_VENCIDA_D3 => 'Cobrança vencida — D+3',
+        EventoNotificacao::AVISO_SUSPENSAO_D5 => 'Aviso de suspensão — D+5',
+        EventoNotificacao::SUSPENSAO_INADIMPLENCIA_D7 => 'Suspensão — D+7',
+        EventoNotificacao::PAGAMENTO_CONFIRMADO => 'Pagamento confirmado',
     ];
 
     private const CANAIS = [

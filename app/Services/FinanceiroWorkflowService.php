@@ -26,8 +26,9 @@ class FinanceiroWorkflowService
     private $auditoriaIndicacao;
     private $primeiroPagamentoIndicacao;
     private $descontoBoasVindas;
+    private $notificacoesFinanceiras;
 
-    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null, $primeiroPagamentoIndicacao = null, $descontoBoasVindas = null)
+    public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null, $primeiroPagamentoIndicacao = null, $descontoBoasVindas = null, $notificacoesFinanceiras = null)
     {
         $this->clientes = $clientes ?: new Cliente();
         $this->assinaturas = $assinaturas ?: new Assinatura();
@@ -41,6 +42,7 @@ class FinanceiroWorkflowService
         $this->auditoriaIndicacao = $auditoriaIndicacao;
         $this->primeiroPagamentoIndicacao = $primeiroPagamentoIndicacao;
         $this->descontoBoasVindas = $descontoBoasVindas ?: new DescontoBoasVindasService($this->cobrancas);
+        $this->notificacoesFinanceiras = $notificacoesFinanceiras;
     }
 
     public function contratarPlano(int $clienteId, int $planoId, string $ciclo): array
@@ -128,6 +130,7 @@ class FinanceiroWorkflowService
         if(!$cobranca || !in_array(strtolower((string) $cobranca['COB_Status']), ['pendente','vencido'], true)){
             throw new \DomainException('Não foi possível lançar o pagamento.');
         }
+        $situacaoAnterior = $this->servicoNotificacoesFinanceiras()->situacaoAntesPagamento((int)$cobranca['CLI_ID']);
         $valorPagoCentavos = $this->valorManualEmCentavos($dados['valor_pago'] ?? null);
         $temDescontoIndicacao = (int) ($cobranca['COB_DescontoIndicacaoCentavos'] ?? 0) > 0;
         $decisaoIndicacao = trim((string) ($dados['decisao_indicacao'] ?? ''));
@@ -148,7 +151,7 @@ class FinanceiroWorkflowService
         if(mb_strlen($motivo, 'UTF-8') > 500){ throw new \DomainException('A observação deve ter no máximo 500 caracteres.'); }
         $usuarioId = (int) ($dados['usuario_id'] ?? 0) ?: null;
 
-        $this->transacao->executar(function() use ($cobrancaId, $cobranca, $valorPagoCentavos, $decisaoIndicacao, $motivo, $usuarioId, $divergente, $valorEsperadoCentavos){
+        $this->transacao->executar(function() use ($cobrancaId, $cobranca, $valorPagoCentavos, $decisaoIndicacao, $motivo, $usuarioId, $divergente, $valorEsperadoCentavos, $situacaoAnterior){
             $atualizada = $this->cobrancas->buscarParaAtualizacao($cobrancaId);
             if(!$atualizada || !in_array(strtolower((string) $atualizada['COB_Status']), ['pendente','vencido'], true)){
                 throw new \DomainException('Não foi possível lançar o pagamento.');
@@ -180,6 +183,7 @@ class FinanceiroWorkflowService
             $this->ativarAssinaturaDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
             $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+            $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado($cobrancaId, $situacaoAnterior);
         });
         $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
         return ['sucesso'=>true, 'cobranca'=>$cobranca];
@@ -201,8 +205,9 @@ class FinanceiroWorkflowService
             $eventId = hash('sha256', implode('|', ['asaas',$paymentId,$evento,$providerStatus,$data]));
         }
         $status = $this->statusCobrancaPorEvento($evento);
+        $situacaoAnterior = $status === 'pago' ? $this->servicoNotificacoesFinanceiras()->situacaoAntesPagamento((int)$cobranca['CLI_ID']) : 'regular';
 
-        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $payment, $status){
+        return $this->transacao->executar(function() use ($cobranca, $eventId, $evento, $providerStatus, $payload, $payment, $status, $situacaoAnterior){
             $atualizada = $this->cobrancas->buscarParaAtualizacao($cobranca['COB_ID']);
             if(!$atualizada){ throw new \RuntimeException('Cobrança não encontrada durante o processamento.'); }
             $transicao = $this->resolverTransicaoWebhook(strtolower((string) $atualizada['COB_Status']), $evento, $status);
@@ -225,6 +230,7 @@ class FinanceiroWorkflowService
                 $this->ativarAssinaturaDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
                 $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+                $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado((int)$cobranca['COB_ID'], $situacaoAnterior);
             }elseif($status === 'vencido'){
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
@@ -593,6 +599,14 @@ class FinanceiroWorkflowService
     {
         if(!$this->descontosIndicacao){ $this->descontosIndicacao = new IndicacaoDescontoService(); }
         return $this->descontosIndicacao;
+    }
+
+    private function servicoNotificacoesFinanceiras()
+    {
+        if(!$this->notificacoesFinanceiras){
+            $this->notificacoesFinanceiras = new FinanceiroNotificacaoService($this->cobrancas, $this->assinaturas, $this->clientes, $this->planos);
+        }
+        return $this->notificacoesFinanceiras;
     }
 
     private function valorEmCentavos($valor): int

@@ -13,6 +13,13 @@ final class EventoNotificacao
     public const PAGAMENTO_APROVADO = 'pagamento_aprovado';
     public const PAGAMENTO_PENDENTE = 'pagamento_pendente';
     public const CONTA_REATIVADA = 'conta_reativada';
+    public const COBRANCA_DISPONIVEL = 'cobranca_disponivel';
+    public const LEMBRETE_VENCIMENTO_D3 = 'lembrete_vencimento_d3';
+    public const COBRANCA_VENCIDA_D1 = 'cobranca_vencida_d1';
+    public const LEMBRETE_VENCIDA_D3 = 'lembrete_vencida_d3';
+    public const AVISO_SUSPENSAO_D5 = 'aviso_suspensao_d5';
+    public const SUSPENSAO_INADIMPLENCIA_D7 = 'suspensao_inadimplencia_d7';
+    public const PAGAMENTO_CONFIRMADO = 'pagamento_confirmado';
 
     public static function todos()
     {
@@ -26,6 +33,13 @@ final class EventoNotificacao
             self::PAGAMENTO_APROVADO,
             self::PAGAMENTO_PENDENTE,
             self::CONTA_REATIVADA,
+            self::COBRANCA_DISPONIVEL,
+            self::LEMBRETE_VENCIMENTO_D3,
+            self::COBRANCA_VENCIDA_D1,
+            self::LEMBRETE_VENCIDA_D3,
+            self::AVISO_SUSPENSAO_D5,
+            self::SUSPENSAO_INADIMPLENCIA_D7,
+            self::PAGAMENTO_CONFIRMADO,
         ];
     }
 }

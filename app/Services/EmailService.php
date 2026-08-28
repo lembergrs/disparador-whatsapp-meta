@@ -20,6 +20,13 @@ class EmailService
         EventoNotificacao::PAGAMENTO_APROVADO => ['assunto' => 'Pagamento aprovado', 'titulo' => 'Pagamento aprovado', 'mensagem' => 'Recebemos seu pagamento do plano {{PLANO}}.', 'botao' => 'Abrir financeiro', 'complemento' => 'Obrigado por continuar com o Disparador.'],
         EventoNotificacao::PAGAMENTO_PENDENTE => ['assunto' => 'Pagamento pendente', 'titulo' => 'Pagamento pendente', 'mensagem' => 'Identificamos uma pendência financeira no plano {{PLANO}}.', 'botao' => 'Regularizar pagamento', 'complemento' => 'Regularize para evitar bloqueios comerciais conforme as regras existentes.'],
         EventoNotificacao::CONTA_REATIVADA => ['assunto' => 'Conta reativada', 'titulo' => 'Conta reativada', 'mensagem' => 'Sua conta foi reativada com sucesso.', 'botao' => 'Acessar Disparador', 'complemento' => 'Você já pode retomar suas operações.'],
+        EventoNotificacao::COBRANCA_DISPONIVEL => ['assunto'=>'Sua cobrança já está disponível','titulo'=>'Cobrança disponível','mensagem'=>'A cobrança do plano {{PLANO}}, no valor de {{VALOR}}, já está disponível. O vencimento é {{VENCIMENTO}}.','botao'=>'Acessar Financeiro','complemento'=>'Você pode consultar os detalhes e realizar o pagamento pela área Financeiro.'],
+        EventoNotificacao::LEMBRETE_VENCIMENTO_D3 => ['assunto'=>'Lembrete de vencimento da sua cobrança','titulo'=>'Vencimento próximo','mensagem'=>'A cobrança do plano {{PLANO}} vence em {{DIAS}} dias, em {{VENCIMENTO}}.','botao'=>'Ver cobrança','complemento'=>'Se o pagamento já foi realizado, aguarde a confirmação automática.'],
+        EventoNotificacao::COBRANCA_VENCIDA_D1 => ['assunto'=>'Sua cobrança está em período de tolerância','titulo'=>'Cobrança vencida','mensagem'=>'A cobrança do plano {{PLANO}} venceu há {{DIAS_ATRASO}} dia. Seus recursos continuam disponíveis temporariamente durante o período de tolerância.','botao'=>'Regularizar pagamento','complemento'=>'Acesse o Financeiro para consultar a cobrança e evitar interrupções.'],
+        EventoNotificacao::LEMBRETE_VENCIDA_D3 => ['assunto'=>'Lembrete de cobrança em aberto','titulo'=>'Pagamento ainda não identificado','mensagem'=>'A cobrança do plano {{PLANO}} está vencida há {{DIAS_ATRASO}} dias.','botao'=>'Regularizar pagamento','complemento'=>'Se você já pagou, aguarde a confirmação automática.'],
+        EventoNotificacao::AVISO_SUSPENSAO_D5 => ['assunto'=>'Aviso sobre possível suspensão em D+7','titulo'=>'Regularize sua cobrança','mensagem'=>'A cobrança do plano {{PLANO}} está vencida há {{DIAS_ATRASO}} dias. Se o pagamento não for identificado, os recursos operacionais serão suspensos em D+7.','botao'=>'Regularizar pagamento','complemento'=>'Seus dados serão preservados e o Financeiro continuará disponível.'],
+        EventoNotificacao::SUSPENSAO_INADIMPLENCIA_D7 => ['assunto'=>'Recursos operacionais temporariamente suspensos','titulo'=>'Suspensão por inadimplência','mensagem'=>'Como o pagamento da cobrança do plano {{PLANO}} ainda não foi identificado, os recursos operacionais foram temporariamente suspensos.','botao'=>'Acessar Financeiro','complemento'=>'Seus dados foram preservados. Após a confirmação do pagamento, o acesso será restabelecido automaticamente.'],
+        EventoNotificacao::PAGAMENTO_CONFIRMADO => ['assunto'=>'Pagamento confirmado','titulo'=>'Pagamento confirmado','mensagem'=>'Confirmamos o pagamento do plano {{PLANO}}, no valor de {{VALOR}}. {{CONTEXTO_PAGAMENTO}}','botao'=>'Abrir Financeiro','complemento'=>'Obrigado por continuar com o Disparador.net.'],
     ];
 
     public function __construct(callable $mailerFactory = null, array $config = null, $modeloRepository = null)
@@ -94,8 +101,20 @@ class EmailService
             EventoNotificacao::PAGAMENTO_APROVADO => ['{{NOME}}'=>'Nome do cliente','{{PLANO}}'=>'Plano do cliente','{{DATA}}'=>'Data do pagamento','{{LINK}}'=>'Link principal da ação'],
             EventoNotificacao::PAGAMENTO_PENDENTE => ['{{NOME}}'=>'Nome do cliente','{{PLANO}}'=>'Plano do cliente','{{DATA}}'=>'Data da pendência','{{LINK}}'=>'Link principal da ação'],
             EventoNotificacao::CONTA_REATIVADA => ['{{NOME}}'=>'Nome do cliente','{{EMPRESA}}'=>'Nome da empresa','{{LINK}}'=>'Link principal da ação'],
+            EventoNotificacao::COBRANCA_DISPONIVEL => self::variaveisFinanceiras(),
+            EventoNotificacao::LEMBRETE_VENCIMENTO_D3 => self::variaveisFinanceiras(),
+            EventoNotificacao::COBRANCA_VENCIDA_D1 => self::variaveisFinanceiras(),
+            EventoNotificacao::LEMBRETE_VENCIDA_D3 => self::variaveisFinanceiras(),
+            EventoNotificacao::AVISO_SUSPENSAO_D5 => self::variaveisFinanceiras(),
+            EventoNotificacao::SUSPENSAO_INADIMPLENCIA_D7 => self::variaveisFinanceiras(),
+            EventoNotificacao::PAGAMENTO_CONFIRMADO => self::variaveisFinanceiras(),
         ];
         return $map[$evento] ?? [];
+    }
+
+    private static function variaveisFinanceiras()
+    {
+        return ['{{NOME}}'=>'Nome do cliente','{{EMPRESA}}'=>'Nome da empresa','{{PLANO}}'=>'Plano','{{VALOR}}'=>'Valor','{{VENCIMENTO}}'=>'Vencimento efetivo','{{DIAS}}'=>'Dias para o vencimento','{{DIAS_ATRASO}}'=>'Dias de atraso','{{CONTEXTO_PAGAMENTO}}'=>'Contexto da regularização','{{LINK}}'=>'Link para o Financeiro'];
     }
 
     public static function placeholdersInvalidos($evento, array $campos)
@@ -112,7 +131,7 @@ class EmailService
 
     private function variaveis(array $c)
     {
-        return ['{{NOME}}'=>$c['nome'] ?? 'cliente','{{EMPRESA}}'=>$c['empresa'] ?? '','{{EMAIL}}'=>$c['email'] ?? '','{{LINK}}'=>$c['link'] ?? rtrim(BASE_URL, '/') . '/index.php?url=dashboard','{{PLANO}}'=>$c['plano'] ?? '','{{DATA}}'=>$c['data'] ?? date('d/m/Y'),'{{DIAS}}'=>(string)($c['dias'] ?? ''),'{{MENSAGENS}}'=>(string)($c['mensagens'] ?? '')];
+        return ['{{NOME}}'=>$c['nome'] ?? 'cliente','{{EMPRESA}}'=>$c['empresa'] ?? '','{{EMAIL}}'=>$c['email'] ?? '','{{LINK}}'=>$c['link'] ?? rtrim(BASE_URL, '/') . '/index.php?url=dashboard','{{PLANO}}'=>$c['plano'] ?? '','{{DATA}}'=>$c['data'] ?? date('d/m/Y'),'{{DIAS}}'=>(string)($c['dias'] ?? ''),'{{MENSAGENS}}'=>(string)($c['mensagens'] ?? ''),'{{VALOR}}'=>$c['valor'] ?? '','{{VENCIMENTO}}'=>$c['vencimento'] ?? '','{{DIAS_ATRASO}}'=>(string)($c['dias_atraso'] ?? ''),'{{CONTEXTO_PAGAMENTO}}'=>$c['contexto_pagamento'] ?? ''];
     }
 
     public function enviar($destinatario, $nome, $assunto, $html, $texto)

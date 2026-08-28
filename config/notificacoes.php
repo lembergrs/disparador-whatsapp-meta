@@ -14,5 +14,12 @@ return [
         EventoNotificacao::PAGAMENTO_APROVADO => [CanalNotificacao::EMAIL],
         EventoNotificacao::PAGAMENTO_PENDENTE => [CanalNotificacao::EMAIL],
         EventoNotificacao::CONTA_REATIVADA => [CanalNotificacao::EMAIL],
+        EventoNotificacao::COBRANCA_DISPONIVEL => [CanalNotificacao::EMAIL],
+        EventoNotificacao::LEMBRETE_VENCIMENTO_D3 => [CanalNotificacao::EMAIL],
+        EventoNotificacao::COBRANCA_VENCIDA_D1 => [CanalNotificacao::EMAIL],
+        EventoNotificacao::LEMBRETE_VENCIDA_D3 => [CanalNotificacao::EMAIL],
+        EventoNotificacao::AVISO_SUSPENSAO_D5 => [CanalNotificacao::EMAIL],
+        EventoNotificacao::SUSPENSAO_INADIMPLENCIA_D7 => [CanalNotificacao::EMAIL],
+        EventoNotificacao::PAGAMENTO_CONFIRMADO => [CanalNotificacao::EMAIL],
     ],
 ];

@@ -12,6 +12,7 @@ class NotificacaoStatusService
         'entregue'=>'entregue', 'delivered'=>'entregue', 'lida'=>'lida', 'lido'=>'lida', 'read'=>'lida',
         'erro_temporario'=>'erro_temporario', 'falha_temporaria'=>'erro_temporario',
         'erro_definitivo'=>'erro_definitivo', 'failed'=>'erro_definitivo', 'erro'=>'erro_definitivo', 'falha'=>'erro_definitivo',
+        'ignorada'=>'ignorada', 'cancelada'=>'ignorada',
     ];
 
     private const VISUAL = [
@@ -22,6 +23,7 @@ class NotificacaoStatusService
         'lida'=>['icone'=>'fa-check-double', 'classe'=>'notificacao-status-lida', 'rotulo'=>'Lida'],
         'erro_temporario'=>['icone'=>'fa-exclamation-triangle', 'classe'=>'notificacao-status-erro-temporario', 'rotulo'=>'Erro temporário'],
         'erro_definitivo'=>['icone'=>'fa-times-circle', 'classe'=>'notificacao-status-erro-definitivo', 'rotulo'=>'Erro definitivo'],
+        'ignorada'=>['icone'=>'fa-ban', 'classe'=>'notificacao-status-desconhecido', 'rotulo'=>'Ignorada'],
     ];
 
     public static function normalizar($status)

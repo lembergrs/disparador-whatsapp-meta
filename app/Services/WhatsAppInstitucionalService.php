@@ -26,8 +26,8 @@ class WhatsAppInstitucionalService
         $this->transport = $transport;
     }
 
-    public static function suporta($evento){ return isset(self::TEMPLATES[$evento]); }
-    public static function template($evento){ return self::TEMPLATES[$evento]['nome'] ?? null; }
+    public static function suporta($evento){ return isset(self::templates()[$evento]); }
+    public static function template($evento){ return self::templates()[$evento]['nome'] ?? null; }
 
     public function preparar($evento, array $contexto)
     {
@@ -35,7 +35,7 @@ class WhatsAppInstitucionalService
         $telefone = self::normalizarTelefone($contexto['telefone'] ?? '');
         if(!$telefone) return $this->falha('telefone_invalido', 'Telefone de contato inválido.', false);
         $valores = [];
-        foreach(self::TEMPLATES[$evento]['parametros'] as $campo){
+        foreach(self::templates()[$evento]['parametros'] as $campo){
             $valor = trim((string) ($contexto[$campo] ?? ''));
             if($valor === '') return $this->falha('parametro_invalido', 'Parâmetro obrigatório ausente.', false);
             $valores[] = $valor;
@@ -84,6 +84,26 @@ class WhatsAppInstitucionalService
     {
         $digitos = preg_replace('/\D+/', '', (string)$telefone);
         return strlen($digitos) > 6 ? substr($digitos, 0, 2) . str_repeat('*', max(3, strlen($digitos)-6)) . substr($digitos, -4) : '***';
+    }
+
+    private static function templates(): array
+    {
+        $templates = self::TEMPLATES;
+        $financeiros = [
+            EventoNotificacao::COBRANCA_DISPONIVEL=>['COBRANCA_DISPONIVEL',['nome','plano','valor','vencimento','link']],
+            EventoNotificacao::LEMBRETE_VENCIMENTO_D3=>['LEMBRETE_VENCIMENTO_D3',['nome','plano','valor','vencimento','link']],
+            EventoNotificacao::COBRANCA_VENCIDA_D1=>['COBRANCA_VENCIDA_D1',['nome','plano','valor','vencimento','dias_atraso','link']],
+            EventoNotificacao::LEMBRETE_VENCIDA_D3=>['LEMBRETE_VENCIDA_D3',['nome','plano','valor','vencimento','dias_atraso','link']],
+            EventoNotificacao::AVISO_SUSPENSAO_D5=>['AVISO_SUSPENSAO_D5',['nome','plano','valor','vencimento','dias_atraso','link']],
+            EventoNotificacao::SUSPENSAO_INADIMPLENCIA_D7=>['SUSPENSAO_INADIMPLENCIA_D7',['nome','plano','valor','vencimento','dias_atraso','link']],
+            EventoNotificacao::PAGAMENTO_CONFIRMADO=>['PAGAMENTO_CONFIRMADO',['nome','plano','valor','contexto_pagamento']],
+        ];
+        foreach($financeiros as $evento=>[$sufixo,$parametros]){
+            $constante='WHATSAPP_TEMPLATE_FINANCEIRO_'.$sufixo;
+            $nome=defined($constante)?trim((string)constant($constante)):'';
+            if($nome!==''){$templates[$evento]=['nome'=>$nome,'parametros'=>$parametros];}
+        }
+        return $templates;
     }
 
     private function curl($url, array $payload)
