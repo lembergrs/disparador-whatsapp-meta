@@ -90,9 +90,11 @@ class Assinatura
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function listarParaRecorrencia()
+    public function listarParaRecorrencia($diasAntecedencia = 0)
     {
-        $sql = $this->db->query("SELECT a.* FROM assinaturas a INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID WHERE a.ASS_Status = 'ativa' AND a.ASS_DataProximaCobranca IS NOT NULL AND a.ASS_DataProximaCobranca <= CURDATE() AND a.PLA_ID IS NOT NULL AND c.CLI_StatusCadastro = 'ativo' ORDER BY a.ASS_DataProximaCobranca ASC, a.ASS_ID ASC");
+        $diasAntecedencia = max(0, min(60, (int) $diasAntecedencia));
+        $sql = $this->db->prepare("SELECT a.* FROM assinaturas a INNER JOIN clientes c ON c.CLI_ID = a.CLI_ID WHERE a.ASS_Status = 'ativa' AND a.ASS_DataProximaCobranca IS NOT NULL AND a.ASS_DataProximaCobranca <= DATE_ADD(CURDATE(), INTERVAL ? DAY) AND a.PLA_ID IS NOT NULL AND c.CLI_StatusCadastro = 'ativo' ORDER BY a.ASS_DataProximaCobranca ASC, a.ASS_ID ASC");
+        $sql->execute([$diasAntecedencia]);
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 

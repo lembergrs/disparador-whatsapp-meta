@@ -11,6 +11,7 @@ class TaskRegistry
         $this->tipos = $tipos ?? [
             'teste_scheduler'=>TesteSchedulerHandler::class,
             'indicacao_confirmacao'=>IndicacaoConfirmacaoHandler::class,
+            'financeiro_gerar_cobrancas_recorrentes'=>FinanceiroGerarCobrancasRecorrentesHandler::class,
         ];
     }
 

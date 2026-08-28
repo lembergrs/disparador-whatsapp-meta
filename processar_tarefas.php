@@ -5,6 +5,8 @@ require __DIR__ . '/config/config.php';
 require __DIR__ . '/vendor/autoload.php';
 
 use Models\TarefaAgendada;
+use Services\FinanceiroSchedulerBootstrapService;
+use Services\TaskSchedulerService;
 use Services\Tasks\TaskDispatcher;
 use Services\Tasks\TaskExecutionService;
 use Services\Tasks\TaskProcessor;
@@ -34,7 +36,9 @@ try{
     if(!flock($lock, LOCK_EX | LOCK_NB)){ fclose($lock); $lock = null; exit(0); }
     $possuiLock = true;
     $repositorio = new TarefaAgendada();
-    $processador = new TaskProcessor($repositorio,new TaskDispatcher(new TaskRegistry()),null,TASK_SCHEDULER_LEASE_MINUTES,$logger);
+    $registry = new TaskRegistry();
+    (new FinanceiroSchedulerBootstrapService(new TaskSchedulerService($repositorio, $registry)))->garantirExecucaoDiaria();
+    $processador = new TaskProcessor($repositorio,new TaskDispatcher($registry),null,TASK_SCHEDULER_LEASE_MINUTES,$logger);
     $execucao = new TaskExecutionService($processador, TASK_SCHEDULER_BATCH_SIZE);
     $resumo = $execucao->processarSobDemanda(TASK_SCHEDULER_BATCH_SIZE);
     echo TaskSchedulerCliOutput::resumo($resumo, $verbose);

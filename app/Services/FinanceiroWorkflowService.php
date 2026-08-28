@@ -243,7 +243,7 @@ class FinanceiroWorkflowService
     public function gerarCobrancasRecorrentes(): array
     {
         $resultado = ['assinaturas_processadas'=>0,'cobrancas_geradas'=>0,'cobrancas_ignoradas_duplicidade'=>0,'erros'=>0];
-        foreach($this->assinaturas->listarParaRecorrencia() as $assinatura){
+        foreach($this->assinaturas->listarParaRecorrencia($this->recorrencia->diasAntecedencia()) as $assinatura){
             $resultado['assinaturas_processadas']++;
             $vencimento = $assinatura['ASS_DataProximaCobranca'] ?: date('Y-m-d');
             $existente = $this->cobrancas->buscarPorCompetencia($assinatura['ASS_ID'], $vencimento, 'mensalidade');
@@ -400,12 +400,13 @@ class FinanceiroWorkflowService
             }
 
             $cobranca = $this->prepararDescontosDaCobranca($clienteId, $cobranca, $plano, $ciclo);
+            $cobranca['provider_due_date'] = $this->recorrencia->vencimentoEfetivoGateway($cobranca['COB_DataVencimento']);
 
             $customerId = trim((string) ($cliente['CLI_ProviderCustomerId'] ?? ''));
             if($customerId === ''){
                 $respostaCliente = $this->asaas->criarOuAtualizarCliente($cliente);
                 if(empty($respostaCliente['sucesso']) || empty($respostaCliente['response']['id'])){
-                    $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_status'=>'erro_cliente','provider_payload'=>$this->payloadProviderSeguro($respostaCliente['response'] ?? [])]);
+                    $this->registrarFalhaGateway($cobrancaId, 'erro_cliente', $respostaCliente, $referencia);
                     $this->liberarDescontoIndicacao($cobranca, 'falha_criacao_cliente_asaas');
                     return ['sucesso'=>false,'mensagem'=>'Não foi possível gerar a cobrança automaticamente. Verifique os dados cadastrais ou entre em contato com o suporte.'];
                 }
@@ -416,8 +417,7 @@ class FinanceiroWorkflowService
 
             $consulta = $this->asaas->buscarCobrancaPorReferenciaExterna($referencia);
             if(empty($consulta['sucesso'])){
-                $payloadErro = array_merge(is_array($consulta['response'] ?? null) ? $consulta['response'] : [], ['externalReference'=>$referencia]);
-                $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_reconciliacao','provider_payload'=>$this->payloadProviderSeguro($payloadErro)]);
+                $this->registrarFalhaGateway($cobrancaId, 'erro_reconciliacao', $consulta, $referencia, $customerId);
                 return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança no Asaas. Tente novamente em instantes.'];
             }
             $pagamento = $this->primeiraCobrancaEncontrada($consulta);
@@ -427,8 +427,7 @@ class FinanceiroWorkflowService
                 $this->cobrancas->prepararReprocessamento($cobrancaId, $tentativa);
                 $consulta = $this->asaas->buscarCobrancaPorReferenciaExterna($referencia);
                 if(empty($consulta['sucesso'])){
-                    $payloadErro = array_merge(is_array($consulta['response'] ?? null) ? $consulta['response'] : [], ['externalReference'=>$referencia]);
-                    $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_reconciliacao','provider_payload'=>$this->payloadProviderSeguro($payloadErro)]);
+                    $this->registrarFalhaGateway($cobrancaId, 'erro_reconciliacao', $consulta, $referencia, $customerId);
                     return ['sucesso'=>false,'mensagem'=>'Não foi possível confirmar a situação da cobrança no Asaas. Tente novamente em instantes.'];
                 }
                 $pagamento = $this->primeiraCobrancaEncontrada($consulta);
@@ -438,8 +437,7 @@ class FinanceiroWorkflowService
                 $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
                 $resposta = $this->asaas->criarCobranca($cliente, $cobranca, $referencia);
                 if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
-                    $payloadErro = array_merge(is_array($resposta['response'] ?? null) ? $resposta['response'] : [], ['externalReference'=>$referencia]);
-                    $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, ['provider'=>'asaas','provider_customer_id'=>$customerId,'provider_status'=>'erro_cobranca','provider_payload'=>$this->payloadProviderSeguro($payloadErro)]);
+                    $this->registrarFalhaGateway($cobrancaId, 'erro_cobranca', $resposta, $referencia, $customerId);
                     $this->liberarDescontoIndicacao($cobranca, 'falha_criacao_cobranca_asaas');
                     return ['sucesso'=>false,'mensagem'=>'Plano selecionado, mas o Asaas não retornou o link de pagamento. Tente novamente em instantes ou fale com o suporte.'];
                 }
@@ -762,6 +760,48 @@ class FinanceiroWorkflowService
     {
         $payment = is_array($payload['payment'] ?? null) ? $payload['payment'] : $payload;
         return json_encode(['event'=>$payload['event'] ?? null,'id'=>$payload['id'] ?? null,'decisao'=>$decisao,'payment'=>array_intersect_key($payment, array_flip(['id','customer','status','value','originalValue','netValue','billingType','dueDate','paymentDate','clientPaymentDate','confirmedDate','invoiceUrl','bankSlipUrl','externalReference']))], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function registrarFalhaGateway(int $cobrancaId, string $status, array $resultado, string $referencia, ?string $customerId = null): void
+    {
+        $diagnostico = [
+            'sucesso'=>(bool) ($resultado['sucesso'] ?? false),
+            'http_code'=>(int) ($resultado['http_code'] ?? 0),
+            'endpoint'=>mb_substr((string) ($resultado['endpoint'] ?? ''), 0, 255),
+            'method'=>mb_substr((string) ($resultado['method'] ?? ''), 0, 12),
+            'erro'=>$this->sanitizarTextoGateway($resultado['erro'] ?? ''),
+            'externalReference'=>$referencia,
+            'response'=>$this->sanitizarDadosGateway(is_array($resultado['response'] ?? null) ? $resultado['response'] : [])
+        ];
+        $dados = ['provider'=>'asaas','provider_status'=>$status,'provider_payload'=>json_encode($diagnostico, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
+        if($customerId !== null){ $dados['provider_customer_id'] = $customerId; }
+        $this->cobrancas->atualizarIntegracaoProvider($cobrancaId, $dados);
+        $this->log('erro_gateway', ['cobranca_id'=>$cobrancaId,'provider'=>'asaas','status'=>$status,'http_code'=>$diagnostico['http_code'],'endpoint'=>$diagnostico['endpoint'],'method'=>$diagnostico['method'],'erro'=>$diagnostico['erro'],'external_reference'=>$referencia]);
+    }
+
+    private function sanitizarDadosGateway(array $dados, int $nivel = 0): array
+    {
+        if($nivel >= 4){ return []; }
+        $seguro = [];
+        foreach(array_slice($dados, 0, 50, true) as $chave=>$valor){
+            if(is_string($chave) && preg_match('/token|authorization|secret|password|senha|credential|api.?key/i', $chave)){ continue; }
+            $chaveNumerica = is_int($chave) || ctype_digit((string) $chave);
+            $permitida = $chaveNumerica || in_array((string) $chave, ['errors','error','code','description','message','status','id','externalReference','dueDate','value','billingType'], true);
+            if(!$permitida){ continue; }
+            if(is_array($valor)){
+                $seguro[$chave] = $this->sanitizarDadosGateway($valor, $nivel + 1);
+            }elseif(is_scalar($valor) || $valor === null){
+                $seguro[$chave] = is_string($valor) ? $this->sanitizarTextoGateway($valor) : $valor;
+            }
+        }
+        return $seguro;
+    }
+
+    private function sanitizarTextoGateway($texto): string
+    {
+        $texto = preg_replace('/[\r\n\t]+/', ' ', trim((string) $texto));
+        $texto = preg_replace('/(token|authorization|bearer|secret|password|senha|credential|api.?key)\s*[:=]?\s*\S+/i', '$1=[removido]', $texto);
+        return mb_substr($texto, 0, 500, 'UTF-8');
     }
 
     private function log(string $evento, array $dados): void
