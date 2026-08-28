@@ -5,6 +5,8 @@ require_once __DIR__ . '/../app/Services/Tasks/TaskHandlerInterface.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskRetryException.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskPermanentFailureException.php';
 require_once __DIR__ . '/../app/Services/Tasks/TesteSchedulerHandler.php';
+require_once __DIR__ . '/../app/Services/FinanceiroRecorrenciaService.php';
+require_once __DIR__ . '/../app/Services/Tasks/FinanceiroGerarCobrancasRecorrentesHandler.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskRegistry.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskRetryPolicy.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskDispatcher.php';
@@ -14,15 +16,19 @@ require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerCliOutput.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerLoggingException.php';
 require_once __DIR__ . '/../app/Services/Tasks/TaskSchedulerLogger.php';
 require_once __DIR__ . '/../app/Services/TaskSchedulerService.php';
+require_once __DIR__ . '/../app/Services/FinanceiroSchedulerBootstrapService.php';
 
 use Models\TarefaAgendada;
 use Services\TaskSchedulerService;
+use Services\FinanceiroSchedulerBootstrapService;
+use Services\FinanceiroRecorrenciaService;
 use Services\Tasks\TaskDispatcher;
 use Services\Tasks\TaskExecutionService;
 use Services\Tasks\TaskProcessor;
 use Services\Tasks\TaskRegistry;
 use Services\Tasks\TaskHandlerInterface;
 use Services\Tasks\TaskPermanentFailureException;
+use Services\Tasks\FinanceiroGerarCobrancasRecorrentesHandler;
 use Services\Tasks\TaskSchedulerLogger;
 use Services\Tasks\TaskSchedulerCliOutput;
 
@@ -103,5 +109,21 @@ foreach($linhasLog as $linhaLog){
     taskAssert(is_array($eventoLog) && isset($eventoLog['data'],$eventoLog['nivel'],$eventoLog['status']),'log deve ser JSONL estruturado');
     taskAssert(strpos($linhaLog,'secreto')===false && strpos($linhaLog,'privada')===false && strpos($linhaLog,'confidencial')===false,'log não deve expor payload ou credenciais');
 }
+
+class TaskFinanceiroRecorrenciaFake extends FinanceiroRecorrenciaService {
+    public $execucoes=0; public $resultado=['erros'=>0];
+    public function __construct(){}
+    public function gerarCobrancasRecorrentes(){ $this->execucoes++; return $this->resultado; }
+}
+$financeiroFake=new TaskFinanceiroRecorrenciaFake();
+(new FinanceiroGerarCobrancasRecorrentesHandler($financeiroFake))->executar([]);
+taskAssert($financeiroFake->execucoes===1,'handler financeiro delega à fachada de recorrência');
+
+$dbFinanceiro=taskDb();$repoFinanceiro=new TarefaAgendada($dbFinanceiro);$registryFinanceiro=new TaskRegistry();$schedulerFinanceiro=new TaskSchedulerService($repoFinanceiro,$registryFinanceiro);
+$relogio=function(){return new DateTimeImmutable('2026-08-28 09:00:00');};
+$bootstrap=new FinanceiroSchedulerBootstrapService($schedulerFinanceiro,$relogio);
+$primeira=$bootstrap->garantirExecucaoDiaria();$segunda=$bootstrap->garantirExecucaoDiaria();
+taskAssert($primeira['criada']===true&&$segunda['criada']===false&&$primeira['id']===$segunda['id'],'bootstrap não duplica execução financeira diária');
+taskAssert($registryFinanceiro->possui(FinanceiroSchedulerBootstrapService::TIPO),'handler financeiro está registrado');
 
 echo "TaskSchedulerTest OK\n";

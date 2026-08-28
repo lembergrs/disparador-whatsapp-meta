@@ -30,7 +30,7 @@ class FwAssinaturas {
     public function cancelarVigentesPorCliente($c){foreach($this->rows as &$r){if($r['CLI_ID']==$c&&in_array($r['ASS_Status'],['ativa','pendente']))$r['ASS_Status']='cancelada';}return true;}
     public function buscarUltimaPorCliente($c){foreach(array_reverse($this->rows,true) as $r){if($r['CLI_ID']==$c)return $r;}return null;}
     public function buscarPorId($id){return $this->rows[$id]??null;}
-    public function listarParaRecorrencia(){return array_values(array_filter($this->rows,fn($r)=>$r['ASS_Status']==='ativa'&&$r['ASS_DataProximaCobranca']<=date('Y-m-d')));}
+    public function listarParaRecorrencia($dias=0){$limite=date('Y-m-d',strtotime('+'.(int)$dias.' days'));return array_values(array_filter($this->rows,fn($r)=>$r['ASS_Status']==='ativa'&&$r['ASS_DataProximaCobranca']<=$limite));}
     public function avancarProximaCobrancaSeCiclo($id,$ciclo,$proxima){
         if($this->falharAvanco){$this->falharAvanco=false;throw new RuntimeException('falha simulada');}
         if(($this->rows[$id]['ASS_DataProximaCobranca']??null)===$ciclo){$this->rows[$id]['ASS_DataProximaCobranca']=$proxima;return true;}return false;
@@ -65,14 +65,14 @@ class FwCobrancas {
 }
 class FwPlanos { public $p=['PLA_ID'=>1,'PLA_Nome'=>'Plano','PLA_Valor'=>10,'PLA_ValorMensal'=>10,'PLA_ValorTrimestral'=>30,'PLA_ValorSemestral'=>60,'PLA_ValorAnual'=>120,'PLA_Periodicidade'=>'mensal','PLA_LimiteNumeros'=>2];public function buscar($id){return $id===1?$this->p:null;} }
 class FwAsaas {
-    public $payments=[]; public $posts=0; public $falharCriacao=false; public $values=[];
+    public $payments=[]; public $posts=0; public $falharCriacao=false; public $values=[]; public $dueDates=[]; public $erroDetalhado=false;
     public function criarOuAtualizarCliente($c){return ['sucesso'=>true,'response'=>['id'=>'cus_1']];}
     public function buscarCobrancaPorReferenciaExterna($ref){return ['sucesso'=>true,'response'=>['data'=>isset($this->payments[$ref])?[$this->payments[$ref]]:[]]];}
-    public function criarCobranca($c,$b,$ref=null){$this->posts++;$this->values[]=(string)$b['COB_Valor'];if($this->falharCriacao)return ['sucesso'=>false,'response'=>[]];$ref=$ref?:'cobranca_'.$b['COB_ID'];$id='pay_'.$b['COB_ID'].($this->posts>1?'_'.$this->posts:'');return ['sucesso'=>true,'response'=>$this->payments[$ref]=['id'=>$id,'status'=>'PENDING','invoiceUrl'=>'https://teste.local/fatura','externalReference'=>$ref]];}
+    public function criarCobranca($c,$b,$ref=null){$this->posts++;$this->values[]=(string)$b['COB_Valor'];$this->dueDates[]=$b['provider_due_date']??$b['COB_DataVencimento'];if($this->falharCriacao)return $this->erroDetalhado?['sucesso'=>false,'http_code'=>503,'endpoint'=>'/payments','method'=>'POST','erro'=>'temporário token=segredo','response'=>['errors'=>[['description'=>'indisponível']]]]:['sucesso'=>false,'response'=>[]];$ref=$ref?:'cobranca_'.$b['COB_ID'];$id='pay_'.$b['COB_ID'].($this->posts>1?'_'.$this->posts:'');return ['sucesso'=>true,'response'=>$this->payments[$ref]=['id'=>$id,'status'=>'PENDING','invoiceUrl'=>'https://teste.local/fatura','externalReference'=>$ref]];}
     public function consultarCobranca($id){foreach($this->payments as $p){if($p['id']===$id)return ['sucesso'=>true,'http_code'=>200,'response'=>$p];}return ['sucesso'=>false,'http_code'=>404,'response'=>[]];}
     public function buscarPixQrCode($id){return ['sucesso'=>true,'response'=>['payload'=>'pix','encodedImage'=>'qr']];}
 }
-class FwRecorrencia {public function diasTolerancia(){return 5;}public function calcularProximaData($c,$d){return date('Y-m-d',strtotime('+1 month',strtotime($d)));}}
+class FwRecorrencia {public function diasTolerancia(){return 5;}public function diasAntecedencia(){return 7;}public function vencimentoEfetivoGateway($c,$h=null){$h=$h?:date('Y-m-d');return $c<$h?date('Y-m-d',strtotime('+3 days',strtotime($h))):$c;}public function calcularProximaData($c,$d){$m=['mensal'=>1,'trimestral'=>3,'semestral'=>6,'anual'=>12][$c]??1;return date('Y-m-d',strtotime('+'.$m.' months',strtotime($d)));}}
 class FwMetas {public function validarLimiteNumerosPlano(){return ['permitido'=>true];}}
 class FwDescontos {
     public $total=0;public $preparadas=[];public $confirmadas=[];public $liberadas=[];public $garantidas=[];public $estados=[];
@@ -229,6 +229,25 @@ $w->processarPagamentoWebhook(['id'=>'evt_primeira_50','event'=>'PAYMENT_CONFIRM
 fwAssert(empty($descontos6->confirmadas)&&empty($descontos6->liberadas),'benefício inicial de 50% não movimenta créditos de indicação');
 
 $descontos4=new FwDescontos();$descontos4->total=150;$w=novoWorkflow($cli,$ass,$cob,$asaas,$descontos4);$anterior=$cob->criar(['cliente'=>1,'plano'=>1,'assinatura'=>1,'valor'=>'10.00','vencimento'=>'2026-01-01','tipo'=>'mensalidade']);$cob->rows[$anterior]['COB_Status']='pago';$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['valor'=>'10.00','proxima_cobranca'=>date('Y-m-d')]);$w->gerarCobrancasRecorrentes();$w->cancelarCobranca(2);$w->cancelarCobranca(2);fwAssert(($descontos4->estados['cobranca:2']??null)==='liberada'&&count($descontos4->liberadas)===1,'cancelamento terminal repetido permanece idempotente');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>date('Y-m-d',strtotime('+8 days'))]);$w->gerarCobrancasRecorrentes();
+fwAssert(count($cob->rows)===0,'D-8 ainda não gera cobrança');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d',strtotime('+7 days'));$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$competencia]);$w->gerarCobrancasRecorrentes();
+fwAssert(count($cob->rows)===1&&$cob->rows[1]['COB_DataVencimento']===$competencia&&$asaas->dueDates[0]===$competencia,'D-7 gera preservando vencimento contratual');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d');$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$competencia]);$w->gerarCobrancasRecorrentes();
+fwAssert(count($cob->rows)===1&&$asaas->dueDates[0]===$competencia,'D0 gera normalmente');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d',strtotime('-11 days'));$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$competencia]);$w->gerarCobrancasRecorrentes();
+fwAssert($cob->rows[1]['COB_DataVencimento']===$competencia&&$asaas->dueDates[0]===date('Y-m-d',strtotime('+3 days')),'competência atrasada é preservada localmente e recebe vencimento efetivo de recuperação');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d');$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['ciclo'=>'trimestral','proxima_cobranca'=>$competencia]);$w->gerarCobrancasRecorrentes();
+fwAssert($ass->rows[1]['ASS_DataProximaCobranca']===date('Y-m-d',strtotime('+3 months',strtotime($competencia))),'trimestral avança três meses desde a competência');
+
+$w=novoWorkflow($cli,$ass,$cob,$asaas);$competencia=date('Y-m-d');$ass->criarOuAtualizarPorCliente(1,(new FwPlanos())->p,'ativa',['proxima_cobranca'=>$competencia]);$asaas->falharCriacao=true;$asaas->erroDetalhado=true;$w->gerarCobrancasRecorrentes();$diagnostico=json_decode($cob->rows[1]['COB_ProviderPayload'],true);
+fwAssert($ass->rows[1]['ASS_DataProximaCobranca']===$competencia&&$diagnostico['http_code']===503&&$diagnostico['endpoint']==='/payments'&&$diagnostico['method']==='POST'&&$diagnostico['externalReference']==='cobranca_1','falha não avança competência e preserva diagnóstico útil');
+fwAssert(strpos($cob->rows[1]['COB_ProviderPayload'],'segredo')===false&&strpos($diagnostico['erro'],'[removido]')!==false,'diagnóstico remove segredo');
 
 $workflowFonte=file_get_contents(__DIR__.'/../app/Services/FinanceiroWorkflowService.php');
 fwAssert(strpos($workflowFonte,'selecionarDisponiveisFifo')===false&&strpos($workflowFonte,'ICR_Percentual')===false,'Financeiro não duplica FIFO nem cálculo percentual do domínio');
