@@ -62,3 +62,5 @@ Cada negativa por D+7 registra em `storage/logs/financeiro-acesso.log` apenas:
 - regra aplicada.
 
 Nenhum dado pessoal ou segredo do gateway é registrado.
+
+Para evitar repetição por chamadas do Auth e do worker, o evento é limitado a um registro por cliente, cobrança e data. A deduplicação usa um índice diário no mesmo diretório, protegido por bloqueio de arquivo, e portanto é compartilhada entre processos PHP sem depender de memória ou banco de dados.

@@ -26,12 +26,19 @@ class AccessCobrancasFake
         if(!$elegiveis)return false;$r=$elegiveis[0];$r['COB_VencimentoFinanceiro']=$r['COB_DataVencimentoEfetivo']??$r['COB_DataVencimento'];return $r;
     }
 }
-class AccessLoggerFake {public $rows=[];public function __invoke($dados){$this->rows[]=$dados;}}
+class AccessLoggerFake
+{
+    public $rows=[];
+    public $dir;
+    public function __construct(){$this->dir=sys_get_temp_dir().'/financeiro-access-log-'.uniqid('',true);mkdir($this->dir,0770,true);}
+    public function __invoke($dados){$this->rows[]=$dados;}
+    public function __destruct(){foreach(glob($this->dir.'/.financeiro-acesso-*')?:[] as $arquivo){unlink($arquivo);}@rmdir($this->dir);}
+}
 
-function accessPolicy($vencimento,$status='vencido',$assinaturaId=10,$efetivo=true){
+function accessPolicy($vencimento,$status='vencido',$assinaturaId=10,$efetivo=true,$diretorioObservabilidade=null){
     $assinaturas=new AccessAssinaturasFake();$cobrancas=new AccessCobrancasFake();
     if($vencimento!==null){$row=['COB_ID'=>20,'CLI_ID'=>1,'ASS_ID'=>$assinaturaId,'COB_Status'=>$status,'COB_DataVencimento'=>'2026-08-01'];if($efetivo)$row['COB_DataVencimentoEfetivo']=$vencimento;else $row['COB_DataVencimento']=$vencimento;$cobrancas->rows[]=$row;}
-    $logs=new AccessLoggerFake();$policy=new FinanceiroAccessPolicyService($assinaturas,$cobrancas,function(){return new DateTimeImmutable('2026-09-08');},$logs,7);
+    $logs=new AccessLoggerFake();$policy=new FinanceiroAccessPolicyService($assinaturas,$cobrancas,function(){return new DateTimeImmutable('2026-09-08');},$logs,7,$diretorioObservabilidade?:$logs->dir);
     return [$policy,$cobrancas,$logs];
 }
 
@@ -39,6 +46,10 @@ function accessPolicy($vencimento,$status='vencido',$assinaturaId=10,$efetivo=tr
 [$p]=accessPolicy('2026-09-07');$r=$p->avaliar(1);accessAssert($r['situacao']==='tolerancia'&&$r['dias_atraso']===1&&$r['acesso_operacional'],'D+1 permanece em tolerância');
 [$p]=accessPolicy('2026-09-02');accessAssert($p->avaliar(1)['situacao']==='tolerancia','D+6 permanece em tolerância');
 [$p,$c,$logs]=accessPolicy('2026-09-01');$r=$p->avaliar(1);accessAssert($r['situacao']==='suspenso'&&$r['dias_atraso']===7&&!$r['acesso_operacional']&&$r['cobranca_id']===20,'D+7 suspende com cobrança responsável');accessAssert(count($logs->rows)===1&&$logs->rows[0]['regra']==='inadimplencia_d_7','suspensão gera log técnico');
+$dedupDir=sys_get_temp_dir().'/financeiro-access-dedup-'.uniqid('',true);mkdir($dedupDir,0770,true);
+[$p,$c,$logs]=accessPolicy('2026-09-01','vencido',10,true,$dedupDir);$p->avaliar(1);$p->avaliar(1);accessAssert(count($logs->rows)===1,'avaliações repetidas geram apenas um log diário por cliente e cobrança');
+[$p2,$c2,$logs2]=accessPolicy('2026-09-01','vencido',10,true,$dedupDir);$p2->avaliar(1);accessAssert(count($logs2->rows)===0,'deduplicação compartilhada funciona entre instâncias PHP distintas');
+foreach(glob($dedupDir.'/.financeiro-acesso-*')?:[] as $arquivo){unlink($arquivo);}rmdir($dedupDir);
 [$p]=accessPolicy('2026-08-31');accessAssert($p->avaliar(1)['situacao']==='suspenso','D+8 continua suspenso');
 [$p]=accessPolicy('2026-09-05','vencido',10,true);accessAssert($p->avaliar(1)['dias_atraso']===3,'vencimento efetivo prevalece sobre competência antiga');
 [$p]=accessPolicy('2026-09-01','vencido',10,false);accessAssert($p->avaliar(1)['situacao']==='suspenso','vencimento contratual é fallback quando efetivo é nulo');

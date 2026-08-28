@@ -12,14 +12,16 @@ class FinanceiroAccessPolicyService
     private $agora;
     private $logger;
     private $diasTolerancia;
+    private $diretorioObservabilidade;
 
-    public function __construct($assinaturas = null, $cobrancas = null, callable $agora = null, callable $logger = null, $diasTolerancia = null)
+    public function __construct($assinaturas = null, $cobrancas = null, callable $agora = null, callable $logger = null, $diasTolerancia = null, $diretorioObservabilidade = null)
     {
         $this->assinaturas = $assinaturas ?: new Assinatura();
         $this->cobrancas = $cobrancas ?: new Cobranca();
         $this->agora = $agora ?: function(){ return new \DateTimeImmutable('today'); };
         $this->logger = $logger;
         $this->diasTolerancia = max(1, (int) ($diasTolerancia ?? (defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') ? FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO : 7)));
+        $this->diretorioObservabilidade = $diretorioObservabilidade;
     }
 
     public function avaliar(int $clienteId): array
@@ -36,7 +38,7 @@ class FinanceiroAccessPolicyService
         $diasAtraso = (int) $vencimento->diff($hoje)->format('%a');
         $situacao = $diasAtraso >= $this->diasTolerancia ? 'suspenso' : 'tolerancia';
         $resultado = $this->resultado($situacao, true, $assinatura, $cobranca, $diasAtraso, $vencimento->format('Y-m-d'));
-        if($situacao === 'suspenso'){ $this->registrarSuspensao($clienteId, $resultado); }
+        if($situacao === 'suspenso'){ $this->registrarSuspensao($clienteId, $resultado, $hoje->format('Y-m-d')); }
         return $resultado;
     }
 
@@ -65,12 +67,35 @@ class FinanceiroAccessPolicyService
         ];
     }
 
-    private function registrarSuspensao(int $clienteId, array $resultado): void
+    private function registrarSuspensao(int $clienteId, array $resultado, string $dataReferencia): void
     {
-        $dados = ['data'=>date('c'),'evento'=>'acesso_financeiro_negado','cliente_id'=>$clienteId,'cobranca_id'=>$resultado['cobranca_id'],'vencimento'=>$resultado['vencimento'],'dias_atraso'=>$resultado['dias_atraso'],'regra'=>$resultado['regra']];
-        if($this->logger){ call_user_func($this->logger, $dados); return; }
-        $dir = function_exists('diretorioLogsProjeto') ? diretorioLogsProjeto() : dirname(__DIR__, 2) . '/storage/logs';
+        $dir = $this->diretorioObservabilidade ?: (function_exists('diretorioLogsProjeto') ? diretorioLogsProjeto() : dirname(__DIR__, 2) . '/storage/logs');
         if(!is_dir($dir)){ mkdir($dir, 0770, true); }
-        error_log(json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $dir . '/financeiro-acesso.log');
+        $indice = fopen($dir . '/.financeiro-acesso-' . $dataReferencia . '.idx', 'c+');
+        if($indice === false || !flock($indice, LOCK_EX)){
+            if(is_resource($indice)){ fclose($indice); }
+            return;
+        }
+
+        try{
+            $chave = hash('sha256', $clienteId . '|' . (int) $resultado['cobranca_id'] . '|' . $dataReferencia);
+            rewind($indice);
+            while(($linha = fgets($indice)) !== false){
+                if(trim($linha) === $chave){ return; }
+            }
+
+            $dados = ['data'=>date('c'),'evento'=>'acesso_financeiro_negado','cliente_id'=>$clienteId,'cobranca_id'=>$resultado['cobranca_id'],'vencimento'=>$resultado['vencimento'],'dias_atraso'=>$resultado['dias_atraso'],'regra'=>$resultado['regra']];
+            if($this->logger){
+                call_user_func($this->logger, $dados);
+            }else{
+                error_log(json_encode($dados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $dir . '/financeiro-acesso.log');
+            }
+            fseek($indice, 0, SEEK_END);
+            fwrite($indice, $chave . PHP_EOL);
+            fflush($indice);
+        }finally{
+            flock($indice, LOCK_UN);
+            fclose($indice);
+        }
     }
 }
