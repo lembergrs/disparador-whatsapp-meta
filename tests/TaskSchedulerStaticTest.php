@@ -11,7 +11,8 @@ taskStaticAssert(strpos($cli,'TaskExecutionService')!==false && strpos($cli,'pro
 taskStaticAssert(strpos($execution,'TaskProcessor')!==false && strpos($execution,'processarLote')!==false,'execução sob demanda deve delegar ao TaskProcessor');
 taskStaticAssert(strpos($migration,'UNIQUE KEY uk_tarefas_agendadas_idempotencia')!==false,'idempotência deve estar no banco');
 taskStaticAssert(strpos($migration,'idx_tarefas_agendadas_elegiveis')!==false && strpos($migration,'idx_tarefas_agendadas_lease')!==false,'migration deve indexar elegibilidade e lease');
-taskStaticAssert(substr_count($registry,'teste_scheduler')===1 && strpos($registry,'liberar_credito_indicacao')===false,'catálogo inicial deve conter apenas teste interno');
+taskStaticAssert(substr_count($registry,'teste_scheduler')===1 && strpos($registry,'financeiro_gerar_cobrancas_recorrentes')!==false,'catálogo registra tarefa financeira sem duplicar teste interno');
+taskStaticAssert(strpos($cli,'FinanceiroSchedulerBootstrapService')!==false&&strpos($cli,'garantirExecucaoDiaria')!==false,'CLI garante bootstrap financeiro diário');
 foreach(['eval(','unserialize(','shell_exec(','system(','passthru('] as $perigoso){taskStaticAssert(strpos($service.$registry.$execution,$perigoso)===false,"não deve conter {$perigoso}");}
 taskStaticAssert(strpos($cli,'while(true)')===false,'processador não deve ser daemon');
 echo "TaskSchedulerStaticTest OK\n";

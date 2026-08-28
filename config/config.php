@@ -80,6 +80,10 @@ defined('TASK_SCHEDULER_LOG_FILE') || define('TASK_SCHEDULER_LOG_FILE', env_valo
 
 // Dias de tolerância financeira após vencimento antes do bloqueio operacional.
 defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO') || define('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO', 5);
+// A competência continua sendo o vencimento; esta antecedência controla apenas quando a cobrança nasce.
+defined('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA') || define('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA', max(0, (int) env_valor('FINANCEIRO_DIAS_ANTECEDENCIA_COBRANCA', 7)));
+// Prazo real concedido quando uma competência atrasada ainda não chegou ao gateway.
+defined('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO') || define('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO', max(1, (int) env_valor('FINANCEIRO_DIAS_VENCIMENTO_RECUPERACAO', 3)));
 
 // App Secret usado para validar X-Hub-Signature-256 do webhook da Meta.
 defined('META_APP_ID') || define('META_APP_ID', env_valor('META_APP_ID', ''));

@@ -142,7 +142,7 @@ class AsaasService
         $payload = [
             'customer' => $cliente['CLI_ProviderCustomerId'],
             'billingType' => 'UNDEFINED',
-            'dueDate' => $cobranca['COB_DataVencimento'],
+            'dueDate' => $cobranca['COB_DataVencimentoEfetivo'] ?? $cobranca['COB_DataVencimento'],
             'value' => $composicao['valor_nominal'],
             'description' => $cobranca['descricao'] ?? 'Mensalidade Disparador.net',
             'externalReference' => $externalReference ?: 'cobranca_' . $cobranca['COB_ID']
