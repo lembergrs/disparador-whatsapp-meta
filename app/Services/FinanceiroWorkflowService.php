@@ -290,8 +290,6 @@ class FinanceiroWorkflowService
                 $resultado['cobrancas_vencidas']++;
                 $clienteId = (int) $cobranca['CLI_ID'];
                 if(!isset($clientes[$clienteId])){
-                    $assinatura = $this->assinaturas->buscarVigentePorCliente($clienteId);
-                    if($assinatura){ $this->assinaturas->marcarVencida($assinatura['ASS_ID']); $resultado['assinaturas_vencidas']++; }
                     $this->clientes->atualizarEstadoFinanceiro($clienteId, ['status_pagamento'=>'pendente']);
                     $clientes[$clienteId] = true;
                     $resultado['clientes_atualizados']++;

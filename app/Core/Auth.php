@@ -283,18 +283,23 @@ class Auth
 
         $usuario = self::usuario();
 
+        if(($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'){
+            return false;
+        }
+
+        $financeiro = (new \Services\FinanceiroAccessPolicyService())->avaliar((int) $usuario['CLI_ID']);
+        if(!empty($financeiro['vinculo_ativo'])){
+            return !empty($financeiro['acesso_operacional']);
+        }
+
         if(
             ($usuario['CLI_StatusPagamento'] ?? null) == 'pago'
-            &&
-            ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
         ){
             return true;
         }
 
         if(
             ($usuario['CLI_StatusPagamento'] ?? null) != 'pendente'
-            ||
-            ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
         ){
             return false;
         }
@@ -349,37 +354,6 @@ class Auth
         $avaliacao = self::dadosAvaliacaoCliente(false);
 
         return !$avaliacao['ativo'];
-    }
-
-
-    private static function clienteEmToleranciaFinanceira($clienteId)
-    {
-        if(empty($clienteId)){
-            return false;
-        }
-
-        $diasTolerancia = defined('FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO')
-            ? (int) FINANCEIRO_DIAS_TOLERANCIA_VENCIMENTO
-            : 5;
-
-        $db = Database::getInstance();
-
-        $sql = $db->prepare("
-            SELECT COB_ID
-            FROM cobrancas
-            WHERE CLI_ID = ?
-            AND COB_Status = 'vencido'
-            AND COB_DataVencimento >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-            ORDER BY COB_DataVencimento DESC
-            LIMIT 1
-        ");
-
-        $sql->execute([
-            $clienteId,
-            $diasTolerancia
-        ]);
-
-        return (bool) $sql->fetch(\PDO::FETCH_ASSOC);
     }
 
     public static function dadosAvaliacaoCliente($atualizar = true)
