@@ -15,13 +15,16 @@ class WorkerOperationalValidatorService
     private $metaModel;
     private $consumoModel;
     private $financeiroAccessPolicy;
+    private $metaHealthResolver;
+    private $aptidaoMetaCache = [];
 
-    public function __construct($clienteModel = null, $metaModel = null, $consumoModel = null, $financeiroAccessPolicy = null)
+    public function __construct($clienteModel = null, $metaModel = null, $consumoModel = null, $financeiroAccessPolicy = null, $metaHealthResolver = null)
     {
         $this->clienteModel = $clienteModel ?: new Cliente();
         $this->metaModel = $metaModel ?: new MetaConta();
         $this->consumoModel = $consumoModel ?: new ConsumoMensal();
         $this->financeiroAccessPolicy = $financeiroAccessPolicy ?: new FinanceiroAccessPolicyService();
+        $this->metaHealthResolver = $metaHealthResolver;
     }
 
     public function validarEnvio(int $clienteId, int $metaId, string $numero = ''): array
@@ -69,6 +72,21 @@ class WorkerOperationalValidatorService
         $statusMeta = strtolower((string) ($meta['MTA_Status'] ?? ''));
         if($statusMeta !== 'conectado'){
             return $this->resultado('bloqueio_temporario', 'meta_status_bloqueado', 'O número remetente ainda não concluiu o registro no WhatsApp.');
+        }
+
+        $cacheKey = $clienteId . ':' . $metaId;
+        if(!isset($this->aptidaoMetaCache[$cacheKey])){
+            $diagnostico = null;
+            if(($meta['MTA_PagamentoMetaStatus'] ?? null) === 'confirmado_cliente'){
+                $diagnostico = is_callable($this->metaHealthResolver)
+                    ? call_user_func($this->metaHealthResolver, $meta)
+                    : MetaHealthService::consultarConta($meta);
+            }
+            $this->aptidaoMetaCache[$cacheKey] = MetaHealthService::avaliarAptidaoEnvio($meta, $diagnostico);
+        }
+
+        if(!$this->aptidaoMetaCache[$cacheKey]['permitido']){
+            return $this->aptidaoMetaCache[$cacheKey];
         }
 
         $numeroNormalizado = preg_replace('/\D/', '', $numero);

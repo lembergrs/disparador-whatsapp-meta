@@ -10,6 +10,57 @@ class MetaHealthService
     const META_BUSINESS_SETTINGS_URL = 'https://business.facebook.com/settings/';
     const META_BUSINESS_SUPPORT_URL = 'https://business.facebook.com/business-support-home/';
 
+    public static function avaliarAptidaoEnvio(array $conta, ?array $diagnostico = null): array
+    {
+        if(($conta['MTA_PagamentoMetaStatus'] ?? null) !== 'confirmado_cliente'){
+            return self::resultadoAptidao(false, 'pagamento_meta_pendente', 'Envio bloqueado: configure a forma de pagamento da sua conta do WhatsApp na Meta.');
+        }
+
+        $diagnostico = $diagnostico ?? self::consultarConta($conta);
+        $canSend = strtoupper((string) ($diagnostico['can_send_message'] ?? ''));
+
+        if($canSend === 'BLOCKED'){
+            return self::resultadoAptidao(false, 'meta_health_blocked', self::mensagemBloqueioDiagnostico($diagnostico));
+        }
+
+        foreach(($diagnostico['erros'] ?? []) as $erro){
+            if(($erro['nivel'] ?? 'warning') === 'danger'){
+                return self::resultadoAptidao(false, (string) ($erro['codigo'] ?? 'meta_health_critico'), self::mensagemErro($erro));
+            }
+        }
+
+        return self::resultadoAptidao(true, null, null, ['diagnostico' => $diagnostico]);
+    }
+
+    private static function resultadoAptidao(bool $permitido, ?string $codigo, ?string $mensagem, array $extra = []): array
+    {
+        return array_merge([
+            'permitido' => $permitido,
+            'status' => $permitido ? 'permitido' : 'bloqueio_definitivo',
+            'codigo' => $codigo,
+            'mensagem' => $mensagem
+        ], $extra);
+    }
+
+    private static function mensagemBloqueioDiagnostico(array $diagnostico): string
+    {
+        foreach(($diagnostico['erros'] ?? []) as $erro){
+            if(($erro['nivel'] ?? 'warning') === 'danger'){
+                return self::mensagemErro($erro);
+            }
+        }
+
+        return 'Envio bloqueado pela Meta. Consulte o WhatsApp Manager para verificar a situação da conta.';
+    }
+
+    private static function mensagemErro(array $erro): string
+    {
+        $titulo = trim((string) ($erro['titulo'] ?? 'A Meta bloqueou o envio desta conta.'));
+        $solucao = trim((string) ($erro['solucao'] ?? ''));
+
+        return $solucao !== '' ? $titulo . '. ' . $solucao : $titulo;
+    }
+
     public static function consultarConta(array $conta)
     {
         if(empty($conta['MTA_Token']) || empty($conta['MTA_WabaId'])){

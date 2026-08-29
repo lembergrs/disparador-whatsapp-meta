@@ -57,6 +57,13 @@ $adminPodeAtualizarStatusMeta =
 
     <div class="col-md-8">
 
+        <?php if($podeConectarNumero){ ?>
+            <div class="callout callout-info">
+                <h5><i class="fas fa-info-circle mr-1"></i> Plano e tarifas do WhatsApp</h5>
+                <p class="mb-0">Além do plano do Disparador, a Meta cobra diretamente as tarifas de uso do WhatsApp Business. Para iniciar conversas e campanhas, será necessário cadastrar uma forma de pagamento válida na Meta após conectar o número.</p>
+            </div>
+        <?php } ?>
+
         <div class="card">
 
             <div class="card-header">
@@ -221,8 +228,10 @@ $adminPodeAtualizarStatusMeta =
                                         <td>
                                             <?php if(($conta['MTA_PagamentoMetaStatus']??null)!=='confirmado_cliente'){ ?><a class="btn btn-warning btn-sm" target="_blank" rel="noopener noreferrer" href="https://business.facebook.com/wa/manage/home/"><i class="fas fa-external-link-alt"></i> Configurar na Meta</a>
                                             <form method="POST" action="<?= BASE_URL; ?>/index.php?url=configuracao/confirmarPagamentoMeta" class="d-inline"><?= \Core\Csrf::input(); ?><input type="hidden" name="conta_id" value="<?= (int)$conta['MTA_ID']; ?>"><button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Já configurei</button></form><?php } ?>
-                                            <?php if(($conta['MTA_Status'] ?? '') === 'conectado'){ ?>
+                                            <?php if(($conta['MTA_Status'] ?? '') === 'conectado' && $pagamentoStatus === 'confirmado_cliente'){ ?>
                                                 <div class="alert alert-success py-1 mb-2">WhatsApp conectado e pronto para uso.</div>
+                                            <?php }elseif(($conta['MTA_Status'] ?? '') === 'conectado'){ ?>
+                                                <div class="alert alert-warning py-1 mb-2">Número conectado. Falta configurar ou confirmar a forma de pagamento na Meta para liberar os envios.</div>
                                             <?php }elseif(in_array(($conta['MTA_Status'] ?? ''), ['pendente_registro', 'erro_registro'], true)){ ?>
                                                 <div class="alert <?= ($conta['MTA_Status'] ?? '') === 'erro_registro' ? 'alert-danger' : 'alert-warning'; ?> py-1 mb-2">Seu número foi vinculado à Meta, mas ainda falta concluir o registro para liberar os envios.</div>
                                             <?php } ?>
