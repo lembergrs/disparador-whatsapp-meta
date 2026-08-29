@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../app/Services/FinanceiroAccessPolicyService.php';
+require_once __DIR__ . '/../app/Services/MetaHealthService.php';
 require_once __DIR__ . '/../app/Services/WorkerOperationalValidatorService.php';
 
 use Services\FinanceiroAccessPolicyService;
@@ -59,11 +60,11 @@ foreach(glob($dedupDir.'/.financeiro-acesso-*')?:[] as $arquivo){unlink($arquivo
 [$p,$c]=accessPolicy('2026-09-01');accessAssert($p->avaliar(1)['situacao']==='suspenso','cliente começa suspenso');$c->rows[0]['COB_Status']='pago';accessAssert($p->avaliar(1)['situacao']==='regular','pagamento libera imediatamente pela política local');
 
 class AccessClienteFake {public $row=['CLI_ID'=>1,'CLI_Ativo'=>'S','CLI_StatusCadastro'=>'ativo','CLI_StatusPagamento'=>'pago','PLA_LimiteMensagens'=>1000];public function buscarComPlano($id){return $this->row;}}
-class AccessMetaFake {public function buscarPorCliente(){return ['MTA_Token'=>'x','MTA_PhoneNumberId'=>'1','MTA_UrlBase'=>'https://meta.test','MTA_Status'=>'conectado'];}}
+class AccessMetaFake {public function buscarPorCliente(){return ['MTA_Token'=>'x','MTA_PhoneNumberId'=>'1','MTA_UrlBase'=>'https://meta.test','MTA_Status'=>'conectado','MTA_PagamentoMetaStatus'=>'confirmado_cliente'];}}
 class AccessConsumoFake {public function buscarMesAtual(){return ['CMS_Mensagens'=>0];}}
 class AccessPolicyFake {public $resultado;public function avaliar(){return $this->resultado;}}
 $policyFake=new AccessPolicyFake();$policyFake->resultado=['situacao'=>'tolerancia','vinculo_ativo'=>true,'acesso_operacional'=>true,'cobranca_id'=>20,'dias_atraso'=>6,'vencimento'=>'2026-09-02'];
-$worker=new WorkerOperationalValidatorService(new AccessClienteFake(),new AccessMetaFake(),new AccessConsumoFake(),$policyFake);
+$worker=new WorkerOperationalValidatorService(new AccessClienteFake(),new AccessMetaFake(),new AccessConsumoFake(),$policyFake,function(){return ['disponivel'=>true,'can_send_message'=>'AVAILABLE','erros'=>[]];});
 accessAssert($worker->validarEnvio(1,1,'41999999999')['permitido'],'worker permite cobrança em tolerância');
 $policyFake->resultado=['situacao'=>'suspenso','vinculo_ativo'=>true,'acesso_operacional'=>false,'cobranca_id'=>20,'dias_atraso'=>7,'vencimento'=>'2026-09-01','regra'=>'inadimplencia_d_7'];
 $bloqueio=$worker->validarEnvio(1,1,'41999999999');accessAssert(!$bloqueio['permitido']&&$bloqueio['codigo']==='financeiro_inadimplente_d7'&&$bloqueio['financeiro']['cobranca_id']===20,'worker bloqueia pela mesma política D+7');

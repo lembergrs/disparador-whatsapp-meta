@@ -16,6 +16,7 @@ use Models\ListaContatoItem;
 use Models\Cliente;
 use Services\ControlePlanoService;
 use Services\DisparoManualQueueService;
+use Services\MetaHealthService;
 
 class DisparoController extends Controller
 {
@@ -479,6 +480,9 @@ class DisparoController extends Controller
             \Core\Session::flash('error', 'Template inválido.');
             $this->redirect('disparo');
         }
+
+
+        $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $usuario['CLI_ID']);
 
         $meta =
             new MetaService(
@@ -1049,6 +1053,8 @@ class DisparoController extends Controller
                 throw new \Exception('Template não encontrado.');
             }
 
+            $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $usuario['CLI_ID'], true);
+
             $numero =
                 preg_replace(
                     '/\D/',
@@ -1254,6 +1260,9 @@ class DisparoController extends Controller
                 throw new \Exception('Template não encontrado.');
             }
 
+
+            $this->validarContaMetaParaEnvio($metaId, (int) $usuario['CLI_ID'], true);
+
             $destinosJson = $_POST['destinos_json'] ?? '[]';
             $destinos = json_decode($destinosJson, true);
 
@@ -1384,6 +1393,9 @@ class DisparoController extends Controller
             if(!$template || (int) $template['MTA_ID'] !== $metaId){
                 throw new \Exception('Template não encontrado.');
             }
+
+
+            $this->validarContaMetaParaEnvio($metaId, (int) $usuario['CLI_ID'], true);
 
             $destinos = json_decode($_POST['destinos_json'] ?? '[]', true);
 
@@ -1564,6 +1576,26 @@ class DisparoController extends Controller
                 'erro' => $e->getMessage()
             ], JSON_UNESCAPED_UNICODE);
         }
+    }
+
+    private function validarContaMetaParaEnvio(int $metaId, int $clienteId, bool $lancarExcecao = false): void
+    {
+        $conta = $this->metaModel->buscarPorCliente($metaId, $clienteId);
+        $aptidao = $conta ? MetaHealthService::avaliarAptidaoEnvio($conta) : [
+            'permitido' => false,
+            'mensagem' => 'Conta Meta não encontrada para este cliente.'
+        ];
+
+        if($aptidao['permitido']){
+            return;
+        }
+
+        if($lancarExcecao){
+            throw new \Exception($aptidao['mensagem']);
+        }
+
+        \Core\Session::flash('error', $aptidao['mensagem']);
+        $this->redirect('disparo');
     }
 
     public function statusLoteAjax()

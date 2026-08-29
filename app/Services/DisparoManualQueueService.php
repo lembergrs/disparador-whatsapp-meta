@@ -106,19 +106,17 @@ class DisparoManualQueueService
             $retorno = null;
 
             try{
-                if($origem !== 'ajax'){
-                    $validacao = $this->validator->validarEnvio(
-                        (int) $item['CLI_ID'],
-                        (int) $item['MTA_ID'],
-                        (string) $item['DMI_Numero']
-                    );
+                $validacao = $this->validator->validarEnvio(
+                    (int) $item['CLI_ID'],
+                    (int) $item['MTA_ID'],
+                    (string) $item['DMI_Numero']
+                );
 
-                    if(!$validacao['permitido']){
-                        $this->registrarBloqueioOperacional($item['DMI_ID'], $validacao);
-                        $resultado['bloqueados']++;
-                        $this->recalcularLote((int) $item['DML_ID']);
-                        continue;
-                    }
+                if(!$validacao['permitido']){
+                    $this->registrarBloqueioOperacional($item['DMI_ID'], $validacao);
+                    $resultado['bloqueados']++;
+                    $this->recalcularLote((int) $item['DML_ID']);
+                    continue;
                 }
 
                 $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);

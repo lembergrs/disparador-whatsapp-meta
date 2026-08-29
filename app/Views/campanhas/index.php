@@ -82,6 +82,8 @@ style="display:none;"
     </div>
 </div>
 
+<?php require dirname(__DIR__) . '/components/meta_costs_notice.php'; ?>
+
 <?php require dirname(__DIR__) . '/components/meta_send_block_alert.php'; ?>
 
 <div class="card">

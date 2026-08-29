@@ -17,6 +17,7 @@ use Models\MetaConta;
 use Models\Cliente;
 use Models\ConsumoMensal;
 use Services\AnalyticsService;
+use Services\MetaHealthService;
 
 class CampanhaController extends Controller
 {
@@ -104,6 +105,9 @@ class CampanhaController extends Controller
             Session::flash('error', 'Lista ou template inválido.');
             $this->redirect('campanha');
         }
+
+
+        $this->validarContaMetaParaEnvio((int) $template['MTA_ID'], (int) $usuario['CLI_ID']);
 
         $campanhaId =
             $this->campanhaModel->salvar([
@@ -417,6 +421,14 @@ class CampanhaController extends Controller
             return;
         }
 
+        $campanha = $this->campanhaModel->buscarPorCliente($id, $usuario['CLI_ID']);
+        if(!$campanha){
+            Session::flash('error', 'Campanha não encontrada.');
+            $this->redirect('campanha');
+        }
+
+        $this->validarContaMetaParaEnvio((int) $campanha['MTA_ID'], (int) $usuario['CLI_ID']);
+
         $this->campanhaModel->reagendar(
             $id,
             $usuario['CLI_ID'],
@@ -457,6 +469,9 @@ class CampanhaController extends Controller
             \Core\Session::flash('error', 'Campanha não encontrada.');
             $this->redirect('campanha');
         }
+
+
+        $this->validarContaMetaParaEnvio((int) $campanha['MTA_ID'], (int) $usuario['CLI_ID']);
 
         $contato =
             $this->campanhaModel->buscarContatoExemploPorCliente($campanhaId, $usuario['CLI_ID']);
@@ -541,6 +556,21 @@ class CampanhaController extends Controller
         $this->redirect(
             'campanha/preview&id=' . $campanhaId
         );
+    }
+
+    private function validarContaMetaParaEnvio(int $metaId, int $clienteId): void
+    {
+        $conta = (new MetaConta())->buscarPorCliente($metaId, $clienteId);
+        if(!$conta){
+            Session::flash('error', 'Conta Meta não encontrada para este cliente.');
+            $this->redirect('campanha');
+        }
+
+        $aptidao = MetaHealthService::avaliarAptidaoEnvio($conta);
+        if(!$aptidao['permitido']){
+            Session::flash('error', $aptidao['mensagem']);
+            $this->redirect('campanha');
+        }
     }
 
 }
