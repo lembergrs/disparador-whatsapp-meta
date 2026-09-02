@@ -16,7 +16,15 @@ SET ART_Conteudo = REPLACE(
     REPLACE(
         REPLACE(
             REPLACE(
-                ART_Conteudo,
+                REPLACE(
+                    REPLACE(
+                        ART_Conteudo,
+                        '<h2><br></h2>',
+                        ''
+                    ),
+                    'mensagens elegíveis entregues',
+                    'mensagens entregues conforme as regras aplicáveis'
+                ),
                 '<p>Em 2026, a cobrança da Meta é feita principalmente por <strong>mensagem de template entregue</strong>. Isso significa que não basta considerar apenas o número de contatos ou de campanhas: é necessário entender quais mensagens são cobradas, quais podem ser gratuitas e quais outros serviços fazem parte da estrutura.</p>',
                 '<p>Em 2026, a Meta utiliza cobrança por <strong>mensagem entregue, conforme a categoria e as regras aplicáveis</strong>. A partir de 1º de outubro, mensagens de Serviço também passam a integrar esse modelo. Por isso, não basta considerar apenas o número de contatos ou campanhas: é necessário avaliar a categoria, o mercado do destinatário, eventuais faixas de volume, franquias e janelas gratuitas aplicáveis.</p>'
             ),
