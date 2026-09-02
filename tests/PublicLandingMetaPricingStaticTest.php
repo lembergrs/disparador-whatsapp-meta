@@ -2,6 +2,8 @@
 
 $root = dirname(__DIR__);
 $home = file_get_contents($root . '/app/Views/site/home.php');
+$pricing = file_get_contents($root . '/app/Views/site/precos_whatsapp_meta.php');
+$publicCopy = $home . "\n" . $pricing;
 
 $assert = function($condition, $message){
     if(!$condition){
@@ -15,6 +17,12 @@ $assert(strpos($home, '1º de outubro de 2026') !== false, 'data da atualizaçã
 $assert(strpos($home, 'mensagens de Serviço') !== false, 'mensagens de Serviço ausentes');
 $assert(strpos($home, 'templates de Utilidade') !== false, 'templates de Utilidade ausentes');
 $assert(!preg_match('/R\$\s*0[,.]0(?:3(?:5)?|5)\b/', $home), 'tarifa fixa da Meta encontrada');
+$assert(strpos($pricing, 'dentro ou fora da janela de atendimento passam a ser cobrados por mensagem') !== false, 'Utilidade deve ser cobrada dentro e fora da janela a partir da vigência');
+$assert(strpos($pricing, 'janela gratuita de 72 horas') !== false, 'Free Entry Point de 72 horas ausente');
+$assert(strpos($publicCopy, 'eventuais franquias') !== false, 'comunicação deve admitir franquias aplicáveis a Serviço');
+$assert(!preg_match('/(?:Serviço|Service)[^.]{0,120}(?:desde a primeira|todas?[^.]{0,20}cobrad)/iu', $publicCopy), 'Serviço não pode ser apresentado como cobrado desde a primeira mensagem');
+$assert(!preg_match('/(?:Utility|Utilidade)[^.]{0,100}(?:grátis|gratuit)[^.]{0,40}(?:24\s*(?:h|horas)|janela)/iu', $publicCopy), 'Utilidade não pode ser apresentada como gratuita dentro de 24 horas após a vigência');
+$assert(strpos($publicCopy, 'mensalidade do Disparador.net') !== false && strpos($publicCopy, 'tarifas') !== false, 'mensalidade Disparador e tarifas Meta devem permanecer separadas');
 $assert(substr_count($home, '<h1') === 1, 'Home deve manter somente um H1');
 
 foreach(['header', 'hero', 'pricing', 'final_cta'] as $localizacao){

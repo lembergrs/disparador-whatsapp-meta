@@ -12,7 +12,7 @@ $perguntasFrequentes = [
     'Preciso contratar um plano antes de conectar o primeiro número?' => 'Não. O cliente elegível ao pré-trial pode conectar o primeiro número para iniciar a avaliação.',
     'Quem define os limites de envio?' => 'Os limites de envio são definidos e administrados pela Meta conforme os critérios aplicáveis à conta e ao número.',
     'O plano do Disparador aumenta automaticamente meu limite na Meta?' => 'Não. O limite do plano do Disparador.net e as faixas administradas pela Meta são capacidades diferentes.',
-    'A Meta cobra pelas mensagens?' => 'A Meta cobra pelo uso da WhatsApp Business Platform conforme sua política vigente. A cobrança pode variar de acordo com a categoria da mensagem e o mercado do destinatário. A partir de 1º de outubro de 2026, mensagens de Serviço — como respostas enviadas pela empresa durante a janela de atendimento de 24 horas — e templates de Utilidade enviados nessa janela também passam a ser cobrados pela Meta. Esses valores são independentes da mensalidade e da franquia de mensagens do Disparador.net.',
+    'A Meta cobra pelas mensagens?' => 'A Meta cobra determinadas mensagens entregues pela WhatsApp Business Platform. A partir de 1º de outubro de 2026, mensagens de Serviço passam a integrar o modelo de cobrança, conforme as condições e eventuais franquias aplicáveis, e templates de Utilidade enviados dentro da janela de 24 horas passam a ser cobrados por mensagem. Categoria, mercado do destinatário e faixas de volume podem alterar o valor. Essas tarifas são independentes da mensalidade e da franquia do Disparador.net.',
     'Posso usar qualquer mensagem em uma campanha?' => 'Mensagens iniciadas pela empresa normalmente dependem de templates aprovados e do cumprimento das políticas aplicáveis da Meta.',
     'O teste grátis possui limite?' => 'Sim. O teste grátis é de até 7 dias ou 200 mensagens, o que ocorrer primeiro.'
 ];
@@ -1099,10 +1099,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         Até 30 de setembro de 2026, mensagens de Serviço enviadas pela empresa durante a janela de atendimento de 24 horas e templates de Utilidade enviados nessa janela têm tratamento gratuito segundo a política atual aplicável.
                     </p>
                     <p>
-                        A partir de 1º de outubro de 2026, a Meta anunciou que mensagens de Serviço, incluindo respostas enviadas pela empresa durante essa janela, e templates de Utilidade enviados nela passarão a ser cobrados por mensagem. Mensagens de Marketing e Autenticação continuam sujeitas às respectivas tarifas.
+                        A partir de 1º de outubro de 2026, mensagens de Serviço passam a integrar o modelo de cobrança por mensagem, conforme as condições e eventuais franquias aplicáveis. Templates de Utilidade enviados dentro ou fora da janela de atendimento passam a ser cobrados por mensagem. Mensagens de Marketing e Autenticação continuam sujeitas às respectivas tarifas.
                     </p>
                     <p class="mb-0">
-                        A alteração é definida pela Meta e não representa aumento da mensalidade do Disparador.net. Mensagens recebidas do cliente não são apresentadas como mensagens cobradas pelo Disparador.net, e exceções e janelas gratuitas continuam sujeitas às regras oficiais vigentes da Meta.
+                        A alteração é definida pela Meta e não representa aumento da mensalidade do Disparador.net. A janela gratuita de 72 horas iniciada por anúncio ou botão elegível continua sujeita às condições oficiais da Meta. Tarifas-base, descontos por volume, franquias e outras exceções devem ser conferidos na documentação vigente.
                     </p>
                 </div>
             </div>
