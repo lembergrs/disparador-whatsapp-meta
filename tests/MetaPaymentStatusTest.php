@@ -5,7 +5,8 @@ $controller=file_get_contents(__DIR__.'/../app/Controllers/ConfiguracaoControlle
 $model=file_get_contents(__DIR__.'/../app/Models/MetaConta.php');
 $migration=file_get_contents(__DIR__.'/../database/migrations/20260820_add_meta_payment_status.sql');
 $view=file_get_contents(__DIR__.'/../app/Views/configuracao/meta.php');
-$dashboard=file_get_contents(__DIR__.'/../app/Views/dashboard/index.php');
+$dashboard=file_get_contents(__DIR__.'/../app/Views/dashboard/_onboarding.php');
+$onboarding=file_get_contents(__DIR__.'/../app/Services/OnboardingChecklistService.php');
 $dashboardController=file_get_contents(__DIR__.'/../app/Controllers/DashboardController.php');
 $admin=file_get_contents(__DIR__.'/../app/Views/meta_contas/index.php');
 $doc=file_get_contents(__DIR__.'/../docs/meta-payment-status.md');
@@ -22,8 +23,8 @@ paymentAssert(strpos($migration,'ADD COLUMN IF NOT EXISTS')!==false&&strpos($mig
 paymentAssert(strpos($view,'Pendente de confirmação')!==false&&strpos($view,'Ainda não confirmada')!==false&&strpos($view,'Confirmada pelo cliente')!==false,'configuração deve mostrar os três estados visuais');
 paymentAssert(strpos($view,'Configurar na Meta')!==false&&strpos($view,'Já configurei')!==false&&strpos($view,'configuracao/confirmarPagamentoMeta')!==false,'pendência deve mostrar link e confirmação');
 paymentAssert(strpos($view,'noopener noreferrer')!==false,'link oficial deve abrir de forma segura');
-paymentAssert(strpos($dashboardController,'buscarPagamentoMetaPendentePorCliente($cliId)')!==false,'dashboard deve usar a consulta testável do Model');
-paymentAssert(strpos($dashboard,'Ação necessária: confirme a configuração de pagamento da Meta.')!==false,'dashboard deve alertar sobre pendência');
+paymentAssert(strpos($dashboardController,'OnboardingChecklistService')!==false,'dashboard deve usar leitura contextual do onboarding');
+paymentAssert(strpos($onboarding,'Configure o pagamento das mensagens na Meta')!==false,'dashboard deve orientar sobre pendência');
 paymentAssert(strpos($dashboard,'confirmado_cliente')===false,'dashboard não deve alertar conta confirmada');
 paymentAssert(strpos($admin,'Pendente de confirmação')!==false&&strpos($admin,'Confirmada pelo cliente')!==false&&strpos($admin,'Ainda não confirmada')!==false,'admin deve mostrar apenas estados declaratórios');
 $campoFinanceiro='primary_'.'funding_id';
