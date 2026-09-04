@@ -61,23 +61,8 @@ class DisparoController extends Controller
         $adminMode = ($usuario['nivel'] ?? null) === 'admin';
 
         if($adminMode){
-            $contas = $this->metaModel->listar();
-            $templates = [];
-            $clientesCarregados = [];
-
-            foreach($contas as $conta){
-                $clienteContaId = (int) ($conta['CLI_ID'] ?? 0);
-                if($clienteContaId <= 0 || isset($clientesCarregados[$clienteContaId])){
-                    continue;
-                }
-
-                $clientesCarregados[$clienteContaId] = true;
-                $templates = array_merge(
-                    $templates,
-                    $this->templateModel->listarAprovadosParaEnvioPorCliente($clienteContaId)
-                );
-            }
-
+            $contas = $this->metaModel->listarPorUsuario($usuario);
+            $templates = $this->templateModel->listarPorUsuario($usuario);
             $clientePlano = null;
             $consumoMes = null;
             $listasContatos = [];
@@ -123,37 +108,25 @@ class DisparoController extends Controller
 
     private function clienteOperacaoPorMeta(array $usuario, int $metaId): int
     {
-        if(($usuario['nivel'] ?? null) === 'admin'){
-            $conta = $this->metaModel->buscarPorIdAdmin($metaId);
+        $conta = $this->metaModel->buscarPorUsuario($metaId, $usuario);
 
-            if(!$conta || ($conta['MTA_Ativo'] ?? 'N') !== 'S' || (int) ($conta['CLI_ID'] ?? 0) <= 0){
-                throw new \Exception('Conta Meta não encontrada.');
-            }
-
-            return (int) $conta['CLI_ID'];
+        if(!$conta || (int) ($conta['CLI_ID'] ?? 0) <= 0){
+            throw new \Exception('Conta Meta não permitida para este usuário.');
         }
 
-        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
-        if($clienteId <= 0){
-            throw new \Exception('Cliente não identificado para o disparo.');
-        }
-
-        return $clienteId;
+        return (int) $conta['CLI_ID'];
     }
 
     private function clienteOperacaoPorLote(array $usuario, int $loteId): int
     {
-        if(($usuario['nivel'] ?? null) === 'admin'){
-            $lote = (new DisparoManual())->buscarLoteAdmin($loteId);
-            if(!$lote || (int) ($lote['CLI_ID'] ?? 0) <= 0){
-                throw new \Exception('Lote não encontrado.');
-            }
-            return (int) $lote['CLI_ID'];
-        }
-
-        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        $clienteId = (int) ($usuario['CLI_ID'] ?? ($usuario['cliente_id'] ?? 0));
         if($clienteId <= 0){
             throw new \Exception('Cliente não identificado para o disparo.');
+        }
+
+        $lote = (new DisparoManual())->buscarLoteCliente($loteId, $clienteId);
+        if(!$lote){
+            throw new \Exception('Lote não encontrado.');
         }
 
         return $clienteId;
