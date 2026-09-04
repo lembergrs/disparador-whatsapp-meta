@@ -263,6 +263,16 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 </li>
 
 <li class="nav-item">
+<a
+href="<?= BASE_URL; ?>/index.php?url=onboardingSuporteAdmin"
+class="nav-link <?= str_contains($url, 'onboardingSuporteAdmin') ? 'active' : ''; ?>"
+>
+<i class="nav-icon fas fa-headset"></i>
+<p>Suporte onboarding</p>
+</a>
+</li>
+
+<li class="nav-item">
 
     <a
     href="<?= BASE_URL; ?>/index.php?url=financeiroAdmin"
