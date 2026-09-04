@@ -5,11 +5,6 @@ $contaGuia = $guia['conta'];
 $escGuia = static function($valor){ return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8'); };
 $urlGuia = static function($rota) use ($escGuia){ return $escGuia(BASE_URL . '/index.php?url=' . $rota); };
 $numeroGuia = $contaGuia ? ($contaGuia['MTA_NumeroTelefone'] ?: $contaGuia['MTA_Nome']) : '';
-$suporteTelefone = !empty($whatsappSuporte['ativo'])
-    ? \Models\ConfiguracaoSite::normalizarTelefone($whatsappSuporte['telefone'] ?? '') : null;
-$mensagemAjuda = 'Olá! Preciso de ajuda com o onboarding do Disparador.net. Etapa: '
-    . ($proxima['titulo'] ?? 'Primeira mensagem entregue')
-    . '. Gostaria de combinar um horário para atendimento.';
 ?>
 <style>
 .onboarding-guia { border-top: 3px solid #147d64; border-radius: .6rem; }
