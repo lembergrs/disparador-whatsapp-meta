@@ -137,8 +137,8 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                         </select>
                     </div>
                 </div>
-            </div>
                 <?php } ?>
+            </div>
 
 
             <div
