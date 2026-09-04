@@ -9,6 +9,7 @@ $statusLabel = [
 ];
 $periodos = \Models\OnboardingSuporteSolicitacao::PERIODOS;
 $assuntos = \Models\OnboardingSuporteSolicitacao::ASSUNTOS;
+$etapas = \Models\OnboardingSuporteSolicitacao::ETAPAS;
 $whatsapp = static function($telefone){
     $numero = preg_replace('/\D/', '', (string) $telefone);
     if(strlen($numero) === 10 || strlen($numero) === 11){
@@ -65,7 +66,7 @@ $whatsapp = static function($telefone){
                         <?php }else{ ?>
                             <span class="text-muted">Antes da seleção/conexão de uma conta</span><br>
                         <?php } ?>
-                        <small><code><?= $e($s['OSS_Etapa']); ?></code></small>
+                        <small><?= $e($etapas[$s['OSS_Etapa']] ?? $s['OSS_Etapa']); ?></small>
                     </td>
                     <td style="min-width:260px">
                         <strong><?= $e($assuntos[$s['OSS_Assunto']] ?? $s['OSS_Assunto']); ?></strong>
