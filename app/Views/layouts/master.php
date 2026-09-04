@@ -390,6 +390,16 @@ class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
 </li>
 
 <li class="nav-item">
+<a
+href="<?= BASE_URL; ?>/index.php?url=disparo"
+class="nav-link <?= str_contains($url, 'disparo') ? 'active' : ''; ?>"
+>
+<i class="nav-icon fas fa-paper-plane"></i>
+<p>Disparos</p>
+</a>
+</li>
+
+<li class="nav-item">
 
 <a
 href="<?= BASE_URL; ?>/index.php?url=conversa"
