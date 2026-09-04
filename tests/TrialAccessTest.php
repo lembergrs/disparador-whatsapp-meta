@@ -19,7 +19,7 @@ $cliente = file_get_contents(__DIR__ . '/../app/Models/Cliente.php');
 $configuracao = file_get_contents(__DIR__ . '/../app/Controllers/ConfiguracaoController.php');
 $financeiro = file_get_contents(__DIR__ . '/../app/Controllers/FinanceiroController.php');
 $financeiroWorkflow = file_get_contents(__DIR__ . '/../app/Services/FinanceiroWorkflowService.php');
-$dashboard = file_get_contents(__DIR__ . '/../app/Views/dashboard/index.php');
+$dashboard = file_get_contents(__DIR__ . '/../app/Views/dashboard/index.php') . file_get_contents(__DIR__ . '/../app/Views/dashboard/_onboarding.php');
 $menu = file_get_contents(__DIR__ . '/../app/Views/layouts/master.php');
 
 assertContainsTrial('const DIAS_AVALIACAO = 7', $auth, 'Trial deve manter 7 dias.');
@@ -46,11 +46,12 @@ assertContainsTrial("'status_pagamento'=>'pendente'", $trechoPlano, 'Seleção d
 assertNotContainsTrial('CLI_DataLiberacao', $trechoPlano, 'Seleção de plano não deve iniciar trial.');
 assertNotContainsTrial("'status_pagamento'=>'pago'", substr($trechoPlano, 0, strpos($trechoPlano, 'public function confirmarPagamentoManual')), 'Seleção de plano não deve marcar cliente como pago.');
 
-assertContainsTrial('Conecte seu número do WhatsApp para iniciar seu período de avaliação de 7 dias ou até 200 mensagens.', $dashboard, 'Dashboard deve orientar pre-trial.');
-assertContainsTrial('Período de avaliação ativo.', $dashboard, 'Dashboard deve indicar trial ativo.');
+assertContainsTrial('Seu período de avaliação ainda não começou.', $dashboard, 'Dashboard deve orientar pre-trial.');
+assertContainsTrial('Os 7 dias de avaliação começam quando a conexão do seu número do WhatsApp for concluída.', $dashboard, 'Dashboard deve explicar conexão operacional.');
+assertContainsTrial('Seu período de avaliação começou.', $dashboard, 'Dashboard deve indicar trial ativo.');
 assertContainsTrial('mensagens_restantes', $dashboard, 'Dashboard deve mostrar mensagens restantes no trial.');
 assertContainsTrial('dias_restantes', $dashboard, 'Dashboard deve mostrar dias restantes no trial.');
-assertContainsTrial('configuracao/meta', $dashboard, 'Dashboard deve levar ao fluxo real de Contas Meta.');
+assertContainsTrial('configuracao/meta', file_get_contents(__DIR__ . '/../app/Services/OnboardingChecklistService.php'), 'Guia deve levar ao fluxo real de Contas Meta.');
 
 assertContainsTrial('Números WhatsApp', $menu, 'Menu deve manter Contas Meta/Números WhatsApp para clientes.');
 assertContainsTrial('$clientePodeConectarMeta', $menu, 'Menu deve liberar Contas Meta no pre-trial.');

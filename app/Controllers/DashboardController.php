@@ -28,12 +28,13 @@ class DashboardController extends Controller
         $assinaturasVencidas = 0;
         $assinaturasCanceladas = 0;
         $metaConta = null;
-        $metaPagamentoConta = null;
         $ultimasCampanhas = [];
         $cliente = null;
         $consumo = null;
         $excedente = null;
         $onboardingChecklist = null;
+        $avaliacaoDashboard = [];
+        $whatsappSuporte = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -183,18 +184,21 @@ class DashboardController extends Controller
             $sql->execute([$cliId]);
             $mensagensRecebidas = $sql->fetch()['total'];
 
-            $sql = $db->prepare("
-                SELECT *
-                FROM meta_contas
-                WHERE CLI_ID = ?
-                AND MTA_Ativo = 'S'
-                ORDER BY MTA_ID DESC
-                LIMIT 1
-            ");
-            $sql->execute([$cliId]);
-            $metaConta = $sql->fetch();
-
-            $metaPagamentoConta=(new \Models\MetaConta())->buscarPagamentoMetaPendentePorCliente($cliId);
+            $operacional = Auth::clienteLiberado();
+            $preTrial = Auth::clienteEmPreTrial();
+            $gerenciar = in_array($usuario['nivel'], ['cliente', 'cliente_admin'], true);
+            $contaContextualId = array_key_exists('conta', $_GET)
+                ? (filter_var($_GET['conta'], FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]) ?: 0)
+                : null;
+            $onboardingChecklist = (new \Services\OnboardingChecklistService())->calcular($cliId, [
+                'operacional'=>$operacional,
+                'pre_trial'=>$preTrial,
+                'gerenciar'=>$gerenciar,
+                'configuracao'=>$gerenciar && ($operacional || Auth::clientePodeConectarMeta()),
+            ], $contaContextualId);
+            $metaConta = $onboardingChecklist['conta'];
+            $avaliacaoDashboard = Auth::dadosAvaliacaoCliente(false);
+            $whatsappSuporte = (new \Models\ConfiguracaoSite())->obterConfiguracaoWhatsappSite();
 
             $sql = $db->prepare("
                 SELECT *
@@ -206,7 +210,6 @@ class DashboardController extends Controller
             $sql->execute([$cliId]);
             $ultimasCampanhas = $sql->fetchAll();
 
-            $onboardingChecklist = (new \Services\OnboardingChecklistService())->calcular($cliId);
         }
 
         $this->view(
@@ -224,7 +227,6 @@ class DashboardController extends Controller
                 'campanhas' => $campanhas,
                 'mensagensRecebidas' => $mensagensRecebidas,
                 'metaConta' => $metaConta,
-                'metaPagamentoConta' => $metaPagamentoConta,
                 'ultimasCampanhas' => $ultimasCampanhas,
                 'consumo' => $consumo,
                 'excedente' => $excedente,
@@ -232,7 +234,11 @@ class DashboardController extends Controller
                 'assinaturasPendentes' => $assinaturasPendentes,
                 'assinaturasVencidas' => $assinaturasVencidas,
                 'assinaturasCanceladas' => $assinaturasCanceladas,
-                'onboardingChecklist' => $onboardingChecklist
+                'onboardingChecklist' => $onboardingChecklist,
+                'avaliacaoDashboard' => $avaliacaoDashboard,
+                'whatsappSuporte' => $whatsappSuporte,
+                // Compartilha a decisão do Auth com o menu deste mesmo request.
+                'acessoOperacionalDashboard' => $operacional ?? null
             ]
         );
     }

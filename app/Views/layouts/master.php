@@ -406,7 +406,11 @@ class="nav-link <?= str_contains($url, 'conversa') ? 'active' : ''; ?>"
 <?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){
 
 
-$clienteLiberado = Auth::clienteLiberado();
+// O Dashboard já precisou avaliar o acesso para escolher a próxima ação.
+// Preserva inclusive false; outras telas continuam usando o Auth normalmente.
+$clienteLiberado = isset($acessoOperacionalDashboard)
+    ? $acessoOperacionalDashboard
+    : Auth::clienteLiberado();
 
 $clientePodeConectarMeta = Auth::clientePodeConectarMeta();
 

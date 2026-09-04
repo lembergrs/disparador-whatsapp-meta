@@ -178,63 +178,26 @@ function avisoMetaDashboard($metaConta)
 <?php }else{ ?>
 
 <?php
-$clienteEmPreTrialDashboard = \Core\Auth::clienteEmPreTrial();
-$avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
+$clienteEmPreTrialDashboard = !empty($onboardingChecklist['pre_trial']);
+$recolherInformacoes = empty($onboardingChecklist['concluido']);
+require __DIR__ . '/_onboarding.php';
 ?>
-
-<?php if($clienteEmPreTrialDashboard){ ?>
-<div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap">
-    <div class="mr-3">
-        <strong>Comece seu período de avaliação.</strong><br>
-        Conecte seu número do WhatsApp para iniciar seu período de avaliação de 7 dias ou até 200 mensagens.
-    </div>
-    <a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="btn btn-primary btn-sm mt-2 mt-md-0">
-        <i class="fab fa-whatsapp mr-1"></i> Conectar WhatsApp
-    </a>
-</div>
-<?php }elseif(!empty($avaliacaoDashboard['ativo'])){ ?>
-<div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap">
-    <div class="mr-3">
-        <strong>Período de avaliação ativo.</strong><br>
-        Início: <?= htmlspecialchars(formatarDataDashboard($avaliacaoDashboard['inicio'] ?? null)); ?> ·
-        Restam <?= (int)($avaliacaoDashboard['dias_restantes'] ?? 0); ?> dia(s) e
-        <?= number_format((int)($avaliacaoDashboard['mensagens_restantes'] ?? 0), 0, ',', '.'); ?> mensagem(ns) do trial.
-    </div>
-    <a href="<?= BASE_URL; ?>/index.php?url=financeiro" class="btn btn-outline-light btn-sm mt-2 mt-md-0">
-        Contratar ou regularizar plano
-    </a>
-</div>
+<?php if($recolherInformacoes){ ?>
+<details class="card dashboard-informacoes mb-4">
+    <summary>Informações da conta e painel operacional</summary>
+    <div class="dashboard-operacional">
 <?php } ?>
-
-<?php if($usuario['nivel'] != 'admin' && !empty($onboardingChecklist) && empty($onboardingChecklist['concluido'])){ ?>
-<div class="card card-outline card-success mb-3">
-    <div class="card-header"><h3 class="card-title">Primeiros passos</h3></div>
-    <div class="card-body">
-        <div class="progress mb-3" style="height: 10px;">
-            <div class="progress-bar bg-success" style="width: <?= (int) $onboardingChecklist['percentual']; ?>%;"></div>
-        </div>
-        <p class="text-muted mb-3"><?= (int) $onboardingChecklist['concluidos']; ?> de <?= (int) $onboardingChecklist['total']; ?> etapas concluídas.</p>
-        <div class="row">
-            <?php foreach($onboardingChecklist['itens'] as $item){ ?>
-                <div class="col-md-6 mb-2">
-                    <a class="d-flex align-items-center text-decoration-none <?= !empty($item['done']) ? 'text-success' : 'text-dark'; ?>" href="<?= BASE_URL; ?>/index.php?url=<?= htmlspecialchars($item['url']); ?>">
-                        <i class="<?= !empty($item['done']) ? 'fas fa-check-circle' : 'far fa-circle'; ?> mr-2"></i>
-                        <span><?= htmlspecialchars($item['label']); ?></span>
-                    </a>
-                </div>
-            <?php } ?>
-        </div>
-    </div>
-</div>
-<?php } ?>
-
 <?php if($usuario['nivel'] != 'admin'){ ?>
 <div class="row mb-3">
     <div class="col-md-6 mb-3">
         <div class="card card-outline card-primary h-100">
             <div class="card-header"><h3 class="card-title">Seu plano no Disparador</h3></div>
             <div class="card-body">
-                <p class="mb-1"><strong>Plano:</strong> <?= htmlspecialchars($cliente['PLA_Nome'] ?? 'Não informado'); ?></p>
+                <?php if($clienteEmPreTrialDashboard){ ?>
+                    <p class="mb-1">Você está preparando seu período de avaliação.</p>
+                <?php }else{ ?>
+                    <p class="mb-1"><strong>Plano:</strong> <?= htmlspecialchars($cliente['PLA_Nome'] ?? 'Avaliação sem plano contratado'); ?></p>
+                <?php } ?>
                 <?php if(isset($cliente['PLA_LimiteMensagens'])){ ?>
                     <p class="mb-1"><strong>Mensagens incluídas:</strong> <?= number_format((int) $cliente['PLA_LimiteMensagens'], 0, ',', '.'); ?></p>
                 <?php } ?>
@@ -258,10 +221,13 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
                     <p class="mb-1"><strong>Limite atual informado pela Meta:</strong><br>Limite da Meta ainda não disponível.</p>
                     <p class="text-muted">Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.</p>
                 <?php } ?>
-                <p class="mb-1"><strong>Qualidade:</strong> <?= htmlspecialchars($metaConta['MTA_QualityRating'] ?? 'Não informado'); ?></p>
-                <p class="mb-1"><strong>Status Meta:</strong> <?= htmlspecialchars($metaConta['MTA_OperationalStatus'] ?? 'Não informado'); ?></p>
-                <p class="mb-1"><strong>Última consulta à Meta:</strong> <?= !empty($metaConta['MTA_UltimaVerificacao']) ? date('d/m/Y \à\s H:i', strtotime($metaConta['MTA_UltimaVerificacao'])) : 'Nunca'; ?></p>
-                <?php $avisoMeta = $metaConta ? \Services\MetaService::avisoDesatualizacaoMeta($metaConta['MTA_UltimaVerificacao'] ?? null) : 'Limite da Meta ainda não disponível. Conclua a conexão do número ou aguarde a sincronização dos dados da Meta.'; ?>
+                <?php $qualidadeDashboard = ['GREEN'=>'Boa', 'YELLOW'=>'Média', 'RED'=>'Baixa'][$metaConta['MTA_QualityRating'] ?? ''] ?? 'Informação de qualidade ainda não disponível.'; ?>
+                <p class="mb-1"><strong>Qualidade:</strong> <?= htmlspecialchars($qualidadeDashboard); ?></p>
+                <p class="mb-1"><strong>Situação do WhatsApp:</strong> <?= !empty($onboardingChecklist['conectado']) ? 'Conectado' : 'Conexão ainda não concluída'; ?></p>
+                <?php if(!empty($onboardingChecklist['conectado'])){ ?>
+                <p class="mb-1"><strong>Última consulta à Meta:</strong> <?= !empty($metaConta['MTA_UltimaVerificacao']) ? date('d/m/Y \à\s H:i', strtotime($metaConta['MTA_UltimaVerificacao'])) : 'Aguardando atualização'; ?></p>
+                <?php } ?>
+                <?php $avisoMeta = !empty($onboardingChecklist['conectado']) ? \Services\MetaService::avisoDesatualizacaoMeta($metaConta['MTA_UltimaVerificacao'] ?? null) : null; ?>
                 <?php if($avisoMeta){ ?><div class="alert alert-warning py-2"><?= htmlspecialchars($avisoMeta); ?></div><?php } ?>
                 <p class="text-muted mb-1">Este limite é definido e controlado exclusivamente pela Meta. O Disparador não consegue aumentá-lo, alterá-lo ou garantir quando ele será ampliado.</p>
                 <p class="text-muted mb-0">A Meta pode alterar esse limite conforme seus próprios critérios, como situação da empresa, qualidade das conversas e histórico de uso.</p>
@@ -578,7 +544,7 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
 
                     <div class="alert alert-warning mb-0">
 
-                        Nenhum plano contratado.
+                        <?= $clienteEmPreTrialDashboard ? 'Você está preparando seu período de avaliação.' : 'Nenhum plano contratado.'; ?>
 
                     </div>
 
@@ -631,7 +597,7 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
                         <?php }else{ ?>
 
                             <span class="badge badge-danger">
-                                <?= htmlspecialchars($metaConta['MTA_Status']); ?>
+                                Conexão precisa de atenção
                             </span>
 
                         <?php } ?>
@@ -727,6 +693,5 @@ $avaliacaoDashboard = \Core\Auth::dadosAvaliacaoCliente(false);
     </div>
 
 </div>
+<?php if($recolherInformacoes){ ?></div></details><?php } ?>
 <?php } ?>
-
-<?php if($metaPagamentoConta){ ?><div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap"><div><strong>Ação necessária: confirme a configuração de pagamento da Meta.</strong><br>As tarifas das mensagens são cobradas diretamente pela Meta. Configure a forma de pagamento da sua conta do WhatsApp para evitar problemas no envio.</div><a href="<?= BASE_URL; ?>/index.php?url=configuracao/meta" class="btn btn-warning btn-sm">Configurar pagamento</a></div><?php } ?>
