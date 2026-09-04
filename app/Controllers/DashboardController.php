@@ -34,7 +34,6 @@ class DashboardController extends Controller
         $excedente = null;
         $onboardingChecklist = null;
         $avaliacaoDashboard = [];
-        $whatsappSuporte = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -236,7 +235,6 @@ class DashboardController extends Controller
                 'assinaturasCanceladas' => $assinaturasCanceladas,
                 'onboardingChecklist' => $onboardingChecklist,
                 'avaliacaoDashboard' => $avaliacaoDashboard,
-                'whatsappSuporte' => $whatsappSuporte,
                 // Compartilha a decisão do Auth com o menu deste mesmo request.
                 'acessoOperacionalDashboard' => $operacional ?? null
             ]

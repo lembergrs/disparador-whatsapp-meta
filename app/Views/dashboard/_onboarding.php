@@ -5,11 +5,6 @@ $contaGuia = $guia['conta'];
 $escGuia = static function($valor){ return htmlspecialchars((string) $valor, ENT_QUOTES, 'UTF-8'); };
 $urlGuia = static function($rota) use ($escGuia){ return $escGuia(BASE_URL . '/index.php?url=' . $rota); };
 $numeroGuia = $contaGuia ? ($contaGuia['MTA_NumeroTelefone'] ?: $contaGuia['MTA_Nome']) : '';
-$suporteTelefone = !empty($whatsappSuporte['ativo'])
-    ? \Models\ConfiguracaoSite::normalizarTelefone($whatsappSuporte['telefone'] ?? '') : null;
-$mensagemAjuda = 'Olá! Preciso de ajuda com o onboarding do Disparador.net. Etapa: '
-    . ($proxima['titulo'] ?? 'Primeira mensagem entregue')
-    . '. Gostaria de combinar um horário para atendimento.';
 ?>
 <style>
 .onboarding-guia { border-top: 3px solid #147d64; border-radius: .6rem; }
@@ -140,13 +135,65 @@ $mensagemAjuda = 'Olá! Preciso de ajuda com o onboarding do Disparador.net. Eta
         <?php if(!$guia['concluido'] || $guia['recuperacao']){ ?>
         <aside class="guia-ajuda" aria-label="Ajuda com a configuração">
             <h3 class="h6">Precisa de ajuda?</h3>
-            <p class="small mb-2">O suporte de onboarding é realizado pelo WhatsApp. Envie uma mensagem e combinaremos o melhor horário para ajudar você.</p>
-            <?php if($suporteTelefone){ ?>
-                <a class="btn btn-outline-success btn-sm" target="_blank" rel="noopener noreferrer" href="<?= $escGuia('https://wa.me/' . $suporteTelefone . '?text=' . rawurlencode($mensagemAjuda)); ?>">Falar com o suporte pelo WhatsApp</a>
-            <?php }else{ ?>
-                <p class="small text-muted mb-0">O link do WhatsApp de suporte não está disponível nesta conta no momento. Utilize o canal oficial de contato informado pela RL2 Net.</p>
-            <?php } ?>
+            <p class="small mb-2">Registre seu pedido e informe quando é melhor entrarmos em contato. Nossa equipe acompanhará a solicitação e falará com você pelo WhatsApp.</p>
+            <button type="button" class="btn btn-outline-success btn-sm" data-toggle="modal" data-target="#modalAjudaOnboarding">
+                <i class="fas fa-headset mr-1" aria-hidden="true"></i> Solicitar ajuda
+            </button>
         </aside>
+
+        <div class="modal fade" id="modalAjudaOnboarding" tabindex="-1" role="dialog" aria-labelledby="tituloModalAjudaOnboarding" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <form method="post" action="<?= $urlGuia('onboardingSuporte/solicitar'); ?>" class="modal-content">
+                    <?= \Core\Csrf::input(); ?>
+                    <input type="hidden" name="conta_id" value="<?= $contaGuia ? (int) $contaGuia['MTA_ID'] : ''; ?>">
+                    <input type="hidden" name="etapa" value="<?= $escGuia($proxima['id'] ?? 'onboarding_concluido_recuperacao'); ?>">
+                    <div class="modal-header">
+                        <h4 class="modal-title h5" id="tituloModalAjudaOnboarding">Solicitar ajuda com esta etapa</h4>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted">Etapa atual: <strong><?= $escGuia($proxima['titulo'] ?? 'Recuperação da configuração'); ?></strong></p>
+
+                        <div class="form-group">
+                            <label for="ajudaAssunto">Como podemos ajudar?</label>
+                            <select class="form-control" id="ajudaAssunto" name="assunto" required>
+                                <option value="">Selecione</option>
+                                <option value="nao_consigo_avancar">Não consigo avançar nesta etapa</option>
+                                <option value="duvida_configuracao">Tenho uma dúvida sobre a configuração</option>
+                                <option value="mensagem_erro">Recebi uma mensagem de erro</option>
+                                <option value="orientacao">Preciso de orientação</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ajudaDescricao">Conte um pouco mais <span class="text-muted">(opcional)</span></label>
+                            <textarea class="form-control" id="ajudaDescricao" name="descricao" rows="3" maxlength="1000" placeholder="Ex.: aparece uma mensagem de erro quando tento concluir esta etapa."></textarea>
+                            <small class="form-text text-muted">Não envie senhas, códigos de verificação ou tokens de acesso.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ajudaPeriodo">Melhor período para contato</label>
+                            <select class="form-control" id="ajudaPeriodo" name="periodo" required>
+                                <option value="manha">Manhã</option>
+                                <option value="tarde">Tarde</option>
+                                <option value="noite">Noite</option>
+                                <option value="qualquer" selected>Qualquer horário</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label for="ajudaHorario">Detalhe de horário <span class="text-muted">(opcional)</span></label>
+                            <input class="form-control" id="ajudaHorario" name="horario" maxlength="120" placeholder="Ex.: dias úteis, entre 14h e 17h">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Enviar solicitação</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         <?php } ?>
     </div>
 </section>
