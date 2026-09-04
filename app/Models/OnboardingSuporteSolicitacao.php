@@ -22,6 +22,29 @@ class OnboardingSuporteSolicitacao
         'qualquer' => 'Qualquer horário'
     ];
 
+    public const ETAPAS = [
+        'selecionar_conta' => 'Selecionar WhatsApp',
+        'pagamento_meta' => 'Configurar pagamento na Meta',
+        'envio_processing' => 'Processando a primeira mensagem',
+        'envio_accepted' => 'Mensagem aceita pela Meta',
+        'envio_sent' => 'Aguardando confirmação de entrega',
+        'template_pending' => 'Template em análise',
+        'template_rejected' => 'Template não aprovado',
+        'template_indisponivel' => 'Template indisponível',
+        'template_criar' => 'Criar primeiro template',
+        'envio_failed' => 'Falha no primeiro envio',
+        'primeiro_envio' => 'Enviar primeira mensagem',
+        'financeiro' => 'Regularizar acesso',
+        'acesso_pendente' => 'Conferir liberação da avaliação',
+        'responsavel' => 'Ação do responsável da conta',
+        'conexao_registro' => 'Concluir registro do WhatsApp',
+        'conexao_erro' => 'Corrigir erro de conexão',
+        'conexao_acao' => 'Resolver pendência de conexão',
+        'conexao_reconectar' => 'Reconectar WhatsApp',
+        'conexao_iniciar' => 'Conectar WhatsApp',
+        'onboarding_concluido_recuperacao' => 'Recuperar configuração'
+    ];
+
     public const STATUS = ['aberta','em_atendimento','concluida','cancelada'];
 
     private $db;
@@ -64,7 +87,7 @@ class OnboardingSuporteSolicitacao
         if($clienteId <= 0 || $usuarioId <= 0){
             throw new \InvalidArgumentException('Cliente ou usuário inválido.');
         }
-        if($etapa === '' || !preg_match('/^[a-z0-9_]{1,80}$/', $etapa)){
+        if($etapa === '' || !array_key_exists($etapa, self::ETAPAS)){
             throw new \InvalidArgumentException('Etapa do onboarding inválida.');
         }
         if(!array_key_exists($assunto, self::ASSUNTOS)){
