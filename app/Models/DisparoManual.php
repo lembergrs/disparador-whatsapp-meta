@@ -58,21 +58,6 @@ class DisparoManual
         ]);
     }
 
-    public function buscarLoteAdmin($loteId)
-    {
-        $sql = $this->db->prepare("
-            SELECT *
-            FROM disparo_manual_lotes
-            WHERE DML_ID = ?
-            LIMIT 1
-        ");
-
-        $sql->execute([(int) $loteId]);
-
-        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
-    }
-
-
     public function buscarLoteCliente($loteId, $clienteId)
     {
         $sql = $this->db->prepare("
