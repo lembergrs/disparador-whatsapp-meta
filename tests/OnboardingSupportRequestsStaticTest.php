@@ -20,6 +20,7 @@ $migration = file_get_contents($root . '/database/migrations/20260904_create_onb
 $assert(strpos($migration, 'CREATE TABLE IF NOT EXISTS onboarding_suporte_solicitacoes') !== false, 'migration da solicitação deve existir');
 $assert(strpos($migration, 'CLI_ID INT NOT NULL') !== false && strpos($migration, 'MTA_ID INT NULL') !== false, 'escopo deve preservar CLI_ID e permitir pré-conexão sem MTA_ID');
 $assert(strpos($model, "AND MTA_ID = ?") !== false && strpos($model, "AND MTA_Ativo = 'S'") !== false, 'conta deve ser validada no mesmo cliente');
+$assert(strpos($model, 'public const ETAPAS') !== false && strpos($model, 'array_key_exists($etapa, self::ETAPAS)') !== false, 'etapa enviada pelo navegador deve ser validada contra estados conhecidos');
 $assert(strpos($model, "OSS_Status IN ('aberta','em_atendimento')") !== false, 'duplicidade de solicitação ativa deve ser bloqueada');
 $assert(strpos($cliente, 'Auth::cliente()') !== false && strpos($cliente, 'validarCsrfPost()') !== false, 'cliente deve estar autenticado e POST protegido');
 $assert(strpos($cliente, 'Auth::isImpersonating()') !== false, 'modo suporte administrativo não deve criar solicitação em nome do cliente');
