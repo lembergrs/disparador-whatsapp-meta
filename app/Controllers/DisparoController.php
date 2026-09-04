@@ -30,7 +30,12 @@ class DisparoController extends Controller
 
     public function __construct()
     {
-        Auth::cliente();
+        Auth::check();
+
+        $usuario = Auth::usuario();
+        if(!$usuario || (($usuario['nivel'] ?? null) !== 'admin' && !Auth::nivelCliente($usuario['nivel'] ?? null))){
+            die('Acesso negado');
+        }
 
         $this->metaModel =
             new MetaConta();
@@ -53,24 +58,38 @@ class DisparoController extends Controller
 
 
 
-        $contas =
-            $this->metaModel
-            ->listarPorCliente(
-                $usuario['CLI_ID']
-            );
+        $adminMode = ($usuario['nivel'] ?? null) === 'admin';
 
+        if($adminMode){
+            $contas = $this->metaModel->listar();
+            $templates = [];
+            $clientesCarregados = [];
 
+            foreach($contas as $conta){
+                $clienteContaId = (int) ($conta['CLI_ID'] ?? 0);
+                if($clienteContaId <= 0 || isset($clientesCarregados[$clienteContaId])){
+                    continue;
+                }
 
+                $clientesCarregados[$clienteContaId] = true;
+                $templates = array_merge(
+                    $templates,
+                    $this->templateModel->listarAprovadosParaEnvioPorCliente($clienteContaId)
+                );
+            }
 
+            $clientePlano = null;
+            $consumoMes = null;
+            $listasContatos = [];
+        }else{
+            $clienteId = (int) $usuario['CLI_ID'];
+            $contas = $this->metaModel->listarPorCliente($clienteId);
+            $templates = $this->templateModel->listarAprovadosParaEnvioPorCliente($clienteId);
+            $clientePlano = (new Cliente())->buscarComPlano($clienteId);
+            $consumoMes = (new ConsumoMensal())->buscarMesAtual($clienteId);
+            $listasContatos = (new ListaContato())->listarPorCliente($clienteId);
+        }
 
-        $templates =
-            $this->templateModel
-            ->listarAprovadosParaEnvioPorCliente(
-                $usuario['CLI_ID']
-            );
-
-        $clientePlano = (new Cliente())->buscarComPlano($usuario['CLI_ID']);
-        $consumoMes = (new ConsumoMensal())->buscarMesAtual($usuario['CLI_ID']);
         $metaContaLimite = $contas[0] ?? null;
 
 
@@ -87,7 +106,9 @@ class DisparoController extends Controller
 
                 'templates' => $templates,
 
-                'listasContatos' => (new ListaContato())->listarPorCliente($usuario['CLI_ID']),
+                'listasContatos' => $listasContatos,
+
+                'adminMode' => $adminMode,
 
                 'clientePlano' => $clientePlano,
 
@@ -100,9 +121,52 @@ class DisparoController extends Controller
     }
 
 
+    private function clienteOperacaoPorMeta(array $usuario, int $metaId): int
+    {
+        if(($usuario['nivel'] ?? null) === 'admin'){
+            $conta = $this->metaModel->buscarPorIdAdmin($metaId);
+
+            if(!$conta || ($conta['MTA_Ativo'] ?? 'N') !== 'S' || (int) ($conta['CLI_ID'] ?? 0) <= 0){
+                throw new \Exception('Conta Meta não encontrada.');
+            }
+
+            return (int) $conta['CLI_ID'];
+        }
+
+        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        if($clienteId <= 0){
+            throw new \Exception('Cliente não identificado para o disparo.');
+        }
+
+        return $clienteId;
+    }
+
+    private function clienteOperacaoPorLote(array $usuario, int $loteId): int
+    {
+        if(($usuario['nivel'] ?? null) === 'admin'){
+            $lote = (new DisparoManual())->buscarLoteAdmin($loteId);
+            if(!$lote || (int) ($lote['CLI_ID'] ?? 0) <= 0){
+                throw new \Exception('Lote não encontrado.');
+            }
+            return (int) $lote['CLI_ID'];
+        }
+
+        $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
+        if($clienteId <= 0){
+            throw new \Exception('Cliente não identificado para o disparo.');
+        }
+
+        return $clienteId;
+    }
+
     public function historico()
     {
         $usuario = Auth::usuario();
+        if(($usuario['nivel'] ?? null) === 'admin'){
+            \Core\Session::flash('error', 'O histórico administrativo de disparos ainda não está disponível nesta tela.');
+            $this->redirect('disparo');
+        }
+
         $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
         $model = new DisparoManual();
 
@@ -151,8 +215,8 @@ class DisparoController extends Controller
 
         try{
             $usuario = Auth::usuario();
-            $clienteId = (int) ($usuario['CLI_ID'] ?? 0);
             $loteId = (int) ($_GET['lote_id'] ?? 0);
+            $clienteId = $this->clienteOperacaoPorLote($usuario, $loteId);
 
             if($loteId <= 0){
                 http_response_code(400);
@@ -468,12 +532,14 @@ class DisparoController extends Controller
 
         $usuario =
             Auth::usuario();
+        $metaId = (int) ($_POST['meta'] ?? 0);
+        $clienteId = $this->clienteOperacaoPorMeta($usuario, $metaId);
 
         $template =
             $this->templateModel
             ->buscarAprovadoParaEnvioPorCliente(
                 (int) ($_POST['template'] ?? 0),
-                $usuario['CLI_ID']
+                $clienteId
             );
 
         if(!$template || (int) $template['MTA_ID'] !== (int) ($_POST['meta'] ?? 0)){
@@ -482,12 +548,12 @@ class DisparoController extends Controller
         }
 
 
-        $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $usuario['CLI_ID']);
+        $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $clienteId);
 
         $meta =
             new MetaService(
                 (int) ($_POST['meta'] ?? 0),
-                $usuario['CLI_ID']
+                $clienteId
             );
 
         $entradaNumeros =
@@ -571,14 +637,14 @@ class DisparoController extends Controller
                     new ConsumoMensal();
 
                 $consumo->registrarMensagem(
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
                 $controlePlano =
                     new ControlePlanoService();
 
                 $controlePlano->registrarUso(
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
                 $totalEnviados++;
@@ -603,7 +669,7 @@ class DisparoController extends Controller
             $disparo->salvar([
 
                 'cliente' =>
-                    $usuario['CLI_ID'],
+                    $clienteId,
 
                 'meta' =>
                     $_POST['meta'],
@@ -637,7 +703,7 @@ class DisparoController extends Controller
 
             $conversaId =
                 $conversaModel->buscarOuCriar(
-                    $usuario['CLI_ID'],
+                    $clienteId,
                     $_POST['meta'],
                     $numero,
                     null
@@ -1042,18 +1108,21 @@ class DisparoController extends Controller
                 return;
             }
 
+            $metaId = (int) ($_POST['meta'] ?? 0);
+            $clienteId = $this->clienteOperacaoPorMeta($usuario, $metaId);
+
             $template =
                 $this->templateModel
                 ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
             if(!$template || (int) $template['MTA_ID'] !== (int) ($_POST['meta'] ?? 0)){
                 throw new \Exception('Template não encontrado.');
             }
 
-            $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $usuario['CLI_ID'], true);
+            $this->validarContaMetaParaEnvio((int) $_POST['meta'], (int) $clienteId, true);
 
             $numero =
                 preg_replace(
@@ -1085,7 +1154,7 @@ class DisparoController extends Controller
             $meta =
                 new \Services\MetaService(
                     (int) ($_POST['meta'] ?? 0),
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
             $response =
@@ -1109,14 +1178,14 @@ class DisparoController extends Controller
                     new ConsumoMensal();
 
                 $consumo->registrarMensagem(
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
                 $controlePlano =
                     new ControlePlanoService();
 
                 $controlePlano->registrarUso(
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
             }
 
@@ -1126,7 +1195,7 @@ class DisparoController extends Controller
             $disparo->salvar([
 
                 'cliente' =>
-                    $usuario['CLI_ID'],
+                    $clienteId,
 
                 'meta' =>
                     $_POST['meta'],
@@ -1159,7 +1228,7 @@ class DisparoController extends Controller
 
             $conversaId =
                 $conversaModel->buscarOuCriar(
-                    $usuario['CLI_ID'],
+                    $clienteId,
                     $_POST['meta'],
                     $numero,
                     null
@@ -1248,12 +1317,15 @@ class DisparoController extends Controller
             }
 
             $metaId = (int) ($_POST['meta'] ?? 0);
+            $clienteId = $this->clienteOperacaoPorMeta($usuario, $metaId);
+            $usuarioOperacao = $usuario;
+            $usuarioOperacao['CLI_ID'] = $clienteId;
 
             $template =
                 $this->templateModel
                 ->buscarAprovadoParaEnvioPorCliente(
                     (int) ($_POST['template'] ?? 0),
-                    $usuario['CLI_ID']
+                    $clienteId
                 );
 
             if(!$template || (int) $template['MTA_ID'] !== $metaId){
@@ -1261,7 +1333,7 @@ class DisparoController extends Controller
             }
 
 
-            $this->validarContaMetaParaEnvio($metaId, (int) $usuario['CLI_ID'], true);
+            $this->validarContaMetaParaEnvio($metaId, (int) $clienteId, true);
 
             $destinosJson = $_POST['destinos_json'] ?? '[]';
             $destinos = json_decode($destinosJson, true);
@@ -1283,7 +1355,7 @@ class DisparoController extends Controller
 
             $meta = new \Services\MetaService(
                 $metaId,
-                $usuario['CLI_ID']
+                $clienteId
             );
 
             $disparo = new \Models\Disparo();
@@ -1305,7 +1377,7 @@ class DisparoController extends Controller
                     }
 
                     $resultados[] = $this->processarEnvioManualDestino(
-                        $usuario,
+                        $usuarioOperacao,
                         $template,
                         $metaId,
                         $destino['numero'] ?? '',
@@ -1383,11 +1455,12 @@ class DisparoController extends Controller
             }
 
             $metaId = (int) ($_POST['meta'] ?? 0);
+            $clienteId = $this->clienteOperacaoPorMeta($usuario, $metaId);
             $templateId = (int) ($_POST['template'] ?? 0);
 
             $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente(
                 $templateId,
-                $usuario['CLI_ID']
+                $clienteId
             );
 
             if(!$template || (int) $template['MTA_ID'] !== $metaId){
@@ -1395,7 +1468,7 @@ class DisparoController extends Controller
             }
 
 
-            $this->validarContaMetaParaEnvio($metaId, (int) $usuario['CLI_ID'], true);
+            $this->validarContaMetaParaEnvio($metaId, (int) $clienteId, true);
 
             $destinos = json_decode($_POST['destinos_json'] ?? '[]', true);
 
@@ -1411,7 +1484,7 @@ class DisparoController extends Controller
 
             if($listaId > 0){
                 $listaModel = new ListaContato();
-                $lista = $listaModel->buscar($listaId, $usuario['CLI_ID']);
+                $lista = $listaModel->buscar($listaId, $clienteId);
 
                 if(!$lista || ($lista['LST_Ativo'] ?? 'S') !== 'S'){
                     throw new \Exception('Lista de contatos não encontrada para este cliente.');
@@ -1476,7 +1549,7 @@ class DisparoController extends Controller
             }
 
             $loteId = $model->criarLote(
-                $usuario['CLI_ID'],
+                $clienteId,
                 $metaId,
                 $templateId,
                 count($itens)
@@ -1485,7 +1558,7 @@ class DisparoController extends Controller
             foreach($itens as $item){
                 $model->adicionarItem(
                     $loteId,
-                    $usuario['CLI_ID'],
+                    $clienteId,
                     $item['numero'],
                     $item['variaveis']
                 );
@@ -1532,15 +1605,16 @@ class DisparoController extends Controller
                 throw new \Exception('Lote não informado.');
             }
 
+            $clienteId = $this->clienteOperacaoPorLote($usuario, $loteId);
             $model = new DisparoManual();
-            $lote = $model->buscarLoteCliente($loteId, $usuario['CLI_ID']);
+            $lote = $model->buscarLoteCliente($loteId, $clienteId);
 
             if(!$lote){
                 throw new \Exception('Lote não encontrado.');
             }
 
             if(!in_array($lote['DML_Status'], ['pendente', 'processando'], true)){
-                $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+                $itens = $model->listarItensCliente($loteId, $clienteId);
 
                 echo json_encode([
                     'sucesso' => true,
@@ -1554,13 +1628,13 @@ class DisparoController extends Controller
 
             $service = new DisparoManualQueueService(false);
             $resumo = $service->processarLote(
-                (int) $usuario['CLI_ID'],
+                (int) $clienteId,
                 $loteId,
                 5,
                 'ajax'
             );
 
-            $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+            $itens = $model->listarItensCliente($loteId, $clienteId);
 
             echo json_encode([
                 'sucesso' => true,
@@ -1619,14 +1693,15 @@ class DisparoController extends Controller
                 throw new \Exception('Lote não informado.');
             }
 
+            $clienteId = $this->clienteOperacaoPorLote($usuario, $loteId);
             $model = new DisparoManual();
-            $lote = $model->buscarLoteCliente($loteId, $usuario['CLI_ID']);
+            $lote = $model->buscarLoteCliente($loteId, $clienteId);
 
             if(!$lote){
                 throw new \Exception('Lote não encontrado.');
             }
 
-            $itens = $model->listarItensCliente($loteId, $usuario['CLI_ID']);
+            $itens = $model->listarItensCliente($loteId, $clienteId);
 
             echo json_encode([
                 'sucesso' => true,
