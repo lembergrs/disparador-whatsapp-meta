@@ -1,4 +1,5 @@
 <?php
+$adminMode = !empty($adminMode);
 $limitePlanoDisparador = isset($clientePlano['PLA_LimiteMensagens']) ? (int) $clientePlano['PLA_LimiteMensagens'] : null;
 $mensagensUsadasDisparador = isset($consumoMes['CMS_Mensagens']) ? (int) $consumoMes['CMS_Mensagens'] : 0;
 $mensagensDisponiveisDisparador = $limitePlanoDisparador !== null ? max(0, $limitePlanoDisparador - $mensagensUsadasDisparador) : null;
@@ -15,15 +16,22 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
         <a href="<?= BASE_URL; ?>/index.php?url=disparo" class="btn btn-primary">
             <i class="fas fa-paper-plane"></i> Novo Disparo
         </a>
+        <?php if(!$adminMode){ ?>
         <a href="<?= BASE_URL; ?>/index.php?url=disparo/historico" class="btn btn-outline-primary">
             <i class="fas fa-history"></i> Histórico de Disparos
         </a>
+        <?php } ?>
     </div>
 </div>
 
 <div class="row mb-3">
     <div class="col-md-6">
         <div class="callout callout-info h-100 mb-0">
+            <?php if($adminMode){ ?>
+            <h5>Envio administrativo</h5>
+            <p class="mb-1">Selecione uma conta Meta ativa e envie o template diretamente para os números informados.</p>
+            <small class="text-muted">O envio será registrado no cliente proprietário da conta Meta selecionada.</small>
+            <?php }else{ ?>
             <h5>Plano Disparador</h5>
             <?php if($mensagensDisponiveisDisparador !== null){ ?>
                 <p class="mb-1">Você possui <?= number_format($mensagensDisponiveisDisparador, 0, ',', '.'); ?> mensagens disponíveis neste ciclo.</p>
@@ -31,6 +39,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                 <p class="mb-1">Consulte seu plano no Disparador para acompanhar a franquia comercial de mensagens.</p>
             <?php } ?>
             <small class="text-muted">Este limite faz parte do plano contratado no Disparador e considera mensagens processadas pela plataforma.</small>
+            <?php } ?>
         </div>
     </div>
     <div class="col-md-6">
@@ -82,7 +91,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                                     value="<?= $conta['MTA_ID']; ?>"
                                     <?= $totalContas == 1 ? 'selected' : ''; ?>
                                 >
-                                    <?= $conta['MTA_Nome']; ?>
+                                    <?= htmlspecialchars($conta['MTA_Nome'] . ($adminMode && !empty($conta['CLI_Nome']) ? ' — ' . $conta['CLI_Nome'] : ''), ENT_QUOTES, 'UTF-8'); ?>
                                 </option>
                             <?php } ?>
                         </select>
@@ -105,6 +114,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                     </div>
                 </div>
 
+                <?php if(!$adminMode){ ?>
                 <div class="col-md-4">
                     <div class="form-group">
                         <label>Lista de Contatos</label>
@@ -128,6 +138,8 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                     </div>
                 </div>
             </div>
+                <?php } ?>
+
 
             <div
                 id="areaProgressoDisparo"
