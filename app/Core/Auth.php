@@ -606,6 +606,7 @@ class Auth
                 $controller,
                 [
                     'dashboard',
+                    'onboardingSuporte',
                     'financeiro',
                     'indicacao',
                     'conta',
