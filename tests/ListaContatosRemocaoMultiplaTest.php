@@ -16,6 +16,9 @@ $assert(strpos($view, 'id="btnExcluirSelecionados"') !== false, 'Tela deve exibi
 $assert(strpos($view, 'id="btnExcluirSelecionados"') < strpos($view, 'disabled'), 'A ação em massa deve iniciar desabilitada.');
 $assert(strpos($view, 'class="contato-selecao mr-2"') !== false, 'Cada contato deve ter checkbox antes do nome.');
 $assert(strpos($view, 'id="selecionarTodosPagina"') !== false, 'Cabeçalho deve permitir selecionar os contatos visíveis da página.');
+$assert(strpos($view, "rows({page: 'current'})") !== false, 'Selecionar todos deve limitar-se à página atual do DataTables.');
+$assert(strpos($view, "checkboxSelecionarTodosPagina.addEventListener('click'") !== false, 'Checkbox do cabeçalho deve tratar o clique diretamente.');
+$assert(strpos($view, 'e.stopPropagation();') !== false, 'Clique no checkbox do cabeçalho não deve disparar ordenação da coluna.');
 $assert(strpos($view, 'var contatosSelecionados = new Set();') !== false, 'Seleção deve sobreviver à paginação/redesenho do DataTables.');
 $assert(strpos($view, "input.name = 'contatos[]';") !== false, 'Envio deve incluir somente os IDs selecionados.');
 $assert(strpos($view, 'continuarão cadastrados no sistema') !== false, 'Confirmação deve deixar claro que os contatos não serão excluídos do sistema.');
