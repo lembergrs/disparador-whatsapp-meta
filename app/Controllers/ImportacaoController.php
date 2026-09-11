@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Upload;
 use Core\Spreadsheet;
+use Core\VCard;
 use Core\Session;
 
 use Models\Contato;
@@ -127,13 +128,25 @@ class ImportacaoController extends Controller
                     $_FILES['arquivo']
                 );
 
-            $linhas =
-                Spreadsheet::ler(
-                    $arquivo
-                );
+            $extensao = strtolower(
+                pathinfo(
+                    $arquivo,
+                    PATHINFO_EXTENSION
+                )
+            );
+
+            if($extensao === 'vcf'){
+                $linhas = VCard::ler($arquivo);
+            }else{
+                $linhas = Spreadsheet::ler($arquivo);
+            }
 
             if(empty($linhas[0])){
                 throw new \Exception('Arquivo sem cabeçalho.');
+            }
+
+            if($extensao === 'vcf' && count($linhas) <= 1){
+                throw new \Exception('Nenhum contato com telefone foi encontrado no arquivo VCF.');
             }
 
             $cabecalho = $linhas[0];
