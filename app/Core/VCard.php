@@ -17,14 +17,14 @@ class VCard
         }
 
         $conteudo = str_replace(["\r\n", "\r"], "\n", $conteudo);
-        $linhas = explode("\n", $conteudo);
-        $linhas = self::desdobrarLinhas($linhas);
+        $linhas = self::desdobrarLinhas(explode("\n", $conteudo));
 
         $resultado = [
             ['Nome', 'Telefone', 'Email']
         ];
 
         $cartao = null;
+        $cartoesEncontrados = 0;
 
         foreach($linhas as $linha){
             $linha = rtrim($linha, "\r\n");
@@ -41,22 +41,28 @@ class VCard
 
             if(strcasecmp(trim($linha), 'END:VCARD') === 0){
                 if($cartao !== null){
+                    $cartoesEncontrados++;
+
                     $nome = $cartao['fn'] !== ''
                         ? $cartao['fn']
                         : self::nomePorN($cartao['n']);
 
                     $telefones = array_values(array_unique($cartao['telefones']));
 
-                    foreach($telefones as $telefone){
-                        if(trim($telefone) === ''){
-                            continue;
-                        }
-
+                    if(empty($telefones)){
                         $resultado[] = [
                             $nome,
-                            $telefone,
+                            '',
                             $cartao['email']
                         ];
+                    }else{
+                        foreach($telefones as $telefone){
+                            $resultado[] = [
+                                $nome,
+                                $telefone,
+                                $cartao['email']
+                            ];
+                        }
                     }
                 }
 
@@ -77,7 +83,14 @@ class VCard
             $chaveCompleta = substr($linha, 0, $posicao);
             $valor = substr($linha, $posicao + 1);
             $partesChave = explode(';', $chaveCompleta);
-            $propriedade = strtoupper(array_shift($partesChave));
+            $propriedade = array_shift($partesChave);
+
+            if(strpos($propriedade, '.') !== false){
+                $partesPropriedade = explode('.', $propriedade);
+                $propriedade = end($partesPropriedade);
+            }
+
+            $propriedade = strtoupper($propriedade);
             $parametros = implode(';', $partesChave);
 
             $valor = self::decodificarValor($valor, $parametros);
@@ -105,6 +118,10 @@ class VCard
                     $cartao['telefones'][] = $valor;
                 }
             }
+        }
+
+        if($cartoesEncontrados === 0){
+            throw new \Exception('Nenhum contato válido encontrado no arquivo VCF.');
         }
 
         return $resultado;
