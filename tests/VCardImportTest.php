@@ -57,7 +57,7 @@ $assert($linhas[4][0] === 'José Oliveira', 'Quoted-printable do vCard 2.1 deve 
 $assert(strpos($upload, "'vcf'") !== false, 'Upload deve aceitar extensão VCF.');
 $assert(strpos($upload, "'text/vcard'") !== false, 'Upload deve aceitar MIME text/vcard.');
 $assert(strpos($controller, 'use Core\\VCard;') !== false, 'Controller deve carregar o parser VCard.');
-$assert(strpos($controller, "if($extensao === 'vcf')") !== false, 'Controller deve selecionar parser VCard por extensão.');
+$assert(strpos($controller, "if(\$extensao === 'vcf')") !== false, 'Controller deve selecionar parser VCard por extensão.');
 $assert(strpos($controller, 'VCard::ler($arquivo)') !== false, 'Controller deve ler o arquivo VCF com o parser dedicado.');
 $assert(strpos($view, '.xls,.xlsx,.vcf') !== false, 'Campo de upload deve anunciar suporte a VCF.');
 $assert(strpos($view, 'exporte-os como arquivo .vcf') !== false, 'Tela deve orientar importação de contatos do celular.');
