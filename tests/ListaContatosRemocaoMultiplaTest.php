@@ -22,8 +22,8 @@ $assert(strpos($view, 'continuarão cadastrados no sistema') !== false, 'Confirm
 
 $assert(strpos($controller, 'public function removerContatosSelecionados()') !== false, 'Controller deve possuir endpoint de remoção múltipla.');
 $assert(strpos($controller, '$this->validarCsrfPost();') !== false, 'Remoção múltipla deve preservar proteção CSRF.');
-$assert(strpos($controller, "$this->listaModel->buscar") !== false, 'Controller deve validar a lista no escopo do cliente.');
-$assert(strpos($controller, "$this->listaItemModel->removerContatos") !== false, 'Controller deve remover somente vínculos da lista.');
+$assert(strpos($controller, '$this->listaModel->buscar') !== false, 'Controller deve validar a lista no escopo do cliente.');
+$assert(strpos($controller, '$this->listaItemModel->removerContatos') !== false, 'Controller deve remover somente vínculos da lista.');
 
 $assert(strpos($model, 'public function removerContatos($listaId, array $contatoIds)') !== false, 'Model deve oferecer remoção em lote.');
 $assert(strpos($model, 'DELETE FROM lista_contatos_itens') !== false, 'Remoção deve atuar na tabela de vínculos da lista.');
