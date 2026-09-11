@@ -4,6 +4,7 @@ $perguntasFrequentes = [
     'Preciso trocar meu número?' => 'Não necessariamente. Durante a conexão, a Meta apresenta as opções disponíveis para o seu número. Você também pode configurar um novo número quando essa opção estiver disponível.',
     'Preciso desinstalar o WhatsApp Business?' => 'Não. Siga as etapas apresentadas pela Meta durante a conexão. Para um número elegível, o aplicativo WhatsApp Business continua fazendo parte da operação.',
     'Posso continuar usando WhatsApp Web e WhatsApp Desktop?' => 'Sim, mas dispositivos vinculados podem ser desconectados durante a integração. Depois de concluir, você poderá vinculá-los novamente pelo WhatsApp Business.',
+    'Meus contatos do WhatsApp Business aparecem no Disparador?' => 'Quando a Meta disponibiliza esses dados durante a conexão pelo modo Coexistence, os contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net. A disponibilidade depende dos dados e eventos fornecidos pela Meta.',
     'Vou perder minhas conversas?' => 'A conexão não significa que suas conversas no aplicativo serão apagadas. A disponibilidade de mensagens anteriores no Disparador depende dos recursos e das condições disponibilizadas pela Meta, por isso não é possível garantir a importação integral do histórico.',
     'Todas as contas podem usar essa modalidade?' => 'Não. A disponibilidade depende da elegibilidade do número e da conta, definida pela Meta. As opções disponíveis aparecem durante o processo de conexão.',
     'O que é Coexistence?' => 'É o nome técnico usado pela Meta para o recurso que permite, quando elegível, utilizar o WhatsApp Business App e a API Oficial com o mesmo número.',
@@ -27,7 +28,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
     <meta charset="UTF-8">
     <title>Conecte seu WhatsApp Business à API Oficial | Disparador.net</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Conecte um número elegível do WhatsApp Business ao Disparador.net pela API Oficial da Meta e continue utilizando o aplicativo no celular.">
+    <meta name="description" content="Conecte um número elegível do WhatsApp Business ao Disparador.net pela API Oficial da Meta, continue utilizando o aplicativo no celular e sincronize contatos quando disponibilizados pela Meta.">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="author" content="Disparador.net">
     <link rel="canonical" href="https://disparador.net/whatsapp-business">
@@ -107,6 +108,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         <div class="site-mockup-top">Um número, mais possibilidades</div>
                         <div class="site-mockup-body">
                             <p><i class="fas fa-mobile-alt text-success mr-2"></i><strong>WhatsApp Business no celular</strong></p>
+                            <p><i class="fas fa-address-book text-success mr-2"></i><strong>Sincronização de contatos disponibilizados pela Meta</strong></p>
                             <p><i class="fas fa-plus-circle text-success mr-2"></i><strong>Recursos do Disparador.net</strong></p>
                             <p class="mb-0"><i class="fas fa-shield-alt text-success mr-2"></i><strong>Infraestrutura oficial da Meta</strong></p>
                         </div>
@@ -142,6 +144,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         </div></div>
                     </div>
                 </div>
+            </div>
+            <div class="alert alert-success mt-4 mb-0 text-center" role="note">
+                <i class="fas fa-address-book mr-2"></i><strong>Seus contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net.</strong><br>
+                <span class="small">A sincronização depende dos contatos e eventos disponibilizados pela Meta para o número conectado.</span>
             </div>
             <p class="text-center text-muted small mt-4 mb-0">Esse recurso da Meta é conhecido tecnicamente como Coexistence.</p>
         </div>
@@ -180,7 +186,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="container"><div class="row justify-content-center"><div class="col-lg-9 text-center">
             <span class="badge badge-success mb-3">Disponibilidade</span>
             <h2 class="site-section-title">A Meta apresenta as opções para cada número</h2>
-            <p class="text-muted mb-0">A possibilidade de manter o número no WhatsApp Business depende da elegibilidade e das condições definidas pela Meta. O Disparador.net não promete disponibilidade para todas as contas nem importação integral de mensagens anteriores.</p>
+            <p class="text-muted mb-0">A possibilidade de manter o número no WhatsApp Business e a disponibilidade de dados para sincronização dependem da elegibilidade, dos recursos e das condições definidas pela Meta. O Disparador.net não promete disponibilidade para todas as contas, sincronização integral de todos os contatos nem importação integral de mensagens anteriores.</p>
         </div></div></div>
     </section>
 
