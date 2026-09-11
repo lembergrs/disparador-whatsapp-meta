@@ -2,25 +2,33 @@
 
 namespace Services;
 
+use Models\ListaContato;
+use Models\ListaContatoItem;
+
 class MetaWebhookStateSyncService
 {
     private $contatoModel;
+    private $listaModel;
+    private $listaItemModel;
     private $logger;
 
-    public function __construct($contatoModel, callable $logger = null)
+    public function __construct($contatoModel, callable $logger = null, $listaModel = null, $listaItemModel = null)
     {
         $this->contatoModel = $contatoModel;
         $this->logger = $logger;
+        $this->listaModel = $listaModel ?: new ListaContato();
+        $this->listaItemModel = $listaItemModel ?: new ListaContatoItem();
     }
 
     public function processar(array $value, array $metaConta)
     {
-        $resultado = ['criadas'=>0, 'existentes'=>0, 'ignoradas'=>0, 'invalidas'=>0];
+        $resultado = ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'ignoradas'=>0, 'invalidas'=>0];
         $clienteId = (int) ($metaConta['CLI_ID'] ?? 0);
         $metaId = (int) ($metaConta['MTA_ID'] ?? 0);
+        $listaWhatsappId = null;
 
         if($clienteId <= 0 || $metaId <= 0){
-            return ['criadas'=>0, 'existentes'=>0, 'ignoradas'=>0, 'invalidas'=>1];
+            return ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'ignoradas'=>0, 'invalidas'=>1];
         }
 
         foreach(($value['state_sync'] ?? []) as $state){
@@ -45,21 +53,34 @@ class MetaWebhookStateSyncService
                 }
 
                 $existente = $this->contatoModel->buscarPorTelefone($clienteId, $normalizado);
+
                 if($existente){
+                    $contatoId = (int) $existente['CON_ID'];
                     $resultado['existentes']++;
-                    continue;
+                }else{
+                    $nome = trim((string) ($state['contact']['full_name'] ?? ($state['contact']['first_name'] ?? '')));
+                    if($nome === '') $nome = $normalizado;
+
+                    $contatoId = (int) $this->contatoModel->salvar([
+                        'cliente_id'=>$clienteId,
+                        'nome'=>$nome,
+                        'telefone'=>$normalizado,
+                        'dados_json'=>json_encode(['origem'=>'whatsapp_business_app'], JSON_UNESCAPED_UNICODE)
+                    ]);
+                    $resultado['criadas']++;
                 }
 
-                $nome = trim((string) ($state['contact']['full_name'] ?? ($state['contact']['first_name'] ?? '')));
-                if($nome === '') $nome = $normalizado;
+                if($listaWhatsappId === null){
+                    $listaWhatsappId = $this->listaModel->obterOuCriarListaWhatsapp($clienteId);
+                }
 
-                $this->contatoModel->salvar([
-                    'cliente_id'=>$clienteId,
-                    'nome'=>$nome,
-                    'telefone'=>$normalizado,
-                    'dados_json'=>json_encode(['origem'=>'whatsapp_business_app'], JSON_UNESCAPED_UNICODE)
-                ]);
-                $resultado['criadas']++;
+                if($listaWhatsappId > 0 && $contatoId > 0){
+                    $jaVinculado = $this->listaItemModel->contatoExisteNaLista($listaWhatsappId, $contatoId);
+                    $this->listaItemModel->adicionar($listaWhatsappId, $contatoId);
+                    if(!$jaVinculado){
+                        $resultado['vinculadas']++;
+                    }
+                }
             }catch(\Throwable $e){
                 $resultado['invalidas']++;
                 $this->log('state_sync_item_erro', [
