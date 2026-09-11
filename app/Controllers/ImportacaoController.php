@@ -145,10 +145,6 @@ class ImportacaoController extends Controller
                 throw new \Exception('Arquivo sem cabeçalho.');
             }
 
-            if($extensao === 'vcf' && count($linhas) <= 1){
-                throw new \Exception('Nenhum contato com telefone foi encontrado no arquivo VCF.');
-            }
-
             $cabecalho = $linhas[0];
 
             $importados = 0;
@@ -248,7 +244,7 @@ class ImportacaoController extends Controller
                 'success',
                 "{$vinculados} contatos importados com sucesso para a lista {$nomeListaImportada}. "
                 . "{$importados} novo(s) contato(s) criado(s). "
-                . "{$ignorados} linha(s) ignorada(s)."
+                . "{$ignorados} registro(s) ignorado(s)."
             );
 
             $this->redirect(
