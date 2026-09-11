@@ -99,6 +99,15 @@ function formatarTelefone($telefone)
 
 </div>
 
+<form
+id="formRemoverSelecionados"
+method="POST"
+action="<?= BASE_URL; ?>/index.php?url=listaContato/removerContatosSelecionados"
+>
+
+<?= \Core\Csrf::input(); ?>
+<input type="hidden" name="lista" value="<?= (int) $lista['LST_ID']; ?>">
+
 <div class="card">
 
     <div class="card-header">
@@ -109,6 +118,16 @@ function formatarTelefone($telefone)
         </h3>
 
         <div class="card-tools">
+
+            <button
+            type="submit"
+            id="btnExcluirSelecionados"
+            class="btn btn-danger btn-sm"
+            disabled
+            >
+                <i class="fas fa-trash"></i>
+                <span id="textoExcluirSelecionados">Excluir selecionados</span>
+            </button>
 
             <a
             href="<?= BASE_URL; ?>/index.php?url=importacao&lista=<?= (int) $lista['LST_ID']; ?>"
@@ -156,7 +175,15 @@ function formatarTelefone($telefone)
             <thead>
 
                 <tr>
-                    <th>Nome</th>
+                    <th>
+                        <input
+                        type="checkbox"
+                        id="selecionarTodosPagina"
+                        aria-label="Selecionar contatos desta página"
+                        class="mr-2"
+                        >
+                        Nome
+                    </th>
                     <th>Telefone</th>
                     <th>Importação</th>
                     <th width="100">
@@ -172,7 +199,15 @@ function formatarTelefone($telefone)
 
             <tr>
 
-                <td><?= htmlspecialchars($contato['CON_Nome'], ENT_QUOTES, 'UTF-8'); ?></td>
+                <td>
+                    <input
+                    type="checkbox"
+                    class="contato-selecao mr-2"
+                    value="<?= (int) $contato['CON_ID']; ?>"
+                    aria-label="Selecionar <?= htmlspecialchars($contato['CON_Nome'], ENT_QUOTES, 'UTF-8'); ?>"
+                    >
+                    <?= htmlspecialchars($contato['CON_Nome'], ENT_QUOTES, 'UTF-8'); ?>
+                </td>
 
                 <td>
                     <?= htmlspecialchars(
@@ -217,6 +252,8 @@ function formatarTelefone($telefone)
     </div>
 
 </div>
+
+</form>
 
 <div
 class="modal fade"
@@ -316,6 +353,115 @@ function limparModalAdicionarContato()
     document.querySelector('#telefoneManual').value = '';
 }
 
+var contatosSelecionados = new Set();
+
+function atualizarBotaoSelecionados()
+{
+    var total = contatosSelecionados.size;
+    var botao = document.getElementById('btnExcluirSelecionados');
+    var texto = document.getElementById('textoExcluirSelecionados');
+
+    botao.disabled = total === 0;
+    texto.textContent = total > 0
+        ? 'Excluir selecionados (' + total + ')'
+        : 'Excluir selecionados';
+}
+
+function atualizarCheckboxTodosPagina()
+{
+    var todos = Array.prototype.slice.call(
+        document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao')
+    );
+    var checkboxTodos = document.getElementById('selecionarTodosPagina');
+
+    if(!checkboxTodos){
+        return;
+    }
+
+    if(!todos.length){
+        checkboxTodos.checked = false;
+        checkboxTodos.indeterminate = false;
+        return;
+    }
+
+    var marcados = todos.filter(function(checkbox){
+        return checkbox.checked;
+    }).length;
+
+    checkboxTodos.checked = marcados === todos.length;
+    checkboxTodos.indeterminate = marcados > 0 && marcados < todos.length;
+}
+
+function restaurarSelecaoVisivel()
+{
+    document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao').forEach(function(checkbox){
+        checkbox.checked = contatosSelecionados.has(checkbox.value);
+    });
+
+    atualizarCheckboxTodosPagina();
+}
+
+document.addEventListener('change', function(e){
+
+    if(e.target && e.target.classList.contains('contato-selecao')){
+        if(e.target.checked){
+            contatosSelecionados.add(e.target.value);
+        }else{
+            contatosSelecionados.delete(e.target.value);
+        }
+
+        atualizarBotaoSelecionados();
+        atualizarCheckboxTodosPagina();
+    }
+
+    if(e.target && e.target.id === 'selecionarTodosPagina'){
+        document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao').forEach(function(checkbox){
+            checkbox.checked = e.target.checked;
+
+            if(e.target.checked){
+                contatosSelecionados.add(checkbox.value);
+            }else{
+                contatosSelecionados.delete(checkbox.value);
+            }
+        });
+
+        atualizarBotaoSelecionados();
+        atualizarCheckboxTodosPagina();
+    }
+
+});
+
+document.getElementById('formRemoverSelecionados').addEventListener('submit', function(e){
+    var total = contatosSelecionados.size;
+
+    if(total === 0){
+        e.preventDefault();
+        return;
+    }
+
+    var mensagem = total === 1
+        ? 'Deseja remover o contato selecionado desta lista? O contato continuará cadastrado no sistema.'
+        : 'Deseja remover os ' + total + ' contatos selecionados desta lista? Os contatos continuarão cadastrados no sistema.';
+
+    if(!window.confirm(mensagem)){
+        e.preventDefault();
+        return;
+    }
+
+    this.querySelectorAll('input.contato-selecionado-envio').forEach(function(input){
+        input.remove();
+    });
+
+    contatosSelecionados.forEach(function(contatoId){
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'contatos[]';
+        input.value = contatoId;
+        input.className = 'contato-selecionado-envio';
+        this.appendChild(input);
+    }, this);
+});
+
 document.addEventListener('click', function(e){
 
     if(e.target.closest('.btn-fechar-modal-contato')){
@@ -345,6 +491,10 @@ document.addEventListener('input', function(e){
 
 });
 
+$('#tabelaContatosLista').on('draw.dt', function(){
+    restaurarSelecaoVisivel();
+});
+
 $('#modalAdicionarContato').on('hidden.bs.modal', function(){
     limparModalAdicionarContato();
 });
@@ -352,5 +502,8 @@ $('#modalAdicionarContato').on('hidden.bs.modal', function(){
 $('#modalAdicionarContato').on('show.bs.modal', function(){
     limparModalAdicionarContato();
 });
+
+atualizarBotaoSelecionados();
+atualizarCheckboxTodosPagina();
 
 </script>
