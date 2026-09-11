@@ -94,6 +94,29 @@ class ListaContatoItem
         ]);
     }
 
+    public function removerContatos($listaId, array $contatoIds)
+    {
+        $contatoIds = array_values(array_unique(array_filter(array_map('intval', $contatoIds), function($id){
+            return $id > 0;
+        })));
+
+        if(!$contatoIds){
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($contatoIds), '?'));
+        $sql = $this->db->prepare("
+            DELETE FROM lista_contatos_itens
+            WHERE LST_ID = ?
+            AND CON_ID IN ({$placeholders})
+        ");
+
+        $parametros = array_merge([(int) $listaId], $contatoIds);
+        $sql->execute($parametros);
+
+        return $sql->rowCount();
+    }
+
     public function contatoExisteNaLista(
         $listaId,
         $contatoId
