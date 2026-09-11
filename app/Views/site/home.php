@@ -981,7 +981,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                         ? $plano['PLA_Cor']
                         : 'primary';
 
-                    $valorMensal = \\Models\\Plano::valorPorCiclo($plano, 'mensal');
+                    $valorMensal = \Models\Plano::valorPorCiclo($plano, 'mensal');
                     $ofertaMensal = $ofertasPublicasPlanos[(int) $plano['PLA_ID']]['mensal'] ?? [];
                     $valorPrimeiroPagamento = ((int) ($ofertaMensal['primeira_cobranca_centavos'] ?? 0)) / 100;
                     $valorDesconto = ((int) ($ofertaMensal['desconto_centavos'] ?? 0)) / 100;
