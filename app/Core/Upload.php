@@ -29,7 +29,8 @@ class Upload
 
         $permitidos = [
             'xls',
-            'xlsx'
+            'xlsx',
+            'vcf'
         ];
 
         if(
@@ -39,18 +40,30 @@ class Upload
             )
         ){
             throw new \Exception(
-                'Arquivo inválido'
+                'Arquivo inválido. Envie uma planilha XLS/XLSX ou um arquivo VCF.'
             );
         }
 
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
         $mime = $finfo->file($arquivo['tmp_name']);
-        $mimesPermitidos = [
+
+        $mimesPlanilha = [
             'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/zip',
             'application/octet-stream'
         ];
+
+        $mimesVcf = [
+            'text/vcard',
+            'text/x-vcard',
+            'text/plain',
+            'application/octet-stream'
+        ];
+
+        $mimesPermitidos = $extensao === 'vcf'
+            ? $mimesVcf
+            : $mimesPlanilha;
 
         if(!in_array($mime, $mimesPermitidos, true)){
             throw new \Exception(

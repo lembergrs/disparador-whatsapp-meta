@@ -72,8 +72,8 @@ if(!function_exists('formatarTelefone')){
 
 <div class="card-header">
 <h3 class="card-title">
-<i class="fas fa-file-excel"></i>
-Modelo de planilha
+<i class="fas fa-address-book"></i>
+Formatos aceitos
 </h3>
 </div>
 
@@ -84,13 +84,13 @@ Modelo de planilha
 <div class="col-md-8">
 
 <div class="alert alert-info mb-0">
-<strong>Formato esperado da planilha:</strong>
+<strong>Você pode importar contatos de duas formas:</strong>
 <ul class="mb-0 pl-3">
-<li>Arquivo XLSX</li>
-<li>Primeira linha com os nomes das colunas</li>
-<li>Telefone obrigatório</li>
-<li>Demais colunas opcionais</li>
-<li>Colunas extras podem ser usadas como variáveis</li>
+<li><strong>Planilha XLS/XLSX:</strong> primeira linha com os nomes das colunas e telefone na segunda coluna.</li>
+<li><strong>Arquivo VCF (vCard):</strong> exportado diretamente dos contatos do celular, Google Contatos, iPhone ou outros aplicativos compatíveis.</li>
+<li>Telefone é obrigatório; contatos sem telefone são ignorados.</li>
+<li>Se um contato no VCF tiver mais de um telefone, cada número é processado individualmente.</li>
+<li>Nome, telefone e e-mail do VCF são preservados como dados do contato quando disponíveis.</li>
 </ul>
 </div>
 
@@ -193,7 +193,7 @@ placeholder="Ex: Clientes Junho"
 
 <div class="form-group">
 
-<label>Arquivo</label>
+<label>Arquivo XLS, XLSX ou VCF</label>
 
 <div class="custom-file">
 
@@ -201,6 +201,7 @@ placeholder="Ex: Clientes Junho"
 type="file"
 name="arquivo"
 class="custom-file-input"
+accept=".xls,.xlsx,.vcf,text/vcard,text/x-vcard"
 required
 >
 
@@ -209,6 +210,10 @@ Escolher arquivo
 </label>
 
 </div>
+
+<small class="form-text text-muted">
+Para importar contatos do celular, exporte-os como arquivo .vcf e selecione o arquivo aqui.
+</small>
 
 </div>
 
@@ -314,6 +319,14 @@ $(document).ready(function(){
 
     $('#lista_id').on('change', alternarNovaLista);
     alternarNovaLista();
+
+    $('.custom-file-input').on('change', function(){
+        const nomeArquivo = (this.files && this.files.length)
+            ? this.files[0].name
+            : 'Escolher arquivo';
+
+        $(this).next('.custom-file-label').text(nomeArquivo);
+    });
 
     $('#tabelaContatos').DataTable({
         language: {

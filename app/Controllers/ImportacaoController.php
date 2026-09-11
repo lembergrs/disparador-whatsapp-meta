@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Auth;
 use Core\Upload;
 use Core\Spreadsheet;
+use Core\VCard;
 use Core\Session;
 
 use Models\Contato;
@@ -127,10 +128,18 @@ class ImportacaoController extends Controller
                     $_FILES['arquivo']
                 );
 
-            $linhas =
-                Spreadsheet::ler(
-                    $arquivo
-                );
+            $extensao = strtolower(
+                pathinfo(
+                    $arquivo,
+                    PATHINFO_EXTENSION
+                )
+            );
+
+            if($extensao === 'vcf'){
+                $linhas = VCard::ler($arquivo);
+            }else{
+                $linhas = Spreadsheet::ler($arquivo);
+            }
 
             if(empty($linhas[0])){
                 throw new \Exception('Arquivo sem cabeçalho.');
@@ -235,7 +244,7 @@ class ImportacaoController extends Controller
                 'success',
                 "{$vinculados} contatos importados com sucesso para a lista {$nomeListaImportada}. "
                 . "{$importados} novo(s) contato(s) criado(s). "
-                . "{$ignorados} linha(s) ignorada(s)."
+                . "{$ignorados} registro(s) ignorado(s)."
             );
 
             $this->redirect(
