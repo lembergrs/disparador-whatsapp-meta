@@ -91,6 +91,42 @@ class ListaContato
         return $sql->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function buscarPorNome($clienteId, $nome)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM listas_contatos
+            WHERE CLI_ID = ?
+            AND LST_Nome = ?
+            AND LST_Ativo = 'S'
+            ORDER BY LST_ID ASC
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            $clienteId,
+            $nome
+        ]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function obterOuCriarListaWhatsapp($clienteId)
+    {
+        $nome = 'Contatos do WhatsApp';
+        $lista = $this->buscarPorNome($clienteId, $nome);
+
+        if($lista){
+            return (int) $lista['LST_ID'];
+        }
+
+        return (int) $this->criar(
+            $clienteId,
+            $nome,
+            'Contatos sincronizados automaticamente pelo WhatsApp Business (Coexistence).'
+        );
+    }
+
     public function atualizar($id, $clienteId, $nome)
     {
         $sql = $this->db->prepare("
