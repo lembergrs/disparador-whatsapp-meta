@@ -22,20 +22,20 @@ class MetaWebhookStateSyncService
 
     public function processar(array $value, array $metaConta)
     {
-        $resultado = ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'ignoradas'=>0, 'invalidas'=>0];
+        $resultado = ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'removidas'=>0, 'ignoradas'=>0, 'invalidas'=>0];
         $clienteId = (int) ($metaConta['CLI_ID'] ?? 0);
         $metaId = (int) ($metaConta['MTA_ID'] ?? 0);
         $listaWhatsappId = null;
 
         if($clienteId <= 0 || $metaId <= 0){
-            return ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'ignoradas'=>0, 'invalidas'=>1];
+            return ['criadas'=>0, 'existentes'=>0, 'vinculadas'=>0, 'removidas'=>0, 'ignoradas'=>0, 'invalidas'=>1];
         }
 
         foreach(($value['state_sync'] ?? []) as $state){
             try{
                 $type = strtolower(trim((string) ($state['type'] ?? '')));
                 $action = strtolower(trim((string) ($state['action'] ?? '')));
-                if($type !== 'contact' || !in_array($action, ['add','added','create','created','update','updated'], true)){
+                if($type !== 'contact' || !in_array($action, ['add','added','create','created','update','updated','remove'], true)){
                     $resultado['ignoradas']++;
                     $this->log('state_sync_tipo_adiado', [
                         'phone_number_id'=>$value['metadata']['phone_number_id'] ?? null,
@@ -54,6 +54,25 @@ class MetaWebhookStateSyncService
 
                 $existente = $this->contatoModel->buscarPorTelefone($clienteId, $normalizado);
 
+                if($action === 'remove'){
+                    if(!$existente){
+                        continue;
+                    }
+
+                    if($listaWhatsappId === null){
+                        $listaWhatsapp = $this->listaModel->buscarPorNome($clienteId, 'Contatos do WhatsApp');
+                        $listaWhatsappId = $listaWhatsapp ? (int) $listaWhatsapp['LST_ID'] : 0;
+                    }
+
+                    $contatoId = (int) $existente['CON_ID'];
+                    if($listaWhatsappId > 0 && $contatoId > 0 && $this->listaItemModel->contatoExisteNaLista($listaWhatsappId, $contatoId)){
+                        if($this->listaItemModel->removerContato($listaWhatsappId, $contatoId)){
+                            $resultado['removidas']++;
+                        }
+                    }
+                    continue;
+                }
+
                 if($existente){
                     $contatoId = (int) $existente['CON_ID'];
                     $resultado['existentes']++;
@@ -70,7 +89,7 @@ class MetaWebhookStateSyncService
                     $resultado['criadas']++;
                 }
 
-                if($listaWhatsappId === null){
+                if($listaWhatsappId === null || $listaWhatsappId === 0){
                     $listaWhatsappId = $this->listaModel->obterOuCriarListaWhatsapp($clienteId);
                 }
 
