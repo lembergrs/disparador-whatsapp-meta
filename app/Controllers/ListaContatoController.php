@@ -428,6 +428,58 @@ class ListaContatoController extends Controller
         );
     }
 
+    public function removerContatosSelecionados()
+    {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+        $listaId = (int) ($_POST['lista'] ?? 0);
+        $contatoIds = $_POST['contatos'] ?? [];
+
+        if($listaId <= 0 || !is_array($contatoIds)){
+            Session::flash('error', 'Dados inválidos.');
+            $this->redirect('listaContato');
+            return;
+        }
+
+        $lista = $this->listaModel->buscar(
+            $listaId,
+            $usuario['cliente_id']
+        );
+
+        if(!$lista){
+            Session::flash('error', 'Lista não encontrada.');
+            $this->redirect('listaContato');
+            return;
+        }
+
+        $contatoIds = array_values(array_unique(array_filter(array_map('intval', $contatoIds), function($id){
+            return $id > 0;
+        })));
+
+        if(!$contatoIds){
+            Session::flash('error', 'Selecione ao menos um contato.');
+            $this->redirect('listaContato/visualizar&id=' . $listaId);
+            return;
+        }
+
+        $removidos = $this->listaItemModel->removerContatos(
+            $listaId,
+            $contatoIds
+        );
+
+        Session::flash(
+            'success',
+            $removidos === 1
+                ? '1 contato removido da lista.'
+                : $removidos . ' contatos removidos da lista.'
+        );
+
+        $this->redirect(
+            'listaContato/visualizar&id=' . $listaId
+        );
+    }
+
     public function adicionarContato()
     {
         $this->validarCsrfPost();
