@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# Expõe arquivos públicos gravados em public/uploads mantendo URLs /uploads/...
+# O DocumentRoot de produção aponta para a raiz do projeto.
+RewriteRule ^uploads/(.*)$ public/uploads/$1 [L]
+
 # Sitemap dinâmico: inclui apenas artigos publicados.
 RewriteRule ^sitemap\.xml$ index.php?url=sitemap [QSA,L]
 
