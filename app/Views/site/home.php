@@ -4,6 +4,7 @@ $perguntasFrequentes = [
     'Preciso trocar meu número?' => 'Não necessariamente. Você pode conectar um número novo ou, quando elegível, utilizar o número que sua empresa já usa no WhatsApp Business.',
     'Posso conectar um número novo?' => 'Sim. O processo de conexão permite cadastrar um novo número para operar pela plataforma oficial.',
     'Minha equipe pode atender pelo mesmo número?' => 'Sim. A central de conversas permite organizar o atendimento da equipe pelos números conectados ao Disparador.net.',
+    'Meus contatos do WhatsApp Business podem aparecer no Disparador?' => 'Quando a Meta disponibiliza esses dados na conexão pelo modo Coexistence, os contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net. A disponibilidade depende dos dados e eventos fornecidos pela Meta.',
     'Preciso deixar um celular ou computador ligado?' => 'O Disparador.net opera em nuvem. Números elegíveis que continuam no WhatsApp Business podem seguir usando o aplicativo, sem que ele seja o responsável por manter a plataforma conectada.',
     'Posso enviar campanhas para meus clientes?' => 'Sim, para contatos que autorizaram a comunicação, utilizando templates aprovados e respeitando as políticas aplicáveis da Meta.',
     'Existe período de teste?' => 'Sim. O teste grátis é de até 7 dias ou 200 mensagens, o que ocorrer primeiro, e começa após a validação da primeira conexão.',
@@ -464,10 +465,12 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <div class="card-body p-4">
                         <p><i class="fas fa-mobile-alt text-success mr-2"></i> Continue utilizando o WhatsApp Business no celular.</p>
                         <p><i class="fas fa-random text-success mr-2"></i> Use o mesmo número no Disparador.net.</p>
+                        <p><i class="fas fa-address-book text-success mr-2"></i> <strong>Seus contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net.</strong></p>
                         <p><i class="fas fa-users text-success mr-2"></i> Centralize o atendimento da sua equipe.</p>
                         <p class="mb-0"><i class="fas fa-bullhorn text-success mr-2"></i> Envie campanhas pela plataforma oficial da Meta.</p>
                     </div>
                 </div>
+                <p class="text-muted small mt-2 mb-0">A sincronização depende dos contatos e eventos disponibilizados pela Meta para o número conectado.</p>
             </div>
         </div>
     </div>
