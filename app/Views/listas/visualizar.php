@@ -180,6 +180,7 @@ action="<?= BASE_URL; ?>/index.php?url=listaContato/removerContatosSelecionados"
                         type="checkbox"
                         id="selecionarTodosPagina"
                         aria-label="Selecionar contatos desta página"
+                        title="Selecionar contatos desta página"
                         class="mr-2"
                         >
                         Nome
@@ -355,6 +356,26 @@ function limparModalAdicionarContato()
 
 var contatosSelecionados = new Set();
 
+function obterCheckboxesPaginaAtual()
+{
+    if(
+        $.fn.DataTable
+        && $.fn.DataTable.isDataTable('#tabelaContatosLista')
+    ){
+        return $('#tabelaContatosLista')
+            .DataTable()
+            .rows({page: 'current'})
+            .nodes()
+            .to$()
+            .find('.contato-selecao')
+            .toArray();
+    }
+
+    return Array.prototype.slice.call(
+        document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao')
+    );
+}
+
 function atualizarBotaoSelecionados()
 {
     var total = contatosSelecionados.size;
@@ -369,9 +390,7 @@ function atualizarBotaoSelecionados()
 
 function atualizarCheckboxTodosPagina()
 {
-    var todos = Array.prototype.slice.call(
-        document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao')
-    );
+    var todos = obterCheckboxesPaginaAtual();
     var checkboxTodos = document.getElementById('selecionarTodosPagina');
 
     if(!checkboxTodos){
@@ -394,11 +413,18 @@ function atualizarCheckboxTodosPagina()
 
 function restaurarSelecaoVisivel()
 {
-    document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao').forEach(function(checkbox){
+    obterCheckboxesPaginaAtual().forEach(function(checkbox){
         checkbox.checked = contatosSelecionados.has(checkbox.value);
     });
 
     atualizarCheckboxTodosPagina();
+}
+
+var checkboxSelecionarTodosPagina = document.getElementById('selecionarTodosPagina');
+if(checkboxSelecionarTodosPagina){
+    checkboxSelecionarTodosPagina.addEventListener('click', function(e){
+        e.stopPropagation();
+    });
 }
 
 document.addEventListener('change', function(e){
@@ -415,7 +441,7 @@ document.addEventListener('change', function(e){
     }
 
     if(e.target && e.target.id === 'selecionarTodosPagina'){
-        document.querySelectorAll('#tabelaContatosLista tbody .contato-selecao').forEach(function(checkbox){
+        obterCheckboxesPaginaAtual().forEach(function(checkbox){
             checkbox.checked = e.target.checked;
 
             if(e.target.checked){
