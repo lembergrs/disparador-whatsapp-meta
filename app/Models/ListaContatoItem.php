@@ -34,6 +34,34 @@ class ListaContatoItem
         ]);
     }
 
+    public function adicionarContatosDeOutraLista($listaOrigemId, $listaDestinoId, array $contatoIds)
+    {
+        $contatoIds = array_values(array_unique(array_filter(array_map('intval', $contatoIds), function($id){
+            return $id > 0;
+        })));
+
+        if(!$contatoIds){
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($contatoIds), '?'));
+        $sql = $this->db->prepare("
+            INSERT IGNORE INTO lista_contatos_itens (LST_ID, CON_ID)
+            SELECT ?, origem.CON_ID
+            FROM lista_contatos_itens origem
+            WHERE origem.LST_ID = ?
+            AND origem.CON_ID IN ({$placeholders})
+        ");
+
+        $parametros = array_merge(
+            [(int) $listaDestinoId, (int) $listaOrigemId],
+            $contatoIds
+        );
+        $sql->execute($parametros);
+
+        return $sql->rowCount();
+    }
+
     public function listarContatos($listaId)
     {
         $sql = $this->db->prepare("
