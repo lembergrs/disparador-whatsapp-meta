@@ -157,12 +157,20 @@ class ListaContatoController extends Controller
                 $id
             );
 
+        $listasDestino = array_values(array_filter(
+            $this->listaModel->listarPorCliente($usuario['cliente_id']),
+            function($listaDisponivel) use ($id){
+                return (int) $listaDisponivel['LST_ID'] !== (int) $id;
+            }
+        ));
+
         $this->view(
             'listas/visualizar',
             [
                 'titulo' => $lista['LST_Nome'],
                 'lista' => $lista,
-                'contatos' => $contatos
+                'contatos' => $contatos,
+                'listasDestino' => $listasDestino
             ]
         );
     }
@@ -477,6 +485,80 @@ class ListaContatoController extends Controller
 
         $this->redirect(
             'listaContato/visualizar&id=' . $listaId
+        );
+    }
+
+    public function vincularContatosSelecionados()
+    {
+        $this->validarCsrfPost();
+
+        $usuario = Auth::usuario();
+        $listaOrigemId = (int) ($_POST['lista_origem'] ?? 0);
+        $listaDestinoId = (int) ($_POST['lista_destino'] ?? 0);
+        $contatoIds = $_POST['contatos'] ?? [];
+
+        if(
+            $listaOrigemId <= 0
+            || $listaDestinoId <= 0
+            || $listaOrigemId === $listaDestinoId
+            || !is_array($contatoIds)
+        ){
+            Session::flash('error', 'Dados inválidos.');
+            $this->redirect(
+                $listaOrigemId > 0
+                    ? 'listaContato/visualizar&id=' . $listaOrigemId
+                    : 'listaContato'
+            );
+            return;
+        }
+
+        $listaOrigem = $this->listaModel->buscar(
+            $listaOrigemId,
+            $usuario['cliente_id']
+        );
+        $listaDestino = $this->listaModel->buscar(
+            $listaDestinoId,
+            $usuario['cliente_id']
+        );
+
+        if(!$listaOrigem || !$listaDestino){
+            Session::flash('error', 'Lista não encontrada.');
+            $this->redirect('listaContato');
+            return;
+        }
+
+        $contatoIds = array_values(array_unique(array_filter(array_map('intval', $contatoIds), function($id){
+            return $id > 0;
+        })));
+
+        if(!$contatoIds){
+            Session::flash('error', 'Selecione ao menos um contato.');
+            $this->redirect('listaContato/visualizar&id=' . $listaOrigemId);
+            return;
+        }
+
+        $vinculados = $this->listaItemModel->adicionarContatosDeOutraLista(
+            $listaOrigemId,
+            $listaDestinoId,
+            $contatoIds
+        );
+
+        if($vinculados > 0){
+            Session::flash(
+                'success',
+                $vinculados === 1
+                    ? '1 contato adicionado à lista ' . $listaDestino['LST_Nome'] . '.'
+                    : $vinculados . ' contatos adicionados à lista ' . $listaDestino['LST_Nome'] . '.'
+            );
+        }else{
+            Session::flash(
+                'success',
+                'Os contatos selecionados já estavam vinculados à lista ' . $listaDestino['LST_Nome'] . '.'
+            );
+        }
+
+        $this->redirect(
+            'listaContato/visualizar&id=' . $listaOrigemId
         );
     }
 

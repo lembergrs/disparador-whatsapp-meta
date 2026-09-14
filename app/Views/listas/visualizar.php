@@ -120,6 +120,19 @@ action="<?= BASE_URL; ?>/index.php?url=listaContato/removerContatosSelecionados"
         <div class="card-tools">
 
             <button
+            type="button"
+            id="btnAdicionarLista"
+            class="btn btn-info btn-sm"
+            data-toggle="modal"
+            data-target="#modalAdicionarLista"
+            <?= empty($listasDestino) ? 'title="Crie outra lista para vincular os contatos selecionados."' : ''; ?>
+            disabled
+            >
+                <i class="fas fa-link"></i>
+                <span id="textoAdicionarLista">Adicionar à lista</span>
+            </button>
+
+            <button
             type="submit"
             id="btnExcluirSelecionados"
             class="btn btn-danger btn-sm"
@@ -256,6 +269,82 @@ action="<?= BASE_URL; ?>/index.php?url=listaContato/removerContatosSelecionados"
 
 </form>
 
+<?php if(!empty($listasDestino)){ ?>
+<div
+class="modal fade"
+id="modalAdicionarLista"
+tabindex="-1"
+role="dialog"
+>
+
+<div class="modal-dialog" role="document">
+
+<div class="modal-content">
+
+<form
+id="formAdicionarLista"
+method="POST"
+action="<?= BASE_URL; ?>/index.php?url=listaContato/vincularContatosSelecionados"
+>
+
+<?= \Core\Csrf::input(); ?>
+<input type="hidden" name="lista_origem" value="<?= (int) $lista['LST_ID']; ?>">
+
+<div class="modal-header">
+
+<h4 class="modal-title">
+Adicionar contatos à lista
+</h4>
+
+<button type="button" class="close" data-dismiss="modal">
+<span>&times;</span>
+</button>
+
+</div>
+
+<div class="modal-body">
+
+<p class="text-muted" id="resumoAdicionarLista"></p>
+
+<div class="form-group">
+<label for="listaDestino">Lista de destino</label>
+<select
+name="lista_destino"
+id="listaDestino"
+class="form-control"
+required
+>
+<option value="">Selecione uma lista</option>
+<?php foreach($listasDestino as $listaDestino){ ?>
+<option value="<?= (int) $listaDestino['LST_ID']; ?>">
+<?= htmlspecialchars($listaDestino['LST_Nome'], ENT_QUOTES, 'UTF-8'); ?>
+</option>
+<?php } ?>
+</select>
+<small class="form-text text-muted">
+Os contatos continuarão também na lista atual.
+</small>
+</div>
+
+</div>
+
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+<button type="submit" class="btn btn-info">
+<i class="fas fa-link"></i>
+Adicionar à lista
+</button>
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+</div>
+<?php } ?>
+
 <div
 class="modal fade"
 id="modalAdicionarContato"
@@ -355,6 +444,7 @@ function limparModalAdicionarContato()
 }
 
 var contatosSelecionados = new Set();
+var temListasDestino = <?= !empty($listasDestino) ? 'true' : 'false'; ?>;
 
 function obterCheckboxesPaginaAtual()
 {
@@ -376,16 +466,23 @@ function obterCheckboxesPaginaAtual()
     );
 }
 
-function atualizarBotaoSelecionados()
+function atualizarBotoesSelecionados()
 {
     var total = contatosSelecionados.size;
-    var botao = document.getElementById('btnExcluirSelecionados');
-    var texto = document.getElementById('textoExcluirSelecionados');
+    var botaoExcluir = document.getElementById('btnExcluirSelecionados');
+    var textoExcluir = document.getElementById('textoExcluirSelecionados');
+    var botaoAdicionar = document.getElementById('btnAdicionarLista');
+    var textoAdicionar = document.getElementById('textoAdicionarLista');
 
-    botao.disabled = total === 0;
-    texto.textContent = total > 0
+    botaoExcluir.disabled = total === 0;
+    textoExcluir.textContent = total > 0
         ? 'Excluir selecionados (' + total + ')'
         : 'Excluir selecionados';
+
+    botaoAdicionar.disabled = total === 0 || !temListasDestino;
+    textoAdicionar.textContent = total > 0
+        ? 'Adicionar à lista (' + total + ')'
+        : 'Adicionar à lista';
 }
 
 function atualizarCheckboxTodosPagina()
@@ -420,6 +517,22 @@ function restaurarSelecaoVisivel()
     atualizarCheckboxTodosPagina();
 }
 
+function adicionarInputsSelecionados(formulario)
+{
+    formulario.querySelectorAll('input.contato-selecionado-envio').forEach(function(input){
+        input.remove();
+    });
+
+    contatosSelecionados.forEach(function(contatoId){
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'contatos[]';
+        input.value = contatoId;
+        input.className = 'contato-selecionado-envio';
+        formulario.appendChild(input);
+    });
+}
+
 var checkboxSelecionarTodosPagina = document.getElementById('selecionarTodosPagina');
 if(checkboxSelecionarTodosPagina){
     checkboxSelecionarTodosPagina.addEventListener('click', function(e){
@@ -436,7 +549,7 @@ document.addEventListener('change', function(e){
             contatosSelecionados.delete(e.target.value);
         }
 
-        atualizarBotaoSelecionados();
+        atualizarBotoesSelecionados();
         atualizarCheckboxTodosPagina();
     }
 
@@ -451,7 +564,7 @@ document.addEventListener('change', function(e){
             }
         });
 
-        atualizarBotaoSelecionados();
+        atualizarBotoesSelecionados();
         atualizarCheckboxTodosPagina();
     }
 
@@ -474,19 +587,29 @@ document.getElementById('formRemoverSelecionados').addEventListener('submit', fu
         return;
     }
 
-    this.querySelectorAll('input.contato-selecionado-envio').forEach(function(input){
-        input.remove();
+    adicionarInputsSelecionados(this);
+});
+
+var formAdicionarLista = document.getElementById('formAdicionarLista');
+if(formAdicionarLista){
+    formAdicionarLista.addEventListener('submit', function(e){
+        if(contatosSelecionados.size === 0){
+            e.preventDefault();
+            return;
+        }
+
+        adicionarInputsSelecionados(this);
     });
 
-    contatosSelecionados.forEach(function(contatoId){
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'contatos[]';
-        input.value = contatoId;
-        input.className = 'contato-selecionado-envio';
-        this.appendChild(input);
-    }, this);
-});
+    $('#modalAdicionarLista').on('show.bs.modal', function(){
+        var total = contatosSelecionados.size;
+        var resumo = document.getElementById('resumoAdicionarLista');
+        resumo.textContent = total === 1
+            ? '1 contato selecionado.'
+            : total + ' contatos selecionados.';
+        document.getElementById('listaDestino').value = '';
+    });
+}
 
 document.addEventListener('click', function(e){
 
@@ -529,7 +652,7 @@ $('#modalAdicionarContato').on('show.bs.modal', function(){
     limparModalAdicionarContato();
 });
 
-atualizarBotaoSelecionados();
+atualizarBotoesSelecionados();
 atualizarCheckboxTodosPagina();
 
 </script>
