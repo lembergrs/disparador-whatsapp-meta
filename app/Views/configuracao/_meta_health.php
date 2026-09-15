@@ -4,13 +4,30 @@ $diagnosticoMeta = \Services\MetaHealthService::consultarConta($conta);
 $canSendMeta = strtoupper((string) ($diagnosticoMeta['can_send_message'] ?? ''));
 $errosMeta = $diagnosticoMeta['erros'] ?? [];
 
+// O health_status agregado da Meta pode retornar BLOCKED mesmo quando as
+// pendências informadas são limitações operacionais/temporárias. Para a
+// apresentação ao cliente, reservamos "Bloqueado" para diagnósticos que
+// contenham ao menos uma pendência realmente crítica (danger).
+$temErroMetaCritico = false;
+foreach($errosMeta as $erroMetaStatus){
+    if(($erroMetaStatus['nivel'] ?? 'warning') === 'danger'){
+        $temErroMetaCritico = true;
+        break;
+    }
+}
+
+$canSendMetaExibicao = $canSendMeta;
+if($canSendMeta === 'BLOCKED' && !$temErroMetaCritico && !empty($errosMeta)){
+    $canSendMetaExibicao = 'LIMITED';
+}
+
 $statusMetaLabel = [
     'AVAILABLE' => ['classe' => 'success', 'texto' => 'Disponível'],
     'LIMITED' => ['classe' => 'warning', 'texto' => 'Limitado'],
     'BLOCKED' => ['classe' => 'danger', 'texto' => 'Bloqueado']
 ];
 
-$statusMeta = $statusMetaLabel[$canSendMeta] ?? null;
+$statusMeta = $statusMetaLabel[$canSendMetaExibicao] ?? null;
 ?>
 
 <div class="mt-3 border-top pt-2">
