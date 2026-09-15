@@ -1,0 +1,38 @@
+:root{color-scheme:light;--ink:#173d3a;--muted:#516762;--accent:#146f67;--line:#dce6e1;--paper:#fbfcf9;--soft:#eef5ef}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:2rem}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65}
+a{color:inherit;text-underline-offset:4px}
+a:hover{color:var(--accent)}
+a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:5px}
+img{max-width:100%;height:auto;display:block}
+.container{width:min(1160px,calc(100% - 64px));margin-inline:auto}
+.skip-link{position:absolute;left:1rem;top:-100px;padding:12px;background:white;z-index:2}
+.skip-link:focus{top:1rem}
+.site-header{border-bottom:1px solid var(--line)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;min-height:100px}
+.brand{font-family:Georgia,serif;font-size:28px;text-decoration:none;line-height:1.2}
+.brand span{display:block;font:10px Arial,sans-serif;letter-spacing:3px;margin-top:8px}
+nav{display:flex;gap:32px}nav a{text-decoration:none;font-size:14px}
+.hero{display:grid;grid-template-columns:.85fr 1.15fr;gap:64px;align-items:center;padding-block:64px 76px}
+.logo{width:200px;margin-bottom:32px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--accent);margin:0 0 18px}
+h1,h2{font-weight:400;letter-spacing:-1.5px;line-height:1.15;margin:0;font-family:Georgia,'Times New Roman',serif}
+h1{font-size:clamp(38px,4vw,56px)}h2{font-size:clamp(30px,3vw,42px)}
+.intro{color:var(--muted);max-width:380px;margin:24px 0 28px}
+.button{display:inline-flex;align-items:center;justify-content:space-between;gap:28px;background:var(--accent);color:white;border-radius:5px;text-decoration:none;padding:12px 20px;font-size:14px;font-weight:600}
+.button:hover{background:var(--ink);color:white}
+.storefront{margin:0;background:var(--soft);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.storefront img{width:100%;aspect-ratio:1691/930;object-fit:contain}
+figcaption{padding:22px 24px;font-size:13px;color:var(--muted)}figcaption span{display:block;font-size:10px;font-weight:bold;letter-spacing:2px;color:var(--accent);margin-bottom:5px}
+.about{background:var(--soft);padding-block:64px;border-block:1px solid var(--line)}
+.about-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:90px}.about-text{margin:0 0 24px;font-size:18px}
+summary{cursor:pointer;color:var(--accent);font-size:14px;font-weight:600;padding-block:10px}
+.company-data{margin:12px 0 0}.company-data div{padding-block:8px;border-top:1px solid var(--line)}dt{font-weight:600}dd{margin:0;color:var(--muted)}.company-data dt,.company-data dd{font-size:14px}
+.contact{padding-block:70px 80px}.contact-grid{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:40px;margin-top:42px}
+h3{font-size:15px;margin:0 0 18px}.contact-column>a{display:table;margin-bottom:10px;font-size:14px;overflow-wrap:anywhere}.contact-column>.phone{font-size:20px;text-decoration:none}.contact-column>.button{display:inline-flex;margin-top:16px}
+address{font-style:normal;color:var(--muted);font-size:14px}.hours{margin:0;font-size:14px}.hours dt:not(:first-child){margin-top:14px}
+footer{border-top:1px solid var(--line);padding-block:24px}.footer-inner{display:flex;justify-content:space-between;gap:20px;align-items:center}footer p{margin:0;font-size:12px;color:var(--muted)}footer p span{display:block;font-size:11px}.hosting{font-size:11px}
+@media(max-width:800px){.hero{gap:32px;grid-template-columns:1fr;padding-block:40px}.hero-copy{max-width:560px}.logo{width:160px}.about-grid{grid-template-columns:1fr;gap:28px}.contact-grid{grid-template-columns:1fr 1fr}.contact-column:first-child{grid-column:1/-1}.about,.contact{padding-block:44px}}
+@media(max-width:480px){.container{width:calc(100% - 40px)}.header-inner{min-height:90px;gap:12px}.brand{font-size:23px}nav{gap:16px}nav a{font-size:12px}.contact-grid{grid-template-columns:1fr;gap:28px}.footer-inner{align-items:flex-start;flex-direction:column;gap:12px}figcaption{padding:18px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
