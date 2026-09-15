@@ -10,12 +10,12 @@ $assert = static function ($condicao, $mensagem) {
 };
 
 $assert(
-    strpos($view, "$canSendMeta === 'BLOCKED' && !$temErroMetaCritico") !== false,
+    strpos($view, '$canSendMeta === \'BLOCKED\' && !$temErroMetaCritico') !== false,
     'BLOCKED sem erro crítico deve ser reclassificado apenas na apresentação.'
 );
 
 $assert(
-    strpos($view, "$canSendMetaExibicao = 'LIMITED';") !== false,
+    strpos($view, '$canSendMetaExibicao = \'LIMITED\';') !== false,
     'A apresentação deve usar LIMITED para limitações não críticas.'
 );
 
