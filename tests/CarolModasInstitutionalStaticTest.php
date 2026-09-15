@@ -13,7 +13,7 @@ $html = file_get_contents($page . '/index.html');
 $text = html_entity_decode(strip_tags($html), ENT_QUOTES, 'UTF-8');
 foreach (['Carol Modas', 'C. A. DA S. OLIVEIRA', '34.640.908/0001-81', '13.780.720-1', '6900',
     'Rua José Olavo Gonçalves, 190N', 'Centro', 'Juara – MT', '78575-000',
-    '(66) 99965-3195', 'castelocarol@outlook.com', '@carolmodasjuara',
+    '(66) 99963-3195', 'castelocarol@outlook.com', '@carolmodasjuara',
     'Segunda a sexta', '08h às 11h', '13h às 18h', 'Sábado', '12h às 20h',
     'Página institucional hospedada por Disparador.net.'] as $required) {
     $assert(str_contains($text, $required), 'Informação obrigatória ausente: ' . $required);
@@ -22,9 +22,9 @@ foreach (['Carol Modas', 'C. A. DA S. OLIVEIRA', '34.640.908/0001-81', '13.780.7
 preg_match_all('/(?<!\d)(?:\+?55[\s.-]*)?\(?\d{2}\)?[\s.-]*9?\d{4}[\s.-]*\d{4}(?!\d)/', $html, $phones);
 $assert(count($phones[0]) >= 3, 'Telefone visível e links de contato devem existir.');
 foreach ($phones[0] as $phone) {
-    $assert(in_array(preg_replace('/\D/', '', $phone), ['66999653195', '5566999653195'], true), 'Telefone não autorizado.');
+    $assert(in_array(preg_replace('/\D/', '', $phone), ['66999633195', '5566999633195'], true), 'Telefone não autorizado.');
 }
-foreach (['tel:+5566999653195', 'https://wa.me/5566999653195', 'https://www.instagram.com/carolmodasjuara/'] as $link) {
+foreach (['tel:+5566999633195', 'https://wa.me/5566999633195', 'https://www.instagram.com/carolmodasjuara/'] as $link) {
     $assert(str_contains($html, 'href="' . $link . '"'), 'Link comercial incorreto.');
 }
 preg_match_all('/(?:src|href)="(assets\/[^"#]+)"/', $html, $assets);
