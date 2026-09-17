@@ -127,7 +127,8 @@ $nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?
                         <option value="">Selecione um cliente primeiro</option>
                     </select>
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
+                <div class="col-md-2">
+                    <label class="d-block">&nbsp;</label>
                     <button type="submit" id="nfse_emitir_btn" class="btn btn-primary btn-block" data-config-fiscal-completa="<?= $nfseConfigFiscalCompleta ? '1' : '0'; ?>" disabled onclick="return confirm('Esta ação emitirá uma NFS-e real no ambiente configurado. Confirma a emissão manual desta cobrança paga?');">
                         Emitir manualmente
                     </button>
