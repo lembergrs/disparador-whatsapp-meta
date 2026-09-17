@@ -89,21 +89,6 @@ class NfseExternalReconciliationService
             throw $e;
         }
 
-        try{
-            $pdfHttp = $this->client->consultarPdf([
-                'cert' => $segredos['cert'],
-                'senhaCert' => $segredos['senhaCert'],
-                'idNota' => $chave
-            ]);
-            $pdf = $this->mapper->mapearPdf($pdfHttp);
-            if(!empty($pdf['sucesso']) && !empty($pdf['conteudo'])){
-                $pathPdf = $this->salvarArquivoPrivado('pdf', $pdf['conteudo']);
-                $this->emissoes->persistirArquivoPdf($novoId, $pathPdf, $pdf['hash'] ?? hash('sha256', $pdf['conteudo']));
-            }
-        }catch(\Throwable $e){
-            $this->emissoes->registrarFalhaDocumento($novoId, 'consulta_pdf', 'pdf_externo_nao_obtido', 'NFS-e reconciliada; PDF poderá ser consultado novamente.');
-        }
-
         return [
             'sucesso' => true,
             'nfse_id' => $novoId,
@@ -177,7 +162,7 @@ class NfseExternalReconciliationService
         return [
             'chave_acesso' => $chave,
             'prestador_cnpj' => $prestador,
-            'ambiente' => 'production',
+            'ambiente' => NfseConfigService::ambiente(),
             'numero_nfse' => $numeroNfse,
             'num_dps' => $numDps,
             'serie' => $serie,
