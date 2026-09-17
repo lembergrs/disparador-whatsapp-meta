@@ -21,6 +21,9 @@ class FakeContatoCoexistence
         if($telefone === '5541999991111'){
             return ['CON_ID'=>10, 'CON_Telefone'=>$telefone];
         }
+        if($telefone === '5541977773333'){
+            return ['CON_ID'=>30, 'CON_Telefone'=>$telefone];
+        }
         return false;
     }
 
@@ -51,6 +54,11 @@ class FakeListaItemCoexistence
         return false;
     }
 
+    public function contatoExisteEmOutraListaDoCliente($clienteId, $contatoId, $listaIgnoradaId = 0)
+    {
+        return $clienteId === 7 && $contatoId === 30 && $listaIgnoradaId === 99;
+    }
+
     public function adicionar($listaId, $contatoId)
     {
         $this->vinculos[] = [$listaId, $contatoId];
@@ -71,7 +79,7 @@ $resultado = $service->processar([
             'action'=>'update',
             'contact'=>[
                 'phone_number'=>'5541999991111',
-                'full_name'=>'Contato Existente'
+                'full_name'=>'Contato Existente Sem Lista'
             ]
         ],
         [
@@ -81,6 +89,14 @@ $resultado = $service->processar([
                 'phone_number'=>'5541988882222',
                 'full_name'=>'Contato Novo'
             ]
+        ],
+        [
+            'type'=>'contact',
+            'action'=>'update',
+            'contact'=>[
+                'phone_number'=>'5541977773333',
+                'full_name'=>'Contato Já Organizado'
+            ]
         ]
     ]
 ], [
@@ -88,20 +104,22 @@ $resultado = $service->processar([
     'MTA_ID'=>3
 ]);
 
-$assert($resultado['existentes'] === 1, 'Contato já existente deve ser reconhecido.');
+$assert($resultado['existentes'] === 2, 'Contatos já existentes devem ser reconhecidos.');
 $assert($resultado['criadas'] === 1, 'Contato novo do state sync deve ser criado.');
-$assert($resultado['vinculadas'] === 2, 'Contato novo e existente devem ser vinculados à lista automática.');
+$assert($resultado['vinculadas'] === 2, 'Somente contato novo e existente sem outra lista devem entrar na lista automática.');
 $assert(count($lista->clientes) === 1, 'Lista automática deve ser resolvida apenas uma vez por payload.');
 $assert($lista->clientes[0] === 7, 'Lista automática deve pertencer ao CLI_ID correto.');
-$assert($item->vinculos === [[99,10],[99,20]], 'Todos os contatos sincronizados devem ser vinculados à lista automática.');
+$assert($item->vinculos === [[99,10],[99,20]], 'Contato já organizado em outra lista não deve ser revinculado à lista automática.');
 $assert(($contato->salvos[0]['dados_json'] ?? '') === '{"origem":"whatsapp_business_app"}', 'Contato criado pelo Coexistence deve preservar a origem.');
 
 $root = dirname(__DIR__);
 $listaModel = file_get_contents($root . '/app/Models/ListaContato.php');
+$listaItemModel = file_get_contents($root . '/app/Models/ListaContatoItem.php');
 $migration = file_get_contents($root . '/database/migrations/20260911_backfill_coexistence_contacts_list.sql');
 
 $assert(strpos($listaModel, "'Contatos do WhatsApp'") !== false, 'Lista automática deve ter nome estável.');
 $assert(strpos($listaModel, 'obterOuCriarListaWhatsapp') !== false, 'Model deve obter ou criar a lista automática.');
+$assert(strpos($listaItemModel, 'contatoExisteEmOutraListaDoCliente') !== false, 'Model deve consultar se o contato já foi organizado em outra lista.');
 $assert(strpos($migration, "'whatsapp_business_app'") !== false, 'Backfill deve limitar-se aos contatos sincronizados pelo WhatsApp Business.');
 $assert(strpos($migration, 'INSERT IGNORE INTO lista_contatos_itens') !== false, 'Backfill deve ser idempotente ao criar vínculos.');
 
