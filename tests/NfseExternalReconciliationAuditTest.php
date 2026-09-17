@@ -14,12 +14,17 @@ $migration = file_get_contents($root . '/database/migrations/20260917_nfse_exter
 
 nfseExternalAssert(strpos($service, 'strlen($chave) !== 50') !== false, 'exige chave de acesso com 50 dígitos');
 nfseExternalAssert(strpos($service, 'consultarXml') !== false && strpos($service, 'mapearXml') !== false, 'consulta XML oficial antes da reconciliação');
-nfseExternalAssert(strpos($service, 'prestador CNPJ') === false || strpos($service, 'prestador') !== false, 'mantém validação do prestador');
+nfseExternalAssert(strpos($service, "documentosDoGrupo(\$xp, 'prest')") !== false, 'valida documento dentro do grupo do prestador');
+nfseExternalAssert(strpos($service, "documentosDoGrupo(\$xp, 'toma')") !== false, 'valida documento dentro do grupo do tomador');
+nfseExternalAssert(strpos($service, "(int) (\$cobranca['CLI_ID'] ?? 0) !== (int) (\$tentativa['CLI_ID'] ?? 0)") !== false, 'confere vínculo entre cobrança e cliente');
 nfseExternalAssert(strpos($service, "abs(\$valor - (float) (\$cobranca['COB_Valor'] ?? 0)) > 0.01") !== false, 'confere valor oficial com a cobrança');
 nfseExternalAssert(strpos($model, "NFE_UltimoErroCodigo = 'substituida_por_emissao_externa'") !== false, 'preserva tentativa anterior como histórico encerrado');
 nfseExternalAssert(strpos($model, 'NFE_EmissaoAtiva = NULL') !== false, 'inativa tentativa substituída na mesma transação');
-nfseExternalAssert(strpos($model, "NFE_Status = :status") !== false && strpos($model, 'STATUS_EMITIDA') !== false, 'nova nota externa é registrada como emitida');
+nfseExternalAssert(strpos($model, 'NFE_XmlStoragePath') !== false && strpos($model, 'NFE_XmlSha256') !== false, 'grava referência do XML na mesma transação da reconciliação');
+nfseExternalAssert(strpos($model, 'STATUS_EMITIDA') !== false, 'nova nota externa é registrada como emitida');
 nfseExternalAssert(strpos($controller, 'buscarVigentesPorCobrancas') !== false, 'cobranças com registro fiscal vigente saem do seletor de nova emissão');
+nfseExternalAssert(strpos($controller, "(\$_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'") !== false, 'rota administrativa permite abrir a tela por GET e reconciliar por POST');
+nfseExternalAssert(strpos($migration, 'DROP INDEX idx_nfse_chave_acesso') !== false, 'remove índice simples redundante da chave de acesso');
 nfseExternalAssert(strpos($migration, 'UNIQUE KEY uk_nfse_chave_acesso_unica') !== false, 'banco impede duplicidade de chave de acesso');
 
 echo "NfseExternalReconciliationAuditTest concluído.\n";
