@@ -95,8 +95,14 @@ class MetaWebhookStateSyncService
 
                 if($listaWhatsappId > 0 && $contatoId > 0){
                     $jaVinculado = $this->listaItemModel->contatoExisteNaLista($listaWhatsappId, $contatoId);
-                    $this->listaItemModel->adicionar($listaWhatsappId, $contatoId);
-                    if(!$jaVinculado){
+                    $organizadoEmOutraLista = $this->listaItemModel->contatoExisteEmOutraListaDoCliente(
+                        $clienteId,
+                        $contatoId,
+                        $listaWhatsappId
+                    );
+
+                    if(!$jaVinculado && !$organizadoEmOutraLista){
+                        $this->listaItemModel->adicionar($listaWhatsappId, $contatoId);
                         $resultado['vinculadas']++;
                     }
                 }
