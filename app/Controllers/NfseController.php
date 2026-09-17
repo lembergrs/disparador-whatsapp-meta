@@ -10,6 +10,8 @@ use Models\Cliente;
 use Models\NfseEmissao;
 use Services\NfseAptidaoFiscalService;
 use Services\NfseEmissionService;
+use Services\NfseExternalReconciliationService;
+use Services\NfsePdfOnDemandService;
 use Services\NfseConfigService;
 use Services\NfseSanitizer;
 
@@ -43,10 +45,19 @@ class NfseController extends Controller
         ]);
     }
 
-
     private function mapearCobrancasElegiveisPorCliente(array $cobrancas)
     {
         $mapa = [];
+        $ids = [];
+
+        foreach($cobrancas as $cobranca){
+            $cobrancaId = (int) ($cobranca['COB_ID'] ?? 0);
+            if($cobrancaId > 0){
+                $ids[] = $cobrancaId;
+            }
+        }
+
+        $vigentes = (new NfseEmissao())->buscarVigentesPorCobrancas($ids);
 
         foreach($cobrancas as $cobranca){
             $clienteId = (int) ($cobranca['CLI_ID'] ?? 0);
@@ -54,7 +65,7 @@ class NfseController extends Controller
             $valor = (float) ($cobranca['COB_Valor'] ?? 0);
             $status = (string) ($cobranca['COB_Status'] ?? '');
 
-            if($clienteId <= 0 || $cobrancaId <= 0 || $status !== 'pago' || $valor <= 0){
+            if($clienteId <= 0 || $cobrancaId <= 0 || $status !== 'pago' || $valor <= 0 || isset($vigentes[$cobrancaId])){
                 continue;
             }
 
@@ -126,18 +137,48 @@ class NfseController extends Controller
         $this->redirect('nfse');
     }
 
-    public function consultarPdf()
+    public function registrarExterna()
     {
-        $this->validarCsrfPost();
         Auth::admin();
 
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'){
+            $emissao = (new NfseEmissao())->buscarPorId((int) ($_GET['nfse_id'] ?? 0));
+            $status = (string) ($emissao['NFE_Status'] ?? '');
+            $statusReconciliaveis = [NfseEmissao::STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO];
+
+            if(!$emissao || (int) ($emissao['NFE_EmissaoAtiva'] ?? 0) !== 1 || !in_array($status, $statusReconciliaveis, true)){
+                Session::flash('error', 'Tentativa fiscal ativa apta para reconciliação não encontrada.');
+                $this->redirect('nfse');
+            }
+
+            $this->view('nfse/externa', [
+                'titulo' => 'Registrar NFS-e externa',
+                'emissao' => $emissao
+            ]);
+            return;
+        }
+
+        $this->validarCsrfPost();
+
         try{
-            $resultado = (new NfseEmissionService())->consultarPdfManual((int) ($_POST['nfse_id'] ?? 0), Auth::usuario() ?: []);
-            Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', !empty($resultado['sucesso']) ? 'PDF consultado e armazenado com sucesso.' : ($resultado['error_message'] ?? 'PDF não consultado.'));
+            $resultado = (new NfseExternalReconciliationService())->registrar(
+                (int) ($_POST['nfse_id'] ?? 0),
+                (string) ($_POST['chave_acesso'] ?? ''),
+                Auth::usuario() ?: []
+            );
+            Session::flash('success', $resultado['mensagem'] ?? 'NFS-e externa reconciliada com sucesso.');
         }catch(\Throwable $e){
             Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
         }
 
+        $this->redirect('nfse');
+    }
+
+    public function consultarPdf()
+    {
+        $this->validarCsrfPost();
+        Auth::admin();
+        Session::flash('error', 'O PDF não é mais armazenado. Use a ação PDF para gerá-lo sob demanda a partir do XML armazenado.');
         $this->redirect('nfse');
     }
 
@@ -148,7 +189,8 @@ class NfseController extends Controller
 
         try{
             $resultado = (new NfseEmissionService())->reconsultarManual((int) ($_POST['nfse_id'] ?? 0), Auth::usuario() ?: []);
-            Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', !empty($resultado['sucesso']) ? 'Reconsulta concluída.' : 'Reconsulta não retornou documentos atualizados.');
+            $sucesso = !empty($resultado['sucesso']);
+            Session::flash($sucesso ? 'success' : 'error', $sucesso ? 'Reconsulta concluída.' : 'Reconsulta não retornou dados atualizados.');
         }catch(\Throwable $e){
             Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
         }
@@ -193,7 +235,23 @@ class NfseController extends Controller
 
     public function pdf()
     {
-        $this->download('pdf');
+        Auth::check();
+        $partes = explode('/', $_GET['url'] ?? '');
+        $nfseId = (int) ($partes[2] ?? ($_GET['id'] ?? 0));
+
+        try{
+            $arquivo = (new NfsePdfOnDemandService())->gerar($nfseId, Auth::usuario() ?: []);
+            header('Cache-Control: private, no-store');
+            header('Content-Type: ' . $arquivo['content_type']);
+            header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
+            header('Content-Length: ' . strlen($arquivo['conteudo']));
+            header('X-Content-Type-Options: nosniff');
+            echo $arquivo['conteudo'];
+            exit;
+        }catch(\Throwable $e){
+            http_response_code(404);
+            exit('PDF da NFS-e não pôde ser gerado.');
+        }
     }
 
     public function xml()
@@ -209,6 +267,7 @@ class NfseController extends Controller
 
         try{
             $arquivo = (new NfseEmissionService())->arquivoDownload($nfseId, $tipo, Auth::usuario() ?: []);
+            header('Cache-Control: private, no-store');
             header('Content-Type: ' . $arquivo['content_type']);
             header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
             header('X-Content-Type-Options: nosniff');

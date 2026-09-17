@@ -334,7 +334,7 @@ class NfseEmissao
 
         $sql = $this->db->prepare("
             SELECT NFE_ID, CLI_ID, COB_ID, NFE_Status, NFE_DataEmissao,
-                   NFE_PdfStoragePath, NFE_XmlStoragePath, NFE_EmissaoAtiva
+                   NFE_XmlStoragePath, NFE_EmissaoAtiva
             FROM nfse_emissoes
             WHERE COB_ID IN ({$placeholders})
             {$filtroCliente}
@@ -358,7 +358,7 @@ class NfseEmissao
                 'COB_ID' => $cobrancaId,
                 'NFE_Status' => (string) ($row['NFE_Status'] ?? ''),
                 'NFE_DataEmissao' => $row['NFE_DataEmissao'] ?? null,
-                'tem_pdf' => !empty($row['NFE_PdfStoragePath']),
+                'tem_pdf' => !empty($row['NFE_XmlStoragePath']),
                 'tem_xml' => !empty($row['NFE_XmlStoragePath'])
             ];
         }
@@ -505,23 +505,6 @@ class NfseEmissao
             UPDATE nfse_emissoes
             SET NFE_XmlStoragePath = :path,
                 NFE_XmlSha256 = :hash,
-                NFE_DataAtualizacao = NOW()
-            WHERE NFE_ID = :id
-        ");
-
-        return $sql->execute([
-            ':path' => $this->normalizarPathRelativo($pathRelativo),
-            ':hash' => $hash,
-            ':id' => (int) $nfseId
-        ]);
-    }
-
-    public function persistirArquivoPdf($nfseId, $pathRelativo, $hash)
-    {
-        $sql = $this->db->prepare("
-            UPDATE nfse_emissoes
-            SET NFE_PdfStoragePath = :path,
-                NFE_PdfSha256 = :hash,
                 NFE_DataAtualizacao = NOW()
             WHERE NFE_ID = :id
         ");

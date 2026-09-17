@@ -43,7 +43,7 @@ financeiroNfseHas($model, 'function buscarVigentesPorCobrancas(array $cobrancaId
 financeiroNfseHas($model, "AND (NFE_EmissaoAtiva = 1 OR NFE_Status = 'cancelada')", 'model exclui históricos inativos não cancelados da exibição vigente');
 financeiroNfseHas($model, "CASE WHEN NFE_EmissaoAtiva = 1 THEN 0 ELSE 1 END", 'model prioriza emissão realmente ativa antes de cancelada');
 financeiroNfseHas($model, 'NFE_ID DESC', 'model escolhe cancelada mais recente quando necessário');
-financeiroNfseHas($model, "'tem_pdf' => !empty($" . "row['NFE_PdfStoragePath'])", 'model retorna apenas existência de PDF');
+financeiroNfseHas($model, "'tem_pdf' => !empty($" . "row['NFE_XmlStoragePath'])", 'model disponibiliza PDF sob demanda quando há XML');
 financeiroNfseHas($model, "'tem_xml' => !empty($" . "row['NFE_XmlStoragePath'])", 'model retorna apenas existência de XML');
 financeiroNfseNot($model, "'NFE_RetornoSanitizado' =>", 'model não retorna retorno sanitizado para financeiro');
 

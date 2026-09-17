@@ -171,33 +171,6 @@ class NfseEmissionService
         ];
     }
 
-    public function consultarPdfManual($nfseId, array $admin = [])
-    {
-        if(($admin['nivel'] ?? '') !== 'admin'){
-            throw new \RuntimeException('Apenas administradores podem consultar PDF de NFS-e.');
-        }
-
-        $emissao = $this->emissoes->buscarPorId((int) $nfseId);
-        if(!$emissao || empty($emissao['NFE_ChaveAcesso'])){
-            throw new \InvalidArgumentException('NFS-e sem chave de acesso para consulta de PDF.');
-        }
-
-        $segredos = $this->builder->carregarSegredosCertificado();
-        $http = $this->client->consultarPdf(['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'idNota' => $emissao['NFE_ChaveAcesso']]);
-        $resultado = $this->mapper->mapearPdf($http);
-
-        if(!empty($resultado['sucesso'])){
-            $path = $this->salvarArquivoPrivado('pdf', $resultado['conteudo']);
-            $this->emissoes->persistirArquivoPdf((int) $nfseId, $path, $resultado['hash']);
-        }
-
-        $this->emissoes->persistirRequestConsulta((int) $nfseId, $resultado, 'consulta');
-        $this->registrarLogSeguro('consultar_pdf', ['CLI_ID' => $emissao['CLI_ID'] ?? 0], ['COB_ID' => $emissao['COB_ID'] ?? 0], $emissao, $resultado);
-
-        return $this->resultadoSeguro($resultado);
-    }
-
-
     public function consultarXmlManual($nfseId, array $admin = [])
     {
         if(($admin['nivel'] ?? '') !== 'admin'){
@@ -253,10 +226,9 @@ class NfseEmissionService
     public function reconsultarManual($nfseId, array $admin = [])
     {
         $xml = $this->consultarXmlManual($nfseId, $admin);
-        $pdf = $this->consultarPdfManual($nfseId, $admin);
         $eventos = $this->consultarEventosManual($nfseId, $admin);
 
-        return ['sucesso' => !empty($xml['sucesso']) || !empty($pdf['sucesso']) || !empty($eventos['sucesso']), 'xml' => $xml, 'pdf' => $pdf, 'eventos' => $eventos];
+        return ['sucesso' => !empty($xml['sucesso']) || !empty($eventos['sucesso']), 'xml' => $xml, 'eventos' => $eventos];
     }
 
     public function cancelarManual($nfseId, $codigoMotivo, $motivo, array $admin = [])
@@ -306,7 +278,7 @@ class NfseEmissionService
         $base = dirname(__DIR__, 2) . '/storage/nfse/' . $tipo . '/';
         $real = realpath($path);
         $realBase = realpath($base);
-        if(!$real || !$realBase || strpos($real, $realBase) !== 0 || !is_file($real)){
+        if(!$real || !$realBase || strpos($real, $realBase . DIRECTORY_SEPARATOR) !== 0 || !is_file($real)){
             throw new \InvalidArgumentException('Documento fiscal indisponível.');
         }
 
@@ -431,7 +403,9 @@ class NfseEmissionService
 
     private function salvarArquivoPrivado($tipo, $conteudo)
     {
-        $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
+        if($tipo !== 'xml'){
+            throw new \InvalidArgumentException('Somente XML pode ser armazenado.');
+        }
         $base = dirname(__DIR__, 2) . '/storage/nfse/' . $tipo;
         if(!is_dir($base)){
             mkdir($base, 0770, true);

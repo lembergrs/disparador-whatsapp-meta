@@ -26,9 +26,21 @@ class NfseApiClient
         return $this->postJson('/acoes/GeraDps.php', $payload, 'nfse.gerarDps');
     }
 
-    public function consultarPdf(array $payload)
+    public function gerarPdfXml($xmlConteudo)
     {
-        return $this->postJson('/acoes/ConsultaDanfse.php', $payload, 'nfse.consultarDanfse');
+        $xmlConteudo = (string) $xmlConteudo;
+        if(trim($xmlConteudo) === ''){
+            return $this->erroTransporte('nfse.gerarDanfseLocal', 'xml_ausente', 'XML da NFS-e não informado para geração do DANFSe.', microtime(true));
+        }
+
+        $gzip = gzencode($xmlConteudo, 9);
+        if($gzip === false){
+            return $this->erroTransporte('nfse.gerarDanfseLocal', 'xml_gzip_failed', 'Falha ao compactar XML oficial para geração do DANFSe.', microtime(true));
+        }
+
+        return $this->postJson('/acoes/GeraDanfse.php', [
+            'nfseXmlGZipB64' => base64_encode($gzip)
+        ], 'nfse.gerarDanfseLocal');
     }
 
     public function consultarXml(array $payload)

@@ -14,11 +14,11 @@ Chaves de acesso e RequestIds são abreviados na tabela e possuem botão de cóp
 
 ## Downloads protegidos
 
-PDF e XML são servidos por ações autenticadas do controller (`nfse/pdf/{id}` e `nfse/xml/{id}`). O sistema valida login administrativo, existência do arquivo privado, caminho relativo controlado e content type correto. Arquivos não são servidos diretamente pelo servidor web.
+PDF e XML são servidos por ações autenticadas do controller (`nfse/pdf/{id}` e `nfse/xml/{id}`). O sistema valida login, autorização administrativa ou vínculo com o cliente/cobrança, existência do XML privado, caminho relativo controlado e content type correto. A rota PDF lê o XML armazenado, envia gzip/Base64 para `rl2-nfse/acoes/GeraDanfse.php` e entrega o PDF em memória ao navegador, sem gravar arquivo ou atualizar `NFE_PdfStoragePath`. Não consulta o Emissor Nacional nem carrega certificado para gerar PDF. Arquivos não são servidos diretamente pelo servidor web.
 
 ## Reconsulta e cancelamento
 
-A ação Reconsultar chama as consultas técnicas de XML, PDF e eventos, atualizando persistência local e logs sem reenviar `GeraDps.php`. O cancelamento é ação administrativa explícita com modal, código de motivo e descrição fiscal. Não há cancelamento automático.
+A ação Reconsultar chama as consultas técnicas de XML e eventos, atualizando persistência local e logs sem gerar/persistir PDF e sem reenviar `GeraDps.php`. O método `reconsultarManual` é o único orquestrador dessa ação. O fluxo antigo `consultarPdfManual` foi removido; a rota administrativa legada `consultarPdf` apenas orienta o uso da ação PDF e não chama a API. O cancelamento é ação administrativa explícita com modal, código de motivo e descrição fiscal. Não há cancelamento automático.
 
 ## Aptidão e segurança
 
@@ -26,7 +26,7 @@ A tela mantém seleção dependente Cliente → Cobrança e mensagens de aptidã
 
 ## Logs
 
-O log `storage/logs/nfse.log` registra operações `emitir`, `consultar_pdf`, `consultar_xml`, `consultar_eventos` e `cancelar` com RequestId, HTTP, duração, resultado e identificadores internos, usando append seguro e rotação simples já existente.
+O log `storage/logs/nfse.log` registra operações `emitir`, `consultar_xml`, `consultar_eventos` e `cancelar` com RequestId, HTTP, duração, resultado e identificadores internos, usando append seguro e rotação simples já existente.
 
 ## Rollback
 
@@ -44,6 +44,10 @@ Para cada cobrança, o sistema carrega as emissões fiscais relevantes em lote e
 
 Os status são simplificados para o cliente: **Não emitida**, **Pendente**, **Emitindo**, **Processando**, **Emitida** ou **Cancelada**. Erros técnicos não são expostos; nesses casos a tela mostra mensagens amigáveis como nota fiscal pendente ou em processamento.
 
-Os botões **PDF** e **XML** só aparecem quando os arquivos já estão armazenados. Os links usam as rotas autenticadas `nfse/pdf/{id}` e `nfse/xml/{id}`; nunca há link direto para `storage/nfse` ou caminho interno.
+Os botões **PDF** e **XML** aparecem sempre que há XML armazenado, tanto no financeiro quanto no menu e na linha expandida do painel administrativo. O PDF é gerado sob demanda; detalhes e timeline indicam somente o XML como armazenado. Os links usam as rotas autenticadas `nfse/pdf/{id}` e `nfse/xml/{id}`; nunca há link direto para `storage/nfse` ou caminho interno.
 
 A autorização dos downloads é validada no backend. Administradores podem baixar documentos pelo módulo protegido. Clientes só podem baixar documentos de emissões vinculadas ao próprio `CLI_ID` e a uma cobrança do mesmo cliente. Tentativas de acessar documento de outro cliente não revelam a existência do arquivo nem caminhos internos.
+
+## Verificação sem serviços externos
+
+Executar `php tests/NfsePdfOnDemandServiceTest.php`, `php tests/NfseDocumentsUiTest.php`, `php tests/NfseEmissionServiceTest.php`, `php tests/NfseApiClientTest.php` e as auditorias NFS-e. Os testes usam dados fictícios, transporte e banco simulados. Cobrem autorização, XML ausente/vazio, falha do gerador, integridade do gzip/Base64, visibilidade com XML sem PDF salvo e ausência de persistência durante geração/reconsulta. Nenhuma chamada fiscal real é necessária. PDFs históricos e colunas legadas não são apagados por esta alteração.
