@@ -34,7 +34,8 @@ nfseOpHas($view, 'nfse_timeline', 'timeline é gerada sem depender de logs do se
 nfseOpHas($view, "if(!empty($" . "emissao['NFE_NumDps'])){ $" . "eventos[] = ['DPS reservada'", 'timeline só mostra DPS reservada com numDPS');
 nfseOpHas($view, "in_array($" . "emissao['NFE_Status'] ?? '', ['emitida', 'cancelada'], true)", 'timeline não inventa emissão sem status fiscal final');
 nfseOpHas($view, "($" . "emissao['NFE_Status'] ?? '') === 'cancelada'", 'timeline só mostra cancelamento com status cancelada');
-nfseOpHas($view, "if(!empty($" . "emissao['NFE_PdfStoragePath'])){ $" . "eventos[] = ['PDF armazenado'", 'timeline só mostra PDF com path real');
+nfseOpAssert(strpos($view, 'NFE_PdfStoragePath') === false && strpos($view, 'PDF armazenado') === false, 'PDF não depende de arquivo armazenado na interface nem na timeline');
+nfseOpHas($view, 'gerado sob demanda', 'detalhes explicam geração do PDF sob demanda');
 nfseOpHas($view, "if(!empty($" . "emissao['NFE_XmlStoragePath'])){ $" . "eventos[] = ['XML armazenado'", 'timeline só mostra XML com path real');
 nfseOpAssert(strpos($view, '<dt class="col-sm-3">XML</dt>') === false, 'modal novo não renderiza campos brutos de path');
 nfseOpHas($controller, 'public function pdf()', 'controller expõe rota protegida de PDF');
@@ -46,7 +47,7 @@ nfseOpHas($service, 'consultarXmlManual', 'service consulta XML');
 nfseOpHas($service, 'consultarEventosManual', 'service consulta eventos');
 nfseOpHas($service, 'cancelarManual', 'service cancela manualmente');
 nfseOpHas($service, 'arquivoDownload', 'service valida arquivo privado antes do download');
-nfseOpHas($service, "registrarLogSeguro('consultar_pdf'", 'logs registram consultar_pdf');
+nfseOpAssert(strpos($service, 'consultarPdfManual') === false, 'fluxo administrativo de persistência de PDF removido');
 nfseOpHas($service, "registrarLogSeguro('consultar_xml'", 'logs registram consultar_xml');
 nfseOpHas($service, "registrarLogSeguro('consultar_eventos'", 'logs registram consultar_eventos');
 nfseOpHas($service, "registrarLogSeguro('cancelar'", 'logs registram cancelar');

@@ -26,16 +26,6 @@ class NfseApiClient
         return $this->postJson('/acoes/GeraDps.php', $payload, 'nfse.gerarDps');
     }
 
-    public function consultarPdf(array $payload)
-    {
-        $xml = $this->consultarXml($payload);
-        if(!empty($xml['transport_error']) || (int) ($xml['http_status'] ?? 0) < 200 || (int) ($xml['http_status'] ?? 0) >= 300 || trim((string) ($xml['body'] ?? '')) === ''){
-            return $xml;
-        }
-
-        return $this->gerarPdfXml((string) $xml['body']);
-    }
-
     public function gerarPdfXml($xmlConteudo)
     {
         $xmlConteudo = (string) $xmlConteudo;

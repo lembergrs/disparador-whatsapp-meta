@@ -188,12 +188,8 @@ class NfseController extends Controller
         Auth::admin();
 
         try{
-            $service = new NfseEmissionService();
-            $usuario = Auth::usuario() ?: [];
-            $nfseId = (int) ($_POST['nfse_id'] ?? 0);
-            $xml = $service->consultarXmlManual($nfseId, $usuario);
-            $eventos = $service->consultarEventosManual($nfseId, $usuario);
-            $sucesso = !empty($xml['sucesso']) || !empty($eventos['sucesso']);
+            $resultado = (new NfseEmissionService())->reconsultarManual((int) ($_POST['nfse_id'] ?? 0), Auth::usuario() ?: []);
+            $sucesso = !empty($resultado['sucesso']);
             Session::flash($sucesso ? 'success' : 'error', $sucesso ? 'Reconsulta concluída.' : 'Reconsulta não retornou dados atualizados.');
         }catch(\Throwable $e){
             Session::flash('error', NfseSanitizer::mensagem($e->getMessage()));
@@ -245,6 +241,7 @@ class NfseController extends Controller
 
         try{
             $arquivo = (new NfsePdfOnDemandService())->gerar($nfseId, Auth::usuario() ?: []);
+            header('Cache-Control: private, no-store');
             header('Content-Type: ' . $arquivo['content_type']);
             header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
             header('Content-Length: ' . strlen($arquivo['conteudo']));
@@ -270,6 +267,7 @@ class NfseController extends Controller
 
         try{
             $arquivo = (new NfseEmissionService())->arquivoDownload($nfseId, $tipo, Auth::usuario() ?: []);
+            header('Cache-Control: private, no-store');
             header('Content-Type: ' . $arquivo['content_type']);
             header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
             header('X-Content-Type-Options: nosniff');

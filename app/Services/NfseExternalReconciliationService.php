@@ -50,7 +50,7 @@ class NfseExternalReconciliationService
         if(!$tentativa || (int) ($tentativa['NFE_EmissaoAtiva'] ?? 0) !== 1){
             throw new \InvalidArgumentException('Tentativa fiscal ativa não encontrada.');
         }
-        if(in_array($tentativa['NFE_Status'] ?? '', [NfseEmissao::STATUS_EMITIDA, NfseEmissao::STATUS_CANCELAMENTO_PENDENTE, NfseEmissao::STATUS_CANCELADA], true)){
+        if(!in_array($tentativa['NFE_Status'] ?? '', [NfseEmissao::STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO], true)){
             throw new \RuntimeException('Este registro não pode ser substituído por uma emissão externa.');
         }
 
@@ -128,7 +128,8 @@ class NfseExternalReconciliationService
             throw new \RuntimeException('A NFS-e consultada não pertence ao CNPJ prestador configurado no Disparador.');
         }
 
-        $documentoCliente = preg_replace('/\D/', '', (string) ($cliente['CLI_NFSe_CNPJ'] ?? $cliente['CLI_CPF_CNPJ'] ?? ''));
+        $documentoFiscal = trim((string) ($cliente['CLI_NFSe_CNPJ'] ?? ''));
+        $documentoCliente = preg_replace('/\D/', '', $documentoFiscal !== '' ? $documentoFiscal : (string) ($cliente['CLI_CPF_CNPJ'] ?? ''));
         if($documentoCliente !== ''){
             $documentosTomador = $this->documentosDoGrupo($xp, 'toma');
             if(!in_array($documentoCliente, $documentosTomador, true)){
@@ -203,7 +204,9 @@ class NfseExternalReconciliationService
 
     private function salvarArquivoPrivado($tipo, $conteudo)
     {
-        $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
+        if($tipo !== 'xml'){
+            throw new \InvalidArgumentException('Somente XML pode ser armazenado.');
+        }
         $base = dirname(__DIR__, 2) . '/storage/nfse/' . $tipo;
         if(!is_dir($base) && !mkdir($base, 0770, true) && !is_dir($base)){
             throw new \RuntimeException('Não foi possível preparar o armazenamento privado da NFS-e.');

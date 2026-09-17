@@ -38,11 +38,18 @@ $res = $timeout->emitir([]);
 nfseClientAssert($res['transport_error'] === true && $res['timeout'] === true, 'timeout de transporte classificado');
 nfseClientAssert(strpos($res['error_message'], 'segredo') === false, 'erro de transporte sanitizado');
 
-$pdf = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_token' => 'TOKEN_FICTICIO_INVALIDO'], function(){
+$pdfCalls = [];
+$pdf = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_token' => 'TOKEN_FICTICIO_INVALIDO'], function($request) use (&$pdfCalls){
+    $pdfCalls[] = $request;
     return ['http_status' => 200, 'content_type' => 'application/pdf', 'body' => '%PDF-1.4 teste'];
 });
-nfseClientAssert($pdf->consultarPdf(['idNota' => 'abc'])['content_type'] === 'application/pdf', 'PDF binário capturado');
+nfseClientAssert($pdf->gerarPdfXml('<?xml version="1.0"?><NFSe/>')['content_type'] === 'application/pdf', 'PDF binário capturado');
 
+nfseClientAssert(count($pdfCalls) === 1 && $pdfCalls[0]['endpoint'] === '/acoes/GeraDanfse.php', 'PDF usa somente gerador local, sem consultar Emissor Nacional');
+$payloadPdf = json_decode($pdfCalls[0]['body'], true);
+nfseClientAssert(array_keys($payloadPdf) === ['nfseXmlGZipB64'], 'geração local envia somente XML, sem certificado ou chave');
+nfseClientAssert(gzdecode(base64_decode($payloadPdf['nfseXmlGZipB64'], true)) === '<?xml version="1.0"?><NFSe/>', 'XML é enviado íntegro em gzip/base64');
+nfseClientAssert($pdf->gerarPdfXml('  ')['error_code'] === 'xml_ausente' && count($pdfCalls) === 1, 'XML vazio não chama gerador');
 $xml = new NfseApiClient(['base_url' => 'https://api.disparador.net', 'auth_token' => 'TOKEN_FICTICIO_INVALIDO'], function(){
     return ['http_status' => 200, 'content_type' => 'application/xml', 'body' => '<?xml version="1.0"?><n/>'];
 });
