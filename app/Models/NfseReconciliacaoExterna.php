@@ -44,8 +44,8 @@ class NfseReconciliacaoExterna
             ){
                 throw new \RuntimeException('A tentativa fiscal não está mais ativa para reconciliação.');
             }
-            if(in_array($atual['NFE_Status'] ?? '', [NfseEmissao::STATUS_EMITIDA, NfseEmissao::STATUS_CANCELAMENTO_PENDENTE, NfseEmissao::STATUS_CANCELADA], true)){
-                throw new \RuntimeException('Uma NFS-e já foi emitida ou encerrada para esta tentativa.');
+            if(!in_array($atual['NFE_Status'] ?? '', [NfseEmissao::STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO], true)){
+                throw new \RuntimeException('Apenas tentativas com erro podem ser substituídas por uma emissão externa.');
             }
 
             $duplicada = $this->db->prepare('SELECT NFE_ID FROM nfse_emissoes WHERE NFE_ChaveAcesso = ? LIMIT 1');
