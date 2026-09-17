@@ -58,7 +58,6 @@ function nfse_timeline(array $emissao){
     if(!empty($emissao['NFE_ChaveDps']) && !empty($emissao['NFE_NumDps'])){ $eventos[] = ['XML assinado', $emissao['NFE_DataEmissao'] ?? $emissao['NFE_DataAtualizacao'] ?? null, 'info']; }
     if(in_array($emissao['NFE_Status'] ?? '', ['emitida', 'cancelada'], true) && !empty($emissao['NFE_ChaveAcesso']) && !empty($emissao['NFE_DataEmissao'])){ $eventos[] = ['NFS-e emitida', $emissao['NFE_DataEmissao'], 'success']; }
     if(!empty($emissao['NFE_RequestIdConsulta'])){ $eventos[] = ['Consulta executada', $emissao['NFE_DataAtualizacao'] ?? null, 'secondary']; }
-    if(!empty($emissao['NFE_PdfStoragePath'])){ $eventos[] = ['PDF armazenado', $emissao['NFE_DataAtualizacao'] ?? null, 'success']; }
     if(!empty($emissao['NFE_XmlStoragePath'])){ $eventos[] = ['XML armazenado', $emissao['NFE_DataAtualizacao'] ?? null, 'success']; }
     if(($emissao['NFE_Status'] ?? '') === 'cancelada' && !empty($emissao['NFE_DataCancelamento'])){ $eventos[] = ['Cancelada', $emissao['NFE_DataCancelamento'], 'dark']; }
     $html = '<div class="nfse-timeline">';
@@ -167,7 +166,6 @@ $nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?
                         $modalId = 'nfse-detalhes-' . (int) $emissao['NFE_ID'];
                         $status = $emissao['NFE_Status'] ?? '';
                         $temChave = !empty($emissao['NFE_ChaveAcesso']);
-                        $temPdf = !empty($emissao['NFE_PdfStoragePath']);
                         $temXml = !empty($emissao['NFE_XmlStoragePath']);
                     ?>
                         <tr class="nfse-master-row">
@@ -191,7 +189,7 @@ $nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?
                                     <button class="btn btn-xs btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">Ações</button>
                                     <div class="dropdown-menu dropdown-menu-right">
                                         <button type="button" class="dropdown-item" data-toggle="modal" data-target="#<?= $modalId; ?>">Detalhes</button>
-                                        <?php if($temPdf){ ?><a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=nfse/pdf/<?= (int) $emissao['NFE_ID']; ?>">PDF</a><?php } ?>
+                                        <?php if($temXml){ ?><a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=nfse/pdf/<?= (int) $emissao['NFE_ID']; ?>">PDF</a><?php } ?>
                                         <?php if($temXml){ ?><a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=nfse/xml/<?= (int) $emissao['NFE_ID']; ?>">XML</a><?php } ?>
                                         <?php if($temChave && $status !== 'cancelada'){ ?><form method="post" action="<?= BASE_URL; ?>/index.php?url=nfse/reconsultar"><?= Csrf::input(); ?><input type="hidden" name="nfse_id" value="<?= (int) $emissao['NFE_ID']; ?>"><button type="submit" class="dropdown-item">Reconsultar</button></form><?php } ?>
                                         <?php if($status === 'emitida' && $temChave){ ?><button type="button" class="dropdown-item text-danger" data-toggle="modal" data-target="#cancelar-<?= (int) $emissao['NFE_ID']; ?>">Cancelar</button><?php } ?>
@@ -204,7 +202,7 @@ $nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?
                             <div class="p-2 bg-light border rounded">
                                 <div class="row">
                                     <div class="col-md-8"><strong>DPS:</strong> <?= nfse_e($emissao['NFE_NumDps'] ?? '-'); ?> · <strong>NFS-e:</strong> <?= nfse_e($emissao['NFE_NumeroNota'] ?? '-'); ?> · <strong>Datas:</strong> <?= nfse_data_hora($emissao['NFE_DataEmissao'] ?? $emissao['NFE_DataCriacao'] ?? null); ?><br><strong>Último retorno:</strong> <?= nfse_e(!empty($emissao['NFE_RetornoSanitizado']) ? 'retorno armazenado' : 'sem retorno'); ?> · <strong>Último erro:</strong> <?= nfse_e($emissao['NFE_UltimoErroMensagem'] ?? 'sem erro'); ?></div>
-                                    <div class="col-md-4 text-right"><?php if($temPdf){ ?><a class="btn btn-xs btn-outline-primary" href="<?= BASE_URL; ?>/index.php?url=nfse/pdf/<?= (int) $emissao['NFE_ID']; ?>">PDF</a><?php } ?> <?php if($temXml){ ?><a class="btn btn-xs btn-outline-success" href="<?= BASE_URL; ?>/index.php?url=nfse/xml/<?= (int) $emissao['NFE_ID']; ?>">XML</a><?php } ?> <?= nfse_doc($emissao['NFE_ChaveAcesso'] ?? ''); ?> <?php if($status === 'emitida' && $temChave){ ?><button type="button" class="btn btn-xs btn-outline-danger" data-toggle="modal" data-target="#cancelar-<?= (int) $emissao['NFE_ID']; ?>">Cancelar</button><?php } ?></div>
+                                    <div class="col-md-4 text-right"><?php if($temXml){ ?><a class="btn btn-xs btn-outline-primary" href="<?= BASE_URL; ?>/index.php?url=nfse/pdf/<?= (int) $emissao['NFE_ID']; ?>">PDF</a><?php } ?> <?php if($temXml){ ?><a class="btn btn-xs btn-outline-success" href="<?= BASE_URL; ?>/index.php?url=nfse/xml/<?= (int) $emissao['NFE_ID']; ?>">XML</a><?php } ?> <?= nfse_doc($emissao['NFE_ChaveAcesso'] ?? ''); ?> <?php if($status === 'emitida' && $temChave){ ?><button type="button" class="btn btn-xs btn-outline-danger" data-toggle="modal" data-target="#cancelar-<?= (int) $emissao['NFE_ID']; ?>">Cancelar</button><?php } ?></div>
                                 </div>
                             </div>
                         </td></tr>
@@ -240,7 +238,7 @@ $nfseDescricaoPreview = trim((string) ($nfseFiscalPreview['descricao_servico'] ?
                 <?= nfse_detail_item('Data cancelamento', nfse_data_hora($emissao['NFE_DataCancelamento'] ?? null)); ?>
             </dl>
             <h6 class="text-muted">Arquivos</h6><dl class="row mb-3">
-                <?= !empty($emissao['NFE_PdfStoragePath']) ? nfse_detail_item('PDF', '<span class="badge badge-success">armazenado</span>') : ''; ?>
+                <?= !empty($emissao['NFE_XmlStoragePath']) ? nfse_detail_item('PDF', '<span class="badge badge-info">gerado sob demanda</span>') : ''; ?>
                 <?= !empty($emissao['NFE_XmlStoragePath']) ? nfse_detail_item('XML', '<span class="badge badge-success">armazenado</span>') : ''; ?>
             </dl>
             <h6 class="text-muted">Retorno</h6><dl class="row mb-3">
