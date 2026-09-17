@@ -40,10 +40,20 @@ function nfseDiagnosticoResumoResposta(array $http)
     $primeiros = preg_replace('/\s+/', ' ', $primeiros);
 
     $domValido = false;
+    $errosXml = [];
     if($trimmed !== ''){
         $dom = new DOMDocument();
         $anterior = libxml_use_internal_errors(true);
+        libxml_clear_errors();
         $domValido = $dom->loadXML($trimmed, LIBXML_NONET | LIBXML_NOBLANKS);
+        foreach(libxml_get_errors() as $erro){
+            $mensagem = trim((string) $erro->message);
+            $mensagem = preg_replace('/\s+/', ' ', $mensagem);
+            $errosXml[] = 'linha ' . (int) $erro->line . ', coluna ' . (int) $erro->column . ': ' . $mensagem;
+            if(count($errosXml) >= 5){
+                break;
+            }
+        }
         libxml_clear_errors();
         libxml_use_internal_errors($anterior);
     }
@@ -64,6 +74,12 @@ function nfseDiagnosticoResumoResposta(array $http)
     fwrite(STDERR, 'Tamanho: ' . strlen($body) . " bytes\n");
     fwrite(STDERR, 'Transport error: ' . (!empty($http['transport_error']) ? 'sim' : 'nao') . "\n");
     fwrite(STDERR, 'DOMDocument XML valido: ' . ($domValido ? 'sim' : 'nao') . "\n");
+    if(!$domValido && !empty($errosXml)){
+        fwrite(STDERR, "Erros libxml:\n");
+        foreach($errosXml as $erroXml){
+            fwrite(STDERR, '  - ' . $erroXml . "\n");
+        }
+    }
     fwrite(STDERR, 'JSON valido: ' . ($jsonValido ? 'sim (' . $jsonTipo . ')' : 'nao') . "\n");
     fwrite(STDERR, 'Inicio sanitizado: ' . ($primeiros !== '' ? $primeiros : '[vazio]') . "\n");
     fwrite(STDERR, "--- FIM DO RESUMO ---\n");
