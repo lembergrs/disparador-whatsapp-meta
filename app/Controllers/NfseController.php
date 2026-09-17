@@ -11,6 +11,7 @@ use Models\NfseEmissao;
 use Services\NfseAptidaoFiscalService;
 use Services\NfseEmissionService;
 use Services\NfseExternalReconciliationService;
+use Services\NfsePdfOnDemandService;
 use Services\NfseConfigService;
 use Services\NfseSanitizer;
 
@@ -240,7 +241,22 @@ class NfseController extends Controller
 
     public function pdf()
     {
-        $this->download('pdf');
+        Auth::check();
+        $partes = explode('/', $_GET['url'] ?? '');
+        $nfseId = (int) ($partes[2] ?? ($_GET['id'] ?? 0));
+
+        try{
+            $arquivo = (new NfsePdfOnDemandService())->gerar($nfseId, Auth::usuario() ?: []);
+            header('Content-Type: ' . $arquivo['content_type']);
+            header('Content-Disposition: attachment; filename="' . $arquivo['filename'] . '"');
+            header('Content-Length: ' . strlen($arquivo['conteudo']));
+            header('X-Content-Type-Options: nosniff');
+            echo $arquivo['conteudo'];
+            exit;
+        }catch(\Throwable $e){
+            http_response_code(404);
+            exit('PDF da NFS-e não pôde ser gerado.');
+        }
     }
 
     public function xml()
