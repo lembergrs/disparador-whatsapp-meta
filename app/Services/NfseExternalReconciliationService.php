@@ -56,12 +56,21 @@ class NfseExternalReconciliationService
 
         $cliente = $this->clientes->buscar((int) $tentativa['CLI_ID']);
         $cobranca = $this->cobrancas->buscar((int) $tentativa['COB_ID']);
-        if(!$cliente || !$cobranca || ($cobranca['COB_Status'] ?? '') !== 'pago' || (float) ($cobranca['COB_Valor'] ?? 0) <= 0){
+        if(
+            !$cliente || !$cobranca
+            || (int) ($cobranca['CLI_ID'] ?? 0) !== (int) ($tentativa['CLI_ID'] ?? 0)
+            || ($cobranca['COB_Status'] ?? '') !== 'pago'
+            || (float) ($cobranca['COB_Valor'] ?? 0) <= 0
+        ){
             throw new \RuntimeException('A cobrança vinculada não está apta para reconciliação fiscal.');
         }
 
         $segredos = $this->builder->carregarSegredosCertificado();
-        $http = $this->client->consultarXml(['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'idNota' => $chave]);
+        $http = $this->client->consultarXml([
+            'cert' => $segredos['cert'],
+            'senhaCert' => $segredos['senhaCert'],
+            'idNota' => $chave
+        ]);
         $resultado = $this->mapper->mapearXml($http);
         if(empty($resultado['sucesso']) || empty($resultado['conteudo'])){
             throw new \RuntimeException($resultado['error_message'] ?? 'A NFS-e não pôde ser confirmada no ambiente nacional.');
@@ -69,13 +78,23 @@ class NfseExternalReconciliationService
 
         $xml = (string) $resultado['conteudo'];
         $nota = $this->extrairEValidar($xml, $chave, $cliente, $cobranca);
-        $novoId = $this->reconciliacoes->registrar($tentativa, $cobranca, $nota);
-
         $pathXml = $this->salvarArquivoPrivado('xml', $xml);
-        $this->emissoes->persistirArquivoXml($novoId, $pathXml, hash('sha256', $xml));
+        $nota['xml_path'] = $pathXml;
+        $nota['xml_hash'] = hash('sha256', $xml);
 
         try{
-            $pdfHttp = $this->client->consultarPdf(['cert' => $segredos['cert'], 'senhaCert' => $segredos['senhaCert'], 'idNota' => $chave]);
+            $novoId = $this->reconciliacoes->registrar($tentativa, $cobranca, $nota);
+        }catch(\Throwable $e){
+            $this->removerArquivoPrivado($pathXml);
+            throw $e;
+        }
+
+        try{
+            $pdfHttp = $this->client->consultarPdf([
+                'cert' => $segredos['cert'],
+                'senhaCert' => $segredos['senhaCert'],
+                'idNota' => $chave
+            ]);
             $pdf = $this->mapper->mapearPdf($pdfHttp);
             if(!empty($pdf['sucesso']) && !empty($pdf['conteudo'])){
                 $pathPdf = $this->salvarArquivoPrivado('pdf', $pdf['conteudo']);
@@ -85,7 +104,11 @@ class NfseExternalReconciliationService
             $this->emissoes->registrarFalhaDocumento($novoId, 'consulta_pdf', 'pdf_externo_nao_obtido', 'NFS-e reconciliada; PDF poderá ser consultado novamente.');
         }
 
-        return ['sucesso' => true, 'nfse_id' => $novoId, 'mensagem' => 'NFS-e externa confirmada e vinculada à cobrança. A tentativa automática anterior foi preservada no histórico.'];
+        return [
+            'sucesso' => true,
+            'nfse_id' => $novoId,
+            'mensagem' => 'NFS-e externa confirmada e vinculada à cobrança. A tentativa automática anterior foi preservada no histórico.'
+        ];
     }
 
     private function extrairEValidar($xml, $chave, array $cliente, array $cobranca)
@@ -103,7 +126,7 @@ class NfseExternalReconciliationService
         $ids = $xp->query('//*[@Id or @ID or @id]');
         $chaveConfirmada = false;
         foreach($ids ?: [] as $node){
-            foreach(['Id','ID','id'] as $attr){
+            foreach(['Id', 'ID', 'id'] as $attr){
                 if($node->hasAttribute($attr) && strpos(preg_replace('/\D/', '', $node->getAttribute($attr)), $chave) !== false){
                     $chaveConfirmada = true;
                     break 2;
@@ -115,16 +138,15 @@ class NfseExternalReconciliationService
         }
 
         $prestador = preg_replace('/\D/', '', NfseConfigService::prestadorCnpj());
-        $cnpjs = $this->valores($xp, '//*[local-name()="CNPJ"]');
-        $cnpjs = array_map(function($v){ return preg_replace('/\D/', '', $v); }, $cnpjs);
-        if(strlen($prestador) !== 14 || !in_array($prestador, $cnpjs, true)){
+        $documentosPrestador = $this->documentosDoGrupo($xp, 'prest');
+        if(strlen($prestador) !== 14 || !in_array($prestador, $documentosPrestador, true)){
             throw new \RuntimeException('A NFS-e consultada não pertence ao CNPJ prestador configurado no Disparador.');
         }
 
         $documentoCliente = preg_replace('/\D/', '', (string) ($cliente['CLI_NFSe_CNPJ'] ?? $cliente['CLI_CPF_CNPJ'] ?? ''));
         if($documentoCliente !== ''){
-            $documentosXml = array_merge($cnpjs, array_map(function($v){ return preg_replace('/\D/', '', $v); }, $this->valores($xp, '//*[local-name()="CPF"]')));
-            if(!in_array($documentoCliente, $documentosXml, true)){
+            $documentosTomador = $this->documentosDoGrupo($xp, 'toma');
+            if(!in_array($documentoCliente, $documentosTomador, true)){
                 throw new \RuntimeException('O tomador da NFS-e consultada não corresponde ao cliente da cobrança.');
             }
         }
@@ -167,6 +189,15 @@ class NfseExternalReconciliationService
         ];
     }
 
+    private function documentosDoGrupo(\DOMXPath $xp, $grupo)
+    {
+        $grupo = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $grupo);
+        $query = '//*[local-name()="' . $grupo . '"]//*[local-name()="CNPJ" or local-name()="CPF"]';
+        return array_values(array_filter(array_map(function($valor){
+            return preg_replace('/\D/', '', $valor);
+        }, $this->valores($xp, $query))));
+    }
+
     private function primeiro(\DOMXPath $xp, $query)
     {
         $nodes = $xp->query($query);
@@ -178,7 +209,9 @@ class NfseExternalReconciliationService
         $nodes = $xp->query($query);
         $out = [];
         if($nodes){
-            foreach($nodes as $node){ $out[] = trim((string) $node->textContent); }
+            foreach($nodes as $node){
+                $out[] = trim((string) $node->textContent);
+            }
         }
         return $out;
     }
@@ -187,13 +220,32 @@ class NfseExternalReconciliationService
     {
         $tipo = $tipo === 'pdf' ? 'pdf' : 'xml';
         $base = dirname(__DIR__, 2) . '/storage/nfse/' . $tipo;
-        if(!is_dir($base)){ mkdir($base, 0770, true); }
+        if(!is_dir($base) && !mkdir($base, 0770, true) && !is_dir($base)){
+            throw new \RuntimeException('Não foi possível preparar o armazenamento privado da NFS-e.');
+        }
         $nome = date('YmdHis') . '_' . bin2hex(random_bytes(12)) . '.' . $tipo;
         $path = $base . '/' . $nome;
         $tmp = $path . '.tmp';
-        file_put_contents($tmp, $conteudo, LOCK_EX);
+        if(file_put_contents($tmp, $conteudo, LOCK_EX) === false){
+            throw new \RuntimeException('Não foi possível armazenar o documento fiscal.');
+        }
         chmod($tmp, 0660);
-        rename($tmp, $path);
+        if(!rename($tmp, $path)){
+            @unlink($tmp);
+            throw new \RuntimeException('Não foi possível concluir o armazenamento do documento fiscal.');
+        }
         return 'storage/nfse/' . $tipo . '/' . $nome;
+    }
+
+    private function removerArquivoPrivado($pathRelativo)
+    {
+        $pathRelativo = str_replace('\\', '/', (string) $pathRelativo);
+        if(strpos($pathRelativo, '..') !== false){
+            return;
+        }
+        $absoluto = dirname(__DIR__, 2) . '/' . ltrim($pathRelativo, '/');
+        if(is_file($absoluto)){
+            @unlink($absoluto);
+        }
     }
 }
