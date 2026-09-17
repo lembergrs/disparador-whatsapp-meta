@@ -31,6 +31,44 @@ spl_autoload_register(function($class) use ($root){
     }
 });
 
+function nfseDiagnosticoResumoResposta(array $http)
+{
+    $body = (string) ($http['body'] ?? '');
+    $trimmed = ltrim($body, "\xEF\xBB\xBF\x00\x09\x0A\x0D\x20");
+    $primeiros = substr($trimmed, 0, 160);
+    $primeiros = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '?', $primeiros);
+    $primeiros = preg_replace('/\s+/', ' ', $primeiros);
+
+    $domValido = false;
+    if($trimmed !== ''){
+        $dom = new DOMDocument();
+        $anterior = libxml_use_internal_errors(true);
+        $domValido = $dom->loadXML($trimmed, LIBXML_NONET | LIBXML_NOBLANKS);
+        libxml_clear_errors();
+        libxml_use_internal_errors($anterior);
+    }
+
+    $jsonValido = false;
+    $jsonTipo = '';
+    if($trimmed !== ''){
+        $json = json_decode($trimmed, true);
+        $jsonValido = json_last_error() === JSON_ERROR_NONE;
+        if($jsonValido){
+            $jsonTipo = is_array($json) ? 'array/object' : gettype($json);
+        }
+    }
+
+    fwrite(STDERR, "--- RESUMO SEGURO DA RESPOSTA ---\n");
+    fwrite(STDERR, 'HTTP status: ' . (int) ($http['http_status'] ?? 0) . "\n");
+    fwrite(STDERR, 'Content-Type: ' . (string) ($http['content_type'] ?? '') . "\n");
+    fwrite(STDERR, 'Tamanho: ' . strlen($body) . " bytes\n");
+    fwrite(STDERR, 'Transport error: ' . (!empty($http['transport_error']) ? 'sim' : 'nao') . "\n");
+    fwrite(STDERR, 'DOMDocument XML valido: ' . ($domValido ? 'sim' : 'nao') . "\n");
+    fwrite(STDERR, 'JSON valido: ' . ($jsonValido ? 'sim (' . $jsonTipo . ')' : 'nao') . "\n");
+    fwrite(STDERR, 'Inicio sanitizado: ' . ($primeiros !== '' ? $primeiros : '[vazio]') . "\n");
+    fwrite(STDERR, "--- FIM DO RESUMO ---\n");
+}
+
 $nfseId = isset($argv[1]) ? (int) $argv[1] : 0;
 $chave = preg_replace('/\D/', '', (string) ($argv[2] ?? ''));
 if($nfseId <= 0 || strlen($chave) !== 50){
@@ -71,6 +109,7 @@ try{
     ]);
     $resultado = $mapper->mapearXml($http);
     if(empty($resultado['sucesso']) || empty($resultado['conteudo'])){
+        nfseDiagnosticoResumoResposta($http);
         throw new RuntimeException($resultado['error_message'] ?? 'A NFS-e não pôde ser confirmada no ambiente nacional.');
     }
 
