@@ -143,8 +143,9 @@ class NfseController extends Controller
         if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'){
             $emissao = (new NfseEmissao())->buscarPorId((int) ($_GET['nfse_id'] ?? 0));
             $status = (string) ($emissao['NFE_Status'] ?? '');
+            $statusReconciliaveis = [NfseEmissao::STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO];
 
-            if(!$emissao || (int) ($emissao['NFE_EmissaoAtiva'] ?? 0) !== 1 || in_array($status, [NfseEmissao::STATUS_EMITIDA, NfseEmissao::STATUS_CANCELAMENTO_PENDENTE, NfseEmissao::STATUS_CANCELADA], true)){
+            if(!$emissao || (int) ($emissao['NFE_EmissaoAtiva'] ?? 0) !== 1 || !in_array($status, $statusReconciliaveis, true)){
                 Session::flash('error', 'Tentativa fiscal ativa apta para reconciliação não encontrada.');
                 $this->redirect('nfse');
             }
