@@ -28,7 +28,32 @@ class NfseApiClient
 
     public function consultarPdf(array $payload)
     {
-        return $this->postJson('/acoes/ConsultaDanfse.php', $payload, 'nfse.consultarDanfse');
+        $xml = $this->consultarXml($payload);
+        if(!empty($xml['transport_error']) || (int) ($xml['http_status'] ?? 0) < 200 || (int) ($xml['http_status'] ?? 0) >= 300 || trim((string) ($xml['body'] ?? '')) === ''){
+            return $xml;
+        }
+
+        $xmlConteudo = (string) $xml['body'];
+        $gzip = gzencode($xmlConteudo, 9);
+        if($gzip === false){
+            return [
+                'transport_error' => true,
+                'timeout' => false,
+                'incerto' => false,
+                'operation' => 'nfse.gerarDanfseLocal',
+                'http_status' => 0,
+                'content_type' => '',
+                'request_id' => null,
+                'body' => null,
+                'error_code' => 'xml_gzip_failed',
+                'error_message' => 'Falha ao compactar XML oficial para geração do DANFSe.',
+                'duration_ms' => 0
+            ];
+        }
+
+        return $this->postJson('/acoes/GeraDanfse.php', [
+            'nfseXmlGZipB64' => base64_encode($gzip)
+        ], 'nfse.gerarDanfseLocal');
     }
 
     public function consultarXml(array $payload)
