@@ -173,4 +173,26 @@ class ListaContatoItem
         return $sql->fetchColumn();
     }
 
+    public function contatoExisteEmOutraListaDoCliente($clienteId, $contatoId, $listaIgnoradaId = 0)
+    {
+        $sql = $this->db->prepare("
+            SELECT 1
+            FROM lista_contatos_itens i
+            INNER JOIN listas_contatos l
+                ON l.LST_ID = i.LST_ID
+            WHERE l.CLI_ID = ?
+              AND i.CON_ID = ?
+              AND l.LST_ID <> ?
+            LIMIT 1
+        ");
+
+        $sql->execute([
+            (int) $clienteId,
+            (int) $contatoId,
+            (int) $listaIgnoradaId
+        ]);
+
+        return (bool) $sql->fetchColumn();
+    }
+
 }
