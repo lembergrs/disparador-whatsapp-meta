@@ -18,12 +18,14 @@ nfseExternalAssert(strpos($service, "documentosDoGrupo(\$xp, 'prest')") !== fals
 nfseExternalAssert(strpos($service, "documentosDoGrupo(\$xp, 'toma')") !== false, 'valida documento dentro do grupo do tomador');
 nfseExternalAssert(strpos($service, "(int) (\$cobranca['CLI_ID'] ?? 0) !== (int) (\$tentativa['CLI_ID'] ?? 0)") !== false, 'confere vínculo entre cobrança e cliente');
 nfseExternalAssert(strpos($service, "abs(\$valor - (float) (\$cobranca['COB_Valor'] ?? 0)) > 0.01") !== false, 'confere valor oficial com a cobrança');
+nfseExternalAssert(strpos($model, 'STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO') !== false, 'modelo aceita reconciliação apenas para tentativas com erro');
 nfseExternalAssert(strpos($model, "NFE_UltimoErroCodigo = 'substituida_por_emissao_externa'") !== false, 'preserva tentativa anterior como histórico encerrado');
 nfseExternalAssert(strpos($model, 'NFE_EmissaoAtiva = NULL') !== false, 'inativa tentativa substituída na mesma transação');
 nfseExternalAssert(strpos($model, 'NFE_XmlStoragePath') !== false && strpos($model, 'NFE_XmlSha256') !== false, 'grava referência do XML na mesma transação da reconciliação');
 nfseExternalAssert(strpos($model, 'STATUS_EMITIDA') !== false, 'nova nota externa é registrada como emitida');
 nfseExternalAssert(strpos($controller, 'buscarVigentesPorCobrancas') !== false, 'cobranças com registro fiscal vigente saem do seletor de nova emissão');
 nfseExternalAssert(strpos($controller, "(\$_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'") !== false, 'rota administrativa permite abrir a tela por GET e reconciliar por POST');
+nfseExternalAssert(strpos($controller, 'STATUS_ERRO_TEMPORARIO, NfseEmissao::STATUS_ERRO_DEFINITIVO') !== false, 'tela de reconciliação só abre para tentativa ativa com erro');
 nfseExternalAssert(strpos($migration, 'UNIQUE KEY uk_nfse_chave_acesso_unica') !== false, 'banco impede duplicidade de chave de acesso');
 
 echo "NfseExternalReconciliationAuditTest concluído.\n";
