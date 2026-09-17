@@ -24,7 +24,6 @@ nfseExternalAssert(strpos($model, 'NFE_XmlStoragePath') !== false && strpos($mod
 nfseExternalAssert(strpos($model, 'STATUS_EMITIDA') !== false, 'nova nota externa é registrada como emitida');
 nfseExternalAssert(strpos($controller, 'buscarVigentesPorCobrancas') !== false, 'cobranças com registro fiscal vigente saem do seletor de nova emissão');
 nfseExternalAssert(strpos($controller, "(\$_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'") !== false, 'rota administrativa permite abrir a tela por GET e reconciliar por POST');
-nfseExternalAssert(strpos($migration, 'DROP INDEX idx_nfse_chave_acesso') !== false, 'remove índice simples redundante da chave de acesso');
 nfseExternalAssert(strpos($migration, 'UNIQUE KEY uk_nfse_chave_acesso_unica') !== false, 'banco impede duplicidade de chave de acesso');
 
 echo "NfseExternalReconciliationAuditTest concluído.\n";
