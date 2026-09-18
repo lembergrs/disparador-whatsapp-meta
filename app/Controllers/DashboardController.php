@@ -208,7 +208,10 @@ class DashboardController extends Controller
                 if($colunaUltimoAcesso){
                     $sqlUltimoAcesso = $db->prepare("SELECT USU_UltimoAcesso FROM usuarios WHERE USU_ID = ? LIMIT 1");
                     $sqlUltimoAcesso->execute([(int) $usuario['id']]);
-                    $ultimoAcessoCliente = $sqlUltimoAcesso->fetchColumn() ?: null;
+                    $ultimoAcessoBanco = $sqlUltimoAcesso->fetchColumn() ?: null;
+                    $ultimoAcessoCliente = array_key_exists('ultimo_acesso_anterior', $usuario)
+                        ? ($usuario['ultimo_acesso_anterior'] ?: null)
+                        : $ultimoAcessoBanco;
                 }
             }catch(\Throwable $e){
                 $ultimoAcessoCliente = null;
