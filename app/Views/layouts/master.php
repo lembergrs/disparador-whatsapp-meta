@@ -105,6 +105,8 @@ body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disp
 body.sidebar-collapse .main-sidebar .brand-link.logo-disparador-brand .logo-disparador-mini {
     display: block !important;
 }
+
+.client-sidebar-help{position:absolute;left:.75rem;right:.75rem;bottom:1rem;padding:.85rem;border-radius:.5rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:#fff;z-index:2}.client-sidebar-help p{font-size:.82rem;color:#d4d9df;margin:.35rem 0 .65rem}.client-sidebar-help .btn{color:#fff;border-color:#aeb6bf}.client-sidebar-help .btn:hover{background:#fff;color:#343a40}.client-sidebar-help-mini{display:none;position:absolute;bottom:1rem;left:0;width:100%;text-align:center;z-index:2}.client-sidebar-help-mini button{width:42px;height:42px;border-radius:.45rem;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#25d366;font-size:1.35rem}.main-sidebar .sidebar{padding-bottom:150px}.sidebar-collapse .client-sidebar-help{display:none}.sidebar-collapse .client-sidebar-help-mini{display:block}.sidebar-collapse .main-sidebar .sidebar{padding-bottom:70px}@media(max-height:620px){.client-sidebar-help{display:none}.client-sidebar-help-mini{display:block}.main-sidebar .sidebar{padding-bottom:70px}}@media(max-width:767.98px){.client-sidebar-help{display:none}.client-sidebar-help-mini{display:block}}
 </style>
 
 </head>
@@ -606,6 +608,17 @@ Conversas
 
 </nav>
 
+<?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){ ?>
+<div class="client-sidebar-help" aria-label="Ajuda">
+    <strong><i class="fab fa-whatsapp text-success mr-1"></i> Precisa de ajuda?</strong>
+    <p>Nossa equipe está pronta para te atender pelo WhatsApp.</p>
+    <button type="button" class="btn btn-outline-light btn-sm btn-block" data-toggle="modal" data-target="#modalAjudaGlobal"><i class="fab fa-whatsapp mr-1"></i> Solicitar ajuda</button>
+</div>
+<div class="client-sidebar-help-mini">
+    <button type="button" title="Solicitar ajuda pelo WhatsApp" aria-label="Solicitar ajuda pelo WhatsApp" data-toggle="modal" data-target="#modalAjudaGlobal"><i class="fab fa-whatsapp"></i></button>
+</div>
+<?php } ?>
+
 </div>
 
 </aside>
@@ -639,6 +652,10 @@ Conversas
 </section>
 
 </div>
+
+<?php if(Auth::nivelCliente($usuario['nivel'] ?? null)){ ?>
+<div class="modal fade" id="modalAjudaGlobal" tabindex="-1" role="dialog" aria-labelledby="tituloModalAjudaGlobal" aria-hidden="true"><div class="modal-dialog" role="document"><form method="post" action="<?= BASE_URL; ?>/index.php?url=onboardingSuporte/solicitar" class="modal-content"><?= \Core\Csrf::input(); ?><input type="hidden" name="conta_id" value=""><input type="hidden" name="etapa" value="ajuda_geral"><div class="modal-header"><h4 class="modal-title h5" id="tituloModalAjudaGlobal">Solicitar ajuda</h4><button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button></div><div class="modal-body"><p class="small text-muted">Nossa equipe acompanhará a solicitação e entrará em contato com você pelo WhatsApp.</p><div class="form-group"><label for="ajudaGlobalAssunto">Como podemos ajudar?</label><select class="form-control" id="ajudaGlobalAssunto" name="assunto" required><option value="">Selecione</option><option value="duvida_configuracao">Dúvida sobre configuração</option><option value="mensagem_erro">Mensagem de erro</option><option value="orientacao">Preciso de orientação</option><option value="outro">Outro</option></select></div><div class="form-group"><label for="ajudaGlobalDescricao">Conte um pouco mais <span class="text-muted">(opcional)</span></label><textarea class="form-control" id="ajudaGlobalDescricao" name="descricao" rows="3" maxlength="1000"></textarea><small class="form-text text-muted">Não envie senhas, códigos de verificação ou tokens de acesso.</small></div><div class="form-group"><label for="ajudaGlobalPeriodo">Melhor período para contato</label><select class="form-control" id="ajudaGlobalPeriodo" name="periodo" required><option value="manha">Manhã</option><option value="tarde">Tarde</option><option value="noite">Noite</option><option value="qualquer" selected>Qualquer horário</option></select></div><div class="form-group mb-0"><label for="ajudaGlobalHorario">Detalhe de horário <span class="text-muted">(opcional)</span></label><input class="form-control" id="ajudaGlobalHorario" name="horario" maxlength="120" placeholder="Ex.: dias úteis, entre 14h e 17h"></div></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-success">Enviar solicitação</button></div></form></div></div>
+<?php } ?>
 
 </div>
 

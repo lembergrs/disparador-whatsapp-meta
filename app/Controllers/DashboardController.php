@@ -35,6 +35,7 @@ class DashboardController extends Controller
         $onboardingChecklist = null;
         $avaliacaoDashboard = [];
         $dashboardAdmin = null;
+        $ultimoAcessoCliente = null;
 
         if($usuario['nivel'] == 'admin'){
 
@@ -202,6 +203,20 @@ class DashboardController extends Controller
             $avaliacaoDashboard = Auth::dadosAvaliacaoCliente(false);
             $whatsappSuporte = (new \Models\ConfiguracaoSite())->obterConfiguracaoWhatsappSite();
 
+            try{
+                $colunaUltimoAcesso = $db->query("SHOW COLUMNS FROM usuarios LIKE 'USU_UltimoAcesso'")->fetch();
+                if($colunaUltimoAcesso){
+                    $sqlUltimoAcesso = $db->prepare("SELECT USU_UltimoAcesso FROM usuarios WHERE USU_ID = ? LIMIT 1");
+                    $sqlUltimoAcesso->execute([(int) $usuario['id']]);
+                    $ultimoAcessoBanco = $sqlUltimoAcesso->fetchColumn() ?: null;
+                    $ultimoAcessoCliente = array_key_exists('ultimo_acesso_anterior', $usuario)
+                        ? ($usuario['ultimo_acesso_anterior'] ?: null)
+                        : $ultimoAcessoBanco;
+                }
+            }catch(\Throwable $e){
+                $ultimoAcessoCliente = null;
+            }
+
             $sql = $db->prepare("
                 SELECT *
                 FROM campanhas
@@ -239,6 +254,7 @@ class DashboardController extends Controller
                 'onboardingChecklist' => $onboardingChecklist,
                 'avaliacaoDashboard' => $avaliacaoDashboard,
                 'dashboardAdmin' => $dashboardAdmin,
+                'ultimoAcessoCliente' => $ultimoAcessoCliente,
                 // Compartilha a decisão do Auth com o menu deste mesmo request.
                 'acessoOperacionalDashboard' => $operacional ?? null
             ]
