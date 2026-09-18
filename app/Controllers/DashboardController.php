@@ -34,8 +34,11 @@ class DashboardController extends Controller
         $excedente = null;
         $onboardingChecklist = null;
         $avaliacaoDashboard = [];
+        $dashboardAdmin = null;
 
         if($usuario['nivel'] == 'admin'){
+
+            $dashboardAdmin = (new \\Models\\DashboardAdmin($db))->obter();
 
             $clientes = $db->query("
                 SELECT COUNT(*) total
@@ -235,6 +238,7 @@ class DashboardController extends Controller
                 'assinaturasCanceladas' => $assinaturasCanceladas,
                 'onboardingChecklist' => $onboardingChecklist,
                 'avaliacaoDashboard' => $avaliacaoDashboard,
+                'dashboardAdmin' => $dashboardAdmin,
                 // Compartilha a decisão do Auth com o menu deste mesmo request.
                 'acessoOperacionalDashboard' => $operacional ?? null
             ]
