@@ -15,10 +15,6 @@ $avisoMeta=$metaConta?avisoMetaDashboard($metaConta):null;
 @media(max-width:767px){.cliente-dashboard .acoes-grid{grid-template-columns:1fr}.cliente-dashboard .resumo-card{height:auto}}
 </style>
 <div class="cliente-dashboard">
-<div class="d-flex flex-wrap justify-content-between align-items-start mb-3">
- <div><h4 class="mb-0">Olá, <?= htmlspecialchars($usuario['nome'] ?? ''); ?>!</h4><small class="text-muted">Aqui está um resumo da sua conta no Disparador.</small></div>
- <?php if($ultimoAcessoCliente){ ?><small class="text-muted mt-1"><i class="far fa-clock mr-1"></i>Último acesso: <?= date('d/m/Y \à\s H:i', strtotime($ultimoAcessoCliente)); ?></small><?php } ?>
-</div>
 <div class="row">
 <?php foreach([
  ['bg-info','fas fa-comments',$conversas,'Conversas','conversa','Abrir conversas'],['bg-danger','fas fa-envelope',$naoLidas,'Não lidas','conversa','Ver pendências'],
