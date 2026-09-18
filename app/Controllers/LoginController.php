@@ -123,6 +123,18 @@ class LoginController extends Controller
 
             ];
 
+            // Registra somente autenticação real por senha. O modo suporte/impersonação
+            // troca a sessão em Auth::startImpersonation() e não passa por este ponto.
+            try{
+                $colunaUltimoAcesso = $db->query("SHOW COLUMNS FROM usuarios LIKE 'USU_UltimoAcesso'")->fetch(PDO::FETCH_ASSOC);
+                if($colunaUltimoAcesso){
+                    $stmtUltimoAcesso = $db->prepare("UPDATE usuarios SET USU_UltimoAcesso = NOW() WHERE USU_ID = ?");
+                    $stmtUltimoAcesso->execute([$usuario['USU_ID']]);
+                }
+            }catch(\Throwable $e){
+                error_log('Não foi possível registrar o último acesso: ' . $e->getMessage());
+            }
+
             AnalyticsService::registrar('login', ['method'=>'password']);
 
             $this->redirect('dashboard');
