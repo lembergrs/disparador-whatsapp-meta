@@ -1065,12 +1065,14 @@ class ConfiguracaoController extends Controller
         \Core\Csrf::exigirPost();
         $usuario = Auth::usuario();
 
-        if(($usuario['nivel'] ?? null) !== 'admin'){
+        if(!Auth::podeGerenciarPropriaConfiguracaoMeta($usuario)){
             $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Acesso negado.'], 403);
         }
 
         $contaId = (int) ($_POST['conta_id'] ?? 0);
-        $conta = $this->metaContaModel->buscarPorIdAdmin($contaId);
+        $conta = ($usuario['nivel'] ?? null) === 'admin'
+            ? $this->metaContaModel->buscarPorIdAdmin($contaId)
+            : $this->metaContaModel->buscarPorUsuario($contaId, $usuario);
 
         if(!$conta || ($conta['MTA_Ativo'] ?? 'N') !== 'S'){
             $this->jsonResponse(['ok'=>false,'status'=>'error','mensagem'=>'Conta Meta não encontrada ou inativa.'], 404);
@@ -1094,7 +1096,7 @@ class ConfiguracaoController extends Controller
                 'waba_id' => $conta['MTA_WabaId'] ?? null,
                 'phone_number_id' => $conta['MTA_PhoneNumberId'],
                 'request_id' => $requestId,
-                'etapa' => 'admin_refresh_meta_status',
+                'etapa' => 'refresh_meta_status',
                 'resultado' => 'ok'
             ]);
 
