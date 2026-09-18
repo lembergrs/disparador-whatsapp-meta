@@ -119,7 +119,8 @@ class LoginController extends Controller
                     $usuario['CLI_DataCadastro'] ?? null,
                 'CLI_Plano_DR' =>
                     $usuario['CLI_Plano_DR'] ?? null,
-                'CMS_MensagensMesAtual' => 0
+                'CMS_MensagensMesAtual' => 0,
+                'ultimo_acesso_anterior' => $usuario['USU_UltimoAcesso'] ?? null
 
             ];
 
