@@ -110,7 +110,8 @@ class DashboardAdmin
         for($i=5;$i>=0;$i--){
             $inicio=date('Y-m-01', strtotime("-{$i} months"));
             $fim=date('Y-m-01', strtotime($inicio.' +1 month'));
-            $labels[]=ucfirst(strftime('%b/%y', strtotime($inicio)));
+            $meses = [1=>'Jan',2=>'Fev',3=>'Mar',4=>'Abr',5=>'Mai',6=>'Jun',7=>'Jul',8=>'Ago',9=>'Set',10=>'Out',11=>'Nov',12=>'Dez'];
+            $labels[]=$meses[(int)date('n', strtotime($inicio))].'/'.date('y', strtotime($inicio));
             $novas[]=(int)$this->valor("SELECT COUNT(*) FROM assinaturas WHERE ASS_DataCadastro >= ? AND ASS_DataCadastro < ?", [$inicio,$fim]);
             $canceladas[]=(int)$this->valor("SELECT COUNT(*) FROM assinaturas WHERE ASS_Status='cancelada' AND ASS_DataAtualizacao >= ? AND ASS_DataAtualizacao < ?", [$inicio,$fim]);
         }
