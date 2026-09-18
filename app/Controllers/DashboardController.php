@@ -38,7 +38,7 @@ class DashboardController extends Controller
 
         if($usuario['nivel'] == 'admin'){
 
-            $dashboardAdmin = (new \\Models\\DashboardAdmin($db))->obter();
+            $dashboardAdmin = (new \Models\DashboardAdmin($db))->obter();
 
             $clientes = $db->query("
                 SELECT COUNT(*) total
