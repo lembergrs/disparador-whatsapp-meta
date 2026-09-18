@@ -169,6 +169,17 @@ foreach($cardsAdmin as $i=>$card){ ?>
 <?php
 $clienteEmPreTrialDashboard = !empty($onboardingChecklist['pre_trial']);
 $mostrarOnboardingDashboard = empty($onboardingChecklist['concluido']) || !empty($onboardingChecklist['recuperacao']);
+?>
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3">
+    <div>
+        <h4 class="mb-0">Olá, <?= htmlspecialchars($usuario['nome'] ?? ''); ?>!</h4>
+        <small class="text-muted">Aqui está um resumo da sua conta no Disparador.</small>
+    </div>
+    <?php if($ultimoAcessoCliente){ ?>
+        <small class="text-muted mt-1"><i class="far fa-clock mr-1"></i>Último acesso: <?= date('d/m/Y \\à\\s H:i', strtotime($ultimoAcessoCliente)); ?></small>
+    <?php } ?>
+</div>
+<?php
 if($mostrarOnboardingDashboard){
     require __DIR__ . '/_onboarding.php';
 }
