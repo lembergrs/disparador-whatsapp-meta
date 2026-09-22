@@ -49,12 +49,6 @@ class WorkerOperationalValidatorService
             return $financeiro;
         }
 
-        $limite = $this->validarLimiteMensagens($clienteId, $cliente);
-
-        if($limite['status'] !== 'permitido'){
-            return $limite;
-        }
-
         $meta = $this->metaModel->buscarPorCliente($metaId, $clienteId);
 
         if(!$meta){
@@ -143,24 +137,6 @@ class WorkerOperationalValidatorService
 
         if($mensagens >= self::LIMITE_MENSAGENS_AVALIACAO){
             return $this->resultado('bloqueio_temporario', 'trial_limite_mensagens', 'Limite de mensagens do trial atingido.');
-        }
-
-        return $this->resultado('permitido');
-    }
-
-    private function validarLimiteMensagens(int $clienteId, array $cliente): array
-    {
-        $limitePlano = (int) ($cliente['PLA_LimiteMensagens'] ?? 0);
-
-        if($limitePlano <= 0){
-            return $this->resultado('permitido');
-        }
-
-        $consumo = $this->consumoModel->buscarMesAtual($clienteId);
-        $utilizadas = (int) ($consumo['CMS_Mensagens'] ?? 0);
-
-        if($utilizadas >= $limitePlano){
-            return $this->resultado('bloqueio_temporario', 'limite_mensal_atingido', 'Limite mensal de mensagens atingido.');
         }
 
         return $this->resultado('permitido');
