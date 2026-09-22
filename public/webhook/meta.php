@@ -24,6 +24,7 @@ use Models\Contato;
 use Models\MetaConta;
 use Services\MensagemStatusService;
 use Services\MetaStatusWebhookService;
+use Services\MetaBillingConsumptionReversalService;
 use Services\MetaWebhookMessageIngestionService;
 use Services\MetaWebhookStateSyncService;
 use Services\MetaCoexistenceHistoryQueueService;
@@ -129,6 +130,7 @@ if(empty($payload)){
 $conversaModel =
     new Conversa();
 $notificacaoModel = new Notificacao($db);
+$billingConsumptionReversalService = new MetaBillingConsumptionReversalService($db);
 
 $statusWebhookService = new MetaStatusWebhookService(
     $conversaModel,
@@ -141,6 +143,9 @@ $statusWebhookService = new MetaStatusWebhookService(
     },
     function($acao, array $dados){
         registrarLogWebhookMeta($acao, $dados);
+    },
+    function($messageId, array $erro) use ($billingConsumptionReversalService){
+        return $billingConsumptionReversalService->processar($messageId, $erro);
     }
 );
 $messageIngestionService = new MetaWebhookMessageIngestionService(
