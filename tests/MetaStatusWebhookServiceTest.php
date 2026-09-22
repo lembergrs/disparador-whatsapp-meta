@@ -94,4 +94,10 @@ $resultadoFalha=$serviceFalha->processarLote([['id'=>'wamid.log','status'=>'deli
 webhookStatusAssert($falhaPersistencia->status==='delivered' && $resultadoFalha['processados']===1,'falha de pricing não deve desfazer status persistido nem interromper processamento');
 webhookStatusAssert($logsPersistencia[0]['acao']==='pricing_meta_persistencia_falhou' && $logsPersistencia[0]['dados']['meta_id']===9,'falha exclusiva de pricing deve ser identificada no log');
 webhookStatusAssert(strpos($logsPersistencia[0]['dados']['erro'],'segredo')===false,'log de falha de pricing deve sanitizar segredos');
+$estornos=[];
+$repoEstorno=new MensagensWebhookFake();
+$repoEstorno->rows['1:wamid.billing']=['status'=>'processing'];
+$serviceEstorno=new MetaStatusWebhookService($repoEstorno, null, null, null, function($id,$erro) use (&$estornos){ $estornos[]=[$id,$erro['codigo']??null]; });
+$serviceEstorno->processarLote([['id'=>'wamid.billing','status'=>'failed','errors'=>[['code'=>131042,'message'=>'Payment issue']]]],1);
+webhookStatusAssert($estornos===[['wamid.billing','131042']],'failed deve acionar callback de estorno com código Meta');
 echo "MetaStatusWebhookServiceTest OK\n";
