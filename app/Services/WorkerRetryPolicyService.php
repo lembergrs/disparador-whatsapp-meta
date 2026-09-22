@@ -9,6 +9,7 @@ class WorkerRetryPolicyService
     public const BLOQUEIO_TEMPORARIO = 'bloqueio_temporario';
     public const BLOQUEIO_DEFINITIVO = 'bloqueio_definitivo';
     public const ERRO_PERSISTENCIA_POS_ENVIO = 'erro_persistencia_pos_envio';
+    public const BLOQUEIO_PAGAMENTO_META = 'meta_pagamento_pendente';
 
     public function maxTentativas(): int
     {
@@ -54,6 +55,18 @@ class WorkerRetryPolicyService
         $mensagem = is_array($erro) ? (string) ($erro['message'] ?? '') : '';
         $curlError = is_array($retorno) ? (string) ($retorno['curl_error'] ?? '') : '';
 
+        if($this->ehPendenciaPagamentoMeta($codigoErro, $mensagem)){
+            return [
+                'sucesso' => false,
+                'message_id' => null,
+                'tipo_resultado' => self::BLOQUEIO_TEMPORARIO,
+                'retry' => false,
+                'bloqueio_conta' => true,
+                'erro_codigo' => self::BLOQUEIO_PAGAMENTO_META,
+                'erro_mensagem' => 'Envios suspensos pela Meta por pendência de pagamento na conta do WhatsApp. Regularize o faturamento da conta na Meta para continuar os envios.'
+            ];
+        }
+
         $temporario = $this->ehErroTemporario($httpCode, $codigoErro, $mensagem, $curlError);
 
         return [
@@ -76,6 +89,15 @@ class WorkerRetryPolicyService
     public function atingiuMaximo(int $tentativas): bool
     {
         return $tentativas >= $this->maxTentativas();
+    }
+
+    private function ehPendenciaPagamentoMeta(string $codigoErro, string $mensagem): bool
+    {
+        $mensagemNormalizada = strtolower($mensagem);
+
+        return (int) $codigoErro === 131042
+            || strpos($mensagemNormalizada, 'unsettled payment') !== false
+            || strpos($mensagemNormalizada, 'unsettled payments') !== false;
     }
 
     private function ehErroTemporario(int $httpCode, string $codigoErro, string $mensagem, string $curlError): bool

@@ -20,6 +20,7 @@ class DisparoManualQueueService
     private $controlePlano;
     private $validator;
     private $retryPolicy;
+    private $bloqueiosPagamentoMeta = [];
 
     public function __construct($modoTeste = false)
     {
@@ -119,6 +120,13 @@ class DisparoManualQueueService
                     continue;
                 }
 
+                if($this->pagamentoMetaBloqueado($item)){
+                    $this->registrarBloqueioPagamentoMeta($item['DMI_ID']);
+                    $resultado['bloqueados']++;
+                    $this->recalcularLote((int) $item['DML_ID']);
+                    continue;
+                }
+
                 $variaveis = json_decode($item['DMI_VariaveisJson'] ?? '[]', true);
 
                 if(!is_array($variaveis)){
@@ -138,9 +146,15 @@ class DisparoManualQueueService
                         $resultado['erros']++;
                     }
                 }else{
-                    $tentativas = ((int) ($item['DMI_Tentativas'] ?? 0)) + 1;
-                    $this->registrarFalhaEnvio($item, $resultadoEnvio, $retorno, $tentativas);
-                    $resultado['erros']++;
+                    if(!empty($resultadoEnvio['bloqueio_conta'])){
+                        $this->ativarBloqueioPagamentoMeta($item);
+                        $this->registrarBloqueioPagamentoMeta($item['DMI_ID']);
+                        $resultado['bloqueados']++;
+                    }else{
+                        $tentativas = ((int) ($item['DMI_Tentativas'] ?? 0)) + 1;
+                        $this->registrarFalhaEnvio($item, $resultadoEnvio, $retorno, $tentativas);
+                        $resultado['erros']++;
+                    }
                 }
             }catch(Exception $e){
                 $this->registrarErro($item['DMI_ID'], $e->getMessage());
@@ -591,6 +605,53 @@ class DisparoManualQueueService
     private function normalizarResultadoEnvio($retorno): array
     {
         return $this->retryPolicy->classificarRetorno($retorno);
+    }
+
+    private function chaveBloqueioPagamentoMeta(array $item): string
+    {
+        return (string) $item['CLI_ID'] . ':' . (string) $item['MTA_ID'];
+    }
+
+    private function ativarBloqueioPagamentoMeta(array $item): void
+    {
+        $this->bloqueiosPagamentoMeta[$this->chaveBloqueioPagamentoMeta($item)] = time() + 1800;
+    }
+
+    private function pagamentoMetaBloqueado(array $item): bool
+    {
+        $chave = $this->chaveBloqueioPagamentoMeta($item);
+        $ate = (int) ($this->bloqueiosPagamentoMeta[$chave] ?? 0);
+
+        if($ate <= time()){
+            unset($this->bloqueiosPagamentoMeta[$chave]);
+            return false;
+        }
+
+        return true;
+    }
+
+    private function registrarBloqueioPagamentoMeta($itemId): void
+    {
+        $mensagem = 'Envios suspensos pela Meta por pendência de pagamento na conta do WhatsApp. Regularize o faturamento da conta na Meta para continuar os envios.';
+        $this->db->prepare("
+            UPDATE disparo_manual_itens
+            SET
+                DMI_Status = 'pendente',
+                DMI_WorkerId = NULL,
+                DMI_DataReserva = NULL,
+                DMI_ProximaTentativa = DATE_ADD(NOW(), INTERVAL 30 MINUTE),
+                DMI_Tentativas = GREATEST(DMI_Tentativas - 1, 0),
+                DMI_UltimoErroTipo = ?,
+                DMI_UltimoErroCodigo = ?,
+                DMI_Erro = ?,
+                DMI_DataAtualizacao = NOW()
+            WHERE DMI_ID = ?
+        ")->execute([
+            WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO,
+            WorkerRetryPolicyService::BLOQUEIO_PAGAMENTO_META,
+            $mensagem,
+            $itemId
+        ]);
     }
 
     private function registrarFalhaEnvio(array $item, array $resultado, $retorno, int $tentativas): void

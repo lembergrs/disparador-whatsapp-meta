@@ -18,6 +18,7 @@ class CampanhaQueueService
     private $conversaModel;
     private $retryPolicy;
     private $metaCache = [];
+    private $bloqueiosPagamentoMeta = [];
 
     public function __construct($modoTeste = false, ?WorkerOperationalValidatorService $validator = null)
     {
@@ -144,6 +145,12 @@ class CampanhaQueueService
                     continue;
                 }
 
+                if($this->pagamentoMetaBloqueado($campanha, $template)){
+                    $this->registrarBloqueioPagamentoMeta($item);
+                    $resumo['bloqueados']++;
+                    continue;
+                }
+
                 $parametros = $this->montarParametros($item, $variaveis);
                 $retorno = $this->enviarItem($campanha, $template, $item, $parametros);
                 $resultado = $this->normalizarResultadoEnvio($retorno);
@@ -157,13 +164,19 @@ class CampanhaQueueService
                         $resumo['erros_definitivos']++;
                     }
                 }else{
-                    $tentativas = ((int) ($item['FIL_Tentativas'] ?? 0)) + 1;
-                    $this->registrarFalhaEnvio($campanha, $item, $resultado, $retorno, $tentativas);
-
-                    if($resultado['retry'] && !$this->retryPolicy->atingiuMaximo($tentativas)){
-                        $resumo['erros_temporarios']++;
+                    if(!empty($resultado['bloqueio_conta'])){
+                        $this->ativarBloqueioPagamentoMeta($campanha, $template);
+                        $this->registrarBloqueioPagamentoMeta($item);
+                        $resumo['bloqueados']++;
                     }else{
-                        $resumo['erros_definitivos']++;
+                        $tentativas = ((int) ($item['FIL_Tentativas'] ?? 0)) + 1;
+                        $this->registrarFalhaEnvio($campanha, $item, $resultado, $retorno, $tentativas);
+
+                        if($resultado['retry'] && !$this->retryPolicy->atingiuMaximo($tentativas)){
+                            $resumo['erros_temporarios']++;
+                        }else{
+                            $resumo['erros_definitivos']++;
+                        }
                     }
                 }
             }catch(Exception $e){
@@ -448,6 +461,53 @@ class CampanhaQueueService
     private function normalizarResultadoEnvio($retorno): array
     {
         return $this->retryPolicy->classificarRetorno($retorno);
+    }
+
+    private function chaveBloqueioPagamentoMeta(array $campanha, array $template): string
+    {
+        return (string) $campanha['CLI_ID'] . ':' . (string) $template['MTA_ID'];
+    }
+
+    private function ativarBloqueioPagamentoMeta(array $campanha, array $template): void
+    {
+        $this->bloqueiosPagamentoMeta[$this->chaveBloqueioPagamentoMeta($campanha, $template)] = time() + 1800;
+    }
+
+    private function pagamentoMetaBloqueado(array $campanha, array $template): bool
+    {
+        $chave = $this->chaveBloqueioPagamentoMeta($campanha, $template);
+        $ate = (int) ($this->bloqueiosPagamentoMeta[$chave] ?? 0);
+
+        if($ate <= time()){
+            unset($this->bloqueiosPagamentoMeta[$chave]);
+            return false;
+        }
+
+        return true;
+    }
+
+    private function registrarBloqueioPagamentoMeta(array $item): void
+    {
+        $mensagem = 'Envios suspensos pela Meta por pendência de pagamento na conta do WhatsApp. Regularize o faturamento da conta na Meta para continuar os envios.';
+        $this->db->prepare("
+            UPDATE fila_envio
+            SET
+                FIL_Status = 'pendente',
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_DataAtualizacao = NOW(),
+                FIL_ProximaTentativa = DATE_ADD(NOW(), INTERVAL 30 MINUTE),
+                FIL_Tentativas = GREATEST(FIL_Tentativas - 1, 0),
+                FIL_UltimoErroTipo = ?,
+                FIL_UltimoErroCodigo = ?,
+                FIL_Erro = ?
+            WHERE FIL_ID = ?
+        ")->execute([
+            WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO,
+            WorkerRetryPolicyService::BLOQUEIO_PAGAMENTO_META,
+            $mensagem,
+            $item['FIL_ID']
+        ]);
     }
 
     private function registrarFalhaEnvio(array $campanha, array $item, array $resultado, $retorno, int $tentativas): void
