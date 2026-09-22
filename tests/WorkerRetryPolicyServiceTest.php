@@ -46,6 +46,19 @@ $assert(!$definitivo['sucesso'], 'retorno 400 não é sucesso');
 $assert($definitivo['retry'] === false, 'retorno 400 não permite retry por padrão');
 $assert($definitivo['tipo_resultado'] === WorkerRetryPolicyService::ERRO_DEFINITIVO, 'retorno 400 é definitivo por padrão');
 
+$pagamentoPendente = $policy->classificarRetorno([
+    'http_code' => 400,
+    'error' => [
+        'code' => 131042,
+        'message' => 'Message failed to send because your WhatsApp Business account has unsettled payments.'
+    ]
+]);
+$assert(!$pagamentoPendente['sucesso'], 'pendência de pagamento não é sucesso');
+$assert($pagamentoPendente['tipo_resultado'] === WorkerRetryPolicyService::BLOQUEIO_TEMPORARIO, 'pendência de pagamento pausa o envio');
+$assert($pagamentoPendente['erro_codigo'] === WorkerRetryPolicyService::BLOQUEIO_PAGAMENTO_META, 'pendência recebe código interno específico');
+$assert(!empty($pagamentoPendente['bloqueio_conta']), 'pendência ativa bloqueio da conta no worker');
+$assert(strpos($pagamentoPendente['erro_mensagem'], 'pendência de pagamento') !== false, 'mensagem amigável explica a pendência');
+
 $sucesso = $policy->classificarRetorno(['messages' => [['id' => 'wamid.TESTE']]]);
 $assert($sucesso['sucesso'] === true, 'retorno com message_id é sucesso');
 $assert($sucesso['message_id'] === 'wamid.TESTE', 'message_id preservado');
