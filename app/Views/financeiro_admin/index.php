@@ -861,6 +861,12 @@ tabindex="-1"
 
                     </div>
 
+                    <div class="form-group form-check">
+                        <input type="checkbox" name="publico" id="publico" class="form-check-input" value="S" checked>
+                        <label class="form-check-label" for="publico">Exibir este plano publicamente para contratação</label>
+                        <small class="form-text text-muted">Desmarque para planos Enterprise, cortesia ou condições comerciais personalizadas atribuídas somente pelo administrador.</small>
+                    </div>
+
                 </div>
 
                 <div class="modal-footer">
@@ -955,12 +961,6 @@ tabindex="-1"
 
                         </select>
 
-                    </div>
-
-                    <div class="form-group form-check">
-                        <input type="checkbox" name="publico" id="publico" class="form-check-input" value="S" checked>
-                        <label class="form-check-label" for="publico">Exibir este plano publicamente para contratação</label>
-                        <small class="form-text text-muted">Desmarque para planos Enterprise ou condições comerciais personalizadas atribuídas somente pelo administrador.</small>
                     </div>
 
                     <div class="form-group">
