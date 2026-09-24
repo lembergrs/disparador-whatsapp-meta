@@ -122,6 +122,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                             <th>Usuários</th>
                             <th>Mensagens/Mês</th>
                             <th>Excedente</th>
+                            <th>Visibilidade</th>
                             <th>Status</th>
                             <th width="120">Ações</th>
 
@@ -180,6 +181,14 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                 </td>
 
                                 <td>
+                                    <?php if(($plano['PLA_Publico'] ?? 'S') === 'S'){ ?>
+                                        <span class="badge badge-info">Público</span>
+                                    <?php }else{ ?>
+                                        <span class="badge badge-secondary">Privado</span>
+                                    <?php } ?>
+                                </td>
+
+                                <td>
 
                                     <?php if($plano['PLA_Ativo'] == 'S'){ ?>
 
@@ -226,6 +235,7 @@ if(!function_exists('nomeCorPlanoAdmin')){
                                     data-mensagens="<?= $plano['PLA_LimiteMensagens']; ?>"
 
                                     data-excedente="<?= $plano['PLA_ValorMensagemExcedente']; ?>"
+                                    data-publico="<?= htmlspecialchars($plano['PLA_Publico'] ?? 'S'); ?>"
                                     >
 
                                         <i class="fas fa-edit"></i>
@@ -947,6 +957,12 @@ tabindex="-1"
 
                     </div>
 
+                    <div class="form-group form-check">
+                        <input type="checkbox" name="publico" id="publico" class="form-check-input" value="S" checked>
+                        <label class="form-check-label" for="publico">Exibir este plano publicamente para contratação</label>
+                        <small class="form-text text-muted">Desmarque para planos Enterprise ou condições comerciais personalizadas atribuídas somente pelo administrador.</small>
+                    </div>
+
                     <div class="form-group">
 
                         <label>Ciclo</label>
@@ -1054,6 +1070,9 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('cor').value =
             botao.dataset.cor || 'secondary';
 
+        document.getElementById('publico').checked =
+            (botao.dataset.publico || 'S') === 'S';
+
         atualizarPreviewCor();
 
         document.getElementById('formPlano').action =
@@ -1095,6 +1114,7 @@ document.addEventListener('DOMContentLoaded', function(){
         document.getElementById('plano_id').value = '';
 
         document.getElementById('cor').value = 'secondary';
+        document.getElementById('publico').checked = true;
         atualizarPreviewCor();
 
         document.getElementById('formPlano').action =
