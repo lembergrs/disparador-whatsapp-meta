@@ -67,7 +67,8 @@ class FinanceiroAdminController extends Controller
             'usuarios' => $_POST['usuarios'],
             'mensagens' => $_POST['mensagens'],
             'excedente' => $_POST['excedente'],
-            'cor' => $_POST['cor']
+            'cor' => $_POST['cor'],
+            'publico' => !empty($_POST['publico']) ? 'S' : 'N'
         ]);
 
         Session::flash(
@@ -225,8 +226,17 @@ class FinanceiroAdminController extends Controller
         $this->validarCsrfPost();
         Auth::admin();
         try{
-            (new FinanceiroWorkflowService())->alterarPlanoCliente((int) ($_POST['cliente_id'] ?? 0), (int) ($_POST['plano_id'] ?? 0), (string) ($_POST['ciclo'] ?? 'mensal'));
-            Session::flash('success', 'Plano do cliente atualizado.');
+            $resultado = (new FinanceiroWorkflowService())->alterarPlanoCliente((int) ($_POST['cliente_id'] ?? 0), (int) ($_POST['plano_id'] ?? 0), (string) ($_POST['ciclo'] ?? 'mensal'));
+            if(!empty($resultado['cortesia'])){
+                Session::flash('success', 'Plano privado gratuito atribuído e ativado sem geração de cobrança.');
+            }elseif(!empty($resultado['aguardando_pagamento'])){
+                $mensagem = !empty($resultado['sucesso'])
+                    ? 'Plano privado atribuído. A primeira cobrança foi gerada e a ativação ocorrerá após a confirmação do pagamento.'
+                    : 'Plano privado atribuído e cobrança registrada, mas não foi possível concluir a integração com o Asaas. Verifique a cobrança pendente.';
+                Session::flash(!empty($resultado['sucesso']) ? 'success' : 'error', $mensagem);
+            }else{
+                Session::flash('success', 'Plano do cliente atualizado.');
+            }
         }catch(\Throwable $e){ Session::flash('error', $e instanceof \DomainException ? $e->getMessage() : 'Erro ao atualizar plano do cliente.'); }
         $this->redirect('financeiroAdmin#tabClientes');
     }

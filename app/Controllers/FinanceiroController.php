@@ -26,7 +26,7 @@ class FinanceiroController extends Controller
         $metaContaModel = new MetaConta();
         $assinaturaModel = new Assinatura();
 
-        $planos = $planoModel->listarAtivos();
+        $planos = $planoModel->listarPublicosAtivos();
         $numerosAtivos =
             $metaContaModel->contarAtivasPorCliente(
                 $usuario['CLI_ID']

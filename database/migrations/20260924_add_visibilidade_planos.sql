@@ -1,0 +1,6 @@
+ALTER TABLE planos
+    ADD COLUMN PLA_Publico ENUM('S','N') NOT NULL DEFAULT 'S' AFTER PLA_Ativo;
+
+UPDATE planos
+SET PLA_Publico = 'S'
+WHERE PLA_Publico IS NULL;
