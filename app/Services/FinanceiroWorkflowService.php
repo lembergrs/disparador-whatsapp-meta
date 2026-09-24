@@ -50,7 +50,7 @@ class FinanceiroWorkflowService
         if(!Plano::cicloValido($ciclo)){
             throw new \DomainException('Ciclo de cobrança inválido.');
         }
-        $plano = $this->planos->buscar($planoId);
+        $plano = $this->planos->buscarPublico($planoId);
         if(!$plano){
             throw new \DomainException('Plano inválido.');
         }
