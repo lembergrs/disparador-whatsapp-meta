@@ -35,11 +35,15 @@ class Plano
 
     public function listarPublicosAtivos()
     {
+        $filtroPublico = $this->colunaPublicoExiste()
+            ? "AND PLA_Publico = 'S'"
+            : '';
+
         $sql = $this->db->query("
             SELECT *
             FROM planos
             WHERE PLA_Ativo = 'S'
-            AND COALESCE(PLA_Publico, 'S') = 'S'
+            {$filtroPublico}
             ORDER BY COALESCE(PLA_ValorMensal, PLA_Valor) ASC
         ");
 
@@ -48,12 +52,16 @@ class Plano
 
     public function buscarPublico($id)
     {
+        $filtroPublico = $this->colunaPublicoExiste()
+            ? "AND PLA_Publico = 'S'"
+            : '';
+
         $sql = $this->db->prepare("
             SELECT *
             FROM planos
             WHERE PLA_ID = ?
             AND PLA_Ativo = 'S'
-            AND COALESCE(PLA_Publico, 'S') = 'S'
+            {$filtroPublico}
         ");
 
         $sql->execute([$id]);
@@ -78,31 +86,13 @@ class Plano
     public function salvar($dados)
     {
         $valores = $this->normalizarValoresCiclo($dados);
-
-        $sql = $this->db->prepare("
-            INSERT INTO planos
-            (
-                PLA_Nome,
-                PLA_Periodicidade,
-                PLA_Valor,
-                PLA_ValorMensal,
-                PLA_ValorTrimestral,
-                PLA_ValorSemestral,
-                PLA_ValorAnual,
-                PLA_LimiteNumeros,
-                PLA_LimiteUsuarios,
-                PLA_LimiteMensagens,
-                PLA_ValorMensagemExcedente,
-                PLA_Cor,
-                PLA_Publico
-            )
-            VALUES
-            (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-            )
-        ");
-
-        return $sql->execute([
+        $campos = [
+            'PLA_Nome', 'PLA_Periodicidade', 'PLA_Valor', 'PLA_ValorMensal',
+            'PLA_ValorTrimestral', 'PLA_ValorSemestral', 'PLA_ValorAnual',
+            'PLA_LimiteNumeros', 'PLA_LimiteUsuarios', 'PLA_LimiteMensagens',
+            'PLA_ValorMensagemExcedente', 'PLA_Cor'
+        ];
+        $valoresSql = [
             $dados['nome'],
             $dados['periodicidade'] ?? 'mensal',
             $valores['mensal'],
@@ -114,35 +104,32 @@ class Plano
             $dados['usuarios'],
             $dados['mensagens'],
             $this->normalizarValor($dados['excedente']),
-            $dados['cor'],
-            $this->normalizarPublico($dados['publico'] ?? 'S')
-        ]);
+            $dados['cor']
+        ];
+
+        if($this->colunaPublicoExiste()){
+            $campos[] = 'PLA_Publico';
+            $valoresSql[] = $this->normalizarPublico($dados['publico'] ?? 'S');
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($campos), '?'));
+        $sql = $this->db->prepare(
+            'INSERT INTO planos (' . implode(', ', $campos) . ') VALUES (' . $placeholders . ')'
+        );
+
+        return $sql->execute($valoresSql);
     }
 
     public function editar($id, $dados)
     {
         $valores = $this->normalizarValoresCiclo($dados);
-
-        $sql = $this->db->prepare("
-            UPDATE planos
-            SET
-                PLA_Nome = ?,
-                PLA_Periodicidade = ?,
-                PLA_Valor = ?,
-                PLA_ValorMensal = ?,
-                PLA_ValorTrimestral = ?,
-                PLA_ValorSemestral = ?,
-                PLA_ValorAnual = ?,
-                PLA_LimiteNumeros = ?,
-                PLA_LimiteUsuarios = ?,
-                PLA_LimiteMensagens = ?,
-                PLA_ValorMensagemExcedente = ?,
-                PLA_Cor = ?,
-                PLA_Publico = ?
-            WHERE PLA_ID = ?
-        ");
-
-        return $sql->execute([
+        $campos = [
+            'PLA_Nome = ?', 'PLA_Periodicidade = ?', 'PLA_Valor = ?', 'PLA_ValorMensal = ?',
+            'PLA_ValorTrimestral = ?', 'PLA_ValorSemestral = ?', 'PLA_ValorAnual = ?',
+            'PLA_LimiteNumeros = ?', 'PLA_LimiteUsuarios = ?', 'PLA_LimiteMensagens = ?',
+            'PLA_ValorMensagemExcedente = ?', 'PLA_Cor = ?'
+        ];
+        $valoresSql = [
             $dados['nome'],
             $dados['periodicidade'] ?? 'mensal',
             $valores['mensal'],
@@ -154,10 +141,20 @@ class Plano
             $dados['usuarios'],
             $dados['mensagens'],
             $this->normalizarValor($dados['excedente']),
-            $dados['cor'],
-            $this->normalizarPublico($dados['publico'] ?? 'S'),
-            $id
-        ]);
+            $dados['cor']
+        ];
+
+        if($this->colunaPublicoExiste()){
+            $campos[] = 'PLA_Publico = ?';
+            $valoresSql[] = $this->normalizarPublico($dados['publico'] ?? 'S');
+        }
+
+        $valoresSql[] = $id;
+        $sql = $this->db->prepare(
+            'UPDATE planos SET ' . implode(', ', $campos) . ' WHERE PLA_ID = ?'
+        );
+
+        return $sql->execute($valoresSql);
     }
 
     public function inativar($id)
@@ -207,6 +204,20 @@ class Plano
         }
 
         return $mensal * self::mesesPorCiclo($ciclo);
+    }
+
+    private function colunaPublicoExiste()
+    {
+        static $existe = null;
+
+        if($existe !== null){
+            return $existe;
+        }
+
+        $sql = $this->db->query("SHOW COLUMNS FROM planos LIKE 'PLA_Publico'");
+        $existe = (bool) $sql->fetch(PDO::FETCH_ASSOC);
+
+        return $existe;
     }
 
     private function normalizarPublico($valor)
