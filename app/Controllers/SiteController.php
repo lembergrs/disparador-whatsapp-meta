@@ -33,7 +33,7 @@ class SiteController extends Controller
     {
         $planoModel = new Plano();
 
-        $planos = $planoModel->listarAtivos();
+        $planos = $planoModel->listarPublicosAtivos();
         $ofertasPublicasPlanos = (new DescontoBoasVindasService())->calcularPlanos($planos);
         $campanhaIndicacao = (new IndicacaoCampanha())->buscarPublicaElegivel();
         $campanhaIndicacaoPublica = [
