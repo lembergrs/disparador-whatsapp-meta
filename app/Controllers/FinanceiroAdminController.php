@@ -227,7 +227,9 @@ class FinanceiroAdminController extends Controller
         Auth::admin();
         try{
             $resultado = (new FinanceiroWorkflowService())->alterarPlanoCliente((int) ($_POST['cliente_id'] ?? 0), (int) ($_POST['plano_id'] ?? 0), (string) ($_POST['ciclo'] ?? 'mensal'));
-            if(!empty($resultado['aguardando_pagamento'])){
+            if(!empty($resultado['cortesia'])){
+                Session::flash('success', 'Plano privado gratuito atribuído e ativado sem geração de cobrança.');
+            }elseif(!empty($resultado['aguardando_pagamento'])){
                 $mensagem = !empty($resultado['sucesso'])
                     ? 'Plano privado atribuído. A primeira cobrança foi gerada e a ativação ocorrerá após a confirmação do pagamento.'
                     : 'Plano privado atribuído e cobrança registrada, mas não foi possível concluir a integração com o Asaas. Verifique a cobrança pendente.';
