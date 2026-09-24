@@ -344,6 +344,36 @@ class FinanceiroWorkflowService
         $valor = Plano::valorPorCiclo($plano, $ciclo);
         $proxima = date('Y-m-d', strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months'));
 
+        if(($plano['PLA_Publico'] ?? 'S') === 'N' && $valor <= 0){
+            $this->transacao->executar(function() use ($clienteId, $plano, $ciclo, $valor, $proxima){
+                $this->cobrancas->cancelarPendentesPorCliente($clienteId);
+                $this->clientes->atualizarEstadoFinanceiro($clienteId, [
+                    'plano'=>$plano['PLA_ID'],
+                    'status_pagamento'=>'pago',
+                    'status_cadastro'=>'ativo',
+                    'ativo'=>'S'
+                ]);
+                $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'ativa', [
+                    'ciclo'=>$ciclo,
+                    'valor'=>$valor,
+                    'proxima_cobranca'=>$proxima
+                ]);
+            });
+
+            $this->log('atribuicao_plano_privado_cortesia', [
+                'cliente_id'=>$clienteId,
+                'plano_id'=>$planoId,
+                'ciclo'=>$ciclo
+            ]);
+
+            return [
+                'sucesso'=>true,
+                'plano'=>$plano,
+                'aguardando_pagamento'=>false,
+                'cortesia'=>true
+            ];
+        }
+
         if(($plano['PLA_Publico'] ?? 'S') === 'N'){
             $vencimento = date('Y-m-d', strtotime('+3 days'));
             $cobrancaId = $this->transacao->executar(function() use ($clienteId, $plano, $ciclo, $valor, $proxima, $vencimento){
