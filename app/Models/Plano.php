@@ -33,6 +33,34 @@ class Plano
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listarPublicosAtivos()
+    {
+        $sql = $this->db->query("
+            SELECT *
+            FROM planos
+            WHERE PLA_Ativo = 'S'
+            AND COALESCE(PLA_Publico, 'S') = 'S'
+            ORDER BY COALESCE(PLA_ValorMensal, PLA_Valor) ASC
+        ");
+
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarPublico($id)
+    {
+        $sql = $this->db->prepare("
+            SELECT *
+            FROM planos
+            WHERE PLA_ID = ?
+            AND PLA_Ativo = 'S'
+            AND COALESCE(PLA_Publico, 'S') = 'S'
+        ");
+
+        $sql->execute([$id]);
+
+        return $sql->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function buscar($id)
     {
         $sql = $this->db->prepare("
@@ -65,11 +93,12 @@ class Plano
                 PLA_LimiteUsuarios,
                 PLA_LimiteMensagens,
                 PLA_ValorMensagemExcedente,
-                PLA_Cor
+                PLA_Cor,
+                PLA_Publico
             )
             VALUES
             (
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
         ");
 
@@ -85,7 +114,8 @@ class Plano
             $dados['usuarios'],
             $dados['mensagens'],
             $this->normalizarValor($dados['excedente']),
-            $dados['cor']
+            $dados['cor'],
+            $this->normalizarPublico($dados['publico'] ?? 'S')
         ]);
     }
 
@@ -107,7 +137,8 @@ class Plano
                 PLA_LimiteUsuarios = ?,
                 PLA_LimiteMensagens = ?,
                 PLA_ValorMensagemExcedente = ?,
-                PLA_Cor = ?
+                PLA_Cor = ?,
+                PLA_Publico = ?
             WHERE PLA_ID = ?
         ");
 
@@ -124,6 +155,7 @@ class Plano
             $dados['mensagens'],
             $this->normalizarValor($dados['excedente']),
             $dados['cor'],
+            $this->normalizarPublico($dados['publico'] ?? 'S'),
             $id
         ]);
     }
@@ -175,6 +207,11 @@ class Plano
         }
 
         return $mensal * self::mesesPorCiclo($ciclo);
+    }
+
+    private function normalizarPublico($valor)
+    {
+        return strtoupper((string) $valor) === 'N' ? 'N' : 'S';
     }
 
     private function normalizarValoresCiclo($dados)
