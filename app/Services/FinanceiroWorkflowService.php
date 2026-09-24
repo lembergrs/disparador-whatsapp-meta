@@ -343,12 +343,46 @@ class FinanceiroWorkflowService
         if(empty($limite['permitido'])){ throw new \DomainException($limite['mensagem']); }
         $valor = Plano::valorPorCiclo($plano, $ciclo);
         $proxima = date('Y-m-d', strtotime('+' . Plano::mesesPorCiclo($ciclo) . ' months'));
+
+        if(($plano['PLA_Publico'] ?? 'S') === 'N'){
+            $vencimento = date('Y-m-d', strtotime('+3 days'));
+            $cobrancaId = $this->transacao->executar(function() use ($clienteId, $plano, $ciclo, $valor, $proxima, $vencimento){
+                $this->cobrancas->cancelarPendentesPorCliente($clienteId);
+                $this->clientes->atualizarEstadoFinanceiro($clienteId, ['plano'=>$plano['PLA_ID'], 'status_pagamento'=>'pendente']);
+                $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'pendente', ['ciclo'=>$ciclo,'valor'=>$valor,'proxima_cobranca'=>$proxima]);
+                $assinatura = $this->assinaturas->buscarParaPagamento($clienteId, $plano['PLA_ID']);
+
+                return $this->cobrancas->criar([
+                    'cliente'=>$clienteId,
+                    'plano'=>$plano['PLA_ID'],
+                    'assinatura'=>$assinatura['ASS_ID'] ?? null,
+                    'valor'=>$valor,
+                    'vencimento'=>$vencimento,
+                    'vencimento_efetivo'=>$vencimento,
+                    'tipo'=>'mensalidade',
+                    'provider'=>'asaas',
+                    'provider_status'=>'local_pendente'
+                ]);
+            });
+
+            $integracao = $this->integrarCobrancaAsaas($clienteId, (int) $cobrancaId, $plano, $ciclo);
+            $this->log('atribuicao_plano_privado', [
+                'cliente_id'=>$clienteId,
+                'plano_id'=>$planoId,
+                'ciclo'=>$ciclo,
+                'cobranca_id'=>$cobrancaId,
+                'sucesso'=>!empty($integracao['sucesso'])
+            ]);
+
+            return array_merge($integracao, ['cobranca_id'=>(int) $cobrancaId, 'plano'=>$plano, 'aguardando_pagamento'=>true]);
+        }
+
         $this->transacao->executar(function() use ($clienteId, $plano, $ciclo, $valor, $proxima){
             $this->clientes->atualizarEstadoFinanceiro($clienteId, ['plano'=>$plano['PLA_ID']]);
             $this->assinaturas->criarOuAtualizarPorCliente($clienteId, $plano, 'ativa', ['ciclo'=>$ciclo,'valor'=>$valor,'proxima_cobranca'=>$proxima]);
         });
         $this->log('alteracao_plano', ['cliente_id'=>$clienteId,'plano_id'=>$planoId,'ciclo'=>$ciclo]);
-        return ['sucesso'=>true];
+        return ['sucesso'=>true, 'aguardando_pagamento'=>false];
     }
 
     public function reativarContrato(int $clienteId): array
@@ -516,6 +550,20 @@ class FinanceiroWorkflowService
         }
 
         $valorBaseCentavos = $this->valorEmCentavos($cobranca['COB_Valor']);
+
+        if(($plano['PLA_Publico'] ?? 'S') === 'N'){
+            $this->cobrancas->registrarComposicaoDesconto((int) $cobranca['COB_ID'], [
+                'valor_base_centavos'=>$valorBaseCentavos,
+                'desconto_inicial_centavos'=>0,
+                'desconto_indicacao_centavos'=>0,
+                'adicionais_centavos'=>0,
+                'ciclo'=>$ciclo,
+                'valor'=>$this->centavosEmValor($valorBaseCentavos)
+            ]);
+
+            return $this->cobrancas->buscar((int) $cobranca['COB_ID']);
+        }
+
         $primeiraCobranca = $this->descontoBoasVindas->clienteElegivel($clienteId, (int) $cobranca['COB_ID']);
         $descontoInicialCentavos = $primeiraCobranca
             ? $this->descontoBoasVindas->calcular($plano, $ciclo, $valorBaseCentavos)['desconto_centavos']
