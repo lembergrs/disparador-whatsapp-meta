@@ -89,7 +89,7 @@ class MetaCoexistenceHistoryQueueService
     {
         $this->db->beginTransaction();
         try{
-            $sql = $this->db->query("SELECT * FROM meta_coexistence_history_jobs WHERE MCH_Status='pendente' ORDER BY MCH_ID ASC LIMIT 1 FOR UPDATE");
+            $sql = $this->db->query("SELECT * FROM meta_coexistence_history_jobs WHERE MCH_Status='pendente' ORDER BY MCH_ID ASC LIMIT 1 FOR UPDATE SKIP LOCKED");
             $job = $sql->fetch(PDO::FETCH_ASSOC);
             if(!$job){ $this->db->commit(); return null; }
             $update = $this->db->prepare("UPDATE meta_coexistence_history_jobs SET MCH_Status='processando',MCH_Tentativas=MCH_Tentativas+1,MCH_WorkerId=?,MCH_ReservadoEm=NOW() WHERE MCH_ID=? AND MCH_Status='pendente'");
