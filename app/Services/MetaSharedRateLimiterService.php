@@ -36,6 +36,28 @@ class MetaSharedRateLimiterService
         return true;
     }
 
+    public function aplicarCooldown(int $metaId, int $segundos): bool
+    {
+        $segundos = max(1, $segundos);
+        $lock = $this->nomeLock($metaId);
+
+        $stmt = $this->db->prepare('SELECT GET_LOCK(?, 5)');
+        $stmt->execute([$lock]);
+
+        if((int) $stmt->fetchColumn() !== 1){
+            return false;
+        }
+
+        try{
+            sleep($segundos);
+        }finally{
+            $stmt = $this->db->prepare('SELECT RELEASE_LOCK(?)');
+            $stmt->execute([$lock]);
+        }
+
+        return true;
+    }
+
     private function nomeLock(int $metaId): string
     {
         $dbName = defined('DB_NAME') ? DB_NAME : 'disparador';
