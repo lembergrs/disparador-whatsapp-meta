@@ -226,9 +226,7 @@ class DisparoManualQueueService
             INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
             INNER JOIN templates_meta t ON t.TMP_ID = l.TMP_ID
             WHERE " . implode(' AND ', $where) . "
-            ORDER BY " . (($clienteId === null && $loteId === null && $origem !== 'ajax')
-                ? "MOD(i.DMI_ID, GREATEST(1, (SELECT COUNT(DISTINCT p.CLI_ID) FROM disparo_manual_itens p INNER JOIN disparo_manual_lotes pl ON pl.DML_ID = p.DML_ID WHERE p.DMI_Status = 'pendente' AND pl.DML_Status IN ('pendente','processando') AND (p.DMI_ProximaTentativa IS NULL OR p.DMI_ProximaTentativa <= NOW()))), i.DMI_ID ASC"
-                : "i.DMI_ID ASC") . "
+            ORDER BY i.DMI_ID ASC
             LIMIT {$limite}
         ");
 
