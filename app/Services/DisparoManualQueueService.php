@@ -79,7 +79,10 @@ class DisparoManualQueueService
 
     private function processarItens(int $limite, ?int $clienteId, ?int $loteId, string $origem, string $workerId = '')
     {
-        $itens = $this->buscarItensPendentes($limite, $clienteId, $loteId, $origem);
+        $reservaAntecipada = $origem !== 'ajax' && $clienteId === null && $loteId === null;
+        $itens = $reservaAntecipada
+            ? $this->reservarItensPendentesDistribuidos($limite, $workerId)
+            : $this->buscarItensPendentes($limite, $clienteId, $loteId, $origem);
 
         $resultado = [
             'processados' => 0,
@@ -98,7 +101,7 @@ class DisparoManualQueueService
             $item['worker_id'] = $workerId;
             $item['origem'] = $origem;
 
-            if(!$this->reservarItem($item)){
+            if(!$reservaAntecipada && !$this->reservarItem($item)){
                 $resultado['pulados']++;
                 continue;
             }
@@ -241,6 +244,118 @@ class DisparoManualQueueService
         $stmt->execute($params);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function reservarItensPendentesDistribuidos(int $limite, string $workerId): array
+    {
+        $stmt = $this->db->query("
+            SELECT DISTINCT i.CLI_ID
+            FROM disparo_manual_itens i
+            INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+            WHERE i.DMI_Status = 'pendente'
+            AND l.DML_Status IN ('pendente','processando')
+            AND (i.DMI_ProximaTentativa IS NULL OR i.DMI_ProximaTentativa <= NOW())
+            ORDER BY i.CLI_ID ASC
+        ");
+        $clientes = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+        if(empty($clientes)){
+            return [];
+        }
+
+        $itens = [];
+
+        while(count($itens) < $limite){
+            $adicionados = 0;
+
+            foreach($clientes as $clienteId){
+                if(count($itens) >= $limite){
+                    break;
+                }
+
+                $item = $this->reservarProximoItemCliente($clienteId, $workerId);
+
+                if($item){
+                    $itens[] = $item;
+                    $adicionados++;
+                }
+            }
+
+            if($adicionados === 0){
+                break;
+            }
+        }
+
+        return $itens;
+    }
+
+    private function reservarProximoItemCliente(int $clienteId, string $workerId)
+    {
+        try{
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare("
+                SELECT i.DMI_ID
+                FROM disparo_manual_itens i
+                INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+                WHERE i.CLI_ID = ?
+                AND i.DMI_Status = 'pendente'
+                AND l.DML_Status IN ('pendente','processando')
+                AND (i.DMI_ProximaTentativa IS NULL OR i.DMI_ProximaTentativa <= NOW())
+                ORDER BY i.DMI_ID ASC
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            ");
+            $stmt->execute([$clienteId]);
+            $itemId = $stmt->fetchColumn();
+
+            if(!$itemId){
+                $this->db->commit();
+                return null;
+            }
+
+            $stmt = $this->db->prepare("
+                UPDATE disparo_manual_itens
+                SET
+                    DMI_Status = 'processando',
+                    DMI_WorkerId = ?,
+                    DMI_DataReserva = NOW(),
+                    DMI_ProximaTentativa = NULL,
+                    DMI_Tentativas = DMI_Tentativas + 1,
+                    DMI_DataAtualizacao = NOW()
+                WHERE DMI_ID = ?
+                AND DMI_Status = 'pendente'
+            ");
+            $stmt->execute([$workerId, $itemId]);
+
+            if($stmt->rowCount() !== 1){
+                $this->db->rollBack();
+                return null;
+            }
+
+            $this->db->commit();
+
+            $stmt = $this->db->prepare("
+                SELECT
+                    i.*,
+                    l.MTA_ID,
+                    l.TMP_ID,
+                    t.*
+                FROM disparo_manual_itens i
+                INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+                INNER JOIN templates_meta t ON t.TMP_ID = l.TMP_ID
+                WHERE i.DMI_ID = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$itemId]);
+
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }catch(\Throwable $e){
+            if($this->db->inTransaction()){
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
     }
 
     private function buscarItensPendentesDistribuidos(int $limite): array
