@@ -23,7 +23,7 @@ class MetaSharedRateLimiterService
         $stmt->execute([$lock]);
 
         if((int) $stmt->fetchColumn() !== 1){
-            throw new \RuntimeException('Não foi possível reservar a janela compartilhada de envio para a Meta.');
+            return false;
         }
 
         try{
