@@ -43,18 +43,29 @@ class CampanhaQueueService
 
         $campanhas = $this->buscarCampanhasProcessando();
         $resumo['processadas'] = count($campanhas);
-        $limitePorCampanha = empty($campanhas)
-            ? $limitePorExecucao
-            : max(1, (int) floor($limitePorExecucao / count($campanhas)));
+        $orcamentoRestante = $limitePorExecucao;
+        $campanhasRestantes = count($campanhas);
 
         foreach($campanhas as $campanha){
+            if($orcamentoRestante <= 0){
+                break;
+            }
+
+            $limiteCampanha = max(
+                1,
+                (int) ceil($orcamentoRestante / max(1, $campanhasRestantes))
+            );
+
             try{
-                $resultado = $this->processarCampanha($campanha, $limitePorCampanha, $workerId);
+                $resultado = $this->processarCampanha($campanha, $limiteCampanha, $workerId);
                 $resumo = $this->somarResumo($resumo, $resultado);
+                $orcamentoRestante -= (int) ($resultado['reservados'] ?? 0);
             }catch(Exception $e){
                 $resumo['excecoes']++;
                 $resumo['mensagens'][] = 'Campanha ' . ($campanha['CAM_ID'] ?? '-') . ': ' . $this->sanitizarMensagem($e->getMessage());
             }
+
+            $campanhasRestantes--;
         }
 
         return $resumo;
