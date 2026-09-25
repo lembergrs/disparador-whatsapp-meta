@@ -92,6 +92,8 @@ class DisparoManualQueueService
             'worker_id' => $workerId
         ];
 
+        $lotesAlterados = [];
+
         foreach($itens as $item){
             $item['worker_id'] = $workerId;
             $item['origem'] = $origem;
@@ -103,6 +105,7 @@ class DisparoManualQueueService
 
             $resultado['reservados']++;
             $resultado['processados']++;
+            $lotesAlterados[(int) $item['DML_ID']] = true;
 
             $retorno = null;
 
@@ -116,14 +119,12 @@ class DisparoManualQueueService
                 if(!$validacao['permitido']){
                     $this->registrarBloqueioOperacional($item['DMI_ID'], $validacao);
                     $resultado['bloqueados']++;
-                    $this->recalcularLote((int) $item['DML_ID']);
                     continue;
                 }
 
                 if($this->pagamentoMetaBloqueado($item)){
                     $this->registrarBloqueioPagamentoMeta($item['DMI_ID']);
                     $resultado['bloqueados']++;
-                    $this->recalcularLote((int) $item['DML_ID']);
                     continue;
                 }
 
@@ -161,8 +162,11 @@ class DisparoManualQueueService
                 $resultado['erros']++;
             }
 
-            $this->recalcularLote((int) $item['DML_ID']);
             $this->aplicarLimiteEnvio($retorno);
+        }
+
+        foreach(array_keys($lotesAlterados) as $loteAlteradoId){
+            $this->recalcularLote($loteAlteradoId);
         }
 
         return $resultado;
