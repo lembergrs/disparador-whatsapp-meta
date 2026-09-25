@@ -48,15 +48,29 @@ class Contato
             )
         ");
 
-        $sql->execute([
-            $dados['cliente_id'],
-            $dados['nome'],
-            $dados['telefone'],
-            $normalizado,
-            $dados['dados_json']
-        ]);
+        try{
+            $sql->execute([
+                $dados['cliente_id'],
+                $dados['nome'],
+                $dados['telefone'],
+                $normalizado,
+                $dados['dados_json']
+            ]);
 
-        return $this->db->lastInsertId();
+            return $this->db->lastInsertId();
+        }catch(\PDOException $e){
+            if((string) $e->getCode() !== '23000'){
+                throw $e;
+            }
+
+            // Outro worker pode ter criado o mesmo contato entre o SELECT e o INSERT.
+            $existente = $this->buscarPorTelefone($dados['cliente_id'], $dados['telefone']);
+            if($existente){
+                return $existente['CON_ID'];
+            }
+
+            throw $e;
+        }
     }
 
     public function telefoneExiste(
