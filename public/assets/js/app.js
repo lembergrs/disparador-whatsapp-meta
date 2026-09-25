@@ -2409,9 +2409,11 @@ $(document).ready(function(){
                     );
                 });
 
+                processamentoImediatoAtivo = false;
+                $('#textoProgressoDisparo').html(
+                    'Lote criado com sucesso. Aguardando processamento pelos workers...'
+                );
                 consultarLote();
-                processamentoImediatoAtivo = true;
-                agendarProximoBloco(500);
             },
             error: function(xhr){
                 $('#resumoFinalDisparo').html(
