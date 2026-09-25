@@ -344,7 +344,8 @@ class CampanhaQueueService
             (int) $campanha['CLI_ID'],
             (int) $template['MTA_ID'],
             $item['CON_Telefone'],
-            $item['CON_Nome']
+            $item['CON_Nome'],
+            false
         );
 
         $this->conversaModel->salvarMensagem([

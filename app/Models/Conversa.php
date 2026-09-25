@@ -122,15 +122,41 @@ class Conversa
             )
         ");
 
-        $sql->execute([
-            $clienteId,
-            $metaId,
-            $numero,
-            $normalizado,
-            $nome
-        ]);
+        try{
+            $sql->execute([
+                $clienteId,
+                $metaId,
+                $numero,
+                $normalizado,
+                $nome
+            ]);
 
-        return $this->db->lastInsertId();
+            return $this->db->lastInsertId();
+        }catch(\PDOException $e){
+            if((string) $e->getCode() !== '23000'){
+                throw $e;
+            }
+
+            // A chave unica da conversa ativa resolve a corrida entre workers.
+            $sql = $this->db->prepare("
+                SELECT CVS_ID
+                FROM conversas
+                WHERE CLI_ID = ?
+                AND MTA_ID = ?
+                AND CVS_NumeroNormalizado = ?
+                AND CVS_Ativo = 'S'
+                ORDER BY CVS_ID DESC
+                LIMIT 1
+            ");
+            $sql->execute([$clienteId, $metaId, $normalizado]);
+            $conversaId = $sql->fetchColumn();
+
+            if($conversaId){
+                return $conversaId;
+            }
+
+            throw $e;
+        }
     }
 
     public function salvarMensagem($dados)
