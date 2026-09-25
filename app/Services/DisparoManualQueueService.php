@@ -20,6 +20,7 @@ class DisparoManualQueueService
     private $controlePlano;
     private $validator;
     private $retryPolicy;
+    private $rateLimiter;
     private $bloqueiosPagamentoMeta = [];
 
     public function __construct($modoTeste = false)
@@ -32,6 +33,7 @@ class DisparoManualQueueService
         $this->controlePlano = new ControlePlanoService();
         $this->validator = new WorkerOperationalValidatorService();
         $this->retryPolicy = new WorkerRetryPolicyService();
+        $this->rateLimiter = new MetaSharedRateLimiterService();
     }
 
     public function processarLote(int $clienteId, int $loteId, int $limite = 5, string $origem = 'ajax')
@@ -137,6 +139,7 @@ class DisparoManualQueueService
                     $variaveis = [];
                 }
 
+                $this->rateLimiter->aguardarSlot((int) $item['MTA_ID']);
                 $retorno = $this->enviarItem($item, $variaveis);
 
                 $resultadoEnvio = $this->normalizarResultadoEnvio($retorno);
@@ -768,8 +771,7 @@ class DisparoManualQueueService
             return;
         }
 
-        $enviosPorSegundo = max(1, (int) WHATSAPP_ENVIOS_POR_SEGUNDO);
-        usleep((int) round(1000000 / $enviosPorSegundo));
+        // O espaçamento normal é coordenado entre processos pelo MetaSharedRateLimiterService.
     }
 
     private function ehRateLimitMeta($retorno)
