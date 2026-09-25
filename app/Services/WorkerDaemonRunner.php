@@ -146,6 +146,7 @@ class WorkerDaemonRunner
             'simulate_pcntl' => extension_loaded('pcntl'),
             'worker_options' => [
                 'modo_teste' => false,
+                'usar_lock_compartilhado' => defined('WORKER_USAR_LOCK_COMPARTILHADO') ? WORKER_USAR_LOCK_COMPARTILHADO : true,
                 'limite_campanhas' => defined('WORKER_DAEMON_LIMITE_CAMPANHAS') ? WORKER_DAEMON_LIMITE_CAMPANHAS : 50,
                 'limite_disparo_manual' => defined('WORKER_DAEMON_LIMITE_DISPARO_MANUAL') ? WORKER_DAEMON_LIMITE_DISPARO_MANUAL : 20,
                 'timeout_processando_minutos' => defined('WORKER_PROCESSING_TIMEOUT_MINUTES') ? WORKER_PROCESSING_TIMEOUT_MINUTES : 15
