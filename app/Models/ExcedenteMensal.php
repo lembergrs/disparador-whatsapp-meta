@@ -31,9 +31,11 @@ class ExcedenteMensal
         ];
         $placeholders = ['?', '?', '1', '?', '?'];
         $params = [$cliId, $anoMes, $valorUnitario, $valorUnitario];
+        // MariaDB avalia as atribuicoes do ON DUPLICATE KEY UPDATE da esquerda
+        // para a direita. Recalcula o total antes de incrementar a quantidade.
         $atualizacoes = [
-            'EXC_Mensagens = EXC_Mensagens + 1',
-            'EXC_ValorTotal = (EXC_Mensagens + 1) * EXC_ValorUnitario'
+            'EXC_ValorTotal = (EXC_Mensagens + 1) * EXC_ValorUnitario',
+            'EXC_Mensagens = EXC_Mensagens + 1'
         ];
 
         if(
