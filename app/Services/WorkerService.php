@@ -13,6 +13,7 @@ class WorkerService
     private $workerId;
     private $db;
     private $lockCompartilhado = false;
+    private $usarLockCompartilhado;
     private $campanhaQueue;
     private $disparoManualQueue;
     private $historyQueue;
@@ -24,6 +25,7 @@ class WorkerService
         $this->limiteDisparoManual = (int) ($opcoes['limite_disparo_manual'] ?? 20);
         $this->timeoutProcessandoMinutos = (int) ($opcoes['timeout_processando_minutos'] ?? (defined('WORKER_PROCESSING_TIMEOUT_MINUTES') ? WORKER_PROCESSING_TIMEOUT_MINUTES : 15));
         $this->workerId = $opcoes['worker_id'] ?? self::gerarWorkerId();
+        $this->usarLockCompartilhado = (bool) ($opcoes['usar_lock_compartilhado'] ?? true);
         $this->db = Database::getInstance();
 
         $validator = new WorkerOperationalValidatorService();
@@ -86,14 +88,18 @@ class WorkerService
 
         $this->registrarLog('inicio_ciclo', ['worker_id' => $this->workerId]);
 
-        if(!$this->adquirirLockCompartilhado()){
-            $resumo['fim'] = date('Y-m-d H:i:s');
-            $resumo['duracao_segundos'] = round(microtime(true) - $inicioTimestamp, 3);
-            $this->registrarLog('lock_compartilhado_ocupado', $resumo);
-            return $resumo;
-        }
+        if($this->usarLockCompartilhado){
+            if(!$this->adquirirLockCompartilhado()){
+                $resumo['fim'] = date('Y-m-d H:i:s');
+                $resumo['duracao_segundos'] = round(microtime(true) - $inicioTimestamp, 3);
+                $this->registrarLog('lock_compartilhado_ocupado', $resumo);
+                return $resumo;
+            }
 
-        $resumo['lock_compartilhado'] = 'adquirido';
+            $resumo['lock_compartilhado'] = 'adquirido';
+        }else{
+            $resumo['lock_compartilhado'] = 'desabilitado';
+        }
 
         try{
             $resumo['recuperados']['manual'] = $this->disparoManualQueue->recuperarTravados($this->timeoutProcessandoMinutos);
