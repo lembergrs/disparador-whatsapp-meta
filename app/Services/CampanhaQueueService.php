@@ -17,6 +17,7 @@ class CampanhaQueueService
     private $controlePlano;
     private $conversaModel;
     private $retryPolicy;
+    private $rateLimiter;
     private $metaCache = [];
     private $bloqueiosPagamentoMeta = [];
 
@@ -29,6 +30,7 @@ class CampanhaQueueService
         $this->controlePlano = new ControlePlanoService();
         $this->conversaModel = new Conversa();
         $this->retryPolicy = new WorkerRetryPolicyService();
+        $this->rateLimiter = new MetaSharedRateLimiterService();
     }
 
     public function processar(int $limitePorExecucao = 50, string $workerId = ''): array
@@ -155,6 +157,7 @@ class CampanhaQueueService
                 }
 
                 $parametros = $this->montarParametros($item, $variaveis);
+                $this->rateLimiter->aguardarSlot((int) $template['MTA_ID']);
                 $retorno = $this->enviarItem($campanha, $template, $item, $parametros);
                 $resultado = $this->normalizarResultadoEnvio($retorno);
 
@@ -642,8 +645,7 @@ class CampanhaQueueService
             return;
         }
 
-        $enviosPorSegundo = max(1, (int) WHATSAPP_ENVIOS_POR_SEGUNDO);
-        usleep((int) round(1000000 / $enviosPorSegundo));
+        // O espaçamento normal é coordenado entre processos pelo MetaSharedRateLimiterService.
     }
 
     private function ehRateLimitMeta($retorno): bool
