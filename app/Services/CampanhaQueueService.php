@@ -121,7 +121,11 @@ class CampanhaQueueService
         }
 
         $variaveis = $this->buscarVariaveis((int) $campanha['CAM_ID']);
-        $itens = $this->buscarItensPendentes((int) $campanha['CAM_ID'], $limitePorExecucao);
+        $itens = $this->reservarItensPendentes(
+            (int) $campanha['CAM_ID'],
+            $limitePorExecucao,
+            $workerId
+        );
 
         if(empty($itens)){
             $this->finalizarSeConcluida((int) $campanha['CAM_ID']);
@@ -129,10 +133,6 @@ class CampanhaQueueService
         }
 
         foreach($itens as $item){
-            if(!$this->reservarItem($item, $workerId)){
-                continue;
-            }
-
             $resumo['reservados']++;
 
             try{
@@ -223,48 +223,87 @@ class CampanhaQueueService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    private function buscarItensPendentes(int $campanhaId, int $limite): array
+    private function reservarItensPendentes(int $campanhaId, int $limite, string $workerId): array
     {
-        $stmt = $this->db->prepare("
-            SELECT
-                f.*,
-                c.CON_Nome,
-                c.CON_Telefone,
-                c.CON_DadosJson
-            FROM fila_envio f
-            INNER JOIN contatos c
-                ON c.CON_ID = f.CON_ID
-            WHERE f.CAM_ID = ?
-            AND f.FIL_Status = 'pendente'
-            AND (f.FIL_ProximaTentativa IS NULL OR f.FIL_ProximaTentativa <= NOW())
-            ORDER BY f.FIL_ID ASC
-            LIMIT {$limite}
-        ");
+        $itens = [];
 
-        $stmt->execute([$campanhaId]);
+        for($i = 0; $i < $limite; $i++){
+            $item = $this->reservarProximoItemCampanha($campanhaId, $workerId);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if(!$item){
+                break;
+            }
+
+            $itens[] = $item;
+        }
+
+        return $itens;
     }
 
-    private function reservarItem(array $item, string $workerId): bool
+    private function reservarProximoItemCampanha(int $campanhaId, string $workerId)
     {
-        $stmt = $this->db->prepare("
-            UPDATE fila_envio
-            SET
-                FIL_Status = 'processando',
-                FIL_WorkerId = ?,
-                FIL_DataReserva = NOW(),
-                FIL_DataAtualizacao = NOW(),
-                FIL_ProximaTentativa = NULL,
-                FIL_Tentativas = FIL_Tentativas + 1
-            WHERE FIL_ID = ?
-            AND FIL_Status = 'pendente'
-            AND (FIL_ProximaTentativa IS NULL OR FIL_ProximaTentativa <= NOW())
-        ");
+        try{
+            $this->db->beginTransaction();
 
-        $stmt->execute([$workerId, $item['FIL_ID']]);
+            $stmt = $this->db->prepare("
+                SELECT FIL_ID
+                FROM fila_envio
+                WHERE CAM_ID = ?
+                AND FIL_Status = 'pendente'
+                AND (FIL_ProximaTentativa IS NULL OR FIL_ProximaTentativa <= NOW())
+                ORDER BY FIL_ID ASC
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            ");
+            $stmt->execute([$campanhaId]);
+            $itemId = $stmt->fetchColumn();
 
-        return $stmt->rowCount() === 1;
+            if(!$itemId){
+                $this->db->commit();
+                return null;
+            }
+
+            $stmt = $this->db->prepare("
+                UPDATE fila_envio
+                SET
+                    FIL_Status = 'processando',
+                    FIL_WorkerId = ?,
+                    FIL_DataReserva = NOW(),
+                    FIL_DataAtualizacao = NOW(),
+                    FIL_ProximaTentativa = NULL,
+                    FIL_Tentativas = FIL_Tentativas + 1
+                WHERE FIL_ID = ?
+                AND FIL_Status = 'pendente'
+            ");
+            $stmt->execute([$workerId, $itemId]);
+
+            if($stmt->rowCount() !== 1){
+                $this->db->rollBack();
+                return null;
+            }
+
+            $this->db->commit();
+
+            $stmt = $this->db->prepare("
+                SELECT
+                    f.*,
+                    c.CON_Nome,
+                    c.CON_Telefone,
+                    c.CON_DadosJson
+                FROM fila_envio f
+                INNER JOIN contatos c ON c.CON_ID = f.CON_ID
+                WHERE f.FIL_ID = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$itemId]);
+
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        }catch(\Throwable $e){
+            if($this->db->inTransaction()){
+                $this->db->rollBack();
+            }
+            throw $e;
+        }
     }
 
     private function montarParametros(array $item, array $variaveis): array
