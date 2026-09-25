@@ -13,7 +13,7 @@ class MetaSharedRateLimiterService
         $this->db = Database::getInstance();
     }
 
-    public function aguardarSlot(int $metaId): void
+    public function aguardarSlot(int $metaId): bool
     {
         $enviosPorSegundo = max(1, (int) WHATSAPP_ENVIOS_POR_SEGUNDO);
         $intervaloMicrossegundos = (int) ceil(1000000 / $enviosPorSegundo);
@@ -32,6 +32,8 @@ class MetaSharedRateLimiterService
             $stmt = $this->db->prepare('SELECT RELEASE_LOCK(?)');
             $stmt->execute([$lock]);
         }
+
+        return true;
     }
 
     private function nomeLock(int $metaId): string
