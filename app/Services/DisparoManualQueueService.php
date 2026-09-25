@@ -172,7 +172,7 @@ class DisparoManualQueueService
                 $resultado['erros']++;
             }
 
-            $this->aplicarLimiteEnvio($retorno);
+            $this->aplicarLimiteEnvio($retorno ?? null, (int) ($item['MTA_ID'] ?? 0));
         }
 
         foreach(array_keys($lotesAlterados) as $loteAlteradoId){
@@ -787,10 +787,14 @@ class DisparoManualQueueService
         ")->execute([$itemId]);
     }
 
-    private function aplicarLimiteEnvio($retorno = null)
+    private function aplicarLimiteEnvio($retorno = null, int $metaId = 0)
     {
         if($this->ehRateLimitMeta($retorno)){
-            sleep((int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            if($metaId > 0){
+                $this->rateLimiter->aplicarCooldown($metaId, (int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            }else{
+                sleep((int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            }
             return;
         }
 

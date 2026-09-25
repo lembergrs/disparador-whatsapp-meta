@@ -194,7 +194,7 @@ class CampanhaQueueService
                 $resumo['erros_definitivos']++;
             }
 
-            $this->aplicarLimiteEnvio($retorno ?? null);
+            $this->aplicarLimiteEnvio($retorno ?? null, (int) ($template['MTA_ID'] ?? 0));
         }
 
         $this->finalizarSeConcluida((int) $campanha['CAM_ID']);
@@ -661,10 +661,14 @@ class CampanhaQueueService
         ")->execute([$itemId]);
     }
 
-    private function aplicarLimiteEnvio($retorno = null): void
+    private function aplicarLimiteEnvio($retorno = null, int $metaId = 0): void
     {
         if($this->ehRateLimitMeta($retorno)){
-            sleep((int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            if($metaId > 0){
+                $this->rateLimiter->aplicarCooldown($metaId, (int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            }else{
+                sleep((int) WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS);
+            }
             return;
         }
 
