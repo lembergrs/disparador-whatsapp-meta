@@ -139,7 +139,11 @@ class DisparoManualQueueService
                     $variaveis = [];
                 }
 
-                $this->rateLimiter->aguardarSlot((int) $item['MTA_ID']);
+                if(!$this->rateLimiter->aguardarSlot((int) $item['MTA_ID'])){
+                    $this->reagendarContencaoRateLimiter($item['DMI_ID']);
+                    continue;
+                }
+
                 $retorno = $this->enviarItem($item, $variaveis);
 
                 $resultadoEnvio = $this->normalizarResultadoEnvio($retorno);
@@ -762,6 +766,25 @@ class DisparoManualQueueService
         }
 
         return max(1, min($limite, 100));
+    }
+
+    private function reagendarContencaoRateLimiter($itemId): void
+    {
+        $this->db->prepare("
+            UPDATE disparo_manual_itens
+            SET
+                DMI_Status = 'pendente',
+                DMI_WorkerId = NULL,
+                DMI_DataReserva = NULL,
+                DMI_ProximaTentativa = DATE_ADD(NOW(), INTERVAL 1 SECOND),
+                DMI_Tentativas = GREATEST(DMI_Tentativas - 1, 0),
+                DMI_UltimoErroTipo = 'contencao_rate_limiter',
+                DMI_UltimoErroCodigo = 'rate_limiter_busy',
+                DMI_Erro = NULL,
+                DMI_Retorno = NULL,
+                DMI_DataAtualizacao = NOW()
+            WHERE DMI_ID = ?
+        ")->execute([$itemId]);
     }
 
     private function aplicarLimiteEnvio($retorno = null)

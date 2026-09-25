@@ -157,7 +157,11 @@ class CampanhaQueueService
                 }
 
                 $parametros = $this->montarParametros($item, $variaveis);
-                $this->rateLimiter->aguardarSlot((int) $template['MTA_ID']);
+                if(!$this->rateLimiter->aguardarSlot((int) $template['MTA_ID'])){
+                    $this->reagendarContencaoRateLimiter($item['FIL_ID']);
+                    continue;
+                }
+
                 $retorno = $this->enviarItem($campanha, $template, $item, $parametros);
                 $resultado = $this->normalizarResultadoEnvio($retorno);
 
@@ -636,6 +640,25 @@ class CampanhaQueueService
             'mime' => $campanha['CAM_HeaderMidiaMime'] ?? null,
             'tamanho' => $campanha['CAM_HeaderMidiaTamanho'] ?? null
         ];
+    }
+
+    private function reagendarContencaoRateLimiter($itemId): void
+    {
+        $this->db->prepare("
+            UPDATE fila_envio
+            SET
+                FIL_Status = 'pendente',
+                FIL_WorkerId = NULL,
+                FIL_DataReserva = NULL,
+                FIL_DataAtualizacao = NOW(),
+                FIL_ProximaTentativa = DATE_ADD(NOW(), INTERVAL 1 SECOND),
+                FIL_Tentativas = GREATEST(FIL_Tentativas - 1, 0),
+                FIL_UltimoErroTipo = 'contencao_rate_limiter',
+                FIL_UltimoErroCodigo = 'rate_limiter_busy',
+                FIL_Erro = NULL,
+                FIL_Retorno = NULL
+            WHERE FIL_ID = ?
+        ")->execute([$itemId]);
     }
 
     private function aplicarLimiteEnvio($retorno = null): void
