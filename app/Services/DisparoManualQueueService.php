@@ -216,6 +216,10 @@ class DisparoManualQueueService
             $params[] = $loteId;
         }
 
+        if($clienteId === null && $loteId === null && $origem !== 'ajax'){
+            return $this->buscarItensPendentesDistribuidos($limite);
+        }
+
         $stmt = $this->db->prepare("
             SELECT
                 i.*,
@@ -233,6 +237,70 @@ class DisparoManualQueueService
         $stmt->execute($params);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function buscarItensPendentesDistribuidos(int $limite): array
+    {
+        $stmt = $this->db->query("
+            SELECT DISTINCT i.CLI_ID
+            FROM disparo_manual_itens i
+            INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+            WHERE i.DMI_Status = 'pendente'
+            AND l.DML_Status IN ('pendente','processando')
+            AND (i.DMI_ProximaTentativa IS NULL OR i.DMI_ProximaTentativa <= NOW())
+            ORDER BY i.CLI_ID ASC
+        ");
+
+        $clientes = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+
+        if(empty($clientes)){
+            return [];
+        }
+
+        $itens = [];
+        $offset = 0;
+
+        while(count($itens) < $limite){
+            $adicionados = 0;
+
+            foreach($clientes as $clienteId){
+                if(count($itens) >= $limite){
+                    break;
+                }
+
+                $stmt = $this->db->prepare("
+                    SELECT
+                        i.*,
+                        l.MTA_ID,
+                        l.TMP_ID,
+                        t.*
+                    FROM disparo_manual_itens i
+                    INNER JOIN disparo_manual_lotes l ON l.DML_ID = i.DML_ID
+                    INNER JOIN templates_meta t ON t.TMP_ID = l.TMP_ID
+                    WHERE i.CLI_ID = ?
+                    AND i.DMI_Status = 'pendente'
+                    AND l.DML_Status IN ('pendente','processando')
+                    AND (i.DMI_ProximaTentativa IS NULL OR i.DMI_ProximaTentativa <= NOW())
+                    ORDER BY i.DMI_ID ASC
+                    LIMIT 1 OFFSET {$offset}
+                ");
+                $stmt->execute([$clienteId]);
+                $item = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if($item){
+                    $itens[] = $item;
+                    $adicionados++;
+                }
+            }
+
+            if($adicionados === 0){
+                break;
+            }
+
+            $offset++;
+        }
+
+        return $itens;
     }
 
     private function reservarItem(array $item)

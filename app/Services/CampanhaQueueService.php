@@ -41,10 +41,13 @@ class CampanhaQueueService
 
         $campanhas = $this->buscarCampanhasProcessando();
         $resumo['processadas'] = count($campanhas);
+        $limitePorCampanha = empty($campanhas)
+            ? $limitePorExecucao
+            : max(1, (int) floor($limitePorExecucao / count($campanhas)));
 
         foreach($campanhas as $campanha){
             try{
-                $resultado = $this->processarCampanha($campanha, $limitePorExecucao, $workerId);
+                $resultado = $this->processarCampanha($campanha, $limitePorCampanha, $workerId);
                 $resumo = $this->somarResumo($resumo, $resultado);
             }catch(Exception $e){
                 $resumo['excecoes']++;
