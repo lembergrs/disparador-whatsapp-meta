@@ -51,7 +51,7 @@ defined('MAIL_TIMEOUT') || define('MAIL_TIMEOUT', (int) env_valor('MAIL_TIMEOUT'
 
 // Taxa segura inicial de disparos para WhatsApp Cloud API.
 // Ajuste conforme qualidade, limites e aprovação da conta na Meta.
-defined('WHATSAPP_ENVIOS_POR_SEGUNDO') || define('WHATSAPP_ENVIOS_POR_SEGUNDO', 5);
+defined('WHATSAPP_ENVIOS_POR_SEGUNDO') || define('WHATSAPP_ENVIOS_POR_SEGUNDO', max(1, (int) env_valor('WHATSAPP_ENVIOS_POR_SEGUNDO', 5)));
 defined('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS') || define('WHATSAPP_PAUSA_RATE_LIMIT_SEGUNDOS', 5);
 defined('WORKER_MAX_ATTEMPTS') || define('WORKER_MAX_ATTEMPTS', 5);
 defined('WORKER_RETRY_DELAY_SECONDS') || define('WORKER_RETRY_DELAY_SECONDS', 30);
