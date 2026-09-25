@@ -16,5 +16,65 @@ $formatarQuantidade = function($quantidade,$singular,$plural){ $quantidade=(int)
 <a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-outline-success btn-block" data-analytics-event="select_trial" data-analytics-location="pricing" data-analytics-destination="registration" data-analytics-plan="<?= htmlspecialchars($plano['PLA_Nome'],ENT_QUOTES,'UTF-8'); ?>">Começar teste grátis</a>
 </div></div></div><?php } ?></div>
 <?php }else{ ?><div class="alert alert-light border text-center">Os planos estão sendo atualizados. Solicite acesso para receber uma proposta adequada à sua operação.</div><?php } ?>
-<p class="text-center text-muted mt-3 mb-0">Valores e limites podem ser ajustados conforme a necessidade da operação.</p><div class="alert alert-light border text-center mt-3"><strong>A franquia corresponde ao uso do Disparador.net.</strong> Tarifas cobradas pela Meta não estão incluídas e seguem a política oficial vigente.</div><div class="text-center"><h3 class="h4 font-weight-bold">Seu negócio nunca para</h3><p class="text-muted">Todos os planos incluem uma franquia de mensagens. Se ela for ultrapassada, o envio continua e as mensagens excedentes são cobradas conforme o consumo.</p></div>
+
+<?php
+$enterpriseMensagem = 'Olá! Conheci o plano Enterprise do Disparador.net e gostaria de conversar sobre uma configuração personalizada para minha empresa.';
+$enterpriseWhatsappUrl = null;
+if(!empty($whatsappSite['ativo']) && !empty($whatsappSite['telefone'])){
+    $enterpriseWhatsappUrl = 'https://wa.me/'
+        . rawurlencode($whatsappSite['telefone'])
+        . '?text='
+        . rawurlencode($enterpriseMensagem);
+}
+?>
+<div class="card border-dark mt-4">
+    <div class="card-body p-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8 text-center text-lg-left">
+                <span class="badge badge-dark mb-2">Enterprise</span>
+                <h3 class="h4 font-weight-bold mb-2">Sua operação precisa de outros limites?</h3>
+                <p class="text-muted mb-3 mb-lg-0">
+                    Para empresas com maior volume de mensagens, usuários ou números de WhatsApp.
+                    Conte para nós o que sua empresa precisa e estudamos uma configuração personalizada para sua operação.
+                </p>
+            </div>
+            <div class="col-lg-4 text-center text-lg-right">
+                <p class="font-weight-bold mb-2">Plano personalizado · Sob consulta</p>
+                <?php if($enterpriseWhatsappUrl){ ?>
+                    <a
+                    href="<?= htmlspecialchars($enterpriseWhatsappUrl, ENT_QUOTES, 'UTF-8'); ?>"
+                    class="btn btn-success"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-analytics-event="click_whatsapp"
+                    data-analytics-location="pricing_enterprise"
+                    data-analytics-plan="Enterprise"
+                    >
+                        <i class="fab fa-whatsapp mr-1"></i> Falar com nossa equipe
+                    </a>
+                <?php }else{ ?>
+                    <a
+                    href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
+                    class="btn btn-outline-success"
+                    data-analytics-event="select_enterprise"
+                    data-analytics-location="pricing_enterprise"
+                    data-analytics-destination="registration"
+                    data-analytics-plan="Enterprise"
+                    >
+                        Falar com nossa equipe
+                    </a>
+                <?php } ?>
+            </div>
+        </div>
+        <hr>
+        <div class="row text-center small">
+            <div class="col-md-3 mb-2 mb-md-0"><i class="fas fa-check text-success mr-1"></i> Mais números de WhatsApp</div>
+            <div class="col-md-3 mb-2 mb-md-0"><i class="fas fa-check text-success mr-1"></i> Mais usuários</div>
+            <div class="col-md-3 mb-2 mb-md-0"><i class="fas fa-check text-success mr-1"></i> Maior volume de mensagens</div>
+            <div class="col-md-3"><i class="fas fa-check text-success mr-1"></i> Limites ajustados à operação</div>
+        </div>
+    </div>
+</div>
+
+<p class="text-center text-muted mt-3 mb-0">Não encontrou um plano adequado? O Enterprise permite estudar limites e condições conforme a necessidade da sua operação.</p><div class="alert alert-light border text-center mt-3"><strong>A franquia corresponde ao uso do Disparador.net.</strong> Tarifas cobradas pela Meta não estão incluídas e seguem a política oficial vigente.</div><div class="text-center"><h3 class="h4 font-weight-bold">Seu negócio nunca para</h3><p class="text-muted">Todos os planos incluem uma franquia de mensagens. Se ela for ultrapassada, o envio continua e as mensagens excedentes são cobradas conforme o consumo.</p></div>
 </div></section>
