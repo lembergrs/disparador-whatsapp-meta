@@ -30,6 +30,11 @@ class ConsumoMensal
         $anoMes = date('Ym');
         $registro = $this->buscarRegistro($cliId, $anoMes);
 
+        if(!$registro){
+            $this->garantirRegistro($cliId, $anoMes, $planoPago, $planoId, $limiteMensagens, $valorMensagemExcedente);
+            $registro = $this->buscarRegistro($cliId, $anoMes);
+        }
+
         if($registro){
             $registro = $this->separarAvaliacaoDoPlanoPago($registro, $planoPago, $planoId, $limiteMensagens, $valorMensagemExcedente);
 
@@ -65,8 +70,43 @@ class ConsumoMensal
             return $sql->execute($paramsAtualizacao);
         }
 
+        return false;
+    }
+
+    public function buscarMesAtual($cliId)
+    {
+        $anoMes = date('Ym');
+        $registro = $this->buscarRegistro($cliId, $anoMes);
+
+        if(!$registro){
+            return false;
+        }
+
+        if($this->colunaExiste('consumo_mensal', 'CMS_InicioPlanoPago') && empty($registro['CMS_InicioPlanoPago'])){
+            $clienteModel = new Cliente();
+            $plano = $clienteModel->buscarComPlano($cliId);
+            $plano = is_array($plano) ? $plano : [];
+            $planoPago = strtolower((string) ($plano['CLI_StatusPagamento'] ?? '')) === 'pago';
+
+            if($planoPago){
+                $this->separarAvaliacaoDoPlanoPago(
+                    $registro,
+                    true,
+                    $plano['PLA_ID'] ?? null,
+                    $plano['PLA_LimiteMensagens'] ?? null,
+                    $plano['PLA_ValorMensagemExcedente'] ?? null
+                );
+                $registro = $this->buscarRegistro($cliId, $anoMes);
+            }
+        }
+
+        return $registro;
+    }
+
+    private function garantirRegistro($cliId, $anoMes, $planoPago, $planoId, $limiteMensagens, $valorMensagemExcedente)
+    {
         $campos = ['CLI_ID', 'CMS_AnoMes', 'CMS_Mensagens'];
-        $placeholders = ['?', '?', '1'];
+        $placeholders = ['?', '?', '0'];
         $params = [$cliId, $anoMes];
 
         if($planoId !== null && $this->colunaExiste('consumo_mensal', 'CMS_PLA_ID')){
@@ -98,43 +138,13 @@ class ConsumoMensal
         }
 
         $sql = $this->db->prepare("
-            INSERT INTO consumo_mensal
+            INSERT IGNORE INTO consumo_mensal
             (" . implode(', ', $campos) . ")
             VALUES
             (" . implode(', ', $placeholders) . ")
         ");
 
         return $sql->execute($params);
-    }
-
-    public function buscarMesAtual($cliId)
-    {
-        $anoMes = date('Ym');
-        $registro = $this->buscarRegistro($cliId, $anoMes);
-
-        if(!$registro){
-            return false;
-        }
-
-        if($this->colunaExiste('consumo_mensal', 'CMS_InicioPlanoPago') && empty($registro['CMS_InicioPlanoPago'])){
-            $clienteModel = new Cliente();
-            $plano = $clienteModel->buscarComPlano($cliId);
-            $plano = is_array($plano) ? $plano : [];
-            $planoPago = strtolower((string) ($plano['CLI_StatusPagamento'] ?? '')) === 'pago';
-
-            if($planoPago){
-                $this->separarAvaliacaoDoPlanoPago(
-                    $registro,
-                    true,
-                    $plano['PLA_ID'] ?? null,
-                    $plano['PLA_LimiteMensagens'] ?? null,
-                    $plano['PLA_ValorMensagemExcedente'] ?? null
-                );
-                $registro = $this->buscarRegistro($cliId, $anoMes);
-            }
-        }
-
-        return $registro;
     }
 
     private function separarAvaliacaoDoPlanoPago(array $registro, $planoPago, $planoId, $limiteMensagens, $valorMensagemExcedente)
