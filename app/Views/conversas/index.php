@@ -926,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
                 verificarAtualizacoes();
 
-            }, 120000);
+            }, 5000);
     }
 
     document.addEventListener('visibilitychange', function(){
