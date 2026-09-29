@@ -28,8 +28,10 @@ $renderConteudo = function($msg){
 };
 
 $ultimaMensagemId = 0;
-foreach($mensagens as $itemMensagem){
-    $ultimaMensagemId = max($ultimaMensagemId, (int) ($itemMensagem['MSG_ID'] ?? 0));
+if(!empty($mensagens)){
+    $ultimaMensagem = end($mensagens);
+    $ultimaMensagemId = (int) ($ultimaMensagem['MSG_ID'] ?? 0);
+    reset($mensagens);
 }
 
 foreach($mensagens as $msg){
