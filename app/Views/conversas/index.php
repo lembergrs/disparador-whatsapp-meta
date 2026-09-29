@@ -748,7 +748,13 @@ document.addEventListener('DOMContentLoaded', function(){
             method: 'GET'
         }).done(function(html){
             $('#areaMensagens').html(html);
-            rolarMensagensParaFinal();
+
+            const ultimaMensagem = $('#areaMensagens [data-ultima-mensagem="1"]').get(0);
+            if(ultimaMensagem){
+                ultimaMensagem.scrollIntoView({block: 'end', behavior: 'auto'});
+            }else{
+                rolarMensagensParaFinal();
+            }
 
             if(marcarLida == 'S'){
                 marcarConversaComoLida(conversaAberta);
