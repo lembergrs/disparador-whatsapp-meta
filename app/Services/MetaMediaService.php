@@ -128,6 +128,106 @@ class MetaMediaService
         }
     }
 
+    public function obterMidiaMensagem($mediaId, $mimeEsperado = null, $sha256Esperado = null)
+    {
+        $mediaId = trim((string) $mediaId);
+        if($mediaId === ''){
+            throw new Exception('Mídia não informada.');
+        }
+
+        $cache = $this->caminhoCacheMensagem($mediaId);
+        if(is_file($cache['arquivo']) && filesize($cache['arquivo']) > 0){
+            $mime = $this->detectarMime($cache['arquivo']) ?: (string) $mimeEsperado;
+            return ['arquivo'=>$cache['arquivo'], 'mime'=>$mime, 'cache'=>true];
+        }
+
+        $metadata = $this->curlGetJson(
+            rtrim($this->conta['MTA_UrlBase'], '/') . '/' . rawurlencode($mediaId)
+        );
+        $url = trim((string) ($metadata['url'] ?? ''));
+        if($url === ''){
+            throw new Exception('Meta não retornou a URL temporária da mídia.');
+        }
+
+        $conteudo = $this->curlGetBinario($url);
+        if($conteudo === ''){
+            throw new Exception('A mídia retornada pela Meta está vazia.');
+        }
+
+        if($sha256Esperado){
+            $hash = base64_encode(hash('sha256', $conteudo, true));
+            $hashHex = hash('sha256', $conteudo);
+            if(!hash_equals((string) $sha256Esperado, $hash) && !hash_equals(strtolower((string) $sha256Esperado), strtolower($hashHex))){
+                throw new Exception('A validação de integridade da mídia falhou.');
+            }
+        }
+
+        if(!is_dir($cache['dir']) && !mkdir($cache['dir'], 0770, true) && !is_dir($cache['dir'])){
+            throw new Exception('Não foi possível preparar o cache de mídia.');
+        }
+
+        $temporario = $cache['arquivo'] . '.tmp.' . bin2hex(random_bytes(6));
+        if(file_put_contents($temporario, $conteudo, LOCK_EX) === false){
+            throw new Exception('Não foi possível armazenar a mídia em cache.');
+        }
+        if(!@rename($temporario, $cache['arquivo'])){
+            @unlink($temporario);
+            throw new Exception('Não foi possível concluir o cache da mídia.');
+        }
+
+        $mime = $this->detectarMime($cache['arquivo']) ?: (string) ($metadata['mime_type'] ?? $mimeEsperado);
+        return ['arquivo'=>$cache['arquivo'], 'mime'=>$mime, 'cache'=>false];
+    }
+
+    private function caminhoCacheMensagem($mediaId)
+    {
+        $hash = hash('sha256', (string) $mediaId);
+        $dir = dirname(__DIR__, 2) . '/storage/cache/meta_media/' . substr($hash, 0, 2);
+        return ['dir'=>$dir, 'arquivo'=>$dir . '/' . $hash . '.bin'];
+    }
+
+    private function curlGetJson($url)
+    {
+        $conteudo = $this->curlGet($url);
+        $json = json_decode($conteudo, true);
+        if(!is_array($json)){
+            throw new Exception('Resposta inválida da Meta ao consultar a mídia.');
+        }
+        return $json;
+    }
+
+    private function curlGetBinario($url)
+    {
+        return $this->curlGet($url);
+    }
+
+    private function curlGet($url)
+    {
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $this->conta['MTA_Token']],
+        ]);
+        $response = curl_exec($curl);
+        $erro = curl_error($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+
+        if($erro){
+            throw new Exception('Falha ao consultar mídia na Meta.');
+        }
+        if($httpCode < 200 || $httpCode >= 300){
+            throw new Exception('Meta recusou o acesso à mídia (HTTP ' . $httpCode . ').');
+        }
+        return (string) $response;
+    }
+
     public function limitesPublicos()
     {
         return $this->limites;
