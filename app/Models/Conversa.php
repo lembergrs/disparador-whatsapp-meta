@@ -166,32 +166,34 @@ class Conversa
 
     private function inserirMensagem($dados)
     {
-        $temOrigem = $this->colunaConversaMensagemExiste('MSG_Origem');
-        $colunaOrigem = $temOrigem ? ",\n                MSG_Origem" : '';
-        $placeholderOrigem = $temOrigem ? ', ?' : '';
-        $sql = $this->db->prepare("
-            INSERT INTO conversa_mensagens
-            (
-                CVS_ID,
-                MSG_Direcao{$colunaOrigem},
-                MSG_Tipo,
-                MSG_Texto,
-                MSG_MetaMessageId,
-                MSG_Status,
-                MSG_Retorno,
-                MSG_DataMensagem
-            )
-            VALUES
-            (
-                ?, ?{$placeholderOrigem}, ?, ?, ?, ?, ?, ?
-            )
-        ");
+        $colunas = ['CVS_ID', 'MSG_Direcao'];
+        $params = [$dados['conversa_id'], $dados['direcao']];
 
-        $params = [
-            $dados['conversa_id'],
-            $dados['direcao']
+        $camposOpcionais = [
+            'MSG_Origem' => $dados['origem'] ?? 'api',
+            'MSG_MediaId' => $dados['media_id'] ?? null,
+            'MSG_MediaMimeType' => $dados['media_mime_type'] ?? null,
+            'MSG_MediaNome' => $dados['media_nome'] ?? null,
+            'MSG_MediaSha256' => $dados['media_sha256'] ?? null,
+            'MSG_ReacaoMessageId' => $dados['reacao_message_id'] ?? null,
+            'MSG_ReacaoEmoji' => $dados['reacao_emoji'] ?? null
         ];
-        if($temOrigem) $params[] = $dados['origem'] ?? 'api';
+
+        foreach($camposOpcionais as $coluna => $valor){
+            if($this->colunaConversaMensagemExiste($coluna)){
+                $colunas[] = $coluna;
+                $params[] = $valor;
+            }
+        }
+
+        $colunas = array_merge($colunas, [
+            'MSG_Tipo',
+            'MSG_Texto',
+            'MSG_MetaMessageId',
+            'MSG_Status',
+            'MSG_Retorno',
+            'MSG_DataMensagem'
+        ]);
         $params = array_merge($params, [
             $dados['tipo'] ?? 'text',
             $dados['texto'] ?? null,
@@ -200,6 +202,11 @@ class Conversa
             json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
             $dados['data_mensagem'] ?? date('Y-m-d H:i:s')
         ]);
+
+        $placeholders = implode(', ', array_fill(0, count($colunas), '?'));
+        $sql = $this->db->prepare(
+            'INSERT INTO conversa_mensagens (' . implode(', ', $colunas) . ') VALUES (' . $placeholders . ')'
+        );
         $sql->execute($params);
 
         if(($dados['resumo_mode'] ?? 'normal') === 'history'){
@@ -281,11 +288,27 @@ class Conversa
         $statusAtual = $existente['MSG_Status'] ?? null;
         $statusNovo = $dados['status'] ?? null;
         $statusFinal = MensagemStatusService::podeAvancar($statusAtual, $statusNovo) ? $statusNovo : $statusAtual;
-        $sql = $this->db->prepare("UPDATE conversa_mensagens SET MSG_Tipo=?,MSG_Texto=?,MSG_Retorno=?,MSG_Status=?,MSG_AtualizadoEm=NOW() WHERE MSG_ID=? AND MSG_Origem='history' AND MSG_Tipo='media_placeholder'");
-        $sql->execute([
-            $dados['tipo'], $dados['texto'] ?? '', json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
-            $statusFinal, (int)$existente['MSG_ID']
-        ]);
+        $sets = ['MSG_Tipo=?', 'MSG_Texto=?', 'MSG_Retorno=?', 'MSG_Status=?', 'MSG_AtualizadoEm=NOW()'];
+        $params = [
+            $dados['tipo'],
+            $dados['texto'] ?? '',
+            json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
+            $statusFinal
+        ];
+        foreach([
+            'MSG_MediaId'=>'media_id',
+            'MSG_MediaMimeType'=>'media_mime_type',
+            'MSG_MediaNome'=>'media_nome',
+            'MSG_MediaSha256'=>'media_sha256'
+        ] as $coluna=>$chave){
+            if($this->colunaConversaMensagemExiste($coluna)){
+                $sets[] = $coluna . '=?';
+                $params[] = $dados[$chave] ?? null;
+            }
+        }
+        $params[] = (int)$existente['MSG_ID'];
+        $sql = $this->db->prepare("UPDATE conversa_mensagens SET " . implode(',', $sets) . " WHERE MSG_ID=? AND MSG_Origem='history' AND MSG_Tipo='media_placeholder'");
+        $sql->execute($params);
         return $sql->rowCount() === 1;
     }
 
