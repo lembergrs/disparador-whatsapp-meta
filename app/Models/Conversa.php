@@ -166,32 +166,34 @@ class Conversa
 
     private function inserirMensagem($dados)
     {
-        $temOrigem = $this->colunaConversaMensagemExiste('MSG_Origem');
-        $colunaOrigem = $temOrigem ? ",\n                MSG_Origem" : '';
-        $placeholderOrigem = $temOrigem ? ', ?' : '';
-        $sql = $this->db->prepare("
-            INSERT INTO conversa_mensagens
-            (
-                CVS_ID,
-                MSG_Direcao{$colunaOrigem},
-                MSG_Tipo,
-                MSG_Texto,
-                MSG_MetaMessageId,
-                MSG_Status,
-                MSG_Retorno,
-                MSG_DataMensagem
-            )
-            VALUES
-            (
-                ?, ?{$placeholderOrigem}, ?, ?, ?, ?, ?, ?
-            )
-        ");
+        $colunas = ['CVS_ID', 'MSG_Direcao'];
+        $params = [$dados['conversa_id'], $dados['direcao']];
 
-        $params = [
-            $dados['conversa_id'],
-            $dados['direcao']
+        $camposOpcionais = [
+            'MSG_Origem' => $dados['origem'] ?? 'api',
+            'MSG_MediaId' => $dados['media_id'] ?? null,
+            'MSG_MediaMimeType' => $dados['media_mime_type'] ?? null,
+            'MSG_MediaNome' => $dados['media_nome'] ?? null,
+            'MSG_MediaSha256' => $dados['media_sha256'] ?? null,
+            'MSG_ReacaoMessageId' => $dados['reacao_message_id'] ?? null,
+            'MSG_ReacaoEmoji' => $dados['reacao_emoji'] ?? null
         ];
-        if($temOrigem) $params[] = $dados['origem'] ?? 'api';
+
+        foreach($camposOpcionais as $coluna => $valor){
+            if($this->colunaConversaMensagemExiste($coluna)){
+                $colunas[] = $coluna;
+                $params[] = $valor;
+            }
+        }
+
+        $colunas = array_merge($colunas, [
+            'MSG_Tipo',
+            'MSG_Texto',
+            'MSG_MetaMessageId',
+            'MSG_Status',
+            'MSG_Retorno',
+            'MSG_DataMensagem'
+        ]);
         $params = array_merge($params, [
             $dados['tipo'] ?? 'text',
             $dados['texto'] ?? null,
@@ -200,6 +202,11 @@ class Conversa
             json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
             $dados['data_mensagem'] ?? date('Y-m-d H:i:s')
         ]);
+
+        $placeholders = implode(', ', array_fill(0, count($colunas), '?'));
+        $sql = $this->db->prepare(
+            'INSERT INTO conversa_mensagens (' . implode(', ', $colunas) . ') VALUES (' . $placeholders . ')'
+        );
         $sql->execute($params);
 
         if(($dados['resumo_mode'] ?? 'normal') === 'history'){
