@@ -288,11 +288,27 @@ class Conversa
         $statusAtual = $existente['MSG_Status'] ?? null;
         $statusNovo = $dados['status'] ?? null;
         $statusFinal = MensagemStatusService::podeAvancar($statusAtual, $statusNovo) ? $statusNovo : $statusAtual;
-        $sql = $this->db->prepare("UPDATE conversa_mensagens SET MSG_Tipo=?,MSG_Texto=?,MSG_Retorno=?,MSG_Status=?,MSG_AtualizadoEm=NOW() WHERE MSG_ID=? AND MSG_Origem='history' AND MSG_Tipo='media_placeholder'");
-        $sql->execute([
-            $dados['tipo'], $dados['texto'] ?? '', json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
-            $statusFinal, (int)$existente['MSG_ID']
-        ]);
+        $sets = ['MSG_Tipo=?', 'MSG_Texto=?', 'MSG_Retorno=?', 'MSG_Status=?', 'MSG_AtualizadoEm=NOW()'];
+        $params = [
+            $dados['tipo'],
+            $dados['texto'] ?? '',
+            json_encode($dados['retorno'] ?? [], JSON_UNESCAPED_UNICODE),
+            $statusFinal
+        ];
+        foreach([
+            'MSG_MediaId'=>'media_id',
+            'MSG_MediaMimeType'=>'media_mime_type',
+            'MSG_MediaNome'=>'media_nome',
+            'MSG_MediaSha256'=>'media_sha256'
+        ] as $coluna=>$chave){
+            if($this->colunaConversaMensagemExiste($coluna)){
+                $sets[] = $coluna . '=?';
+                $params[] = $dados[$chave] ?? null;
+            }
+        }
+        $params[] = (int)$existente['MSG_ID'];
+        $sql = $this->db->prepare("UPDATE conversa_mensagens SET " . implode(',', $sets) . " WHERE MSG_ID=? AND MSG_Origem='history' AND MSG_Tipo='media_placeholder'");
+        $sql->execute($params);
         return $sql->rowCount() === 1;
     }
 
