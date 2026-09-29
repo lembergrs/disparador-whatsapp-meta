@@ -54,7 +54,7 @@ class MetaWebhookMessageIngestionService
             }
 
             $resultado['criadas']++;
-            if($this->autoResponder){
+            if($this->autoResponder && $dados['tipo'] !== 'reaction'){
                 call_user_func($this->autoResponder, $metaConta, $conversaId, $dados['participante']);
             }
         }
