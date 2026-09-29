@@ -39,6 +39,15 @@ foreach($mensagens as $msg){
             <span class="mensagem-status <?= htmlspecialchars($statusVisual['classe'], ENT_QUOTES, 'UTF-8'); ?>" data-message-status-id="<?= (int)$msg['MSG_ID']; ?>" data-status="<?= htmlspecialchars($statusVisual['status'], ENT_QUOTES, 'UTF-8'); ?>" title="<?= htmlspecialchars($statusVisual['tooltip'], ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?= htmlspecialchars($statusVisual['tooltip'], ENT_QUOTES, 'UTF-8'); ?>" role="img"><i class="fas <?= htmlspecialchars($statusVisual['icone'], ENT_QUOTES, 'UTF-8'); ?>" aria-hidden="true"></i></span>
             <?php }} ?>
         </div>
+        <?php if(!empty($msg['MSG_Reacoes'])){ ?>
+        <div class="d-flex flex-wrap" style="gap:3px;margin-top:-3px;margin-bottom:-8px;<?= $enviada ? 'justify-content:flex-end;' : 'justify-content:flex-start;'; ?>">
+            <?php foreach($msg['MSG_Reacoes'] as $reacao){ ?>
+            <span title="Reação" style="display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:24px;padding:0 6px;background:#fff;border:1px solid #e1e4e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.12);font-size:16px;line-height:1;">
+                <?= htmlspecialchars((string) ($reacao['emoji'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
+            </span>
+            <?php } ?>
+        </div>
+        <?php } ?>
     </div>
 </div>
 <?php } ?>

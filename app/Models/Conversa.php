@@ -607,7 +607,43 @@ class Conversa
 
         $sql->execute([$conversaId]);
 
-        return $sql->fetchAll(PDO::FETCH_ASSOC);
+        $mensagens = $sql->fetchAll(PDO::FETCH_ASSOC);
+        $reacoes = [];
+        foreach($mensagens as $mensagem){
+            if(strtolower((string) ($mensagem['MSG_Tipo'] ?? '')) !== 'reaction') continue;
+            $alvo = trim((string) ($mensagem['MSG_ReacaoMessageId'] ?? ''));
+            if($alvo === '') continue;
+
+            // O evento mais recente para o mesmo alvo/direção representa o estado atual.
+            $chave = $alvo . '|' . (string) ($mensagem['MSG_Direcao'] ?? '');
+            $emoji = (string) ($mensagem['MSG_ReacaoEmoji'] ?? '');
+            if($emoji === ''){
+                unset($reacoes[$chave]);
+            }else{
+                $reacoes[$chave] = [
+                    'message_id'=>$alvo,
+                    'direcao'=>$mensagem['MSG_Direcao'] ?? null,
+                    'emoji'=>$emoji
+                ];
+            }
+        }
+
+        $resultado = [];
+        foreach($mensagens as $mensagem){
+            if(strtolower((string) ($mensagem['MSG_Tipo'] ?? '')) === 'reaction') continue;
+            $messageId = trim((string) ($mensagem['MSG_MetaMessageId'] ?? ''));
+            $mensagem['MSG_Reacoes'] = [];
+            if($messageId !== ''){
+                foreach($reacoes as $reacao){
+                    if($reacao['message_id'] === $messageId){
+                        $mensagem['MSG_Reacoes'][] = $reacao;
+                    }
+                }
+            }
+            $resultado[] = $mensagem;
+        }
+
+        return $resultado;
     }
 
     public function atualizarStatusPorMetaMessageId($messageId, $novoStatus, $dataEvento = null, array $erro = [], $metaId = null)
