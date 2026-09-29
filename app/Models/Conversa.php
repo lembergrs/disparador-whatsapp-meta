@@ -960,8 +960,12 @@ class Conversa
         }
 
         $sql = $this->db->prepare("
-            SELECT MAX(COALESCE(CVS_DataAtualizacao, CVS_DataUltimaMensagem)) AS ultima
+            SELECT GREATEST(
+                COALESCE(MAX(COALESCE(conversas.CVS_DataAtualizacao, conversas.CVS_DataUltimaMensagem)), '1970-01-01 00:00:00'),
+                COALESCE(MAX(m.MSG_AtualizadoEm), '1970-01-01 00:00:00')
+            ) AS ultima
             FROM conversas
+            LEFT JOIN conversa_mensagens m ON m.CVS_ID = conversas.CVS_ID
             WHERE " . implode(' AND ', $where) . "
         ");
 

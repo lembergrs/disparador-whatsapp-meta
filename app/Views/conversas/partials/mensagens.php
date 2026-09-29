@@ -27,10 +27,16 @@ $renderConteudo = function($msg){
     }
 };
 
+$ultimaMensagemId = 0;
+foreach($mensagens as $itemMensagem){
+    $ultimaMensagemId = max($ultimaMensagemId, (int) ($itemMensagem['MSG_ID'] ?? 0));
+}
+
 foreach($mensagens as $msg){
     $enviada = ($msg['MSG_Direcao'] ?? '') === 'enviada';
+    $ehUltimaMensagem = ((int) ($msg['MSG_ID'] ?? 0) === $ultimaMensagemId);
 ?>
-<div class="d-flex justify-content-<?= $enviada ? 'end' : 'start'; ?> mb-2">
+<div class="d-flex justify-content-<?= $enviada ? 'end' : 'start'; ?> mb-2"<?= $ehUltimaMensagem ? ' data-ultima-mensagem="1"' : ''; ?>>
     <div class="p-2 rounded shadow-sm" style="background:<?= $enviada ? '#d9fdd3' : '#ffffff'; ?>;max-width:70%;border-radius:8px;">
         <?php $renderConteudo($msg); ?>
         <div class="text-muted mensagem-meta mensagem-meta-saida">
