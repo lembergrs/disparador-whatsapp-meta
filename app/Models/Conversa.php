@@ -342,7 +342,7 @@ class Conversa
             'image' => '📷 Imagem',
             'document' => '📄 Documento',
             'video' => '🎥 Vídeo',
-            'sticker' => 'Sticker'
+            'sticker' => 'Figurinha'
         ];
 
         if(isset($rotulos[$tipo])){
