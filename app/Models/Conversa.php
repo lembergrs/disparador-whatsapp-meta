@@ -209,18 +209,21 @@ class Conversa
         );
         $sql->execute($params);
 
-        if(($dados['resumo_mode'] ?? 'normal') === 'history'){
-            $this->atualizarResumoHistorico(
-                $dados['conversa_id'],
-                $dados['texto'] ?? '',
-                $dados['data_mensagem'] ?? null
-            );
-        }else{
-            $this->atualizarResumo(
-                $dados['conversa_id'],
-                $dados['texto'] ?? '',
-                $dados['direcao']
-            );
+        $resumo = $this->resumoMensagem($dados);
+        if($resumo !== null){
+            if(($dados['resumo_mode'] ?? 'normal') === 'history'){
+                $this->atualizarResumoHistorico(
+                    $dados['conversa_id'],
+                    $resumo,
+                    $dados['data_mensagem'] ?? null
+                );
+            }else{
+                $this->atualizarResumo(
+                    $dados['conversa_id'],
+                    $resumo,
+                    $dados['direcao']
+                );
+            }
         }
 
         return $this->db->lastInsertId();
@@ -323,6 +326,39 @@ class Conversa
         }catch(\Throwable $e){
             return $cache[$coluna] = false;
         }
+    }
+
+    private function resumoMensagem(array $dados)
+    {
+        $tipo = strtolower(trim((string) ($dados['tipo'] ?? 'text')));
+        $texto = trim((string) ($dados['texto'] ?? ''));
+
+        if($tipo === 'reaction'){
+            return null;
+        }
+
+        $rotulos = [
+            'audio' => '🎤 Áudio',
+            'image' => '📷 Imagem',
+            'document' => '📄 Documento',
+            'video' => '🎥 Vídeo',
+            'sticker' => 'Sticker'
+        ];
+
+        if(isset($rotulos[$tipo])){
+            $placeholder = '[' . strtoupper($tipo) . ']';
+            if($texto === '' || strtoupper($texto) === $placeholder){
+                return $rotulos[$tipo];
+            }
+
+            if(in_array($tipo, ['image', 'document', 'video'], true)){
+                return $rotulos[$tipo] . ': ' . $texto;
+            }
+
+            return $rotulos[$tipo];
+        }
+
+        return $texto;
     }
 
     public function atualizarResumo($conversaId, $ultimaMensagem, $direcao)
