@@ -176,7 +176,8 @@ class Conversa
             'MSG_MediaNome' => $dados['media_nome'] ?? null,
             'MSG_MediaSha256' => $dados['media_sha256'] ?? null,
             'MSG_ReacaoMessageId' => $dados['reacao_message_id'] ?? null,
-            'MSG_ReacaoEmoji' => $dados['reacao_emoji'] ?? null
+            'MSG_ReacaoEmoji' => $dados['reacao_emoji'] ?? null,
+            'MSG_AtualizadoEm' => date('Y-m-d H:i:s')
         ];
 
         foreach($camposOpcionais as $coluna => $valor){
