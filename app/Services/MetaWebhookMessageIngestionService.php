@@ -35,6 +35,12 @@ class MetaWebhookMessageIngestionService
                 'status'=>'recebida',
                 'origem'=>'api',
                 'retorno'=>$message,
+                'media_id'=>$dados['media_id'],
+                'media_mime_type'=>$dados['media_mime_type'],
+                'media_nome'=>$dados['media_nome'],
+                'media_sha256'=>$dados['media_sha256'],
+                'reacao_message_id'=>$dados['reacao_message_id'],
+                'reacao_emoji'=>$dados['reacao_emoji'],
                 'data_mensagem'=>$dados['data_mensagem']
             ], function() use ($metaConta, $dados, &$conversaId){
                 return $conversaId = $this->conversaModel->buscarOuCriar(
@@ -80,6 +86,12 @@ class MetaWebhookMessageIngestionService
                 'status'=>'sent',
                 'origem'=>'business_app',
                 'retorno'=>$message,
+                'media_id'=>$dados['media_id'],
+                'media_mime_type'=>$dados['media_mime_type'],
+                'media_nome'=>$dados['media_nome'],
+                'media_sha256'=>$dados['media_sha256'],
+                'reacao_message_id'=>$dados['reacao_message_id'],
+                'reacao_emoji'=>$dados['reacao_emoji'],
                 'data_mensagem'=>$dados['data_mensagem']
             ], function() use ($metaConta, $dados){
                 return $this->conversaModel->buscarOuCriar(
@@ -128,6 +140,12 @@ class MetaWebhookMessageIngestionService
                             'status'=>$dados['status'],
                             'origem'=>'history',
                             'retorno'=>$message,
+                            'media_id'=>$dados['media_id'],
+                            'media_mime_type'=>$dados['media_mime_type'],
+                            'media_nome'=>$dados['media_nome'],
+                            'media_sha256'=>$dados['media_sha256'],
+                            'reacao_message_id'=>$dados['reacao_message_id'],
+                            'reacao_emoji'=>$dados['reacao_emoji'],
                             'data_mensagem'=>$dados['data_mensagem'],
                             'resumo_mode'=>'history',
                             'permitir_enriquecimento_history'=>true
@@ -246,6 +264,8 @@ class MetaWebhookMessageIngestionService
         $tipo = trim((string) ($message['type'] ?? 'text')) ?: 'text';
         $texto = $this->textoMensagem($message, $tipo);
         $timestamp = filter_var($message['timestamp'] ?? null, FILTER_VALIDATE_INT);
+        $midia = $this->dadosMidia($message, $tipo);
+        $reacao = $this->dadosReacao($message, $tipo);
 
         if($timestampObrigatorio && (!$timestamp || $timestamp <= 0)) return null;
 
@@ -255,6 +275,12 @@ class MetaWebhookMessageIngestionService
             'tipo'=>$tipo,
             'texto'=>$texto,
             'nome'=>$nome,
+            'media_id'=>$midia['id'],
+            'media_mime_type'=>$midia['mime_type'],
+            'media_nome'=>$midia['filename'],
+            'media_sha256'=>$midia['sha256'],
+            'reacao_message_id'=>$reacao['message_id'],
+            'reacao_emoji'=>$reacao['emoji'],
             'data_mensagem'=>$timestamp && $timestamp > 0
                 ? date('Y-m-d H:i:s', $timestamp)
                 : date('Y-m-d H:i:s')
@@ -276,7 +302,7 @@ class MetaWebhookMessageIngestionService
         return in_array(strtolower(trim((string) $tipo)), [
             'text', 'button', 'interactive',
             'image', 'video', 'document', 'audio', 'sticker',
-            'location', 'contacts', 'media_placeholder'
+            'location', 'contacts', 'reaction', 'media_placeholder'
         ], true);
     }
 
@@ -289,10 +315,42 @@ class MetaWebhookMessageIngestionService
                 ?? $message['interactive']['list_reply']['title']
                 ?? '[Interativo]');
         }
+        if($tipo === 'reaction'){
+            $emoji = (string) ($message['reaction']['emoji'] ?? '');
+            return $emoji !== '' ? $emoji . ' [Reação]' : '[Reação removida]';
+        }
         foreach(['image','video','document'] as $media){
             if($tipo === $media && !empty($message[$media]['caption'])) return (string) $message[$media]['caption'];
         }
         return '[' . strtoupper($tipo) . ']';
+    }
+
+    private function dadosMidia(array $message, $tipo)
+    {
+        if(!in_array($tipo, ['image','video','document','audio','sticker'], true)){
+            return ['id'=>null, 'mime_type'=>null, 'filename'=>null, 'sha256'=>null];
+        }
+
+        $media = $message[$tipo] ?? [];
+        return [
+            'id'=>trim((string) ($media['id'] ?? '')) ?: null,
+            'mime_type'=>trim((string) ($media['mime_type'] ?? '')) ?: null,
+            'filename'=>trim((string) ($media['filename'] ?? '')) ?: null,
+            'sha256'=>trim((string) ($media['sha256'] ?? '')) ?: null
+        ];
+    }
+
+    private function dadosReacao(array $message, $tipo)
+    {
+        if($tipo !== 'reaction'){
+            return ['message_id'=>null, 'emoji'=>null];
+        }
+
+        $reaction = $message['reaction'] ?? [];
+        return [
+            'message_id'=>trim((string) ($reaction['message_id'] ?? '')) ?: null,
+            'emoji'=>array_key_exists('emoji', $reaction) ? (string) $reaction['emoji'] : null
+        ];
     }
 
     private function telefoneValido($telefone)
