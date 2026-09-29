@@ -13,7 +13,7 @@ $assert(strpos($arquivo, "'audio' => '🎤 Áudio'") !== false, 'Áudio deve ter
 $assert(strpos($arquivo, "'image' => '📷 Imagem'") !== false, 'Imagem deve ter resumo amigável.');
 $assert(strpos($arquivo, "'document' => '📄 Documento'") !== false, 'Documento deve ter resumo amigável.');
 $assert(strpos($arquivo, "'video' => '🎥 Vídeo'") !== false, 'Vídeo deve ter resumo amigável.');
-$assert(strpos($arquivo, "'sticker' => 'Sticker'") !== false, 'Sticker deve ter resumo amigável.');
+$assert(strpos($arquivo, "'sticker' => 'Figurinha'") !== false, 'Figurinha deve ter resumo amigável.');
 $assert(strpos($arquivo, "if(\$tipo === 'reaction'){\n            return null;") !== false, 'Reaction não deve substituir o resumo da conversa.');
 $assert(strpos($arquivo, "'image', 'document', 'video'") !== false, 'Tipos com caption devem preservar texto no resumo.');
 
