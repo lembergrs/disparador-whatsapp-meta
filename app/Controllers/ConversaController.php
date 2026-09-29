@@ -13,6 +13,7 @@ use Models\MetaConta;
 use Models\TemplateMeta;
 use Services\ConversaTemplateService;
 use Services\MetaService;
+use Services\MetaMediaService;
 use Services\MensagemStatusService;
 
 class ConversaController extends Controller
@@ -470,6 +471,61 @@ class ConversaController extends Controller
         }
 
         require __DIR__ . '/../Views/conversas/partials/lista.php';
+    }
+
+    public function midia()
+    {
+        $usuario = Auth::usuario();
+        $mensagemId = (int) ($_GET['id'] ?? 0);
+        if($mensagemId <= 0){
+            http_response_code(404);
+            return;
+        }
+
+        $mensagem = $this->conversaModel->buscarMensagemAcessivel(
+            $mensagemId,
+            $usuario['CLI_ID'],
+            $usuario
+        );
+        if(!$mensagem || empty($mensagem['MSG_MediaId'])){
+            http_response_code(404);
+            return;
+        }
+
+        $tiposPermitidos = ['image', 'video', 'document', 'audio', 'sticker'];
+        if(!in_array(strtolower((string) ($mensagem['MSG_Tipo'] ?? '')), $tiposPermitidos, true)){
+            http_response_code(404);
+            return;
+        }
+
+        try{
+            $media = (new MetaMediaService(
+                $mensagem['MTA_ID'],
+                $mensagem['CLI_ID']
+            ))->obterMidiaMensagem(
+                $mensagem['MSG_MediaId'],
+                $mensagem['MSG_MediaMimeType'] ?? null,
+                $mensagem['MSG_MediaSha256'] ?? null
+            );
+
+            $mime = trim((string) ($media['mime'] ?? '')) ?: 'application/octet-stream';
+            $inline = strpos($mime, 'image/') === 0 || strpos($mime, 'audio/') === 0 || strpos($mime, 'video/') === 0;
+            $nome = trim((string) ($mensagem['MSG_MediaNome'] ?? ''));
+            if($nome === ''){
+                $nome = 'midia-' . (int) $mensagem['MSG_ID'];
+            }
+            $nome = preg_replace('/[^A-Za-z0-9._-]+/', '_', basename($nome));
+
+            header('Content-Type: ' . $mime);
+            header('Content-Length: ' . filesize($media['arquivo']));
+            header('Content-Disposition: ' . ($inline ? 'inline' : 'attachment') . '; filename="' . $nome . '"');
+            header('Cache-Control: private, max-age=3600');
+            header('X-Content-Type-Options: nosniff');
+            readfile($media['arquivo']);
+        }catch(\Exception $e){
+            http_response_code(502);
+        }
+        exit;
     }
 
     public function ajaxMensagens()
