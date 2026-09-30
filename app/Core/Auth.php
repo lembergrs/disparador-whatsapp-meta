@@ -654,7 +654,7 @@ class Auth
     {
         $url=trim((string)($_GET['url'] ?? 'dashboard'),'/');
         $controller=explode('/',$url)[0] ?? 'dashboard';
-        if(in_array($controller,['dashboard','configuracao','parceiroClientes','conta','login','onboardingSuporte'],true)){ return; }
+        if(in_array($controller,['dashboard','configuracao','parceiroClientes','parceiroTemplates','conta','login','onboardingSuporte'],true)){ return; }
         header('Location: '.BASE_URL.'/index.php?url=dashboard');
         exit;
     }
