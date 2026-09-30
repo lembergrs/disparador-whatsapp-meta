@@ -76,8 +76,7 @@ class ParceiroApi
               AND c.CLI_Ativo='S'
             ON DUPLICATE KEY UPDATE
                 PAC_IdentificadorExterno=VALUES(PAC_IdentificadorExterno),
-                PAC_Ativo='S',
-                PAC_Status=IF(c.CLI_TipoConta='cliente','ativo',PAC_Status)
+                PAC_Ativo='S'
         ");
         $sql->execute([(int)$parceiroId,$identificadorExterno ?: null,(int)$metaId,(int)$clienteId]);
 
