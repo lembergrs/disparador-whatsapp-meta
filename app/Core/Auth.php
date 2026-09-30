@@ -292,6 +292,10 @@ class Auth
 
         $usuario = self::usuario();
 
+        if(self::clienteEhPartnerVinculado()){
+            return true;
+        }
+
         if(($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'){
             return false;
         }
