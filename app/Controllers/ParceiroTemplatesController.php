@@ -48,11 +48,12 @@ class ParceiroTemplatesController extends Controller
     {
         list($p,$cliente)=$this->contexto();
         $canais=$this->parceiros->listarCanaisGerenciaveis((int)$p['PAR_ID'],(int)$cliente['CLI_ID']);
-        $metaId=(int)($_GET['meta']??0);
-        if($metaId){ $this->canal($p,$cliente,$metaId); }
-        elseif(count($canais)===1){ $metaId=(int)$canais[0]['MTA_ID']; }
-        $templates=$metaId ? $this->templates->listarPorClienteConta((int)$cliente['CLI_ID'],$metaId) : [];
-        $this->view('parceiros/templates_cliente',['titulo'=>'Templates do cliente','clientePartner'=>$cliente,'canaisPartner'=>$canais,'metaSelecionada'=>$metaId,'templates'=>$templates]);
+        $templates=[];
+        foreach($canais as $canal){
+            $templates=array_merge($templates,$this->templates->listarPorClienteConta((int)$cliente['CLI_ID'],(int)$canal['MTA_ID']));
+        }
+        usort($templates,function($a,$b){return (int)$b['TMP_ID'] <=> (int)$a['TMP_ID'];});
+        $this->view('templates/index',['titulo'=>'Templates — '.$cliente['CLI_Nome'],'templates'=>$templates,'contas'=>$canais,'partnerContexto'=>true,'partnerCliente'=>$cliente]);
     }
 
     public function criar()
@@ -81,6 +82,18 @@ class ParceiroTemplatesController extends Controller
             if($preview){(new TemplateMediaPreviewService())->removerCopia($preview);}
             Session::flash('error',$e->getMessage());
         }
+        $this->voltar((int)$cliente['CLI_ID']);
+    }
+
+    public function editar()
+    {
+        $this->validarCsrfPost();
+        list($p,$cliente)=$this->contexto();
+        $id=(int)($_POST['id']??0);
+        $t=$this->templates->buscarPorCliente($id,(int)$cliente['CLI_ID']);
+        if(!$t){http_response_code(403);die('Template não autorizado para este Partner.');}
+        $this->canal($p,$cliente,(int)$t['MTA_ID']);
+        Session::flash('error','Templates aprovados pela Meta podem exigir criação de um novo template para alteração.');
         $this->voltar((int)$cliente['CLI_ID']);
     }
 
