@@ -53,7 +53,7 @@ class ParceiroFinanceiroService
     {
         $calculo=$this->calcularCompetencia($parceiroId,$competencia);
         $snapshot=$this->financeiro->buscarCompetencia($calculo['competencia_id']);
-        if(!empty($snapshot['COB_ID'])){ return (int)$snapshot['COB_ID']; }
+        if(!empty($snapshot['COB_ID'])){ return ['cobranca_id'=>(int)$snapshot['COB_ID'],'integracao'=>['sucesso'=>true,'reconciliada'=>true],'calculo'=>$calculo]; }
 
         $parceiro=$this->buscarParceiro($parceiroId);
         $assinatura=$this->financeiro->assinaturaAtiva($parceiroId);
