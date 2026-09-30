@@ -80,8 +80,17 @@ class ParceiroApi
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function aprovarAdmin($parceiroId)
+    {
+        $sql=$this->db->prepare("UPDATE parceiros_api p INNER JOIN clientes c ON c.CLI_ID=p.CLI_ID SET p.PAR_StatusCadastro='aprovado',c.CLI_StatusCadastro='ativo',c.CLI_Ativo='S' WHERE p.PAR_ID=? AND p.PAR_Ativo='S' AND c.CLI_TipoConta='cliente_partner'");
+        return $sql->execute([(int)$parceiroId]);
+    }
+
     public function gerarChaveAdmin($parceiroId, $nome)
     {
+        $check=$this->db->prepare("SELECT PAR_ID FROM parceiros_api WHERE PAR_ID=? AND PAR_Ativo='S' AND PAR_StatusCadastro='aprovado' LIMIT 1");
+        $check->execute([(int)$parceiroId]);
+        if(!$check->fetchColumn()){ throw new \DomainException('Aprove o cadastro do parceiro antes de gerar uma API key.'); }
         $segredo='dsp_live_' . bin2hex(random_bytes(32));
         $prefixo=substr($segredo,0,18);
         $hash=hash('sha256',$segredo);
@@ -119,6 +128,7 @@ class ParceiroApi
               AND k.PAK_RevogadaEm IS NULL
               AND (k.PAK_ExpiraEm IS NULL OR k.PAK_ExpiraEm > NOW())
               AND p.PAR_Ativo = 'S'
+              AND p.PAR_StatusCadastro = 'aprovado'
             LIMIT 1
         ");
         $sql->execute([$hash]);

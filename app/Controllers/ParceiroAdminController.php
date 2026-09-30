@@ -82,6 +82,16 @@ class ParceiroAdminController extends Controller
         }
     }
 
+    public function aprovar()
+    {
+        $this->validarCsrfPost();
+        $parceiroId=(int)($_POST['parceiro_id'] ?? 0);
+        if(!$this->model->buscarAdmin($parceiroId)){ Session::flash('error','Parceiro não encontrado.'); $this->redirect('parceiroAdmin'); }
+        $this->model->aprovarAdmin($parceiroId);
+        Session::flash('success','Cadastro Partner aprovado. A validação/onboarding e a cobrança de implantação podem seguir pelas próximas etapas.');
+        $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
+    }
+
     public function vincular()
     {
         $this->validarCsrfPost();

@@ -1,3 +1,4 @@
+<div class="alert alert-info"><strong>Cadastro self-service:</strong> envie ao futuro parceiro o link <code><?= rtrim(BASE_URL,'/') ?>/index.php?url=parceiroCadastro</code>. O cadastro entra como pendente e precisa ser aprovado aqui antes da liberação de API keys.</div>
 <div class="card">
 <div class="card-header"><h3 class="card-title">Parceiros da API</h3></div>
 <div class="card-body">
