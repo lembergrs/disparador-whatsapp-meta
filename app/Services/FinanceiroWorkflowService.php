@@ -184,8 +184,10 @@ class FinanceiroWorkflowService
                 throw new \RuntimeException('Não foi possível lançar o pagamento.');
             }
             $this->aplicarPagamentoDaCobranca($cobranca);
-            $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
-            if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
+            if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){
+                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
+                $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+            }
             $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado($cobrancaId, $situacaoAnterior);
         });
         $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
@@ -231,20 +233,22 @@ class FinanceiroWorkflowService
             if($status === 'pago'){
                 $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
                 $this->aplicarPagamentoDaCobranca($cobranca);
-                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
-                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){
+                    $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
+                    $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+                }
                 $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado((int)$cobranca['COB_ID'], $situacaoAnterior);
             }elseif($status === 'vencido'){
                 $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'vencido');
-                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']); }
             }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
                 $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'cancelado');
                 $this->liberarDescontoIndicacao($atualizada, 'cobranca_cancelada_provider');
-                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']); }
             }elseif($evento === 'PAYMENT_REFUNDED'){
                 // Reembolso afeta a cobrança e a situação financeira, mas a decisão
                 // contratual permanece separada e não cancela assinaturas em massa.
-                $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']); }
             }
             $this->log('webhook_asaas', ['cobranca_id'=>$cobranca['COB_ID'], 'evento'=>$evento, 'status'=>$status]);
             return ['processado'=>true, 'status'=>$status];
@@ -300,6 +304,10 @@ class FinanceiroWorkflowService
                 $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], ['status'=>'vencido']);
                 $resultado['cobrancas_vencidas']++;
                 $clienteId = (int) $cobranca['CLI_ID'];
+                if(($cobranca['COB_Origem'] ?? '') === 'partner_api'){
+                    $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'vencido');
+                    return;
+                }
                 if(!isset($clientes[$clienteId])){
                     $this->clientes->atualizarEstadoFinanceiro($clienteId, ['status_pagamento'=>'pendente']);
                     $clientes[$clienteId] = true;
@@ -550,7 +558,9 @@ class FinanceiroWorkflowService
             if(!$pagamento){
                 $this->persistirVencimentoEfetivo($cobrancaId, $vencimentoRecuperacao);
                 $cobranca['COB_DataVencimentoEfetivo'] = $vencimentoRecuperacao;
-                $cobranca['descricao'] = 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
+                $cobranca['descricao'] = ($cobranca['COB_Origem'] ?? '') === 'partner_api'
+                    ? (string) ($plano['PLA_Nome'] ?? 'Partner API')
+                    : 'Mensalidade ' . ($plano['PLA_Nome'] ?? 'Disparador.net');
                 $resposta = $this->asaas->criarCobranca($cliente, $cobranca, $referencia);
                 if(empty($resposta['sucesso']) || empty($resposta['response']['id'])){
                     $this->registrarFalhaGateway($cobrancaId, 'erro_cobranca', $resposta, $referencia, $customerId);

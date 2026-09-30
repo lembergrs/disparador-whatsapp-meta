@@ -39,6 +39,15 @@ class ParceiroFinanceiroService
         $parceiro=$this->buscarParceiro($parceiroId);
         $assinatura=$this->financeiro->assinaturaAtiva($parceiroId);
         if(!$assinatura){ throw new \DomainException('Crie a assinatura Partner antes da cobrança de implantação.'); }
+        $existente=$this->financeiro->buscarCobrancaImplantacaoAberta($parceiroId,(int)$assinatura['PAS_ID']);
+        if($existente){
+            if(($existente['COB_Status'] ?? '') === 'pago'){
+                throw new \DomainException('A implantação deste Partner já está paga.');
+            }
+            $integracao=$this->workflow()->integrarCobrancaPartner((int)$existente['COB_ID'],'Implantação Partner API');
+            return ['cobranca_id'=>(int)$existente['COB_ID'],'integracao'=>$integracao,'reutilizada'=>true];
+        }
+
         $cobrancaId=(int)$this->cobrancas->criar([
             'cliente'=>(int)$parceiro['CLI_ID'],'plano'=>null,'valor'=>$valor,'vencimento'=>$vencimento,'vencimento_efetivo'=>$vencimento,
             'tipo'=>'implantacao_partner','parceiro'=>$parceiroId,'assinatura_partner'=>(int)$assinatura['PAS_ID'],

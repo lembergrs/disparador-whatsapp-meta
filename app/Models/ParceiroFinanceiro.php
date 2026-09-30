@@ -9,6 +9,59 @@ class ParceiroFinanceiro
     private $db;
     public function __construct($db=null){ $this->db=$db ?: Database::getInstance(); }
 
+    public function listarPlanosAdmin()
+    {
+        return $this->db->query("SELECT * FROM parceiro_planos ORDER BY PPL_Ativo DESC,PPL_MinClientes ASC,PPL_ID ASC")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function salvarPlanoAdmin($nome,$min,$max,$valor)
+    {
+        $min=max(1,(int)$min);
+        $max=$max === null || $max === '' ? null : (int)$max;
+        if($max !== null && $max < $min){ throw new \DomainException('O máximo de clientes não pode ser menor que o mínimo.'); }
+        if((float)$valor < 0){ throw new \DomainException('O valor mensal não pode ser negativo.'); }
+        $fim=$max === null ? 2147483647 : $max;
+        $overlap=$this->db->prepare("SELECT 1 FROM parceiro_planos WHERE PPL_Ativo='S' AND PPL_MinClientes<=? AND COALESCE(PPL_MaxClientes,2147483647)>=? LIMIT 1");
+        $overlap->execute([$fim,$min]);
+        if($overlap->fetchColumn()){ throw new \DomainException('Esta faixa sobrepõe outra faixa Partner ativa.'); }
+        $sql=$this->db->prepare("INSERT INTO parceiro_planos (PPL_Nome,PPL_MinClientes,PPL_MaxClientes,PPL_Valor,PPL_Ativo) VALUES (?,?,?,?,'S')");
+        $sql->execute([trim($nome),$min,$max,number_format((float)$valor,2,'.','')]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function inativarPlanoAdmin($id)
+    {
+        return $this->db->prepare("UPDATE parceiro_planos SET PPL_Ativo='N' WHERE PPL_ID=?")->execute([(int)$id]);
+    }
+
+    public function criarOuAtualizarAssinaturaAdmin($parceiroId,$valorImplantacao,$diaVencimento)
+    {
+        $diaVencimento=max(1,min(28,(int)$diaVencimento));
+        $assinatura=$this->assinaturaAtiva($parceiroId);
+        if($assinatura){
+            $sql=$this->db->prepare("UPDATE parceiro_assinaturas SET PAS_ValorImplantacao=?,PAS_DiaVencimento=? WHERE PAS_ID=? AND PAR_ID=?");
+            $sql->execute([number_format((float)$valorImplantacao,2,'.',''),$diaVencimento,(int)$assinatura['PAS_ID'],(int)$parceiroId]);
+            return (int)$assinatura['PAS_ID'];
+        }
+        $sql=$this->db->prepare("INSERT INTO parceiro_assinaturas (PAR_ID,PAS_Status,PAS_ValorImplantacao,PAS_ValorMensal,PAS_DiaVencimento) VALUES (?,'pendente',?,0,?)");
+        $sql->execute([(int)$parceiroId,number_format((float)$valorImplantacao,2,'.',''),$diaVencimento]);
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function listarCobrancasAdmin($parceiroId)
+    {
+        $sql=$this->db->prepare("SELECT COB_ID,COB_Tipo,COB_Valor,COB_Status,COB_DataVencimento,COB_ProviderStatus,COB_LinkPagamento,COB_DataPagamento FROM cobrancas WHERE PAR_ID=? AND COB_Origem='partner_api' ORDER BY COB_ID DESC LIMIT 30");
+        $sql->execute([(int)$parceiroId]);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarCobrancaImplantacaoAberta($parceiroId,$assinaturaId)
+    {
+        $sql=$this->db->prepare("SELECT * FROM cobrancas WHERE PAR_ID=? AND PAS_ID=? AND COB_Origem='partner_api' AND COB_Tipo='implantacao_partner' AND COB_Status IN ('pendente','vencido','pago') ORDER BY COB_ID DESC LIMIT 1");
+        $sql->execute([(int)$parceiroId,(int)$assinaturaId]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public function contarClientesFaturaveis($parceiroId, $dataReferencia=null)
     {
         $data=$dataReferencia ?: date('Y-m-d H:i:s');
@@ -83,10 +136,9 @@ class ParceiroFinanceiro
             $pfcStatus=$status === 'cancelado' ? 'cancelada' : 'cobrada';
             $this->db->prepare("UPDATE parceiro_faturamento_competencias SET PFC_Status=? WHERE COB_ID=? AND PAR_ID=? AND PFC_Status<>'paga'")->execute([$pfcStatus,(int)$cobranca['COB_ID'],$parceiroId]);
         }
-        if($status === 'vencido'){
-            $this->db->prepare("UPDATE parceiro_assinaturas SET PAS_Status='suspensa' WHERE PAS_ID=? AND PAR_ID=? AND PAS_Status='ativa'")->execute([(int)$cobranca['PAS_ID'],$parceiroId]);
-            $this->db->prepare("UPDATE parceiros_api SET PAR_StatusApi='suspensa' WHERE PAR_ID=? AND PAR_StatusApi='ativa'")->execute([$parceiroId]);
-        }
+        // O vencimento isolado não suspende a API imediatamente. A suspensão Partner
+        // será aplicada por uma política própria de tolerância, sem misturar o status
+        // comercial da integração com o primeiro evento de atraso.
     }
 
     public function marcarClienteFaturavel($parceiroId,$vinculoId)

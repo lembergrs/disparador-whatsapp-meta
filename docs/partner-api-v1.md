@@ -165,6 +165,16 @@ A autorização especial vale apenas para o primeiro número próprio do Partner
 
 Isso não mistura os clientes do integrador com a conta dele: números de clientes finais continuam pertencendo aos respectivos `cliente_partner_vinculado` e são autorizados separadamente em `parceiro_clientes`.
 
+### Operação financeira pelo admin
+
+A tela de detalhe do Partner concentra a operação comercial: configuração da assinatura, valor de implantação, dia de vencimento, faixas mensais por quantidade de clientes faturáveis, geração/recuperação da cobrança de implantação, geração da mensalidade por competência e acompanhamento das cobranças Asaas.
+
+As faixas são globais para o programa Partner e não podem se sobrepor. A competência mensal mantém o snapshot da quantidade de clientes faturáveis e da faixa aplicada.
+
+A cobrança de implantação é idempotente por Partner/assinatura: uma tentativa de recuperação reutiliza a cobrança aberta em vez de criar outra. O primeiro vencimento não suspende a API imediatamente; uma política Partner de tolerância deve decidir a suspensão posteriormente.
+
+Cobranças `partner_api` não alteram o estado financeiro do plano Disparador comum do mesmo `CLI_ID`. Isso permite que a empresa Partner também tenha uma assinatura operacional normal sem que os dois contratos se contaminem.
+
 ## Ciclo comercial e financeiro
 
 O cadastro Partner utiliza o mesmo cadastro empresarial/fiscal de `clientes` usado pelo financeiro do Disparador. Isso permite que cobrança, confirmação de pagamento e NFS-e permaneçam no fluxo financeiro já existente.
