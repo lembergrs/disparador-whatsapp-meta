@@ -11,8 +11,5 @@ ALTER TABLE parceiros_api
     ADD CONSTRAINT FK_parceiros_api_cliente
         FOREIGN KEY (CLI_ID) REFERENCES clientes (CLI_ID);
 
--- USU_Nivel já é utilizado pela aplicação como perfil de acesso.
--- O ENUM/estrutura atual da coluna deve aceitar o novo nível antes de criar usuários partner.
-ALTER TABLE usuarios
-    MODIFY COLUMN USU_Nivel ENUM('admin','cliente','cliente_admin','cliente_usuario','cliente_partner')
-        NOT NULL;
+-- O perfil de login do parceiro será tratado em migration própria junto da tela/permissões.
+-- Não alteramos USU_Nivel aqui para não reescrever a definição atual da coluna sem necessidade.
