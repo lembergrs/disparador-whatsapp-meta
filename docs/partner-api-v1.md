@@ -44,6 +44,30 @@ O acesso do parceiro a um cliente final **não é inferido pela classificação*
 
 Isso permite que o Disparador revogue um único cliente/número sem afetar os demais clientes do parceiro.
 
+
+## Provisionamento de acesso
+
+As credenciais são provisionadas pela administração do Disparador.net.
+
+1. o parceiro possui um cadastro classificado como `cliente_partner`;
+2. cada cliente final utilizado na integração é classificado como `cliente_partner_vinculado`;
+3. o administrador vincula explicitamente o cliente e o canal WhatsApp (`MTA_ID`) ao parceiro;
+4. o administrador gera uma API key para a integração;
+5. o segredo completo é exibido **uma única vez** e deve ser armazenado com segurança pelo integrador;
+6. no banco do Disparador permanece somente o hash SHA-256 e um prefixo identificador;
+7. uma chave pode ser revogada individualmente sem desconectar o número da Meta.
+
+Para testar no Postman, configure o header:
+
+```http
+Authorization: Bearer dsp_live_SUA_CHAVE
+Accept: application/json
+```
+
+e execute primeiro o endpoint `GET /status`. Uma resposta HTTP 200 confirma a autenticação e mostra apenas os canais autorizados para aquela credencial.
+
+> As credenciais de homologação terão prefixo/ambiente próprios quando o sandbox for disponibilizado. Não reutilize uma chave de produção em homologação.
+
 ## Endpoint disponível
 
 ### GET /status
