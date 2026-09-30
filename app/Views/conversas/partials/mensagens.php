@@ -39,7 +39,21 @@ foreach($mensagens as $msg){
     $ehUltimaMensagem = ((int) ($msg['MSG_ID'] ?? 0) === $ultimaMensagemId);
 ?>
 <div class="d-flex justify-content-<?= $enviada ? 'end' : 'start'; ?> mb-2"<?= $ehUltimaMensagem ? ' data-ultima-mensagem="1"' : ''; ?>>
-    <div class="p-2 rounded shadow-sm" style="background:<?= $enviada ? '#d9fdd3' : '#ffffff'; ?>;max-width:70%;border-radius:8px;">
+    <div
+        class="p-2 rounded shadow-sm position-relative mensagem-bolha"
+        style="background:<?= $enviada ? '#d9fdd3' : '#ffffff'; ?>;max-width:70%;border-radius:8px;"
+        data-mensagem-id="<?= (int) ($msg['MSG_ID'] ?? 0); ?>"
+    >
+        <?php if(!empty($msg['MSG_MetaMessageId'])){ ?>
+        <button
+            type="button"
+            class="btn btn-sm btn-light border js-abrir-reactions"
+            data-mensagem-id="<?= (int) ($msg['MSG_ID'] ?? 0); ?>"
+            title="Reagir à mensagem"
+            aria-label="Reagir à mensagem"
+            style="position:absolute;top:4px;<?= $enviada ? 'left:-34px;' : 'right:-34px;'; ?>width:30px;height:30px;padding:0;border-radius:15px;"
+        ><i class="far fa-smile"></i></button>
+        <?php } ?>
         <?php $renderConteudo($msg); ?>
         <div class="text-muted mensagem-meta mensagem-meta-saida">
             <span class="mensagem-horario"><?= date('d/m/Y H:i', strtotime($msg['MSG_DataMensagem'])); ?></span>
