@@ -1,0 +1,13 @@
+<?php use Core\Session; ?>
+<?php if(!empty($novoConvite)){ ?><div class="alert alert-success"><strong>Link do convite:</strong><div class="input-group mt-2"><input id="partnerInviteUrl" class="form-control" readonly value="<?= htmlspecialchars($novoConvite,ENT_QUOTES,'UTF-8') ?>"><div class="input-group-append"><button type="button" class="btn btn-outline-dark" onclick="navigator.clipboard.writeText(document.getElementById('partnerInviteUrl').value)">Copiar</button></div></div><small>Este link é exibido após a geração. O token não é armazenado em texto puro.</small></div><?php } ?>
+<div class="card"><div class="card-header"><h3 class="card-title">Convidar cliente</h3></div><div class="card-body">
+<p class="text-muted">Gere um link para o cliente cadastrar a própria empresa. O cadastro não gera cobrança; o cliente passa a ser faturável somente após conectar e ativar o WhatsApp.</p>
+<form method="post" action="<?= BASE_URL ?>/index.php?url=parceiroClientes/gerarConvite" class="form-inline"><?= \Core\Csrf::input() ?><input name="nome_referencia" class="form-control mr-2" maxlength="150" placeholder="Identificação opcional do cliente"><button class="btn btn-primary"><i class="fas fa-link mr-1"></i> Gerar link</button></form>
+</div></div>
+<div class="card"><div class="card-header"><h3 class="card-title">Clientes cadastrados</h3></div><div class="card-body table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>Cliente</th><th>E-mail</th><th>Cadastro</th><th>Canais vinculados</th></tr></thead><tbody>
+<?php foreach($clientesPartner as $c){ ?><tr><td><?= htmlspecialchars($c['CLI_Nome']) ?></td><td><?= htmlspecialchars($c['CLI_Email']) ?></td><td><?= htmlspecialchars($c['PCI_AceitoEm']) ?></td><td><?= (int)$c['total_canais'] ?></td></tr><?php } ?>
+<?php if(!$clientesPartner){ ?><tr><td colspan="4" class="text-muted text-center">Nenhum cliente concluiu o cadastro ainda.</td></tr><?php } ?>
+</tbody></table></div></div>
+<div class="card"><div class="card-header"><h3 class="card-title">Convites</h3></div><div class="card-body table-responsive"><table class="table table-bordered table-sm"><thead><tr><th>Referência</th><th>Status</th><th>Expira em</th><th>Cliente</th></tr></thead><tbody>
+<?php foreach($convites as $i){ ?><tr><td><?= htmlspecialchars($i['PCI_NomeReferencia']??'') ?></td><td><?= htmlspecialchars($i['PCI_Status']) ?></td><td><?= htmlspecialchars($i['PCI_ExpiraEm']) ?></td><td><?= htmlspecialchars($i['CLI_Nome']??'—') ?></td></tr><?php } ?>
+</tbody></table></div></div>

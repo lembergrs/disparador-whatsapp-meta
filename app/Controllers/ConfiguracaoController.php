@@ -737,6 +737,11 @@ class ConfiguracaoController extends Controller
         );
 
         if($statusConexao === 'conectado'){
+            try{
+                (new \Models\ParceiroConvite())->vincularContaDoCliente($clienteId, (int)($conta['MTA_ID'] ?? 0), 'ativo');
+            }catch(\Throwable $e){
+                $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'conta_id'=>$conta['MTA_ID'] ?? null,'etapa'=>'partner_client_activate','erro'=>$this->sanitizeMetaMessage($e->getMessage()),'resultado'=>'erro']);
+            }
             if($atualizou && ($conta['MTA_Status'] ?? '') !== 'conectado' && !empty($conta['MTA_WabaId']) && !empty($conta['MTA_PhoneNumberId'])){
                 AnalyticsService::registrar('connect_meta', [
                     'connection_type'=>'embedded_signup', 'first_connection'=>true, 'source_area'=>'configuration'
@@ -807,6 +812,12 @@ class ConfiguracaoController extends Controller
 
         if(!$contaId){
             throw new Exception('Falha ao salvar conta Meta no banco.');
+        }
+
+        try{
+            (new \Models\ParceiroConvite())->vincularContaDoCliente($clienteId, $contaId, $statusConexao === 'conectado' ? 'ativo' : 'onboarding');
+        }catch(\Throwable $e){
+            $this->logMetaEmbeddedSignup(['data'=>date('Y-m-d H:i:s'),'cliente_id'=>$clienteId,'conta_id'=>$contaId,'etapa'=>'partner_client_link','erro'=>$this->sanitizeMetaMessage($e->getMessage()),'resultado'=>'erro']);
         }
 
         if(!$contaExistenteId){

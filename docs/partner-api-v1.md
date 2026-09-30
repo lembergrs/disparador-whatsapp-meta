@@ -223,3 +223,12 @@ Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do
 4. webhooks de saída;
 5. HMAC, retries, idempotência e logs;
 6. ambiente de homologação/sandbox e credenciais de teste.
+
+
+## Onboarding de clientes do Partner
+
+O Partner aprovado gera convites no painel em **Clientes Partner**. O link contém um token aleatório de uso único; somente o SHA-256 do token é persistido.
+
+O cliente final conclui o próprio cadastro como `cliente_partner_vinculado`, cria seu login e então conecta o próprio WhatsApp pelo Embedded Signup. O cliente vinculado possui painel restrito a configuração do WhatsApp, templates e dados da conta; disparos, campanhas, listas, conversas e financeiro do Disparador não fazem parte desse perfil.
+
+Ao concluir o Embedded Signup, o Disparador cria automaticamente a autorização `PAR_ID + CLI_ID + MTA_ID`. O vínculo só recebe `PAC_Status=ativo` e `PAC_FaturavelDesde` quando o número chega ao estado conectado. Convite ou cadastro sem WhatsApp ativo não entra na contagem faturável.
