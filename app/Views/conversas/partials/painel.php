@@ -131,6 +131,22 @@ if(!function_exists('formatarNumeroBR')){
                         <button
                             type="button"
                             class="btn btn-outline-secondary"
+                            id="btnAnexarMensagem"
+                            title="Anexar arquivo"
+                            aria-label="Anexar arquivo"
+                        >
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input
+                            type="file"
+                            name="arquivo"
+                            id="arquivoMensagem"
+                            class="d-none"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.3gpp,image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/3gpp"
+                        >
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
                             id="btnEmojiMensagem"
                             title="Inserir emoji"
                             aria-label="Inserir emoji"
