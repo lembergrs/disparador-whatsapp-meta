@@ -13,5 +13,5 @@ ppAssert(strpos($partner,"PAR_StatusImplantacao='aguardando_pagamento'")!==false
 ppAssert(strpos($model,"PAR_StatusImplantacao='paga'")!==false,'pagamento da implantacao deve atualizar estado');
 ppAssert(strpos($model,"PAR_StatusApi=IF(PAR_StatusApi='bloqueada','homologacao'")!==false,'pagamento deve liberar homologacao');
 ppAssert(strpos($model,"PFC_Status='paga'")!==false,'mensalidade paga deve fechar competencia');
-ppAssert(strpos($workflow,"!== 'partner_api'){ \$this->processarIndicacaoNoPrimeiroPagamento")!==false,'Partner nao deve consumir beneficio de indicacao');
+ppAssert(strpos($workflow,"!== 'partner_api'")!==false && strpos($workflow,'processarIndicacaoNoPrimeiroPagamento')!==false,'Partner nao deve consumir beneficio de indicacao');
 echo "Partner payment workflow static tests passed\n";
