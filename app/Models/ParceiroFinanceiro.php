@@ -20,6 +20,10 @@ class ParceiroFinanceiro
         $max=$max === null || $max === '' ? null : (int)$max;
         if($max !== null && $max < $min){ throw new \DomainException('O máximo de clientes não pode ser menor que o mínimo.'); }
         if((float)$valor < 0){ throw new \DomainException('O valor mensal não pode ser negativo.'); }
+        $fim=$max === null ? 2147483647 : $max;
+        $overlap=$this->db->prepare("SELECT 1 FROM parceiro_planos WHERE PPL_Ativo='S' AND PPL_MinClientes<=? AND COALESCE(PPL_MaxClientes,2147483647)>=? LIMIT 1");
+        $overlap->execute([$fim,$min]);
+        if($overlap->fetchColumn()){ throw new \DomainException('Esta faixa sobrepõe outra faixa Partner ativa.'); }
         $sql=$this->db->prepare("INSERT INTO parceiro_planos (PPL_Nome,PPL_MinClientes,PPL_MaxClientes,PPL_Valor,PPL_Ativo) VALUES (?,?,?,?,'S')");
         $sql->execute([trim($nome),$min,$max,number_format((float)$valor,2,'.','')]);
         return (int)$this->db->lastInsertId();
