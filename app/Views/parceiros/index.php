@@ -1,4 +1,4 @@
-<div class="alert alert-info"><strong>Cadastro self-service:</strong> envie ao futuro parceiro o link <code><?= rtrim(BASE_URL,'/') ?>/index.php?url=parceiroCadastro</code>. O cadastro entra como pendente e precisa ser aprovado aqui antes da liberação de API keys.</div>
+<div class="alert alert-info"><strong>Cadastro self-service:</strong> envie ao futuro parceiro o link <code style="color:#000;"><?= rtrim(BASE_URL,'/') ?>/index.php?url=parceiroCadastro</code>. O cadastro entra como pendente e precisa ser aprovado aqui antes da liberação de API keys.</div>
 <div class="card">
 <div class="card-header"><h3 class="card-title">Parceiros da API</h3></div>
 <div class="card-body">
@@ -6,7 +6,7 @@
 <?= \Core\Csrf::input(); ?>
 <div class="form-group col-md-4"><label>Cadastro do parceiro</label><select name="cliente_id" class="form-control" required><option value="">Selecione</option><?php foreach($clientes as $c){ if(($c['CLI_TipoConta']??'')!=='cliente_partner') continue; ?><option value="<?= (int)$c['CLI_ID'] ?>"><?= htmlspecialchars($c['CLI_Nome']) ?> (#<?= (int)$c['CLI_ID'] ?>)</option><?php } ?></select></div>
 <div class="form-group col-md-3"><label>Nome da integração</label><input name="nome" class="form-control" required></div>
-<div class="form-group col-md-2"><label>Identificador</label><input name="identificador" class="form-control" placeholder="ex.: zain" required></div>
+<div class="form-group col-md-2"><label>Identificador</label><input name="identificador" class="form-control" placeholder="ex.: nome" required></div>
 <div class="form-group col-md-3"><label>Webhook <small>(opcional)</small></label><input name="webhook_url" type="url" class="form-control"></div>
 <div class="col-12"><button class="btn btn-primary"><i class="fas fa-plus mr-1"></i>Cadastrar parceiro</button></div>
 </form>
