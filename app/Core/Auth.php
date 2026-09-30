@@ -292,7 +292,7 @@ class Auth
 
         $usuario = self::usuario();
 
-        if(self::clienteEhPartnerVinculado()){
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
             return true;
         }
 
@@ -337,6 +337,10 @@ class Auth
         self::atualizarStatusCliente();
         $usuario = self::usuario();
 
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
+            return false;
+        }
+
         return (
             ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
             &&
@@ -361,6 +365,10 @@ class Auth
             ||
             empty($usuario['CLI_DataLiberacao'])
         ){
+            return false;
+        }
+
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
             return false;
         }
 
@@ -396,6 +404,10 @@ class Auth
             ||
             ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
         ){
+            return $dados;
+        }
+
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
             return $dados;
         }
 
@@ -547,6 +559,11 @@ class Auth
             return;
         }
 
+        if(self::clienteEhPartnerAprovado()){
+            self::validarRotaPartner();
+            return;
+        }
+
         if(self::rotaFinanceiraLiberada()){
             return;
         }
@@ -631,6 +648,15 @@ class Auth
 
         $_SESSION['usuario']['CMS_MensagensMesAtual'] =
             (int) $cliente['CMS_MensagensMesAtual'];
+    }
+
+    private static function validarRotaPartner()
+    {
+        $url=trim((string)($_GET['url'] ?? 'dashboard'),'/');
+        $controller=explode('/',$url)[0] ?? 'dashboard';
+        if(in_array($controller,['dashboard','configuracao','parceiroClientes','conta','login','onboardingSuporte'],true)){ return; }
+        header('Location: '.BASE_URL.'/index.php?url=dashboard');
+        exit;
     }
 
     private static function validarRotaPartnerVinculado()
