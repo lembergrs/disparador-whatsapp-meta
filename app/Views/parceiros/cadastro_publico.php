@@ -30,14 +30,14 @@ function partnerEsc($v){return htmlspecialchars((string)($v ?? ''),ENT_QUOTES,'U
 <div class="form-group col-md-6"><label>E-mail de acesso e financeiro</label><input type="email" name="email" id="emailPartner" class="form-control text-lowercase" autocomplete="email" required value="<?= partnerEsc($d['email']??'') ?>"><div class="invalid-feedback">Informe um e-mail válido.</div></div>
 </div>
 <h5 class="mt-4 mb-3">Endereço fiscal para cobrança e NFS-e</h5><div class="row">
-<div class="form-group col-md-3"><label>CEP</label><input name="cep" class="form-control" required maxlength="9" value="<?= partnerEsc($d['cep']??'') ?>"></div>
-<div class="form-group col-md-7"><label>Logradouro</label><input name="logradouro" class="form-control" required value="<?= partnerEsc($d['logradouro']??'') ?>"></div>
-<div class="form-group col-md-2"><label>Número</label><input name="numero" class="form-control" required value="<?= partnerEsc($d['numero']??'') ?>"></div>
+<div class="form-group col-md-3"><label>CEP</label><input name="cep" id="cepPartner" class="form-control" required maxlength="9" inputmode="numeric" value="<?= partnerEsc($d['cep']??'') ?>"><div class="invalid-feedback" id="erroCepPartner">Informe um CEP válido.</div><small class="form-text text-muted" id="statusCepPartner"></small></div>
+<div class="form-group col-md-7"><label>Logradouro</label><input name="logradouro" id="logradouroPartner" class="form-control" required value="<?= partnerEsc($d['logradouro']??'') ?>"></div>
+<div class="form-group col-md-2"><label>Número</label><input name="numero" id="numeroPartner" class="form-control" required value="<?= partnerEsc($d['numero']??'') ?>"></div>
 <div class="form-group col-md-4"><label>Complemento</label><input name="complemento" class="form-control" value="<?= partnerEsc($d['complemento']??'') ?>"></div>
-<div class="form-group col-md-4"><label>Bairro</label><input name="bairro" class="form-control" required value="<?= partnerEsc($d['bairro']??'') ?>"></div>
-<div class="form-group col-md-4"><label>Município</label><input name="municipio" class="form-control" required value="<?= partnerEsc($d['municipio']??'') ?>"></div>
-<div class="form-group col-md-2"><label>UF</label><input name="uf" class="form-control text-uppercase" maxlength="2" required value="<?= partnerEsc($d['uf']??'') ?>"></div>
-<div class="form-group col-md-3"><label>Código IBGE</label><input name="codigo_ibge" class="form-control" maxlength="7" pattern="\d{7}" required value="<?= partnerEsc($d['codigo_ibge']??'') ?>"><small class="text-muted">7 dígitos do município.</small></div>
+<div class="form-group col-md-4"><label>Bairro</label><input name="bairro" id="bairroPartner" class="form-control" required value="<?= partnerEsc($d['bairro']??'') ?>"></div>
+<div class="form-group col-md-4"><label>Município</label><input name="municipio" id="municipioPartner" class="form-control" required value="<?= partnerEsc($d['municipio']??'') ?>"></div>
+<div class="form-group col-md-2"><label>UF</label><input name="uf" id="ufPartner" class="form-control text-uppercase" maxlength="2" required value="<?= partnerEsc($d['uf']??'') ?>"></div>
+<div class="form-group col-md-3"><label>Código IBGE</label><input name="codigo_ibge" id="codigoIbgePartner" class="form-control" maxlength="7" pattern="\d{7}" required value="<?= partnerEsc($d['codigo_ibge']??'') ?>"><small class="text-muted">7 dígitos do município.</small></div>
 </div>
 <h5 class="mt-4 mb-3">Acesso</h5><div class="row">
 <div class="form-group col-md-6"><label>Senha</label><input type="password" name="senha" id="senhaCadastroPartner" class="form-control" data-password-strength minlength="8" required autocomplete="new-password"><div class="invalid-feedback">A senha deve atender aos requisitos de segurança.</div></div>
@@ -53,8 +53,10 @@ function partnerEsc($v){return htmlspecialchars((string)($v ?? ''),ENT_QUOTES,'U
 <script>
 $(function(){
     const $cnpj=$('#cnpjPartner'), $telefone=$('#telefonePartner'), $email=$('#emailPartner');
+    const $cep=$('#cepPartner');
     $cnpj.inputmask('99.999.999/9999-99');
     $telefone.inputmask('(99) 99999-9999');
+    $cep.inputmask('99999-999');
 
     function numeros(v){ return String(v||'').replace(/\D/g,''); }
     function cnpjValido(v){
@@ -78,6 +80,42 @@ $(function(){
     function validarTelefone(){ return marcar($telefone,telefoneValido($telefone.val())); }
     function validarEmail(){ return marcar($email,emailValido($email.val())); }
 
+    function limparEnderecoCep(){
+        $('#logradouroPartner,#bairroPartner,#municipioPartner,#ufPartner,#codigoIbgePartner').val('');
+    }
+    function consultarCep(){
+        const cep=numeros($cep.val());
+        if(cep.length!==8){
+            marcar($cep,false);
+            $('#statusCepPartner').text('');
+            return;
+        }
+        marcar($cep,true);
+        $('#statusCepPartner').text('Consultando CEP...');
+        $.getJSON('https://viacep.com.br/ws/'+cep+'/json/')
+            .done(function(dados){
+                if(dados.erro){
+                    limparEnderecoCep();
+                    marcar($cep,false);
+                    $('#erroCepPartner').text('CEP não encontrado.');
+                    $('#statusCepPartner').text('');
+                    return;
+                }
+                $('#logradouroPartner').val(dados.logradouro || '');
+                $('#bairroPartner').val(dados.bairro || '');
+                $('#municipioPartner').val(dados.localidade || '');
+                $('#ufPartner').val(dados.uf || '');
+                $('#codigoIbgePartner').val(dados.ibge || '');
+                marcar($cep,true);
+                $('#erroCepPartner').text('Informe um CEP válido.');
+                $('#statusCepPartner').text('Endereço localizado. Confira os dados antes de continuar.');
+                $('#numeroPartner').trigger('focus');
+            })
+            .fail(function(){
+                $('#statusCepPartner').text('Não foi possível consultar o CEP agora. Preencha o endereço manualmente.');
+            });
+    }
+
     $email.on('input',function(){
         const inicio=this.selectionStart, fim=this.selectionEnd;
         this.value=this.value.toLowerCase();
@@ -86,6 +124,8 @@ $(function(){
     $cnpj.on('blur',validarCnpj);
     $telefone.on('blur',validarTelefone);
     $email.on('blur',validarEmail);
+    $cep.on('blur',consultarCep);
+    $cep.on('input',function(){ if(numeros(this.value).length===8){ consultarCep(); } });
 
     $('#formCadastroPartner').on('submit',function(e){
         $email.val($.trim($email.val()).toLowerCase());
