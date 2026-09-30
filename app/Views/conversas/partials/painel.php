@@ -172,7 +172,6 @@ if(!function_exists('formatarNumeroBR')){
                         class="form-control"
                         placeholder="Digite uma mensagem..."
                         autocomplete="off"
-                        required
                     >
 
                     <div class="input-group-append">
