@@ -109,6 +109,8 @@ if(!function_exists('formatarNumeroBR')){
                 method="POST"
                 id="formEnviarMensagem"
                 action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarAjax"
+                data-action-midia="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarMidiaAjax"
+                enctype="multipart/form-data"
             >
 
                 <input
