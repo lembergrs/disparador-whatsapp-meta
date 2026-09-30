@@ -5,6 +5,8 @@ namespace Controllers;
 use Core\Controller;
 use Models\ParceiroApi;
 use Services\PartnerApiAuthService;
+use Services\PartnerMessageService;
+use Services\PartnerApiException;
 
 class ApiV1Controller extends Controller
 {
@@ -53,6 +55,36 @@ class ApiV1Controller extends Controller
                 }, $canais)
             ]
         ]);
+    }
+
+    public function messages()
+    {
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST'){
+            header('Allow: POST');
+            $this->json(['error'=>['code'=>'method_not_allowed','message'=>'Método não permitido.']],405);
+        }
+
+        $parceiro=$this->authService->autenticar();
+        if(!$parceiro){
+            header('WWW-Authenticate: Bearer');
+            $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
+        }
+
+        $raw=file_get_contents('php://input');
+        $dados=json_decode((string)$raw,true);
+        if(!is_array($dados)){
+            $this->json(['error'=>['code'=>'invalid_json','message'=>'Envie um corpo JSON válido.']],400);
+        }
+
+        try{
+            $resultado=(new PartnerMessageService($this->parceiroModel))->enviar($parceiro,$dados);
+            $this->json(['data'=>$resultado],202);
+        }catch(PartnerApiException $e){
+            $this->json(['error'=>['code'=>$e->apiCode(),'message'=>$e->getMessage()]],$e->httpStatus());
+        }catch(\Throwable $e){
+            error_log('Partner API messages: '.$e->getMessage());
+            $this->json(['error'=>['code'=>'internal_error','message'=>'Não foi possível processar o envio.']],500);
+        }
     }
 
     private function json(array $payload, $status = 200)
