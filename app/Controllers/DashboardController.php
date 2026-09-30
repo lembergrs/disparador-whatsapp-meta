@@ -13,6 +13,9 @@ class DashboardController extends Controller
         Auth::check();
 
         $usuario = Auth::usuario();
+        if(Auth::clienteEhPartnerVinculado()){
+            $this->redirect('template');
+        }
         $db = Database::getInstance();
 
         $clientes = 0;
