@@ -161,7 +161,7 @@ href="#"
         <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta#seguranca">
             <i class="fas fa-lock mr-2"></i> Alterar Senha
         </a>
-        <?php if(!$clientePartnerVinculado){ ?>
+        <?php if(!$clientePartnerVinculado && !$clientePartnerAprovado){ ?>
         <div class="dropdown-divider"></div>
         <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=financeiro">
             <i class="fas fa-dollar-sign mr-2"></i> Financeiro
@@ -481,7 +481,7 @@ $usuario = Auth::usuario();
 <li class="nav-item"><a href="<?= BASE_URL; ?>/index.php?url=parceiroClientes" class="nav-link <?= str_contains($url, 'parceiroClientes') ? 'active' : ''; ?>"><i class="nav-icon fas fa-user-plus"></i><p>Clientes Partner</p></a></li>
 <?php } ?>
 
-<?php if($podeGerenciarConta && !$clientePartnerVinculado){ ?>
+<?php if($podeGerenciarConta && !$clientePartnerVinculado && !$clientePartnerAprovado){ ?>
 <li class="nav-item">
     <a href="<?= BASE_URL; ?>/index.php?url=usuario" class="nav-link <?= str_contains($url, 'usuario') ? 'active' : ''; ?>">
         <i class="nav-icon fas fa-users"></i>
@@ -490,7 +490,7 @@ $usuario = Auth::usuario();
 </li>
 <?php } ?>
 
-<?php if(!$clientePartnerVinculado){ ?>
+<?php if(!$clientePartnerVinculado && !$clientePartnerAprovado){ ?>
 <li class="nav-item">
     <a href="<?= BASE_URL; ?>/index.php?url=depoimento" class="nav-link <?= $url === 'depoimento' ? 'active' : ''; ?>">
         <i class="nav-icon fas fa-comment-dots"></i><p>Meu depoimento</p>
@@ -532,6 +532,7 @@ class="nav-link <?= str_contains($url, 'importacao') ? 'active' : ''; ?>"
 </li -->
 <?php } ?>
 
+<?php if(!$clientePartnerAprovado){ ?>
 <li class="nav-item">
 
 <a
@@ -548,8 +549,9 @@ class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
 </a>
 
 </li>
+<?php } ?>
 
-<?php if(!$clientePartnerVinculado){ ?>
+<?php if(!$clientePartnerVinculado && !$clientePartnerAprovado){ ?>
 <li class="nav-item">
 
 <a
