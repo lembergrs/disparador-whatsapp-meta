@@ -18,6 +18,9 @@ partnerAdminAssert(strpos($controller,'listarClientesAutorizaveisAdmin()')!==fal
 partnerAdminAssert(strpos($detail,'Homologação')!==false,'UI deve identificar canal comum como homologação');
 partnerAdminAssert(strpos($model,'m.MTA_ID=?')!==false && strpos($model,'m.MTA_Ativo=\'S\'')!==false,'MTA deve pertencer ao cliente e estar ativo');
 partnerAdminAssert(strpos($detail,'Ela não será exibida novamente')!==false,'UI deve alertar sobre exibição única');
+partnerAdminAssert(strpos($controller,"Session::set('partner_api_key_once',\$segredo)")!==false,'segredo deve usar sessão própria sem competir com flash global');
+partnerAdminAssert(strpos($controller,"Session::remove('partner_api_key_once')")!==false,'segredo deve ser removido da sessão após a primeira leitura');
+partnerAdminAssert(strpos($controller,"Session::flash('partner_api_key_once'")===false,'segredo não deve usar Session::flash, que suporta apenas uma mensagem');
 partnerAdminAssert(strpos($detail,'revogarChave')!==false,'UI deve permitir revogação');
 partnerAdminAssert(strpos($index,'cliente_partner')!==false,'cadastro deve selecionar conta partner');
 partnerAdminAssert(strpos($docs,'Provisionamento de acesso')!==false,'documentação deve explicar provisionamento');
