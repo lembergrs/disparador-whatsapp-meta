@@ -1109,17 +1109,40 @@ document.addEventListener('DOMContentLoaded', function(){
         }
     });
 
+    $(document).on('click', '#btnAnexarMensagem', function(e){
+        e.preventDefault();
+        $('#arquivoMensagem').trigger('click');
+    });
+
+    $(document).on('change', '#arquivoMensagem', function(){
+        const arquivo = this.files && this.files.length ? this.files[0] : null;
+        if(!arquivo){
+            $('#arquivoMensagemSelecionado').addClass('d-none');
+            return;
+        }
+
+        $('#arquivoMensagemSelecionado .nome-arquivo').text(arquivo.name);
+        $('#arquivoMensagemSelecionado').removeClass('d-none');
+        $('#campoMensagem').attr('placeholder', 'Adicione uma legenda (opcional)...').focus();
+    });
+
+    $(document).on('click', '#btnRemoverArquivoMensagem', function(e){
+        e.preventDefault();
+        $('#arquivoMensagem').val('');
+        $('#arquivoMensagemSelecionado').addClass('d-none');
+        $('#campoMensagem').attr('placeholder', 'Digite uma mensagem...').focus();
+    });
+
     $(document).on('submit', '#formEnviarMensagem', function(e){
 
         e.preventDefault();
 
-        let form =
-            $(this);
+        const form = $(this);
+        const mensagem = $('#campoMensagem').val().trim();
+        const inputArquivo = document.getElementById('arquivoMensagem');
+        const temArquivo = !!(inputArquivo && inputArquivo.files && inputArquivo.files.length);
 
-        let mensagem =
-            $('#campoMensagem').val().trim();
-
-        if(mensagem == ''){
+        if(mensagem === '' && !temArquivo){
             return;
         }
 
@@ -1127,58 +1150,50 @@ document.addEventListener('DOMContentLoaded', function(){
             .prop('disabled', true)
             .html('<i class="fas fa-spinner fa-spin"></i>');
 
-        $.ajax({
+        let opcoesAjax = {
+            url: form.attr('action'),
+            method: 'POST',
+            data: form.serialize() + '&csrf_token=' + encodeURIComponent(csrfTokenConversas),
+            dataType: 'json'
+        };
 
-            url:
-                form.attr('action'),
+        if(temArquivo){
+            const dados = new FormData(form.get(0));
+            dados.set('csrf_token', csrfTokenConversas);
+            opcoesAjax.url = form.data('action-midia');
+            opcoesAjax.data = dados;
+            opcoesAjax.processData = false;
+            opcoesAjax.contentType = false;
+        }
 
-            method:
-                'POST',
+        $.ajax(opcoesAjax)
+        .done(function(retorno){
+            if(retorno.sucesso){
+                $('#campoMensagem').val('').attr('placeholder', 'Digite uma mensagem...');
+                $('#arquivoMensagem').val('');
+                $('#arquivoMensagemSelecionado').addClass('d-none');
 
-            data:
-                form.serialize() + '&csrf_token=' + encodeURIComponent(csrfTokenConversas),
-
-            dataType:
-                'json',
-
-            success: function(retorno){
-
-                if(retorno.sucesso){
-
-                    $('#campoMensagem').val('');
-
-                    atualizarMensagens('N', false);
-                    atualizarListaConversas(false);
-
-                }else{
-
-                    alert(
-                        retorno.erro
-                        || 'Erro ao enviar mensagem.'
-                    );
-
-                }
-
-            },
-
-            error: function(){
-
-                alert(
-                    'Erro de comunicação com o servidor.'
-                );
-
-            },
-
-            complete: function(){
-
-                $('#btnEnviarMensagem')
-                    .prop('disabled', false)
-                    .html('<i class="fas fa-paper-plane"></i>');
-
-                $('#campoMensagem').focus();
-
+                atualizarMensagens('N', false);
+                atualizarListaConversas(false);
+                return;
             }
 
+            alert(retorno.erro || 'Erro ao enviar mensagem.');
+        })
+        .fail(function(xhr){
+            const retorno = xhr.responseJSON || {};
+            if(xhr.status === 403 && retorno.acesso_perdido){
+                bloquearConversaPorPerdaDeAcesso();
+                return;
+            }
+            alert(retorno.erro || 'Erro de comunicação com o servidor.');
+        })
+        .always(function(){
+            $('#btnEnviarMensagem')
+                .prop('disabled', false)
+                .html('<i class="fas fa-paper-plane"></i>');
+
+            $('#campoMensagem').focus();
         });
 
     });

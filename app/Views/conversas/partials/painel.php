@@ -109,6 +109,8 @@ if(!function_exists('formatarNumeroBR')){
                 method="POST"
                 id="formEnviarMensagem"
                 action="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarAjax"
+                data-action-midia="<?= rtrim(BASE_URL, '/'); ?>/index.php?url=conversa/enviarMidiaAjax"
+                enctype="multipart/form-data"
             >
 
                 <input
@@ -126,6 +128,22 @@ if(!function_exists('formatarNumeroBR')){
                 <div class="input-group position-relative">
 
                     <div class="input-group-prepend">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            id="btnAnexarMensagem"
+                            title="Anexar arquivo"
+                            aria-label="Anexar arquivo"
+                        >
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input
+                            type="file"
+                            name="arquivo"
+                            id="arquivoMensagem"
+                            class="d-none"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf,.mp4,.3gpp,image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/3gpp"
+                        >
                         <button
                             type="button"
                             class="btn btn-outline-secondary"
@@ -154,7 +172,6 @@ if(!function_exists('formatarNumeroBR')){
                         class="form-control"
                         placeholder="Digite uma mensagem..."
                         autocomplete="off"
-                        required
                     >
 
                     <div class="input-group-append">
@@ -169,6 +186,12 @@ if(!function_exists('formatarNumeroBR')){
 
                     </div>
 
+                </div>
+
+                <div id="arquivoMensagemSelecionado" class="small text-muted mt-1 d-none">
+                    <i class="fas fa-paperclip mr-1"></i>
+                    <span class="nome-arquivo"></span>
+                    <button type="button" class="btn btn-link btn-sm text-danger p-0 ml-2" id="btnRemoverArquivoMensagem">Remover</button>
                 </div>
 
             </form>

@@ -516,6 +516,63 @@ class MetaService
 
 
 
+    public function enviarMidia($numero, $tipo, $mediaId, $caption = '', $filename = '')
+    {
+        $this->validarContaProntaParaEnvio();
+
+        $tipo = strtolower(trim((string) $tipo));
+        $mediaId = trim((string) $mediaId);
+
+        if(!in_array($tipo, ['image', 'video', 'document'], true)){
+            throw new Exception('Tipo de mídia não permitido para envio.');
+        }
+
+        if($mediaId === ''){
+            throw new Exception('Mídia não informada para envio.');
+        }
+
+        $conteudo = ['id' => $mediaId];
+        $caption = trim((string) $caption);
+        if($caption !== ''){
+            $conteudo['caption'] = $caption;
+        }
+
+        if($tipo === 'document' && trim((string) $filename) !== ''){
+            $conteudo['filename'] = basename((string) $filename);
+        }
+
+        $url = rtrim($this->conta['MTA_UrlBase'], '/')
+            . '/' . $this->conta['MTA_PhoneNumberId'] . '/messages';
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $numero,
+            'type' => $tipo,
+            $tipo => $conteudo
+        ];
+
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $this->conta['MTA_Token']
+            ]
+        ]);
+
+        $response = curl_exec($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        curl_close($curl);
+
+        return $this->aplicarMensagemAmigavelErroEnvio([
+            'http_code' => $httpCode,
+            'response' => json_decode($response, true)
+        ]);
+    }
+
     public function enviarReaction($numero, $messageId, $emoji)
     {
         $this->validarContaProntaParaEnvio();
