@@ -209,6 +209,7 @@ class Conversa
             'INSERT INTO conversa_mensagens (' . implode(', ', $colunas) . ') VALUES (' . $placeholders . ')'
         );
         $sql->execute($params);
+        $mensagemId = (int) $this->db->lastInsertId();
 
         $resumo = $this->resumoMensagem($dados);
         if($resumo !== null){
@@ -227,7 +228,7 @@ class Conversa
             }
         }
 
-        return $this->db->lastInsertId();
+        return $mensagemId;
     }
 
     public function buscarMensagemPorMetaIdConta($metaId, $messageId)
