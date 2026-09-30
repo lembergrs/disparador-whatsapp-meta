@@ -189,6 +189,9 @@ class ParceiroApi
               AND pc.CLI_ID = ?
               AND pc.MTA_ID = ?
               AND pc.PAC_Ativo = 'S'
+              AND pc.PAC_Status = 'ativo'
+              AND pc.PAC_FaturavelDesde IS NOT NULL
+              AND (pc.PAC_FaturavelAte IS NULL OR pc.PAC_FaturavelAte > NOW())
               AND m.MTA_Ativo = 'S'
             LIMIT 1
         ");
