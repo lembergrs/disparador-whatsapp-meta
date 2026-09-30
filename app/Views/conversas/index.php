@@ -1010,6 +1010,105 @@ document.addEventListener('DOMContentLoaded', function(){
 
     });
 
+    $(document).on('click', '#btnEmojiMensagem', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+        $('#seletorEmojiMensagem').toggleClass('d-none');
+        $('.reaction-picker-central').remove();
+    });
+
+    $(document).on('click', '.js-inserir-emoji', function(e){
+        e.preventDefault();
+        const campo = document.getElementById('campoMensagem');
+        if(!campo){ return; }
+
+        const emoji = $(this).text();
+        const inicio = typeof campo.selectionStart === 'number' ? campo.selectionStart : campo.value.length;
+        const fim = typeof campo.selectionEnd === 'number' ? campo.selectionEnd : campo.value.length;
+        campo.value = campo.value.substring(0, inicio) + emoji + campo.value.substring(fim);
+        const novaPosicao = inicio + emoji.length;
+        campo.focus();
+        campo.setSelectionRange(novaPosicao, novaPosicao);
+        $('#seletorEmojiMensagem').addClass('d-none');
+    });
+
+    $(document).on('click', '.js-abrir-reactions', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+
+        $('.reaction-picker-central').remove();
+        $('#seletorEmojiMensagem').addClass('d-none');
+
+        const botao = $(this);
+        const mensagemId = botao.data('mensagem-id');
+        const picker = $('<div class="reaction-picker-central bg-white border rounded-pill shadow-sm p-1"></div>');
+        picker.css({
+            position: 'absolute',
+            zIndex: 2000,
+            whiteSpace: 'nowrap'
+        });
+
+        ['👍','❤️','😂','😮','😢','🙏'].forEach(function(emoji){
+            $('<button type="button" class="btn btn-light btn-sm rounded-circle js-enviar-reaction"></button>')
+                .attr('data-mensagem-id', mensagemId)
+                .attr('data-emoji', emoji)
+                .css({fontSize:'20px', width:'38px', height:'38px', padding:0})
+                .text(emoji)
+                .appendTo(picker);
+        });
+
+        $('body').append(picker);
+        const offset = botao.offset();
+        picker.css({
+            top: offset.top - picker.outerHeight() - 4,
+            left: Math.max(8, Math.min(offset.left, $(window).width() - picker.outerWidth() - 8))
+        });
+    });
+
+    $(document).on('click', '.js-enviar-reaction', function(e){
+        e.preventDefault();
+        e.stopPropagation();
+
+        const botao = $(this);
+        const mensagemId = botao.data('mensagem-id');
+        const emoji = botao.data('emoji');
+        botao.closest('.reaction-picker-central').remove();
+
+        $.ajax({
+            url: urlBase + 'conversa/reagirAjax',
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                conversa_id: conversaAberta,
+                mensagem_id: mensagemId,
+                emoji: emoji,
+                csrf_token: csrfTokenConversas
+            }
+        }).done(function(retorno){
+            if(retorno && retorno.sucesso){
+                atualizarMensagens('N', true);
+                return;
+            }
+            alert((retorno && retorno.erro) || 'Erro ao enviar reação.');
+        }).fail(function(xhr){
+            const retorno = xhr.responseJSON || {};
+            if(xhr.status === 403 && retorno.acesso_perdido){
+                bloquearConversaPorPerdaDeAcesso();
+                return;
+            }
+            alert(retorno.erro || 'Erro de comunicação ao enviar reação.');
+        });
+    });
+
+    $(document).on('click', function(e){
+        if(!$(e.target).closest('#seletorEmojiMensagem, #btnEmojiMensagem').length){
+            $('#seletorEmojiMensagem').addClass('d-none');
+        }
+        if(!$(e.target).closest('.reaction-picker-central, .js-abrir-reactions').length){
+            $('.reaction-picker-central').remove();
+        }
+    });
+
     $(document).on('submit', '#formEnviarMensagem', function(e){
 
         e.preventDefault();
