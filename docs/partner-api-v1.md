@@ -232,3 +232,68 @@ O Partner aprovado gera convites no painel em **Clientes Partner**. O link cont�
 O cliente final conclui o próprio cadastro como `cliente_partner_vinculado`, cria seu login e então conecta o próprio WhatsApp pelo Embedded Signup. O cliente vinculado possui painel restrito a configuração do WhatsApp, templates e dados da conta; disparos, campanhas, listas, conversas e financeiro do Disparador não fazem parte desse perfil.
 
 Ao concluir o Embedded Signup, o Disparador cria automaticamente a autorização `PAR_ID + CLI_ID + MTA_ID`. O vínculo só recebe `PAC_Status=ativo` e `PAC_FaturavelDesde` quando o número chega ao estado conectado. Convite ou cadastro sem WhatsApp ativo não entra na contagem faturável.
+
+
+## Envio de mensagens
+
+`POST /index.php?url=api/v1/messages`
+
+Headers:
+
+`Authorization: Bearer <API_KEY>`
+
+`Content-Type: application/json`
+
+### Texto
+
+Texto livre só é aceito quando existe mensagem recebida do destinatário nas últimas 24 horas naquele mesmo cliente/canal.
+
+```json
+{
+  "client_id": 123,
+  "channel_id": 456,
+  "to": "5541999999999",
+  "type": "text",
+  "text": {
+    "body": "Olá! Como posso ajudar?"
+  }
+}
+```
+
+### Template
+
+O template deve existir no Disparador, pertencer ao mesmo `client_id + channel_id` e estar com status `APPROVED`.
+
+```json
+{
+  "client_id": 123,
+  "channel_id": 456,
+  "to": "5541999999999",
+  "type": "template",
+  "template": {
+    "id": 789,
+    "variables": {
+      "nome": "Maria"
+    }
+  }
+}
+```
+
+Templates com header de mídia podem informar `template.header_media` usando os mesmos dados aceitos pelo serviço interno de templates (`media_id`, `link` e, para documento, `filename`).
+
+Resposta aceita:
+
+```json
+{
+  "data": {
+    "message_id": "wamid...",
+    "local_message_id": 321,
+    "status": "accepted",
+    "type": "text"
+  }
+}
+```
+
+Erros usam o formato `{"error":{"code":"...","message":"..."}}`. Códigos iniciais: `unauthorized`, `invalid_json`, `validation_error`, `unsupported_message_type`, `channel_not_authorized`, `channel_not_ready`, `customer_care_window_closed`, `template_not_available`, `meta_send_failed` e `internal_error`.
+
+O endpoint nunca recebe nem retorna token da Meta. A autorização é sempre resolvida pela API key do Partner e pelo vínculo ativo `PAR_ID + CLI_ID + MTA_ID`.
