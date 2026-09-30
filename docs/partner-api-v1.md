@@ -142,6 +142,45 @@ As próximas implementações devem manter:
 - exemplos de request e response neste documento;
 - nenhuma exposição de credenciais Meta.
 
+
+## Ciclo comercial e financeiro
+
+O cadastro Partner utiliza o mesmo cadastro empresarial/fiscal de `clientes` usado pelo financeiro do Disparador. Isso permite que cobrança, confirmação de pagamento e NFS-e permaneçam no fluxo financeiro já existente.
+
+### Estados
+
+O parceiro possui estados independentes de cadastro, implantação e API. Um cliente vinculado somente entra na base faturável quando o vínculo está em `ativo` e possui `PAC_FaturavelDesde`.
+
+Cadastro ou convite, isoladamente, **não gera mensalidade**.
+
+### Implantação
+
+A implantação é uma cobrança de origem `partner_api` e tipo `implantacao_partner`. Ela pertence ao `CLI_ID` do próprio parceiro e pode ser sincronizada com o mesmo provider financeiro usado pelo Disparador.
+
+A liberação para homologação/ativação da API deve ocorrer somente após a confirmação idempotente do pagamento.
+
+### Mensalidade variável
+
+No fechamento de cada competência:
+
+1. contam-se clientes distintos faturáveis do parceiro;
+2. localiza-se a faixa ativa em `parceiro_planos`;
+3. grava-se um snapshot em `parceiro_faturamento_competencias`;
+4. cria-se uma cobrança `mensalidade_partner` vinculada ao parceiro;
+5. alterações posteriores na quantidade de clientes não modificam retroativamente a competência já fechada.
+
+O snapshot registra quantidade, faixa e valor utilizados no cálculo, permitindo auditoria.
+
+### Pagamento e NFS-e
+
+Cobranças Partner são registros da tabela `cobrancas`. Portanto, devem seguir o mesmo ciclo financeiro:
+
+`cobrança local → provider/Asaas → confirmação por webhook ou admin → COB_Status=pago → NFS-e por COB_ID`
+
+A NFS-e continua sendo emitida pela RL2 Net para o tomador identificado pelo `CLI_ID` da cobrança. No caso Partner, o tomador é a empresa parceira pagadora, e não cada cliente final vinculado.
+
+Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do parceiro. A Partner API não cria uma segunda estrutura fiscal.
+
 ## Roadmap da integração
 
 1. administração de parceiros, clientes vinculados e API keys;
