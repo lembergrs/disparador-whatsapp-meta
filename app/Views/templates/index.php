@@ -90,6 +90,12 @@ if(!function_exists('templateHeaderDocumentoNome')){
 }
 
 ?>
+<?php
+$modoPartner = !empty($partnerContexto) && !empty($partnerCliente);
+$rotaTemplate = $modoPartner ? 'parceiroTemplates' : 'template';
+$partnerClienteId = $modoPartner ? (int)($partnerCliente['CLI_ID'] ?? 0) : 0;
+?>
+<?php if($modoPartner){ ?><div class="alert alert-light border"><div class="d-flex justify-content-between align-items-center"><div><strong>Cliente: <?= htmlspecialchars($partnerCliente['CLI_Nome'] ?? '', ENT_QUOTES, 'UTF-8'); ?></strong><br><small class="text-muted">Você está gerenciando somente os templates e contas WhatsApp vinculados a este cliente.</small></div><a class="btn btn-outline-secondary btn-sm" href="<?= BASE_URL; ?>/index.php?url=parceiroClientes">Voltar aos clientes</a></div></div><?php } ?>
 
 <div class="card">
 
@@ -97,9 +103,10 @@ if(!function_exists('templateHeaderDocumentoNome')){
 
 <form
 method="POST"
-action="<?= BASE_URL; ?>/index.php?url=template/sincronizar"
+action="<?= BASE_URL; ?>/index.php?url=<?= $rotaTemplate; ?>/sincronizar"
 class="form-inline"
 >
+<?php if($modoPartner){ ?><input type="hidden" name="cliente_id" value="<?= $partnerClienteId; ?>"><?php } ?>
 
 <select
 name="meta"
@@ -277,7 +284,7 @@ data-header-documento-nome="<?= htmlspecialchars(templateHeaderDocumentoNome($te
 </button>
 
 <a
-href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=template/inativar" data-field-id="<?= (int) $template['TMP_ID']; ?>"
+href="#" data-post-url="<?= BASE_URL; ?>/index.php?url=<?= $rotaTemplate; ?>/inativar" data-field-id="<?= (int) $template['TMP_ID']; ?>" <?= $modoPartner ? 'data-field-cliente_id="' . $partnerClienteId . '"' : ''; ?>
 class="btn btn-danger btn-sm"
 data-confirm="Deseja remover este template da listagem? Ele não será excluído da Meta."
 >
@@ -400,8 +407,9 @@ aria-label="Close"
 <div class="modal fade" id="modalEditarTemplate">
 <div class="modal-dialog">
 <div class="modal-content">
-<form method="POST" action="<?= BASE_URL; ?>/index.php?url=template/editar" enctype="multipart/form-data">
+<form method="POST" action="<?= BASE_URL; ?>/index.php?url=<?= $rotaTemplate; ?>/editar" enctype="multipart/form-data">
     <?= \Core\Csrf::input(); ?>
+    <?php if($modoPartner){ ?><input type="hidden" name="cliente_id" value="<?= $partnerClienteId; ?>"><?php } ?>
     <input type="hidden" name="id" id="editarTemplateId">
     <div class="modal-header">
         <h4 class="modal-title">Editar Template</h4>
@@ -433,11 +441,12 @@ id="modalNovoTemplate"
 
 <form
 method="POST"
-action="<?= BASE_URL; ?>/index.php?url=template/criar"
+action="<?= BASE_URL; ?>/index.php?url=<?= $rotaTemplate; ?>/criar"
 id="formNovoTemplate"
 enctype="multipart/form-data"
 >
 <?= \Core\Csrf::input(); ?>
+<?php if($modoPartner){ ?><input type="hidden" name="cliente_id" value="<?= $partnerClienteId; ?>"><?php } ?>
 
 
 <div class="modal-header">
