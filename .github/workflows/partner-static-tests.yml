@@ -8,6 +8,8 @@ on:
       - 'app/Services/ParceiroFinanceiroService.php'
       - 'app/Services/FinanceiroWorkflowService.php'
       - 'app/Controllers/ParceiroAdminController.php'
+      - 'app/Controllers/ParceiroCadastroController.php'
+      - 'app/Services/ParceiroCadastroService.php'
       - 'app/Views/parceiros/**'
       - 'database/migrations/*partner*'
       - 'docs/partner-api*.md'
@@ -29,6 +31,8 @@ jobs:
           php -l app/Models/ParceiroFinanceiro.php
           php -l app/Services/ParceiroFinanceiroService.php
           php -l app/Services/FinanceiroWorkflowService.php
+          php -l app/Services/ParceiroCadastroService.php
+          php -l app/Controllers/ParceiroCadastroController.php
       - name: Partner static tests
         run: |
           for test in tests/Partner*Test.php; do
