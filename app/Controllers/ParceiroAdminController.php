@@ -35,9 +35,7 @@ class ParceiroAdminController extends Controller
         $parceiro=$this->model->buscarAdmin($id);
         if(!$parceiro){ Session::flash('error','Parceiro não encontrado.'); $this->redirect('parceiroAdmin'); }
 
-        $clientes=array_values(array_filter($this->model->listarClientesDisponiveisAdmin(),function($c){
-            return ($c['CLI_TipoConta'] ?? '') === 'cliente_partner_vinculado';
-        }));
+        $clientes=$this->model->listarClientesAutorizaveisAdmin();
 
         $contas=[];
         foreach($clientes as $cliente){

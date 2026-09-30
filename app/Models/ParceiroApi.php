@@ -39,6 +39,17 @@ class ParceiroApi
         return $this->db->query("SELECT CLI_ID,CLI_Nome,CLI_TipoConta FROM clientes WHERE CLI_Ativo='S' AND CLI_TipoConta IN ('cliente_partner','cliente_partner_vinculado') ORDER BY CLI_Nome")->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listarClientesAutorizaveisAdmin()
+    {
+        return $this->db->query("
+            SELECT CLI_ID,CLI_Nome,CLI_TipoConta
+            FROM clientes
+            WHERE CLI_Ativo='S'
+              AND CLI_TipoConta IN ('cliente','cliente_partner_vinculado')
+            ORDER BY CLI_Nome
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function listarContasClienteAdmin($clienteId)
     {
         $sql=$this->db->prepare("SELECT MTA_ID,MTA_Nome,MTA_NumeroTelefone,MTA_Status FROM meta_contas WHERE CLI_ID=? AND MTA_Ativo='S' ORDER BY MTA_ID DESC");
@@ -60,11 +71,29 @@ class ParceiroApi
             SELECT ?,c.CLI_ID,m.MTA_ID,?,'S'
             FROM clientes c
             INNER JOIN meta_contas m ON m.CLI_ID=c.CLI_ID AND m.MTA_ID=? AND m.MTA_Ativo='S'
-            WHERE c.CLI_ID=? AND c.CLI_TipoConta='cliente_partner_vinculado' AND c.CLI_Ativo='S'
-            ON DUPLICATE KEY UPDATE PAC_IdentificadorExterno=VALUES(PAC_IdentificadorExterno),PAC_Ativo='S'
+            WHERE c.CLI_ID=?
+              AND c.CLI_TipoConta IN ('cliente','cliente_partner_vinculado')
+              AND c.CLI_Ativo='S'
+            ON DUPLICATE KEY UPDATE
+                PAC_IdentificadorExterno=VALUES(PAC_IdentificadorExterno),
+                PAC_Ativo='S'
         ");
         $sql->execute([(int)$parceiroId,$identificadorExterno ?: null,(int)$metaId,(int)$clienteId]);
-        if($sql->rowCount() < 1){ throw new \RuntimeException('Cliente/número inválido para vínculo partner.'); }
+
+        // Cliente normal só pode ser autorizado pelo admin para homologação.
+        // Ele não vira cliente Partner, não entra no faturamento e mantém seu acesso original.
+        $this->db->prepare("
+            UPDATE parceiro_clientes pc
+            INNER JOIN clientes c ON c.CLI_ID=pc.CLI_ID
+            SET pc.PAC_Status='ativo',
+                pc.PAC_FaturavelDesde=NULL,
+                pc.PAC_FaturavelAte=NULL
+            WHERE pc.PAR_ID=? AND pc.CLI_ID=? AND pc.MTA_ID=?
+              AND c.CLI_TipoConta='cliente'
+        ")->execute([(int)$parceiroId,(int)$clienteId,(int)$metaId]);
+        $check=$this->db->prepare("SELECT PAC_ID FROM parceiro_clientes WHERE PAR_ID=? AND CLI_ID=? AND MTA_ID=? AND PAC_Ativo='S' LIMIT 1");
+        $check->execute([(int)$parceiroId,(int)$clienteId,(int)$metaId]);
+        if(!$check->fetchColumn()){ throw new \RuntimeException('Cliente/número inválido para vínculo partner.'); }
     }
 
     public function inativarVinculoAdmin($parceiroId, $vinculoId)
@@ -152,6 +181,7 @@ class ParceiroApi
                 pc.CLI_ID,
                 pc.MTA_ID,
                 pc.PAC_IdentificadorExterno,
+                c.CLI_TipoConta,
                 m.MTA_Nome,
                 m.MTA_NumeroTelefone,
                 m.MTA_Status,
@@ -159,7 +189,7 @@ class ParceiroApi
             FROM parceiro_clientes pc
             INNER JOIN clientes c
                 ON c.CLI_ID = pc.CLI_ID
-               AND c.CLI_TipoConta = 'cliente_partner_vinculado'
+               AND c.CLI_TipoConta IN ('cliente','cliente_partner_vinculado')
                AND c.CLI_Ativo = 'S'
             INNER JOIN meta_contas m
                 ON m.MTA_ID = pc.MTA_ID
@@ -180,7 +210,7 @@ class ParceiroApi
             FROM parceiro_clientes pc
             INNER JOIN clientes c
                 ON c.CLI_ID = pc.CLI_ID
-               AND c.CLI_TipoConta = 'cliente_partner_vinculado'
+               AND c.CLI_TipoConta IN ('cliente','cliente_partner_vinculado')
                AND c.CLI_Ativo = 'S'
             INNER JOIN meta_contas m
                 ON m.MTA_ID = pc.MTA_ID
@@ -190,8 +220,14 @@ class ParceiroApi
               AND pc.MTA_ID = ?
               AND pc.PAC_Ativo = 'S'
               AND pc.PAC_Status = 'ativo'
-              AND pc.PAC_FaturavelDesde IS NOT NULL
-              AND (pc.PAC_FaturavelAte IS NULL OR pc.PAC_FaturavelAte > NOW())
+              AND (
+                    c.CLI_TipoConta = 'cliente'
+                    OR (
+                        c.CLI_TipoConta = 'cliente_partner_vinculado'
+                        AND pc.PAC_FaturavelDesde IS NOT NULL
+                        AND (pc.PAC_FaturavelAte IS NULL OR pc.PAC_FaturavelAte > NOW())
+                    )
+                  )
               AND m.MTA_Ativo = 'S'
             LIMIT 1
         ");
