@@ -337,6 +337,10 @@ class Auth
         self::atualizarStatusCliente();
         $usuario = self::usuario();
 
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
+            return false;
+        }
+
         return (
             ($usuario['CLI_StatusCadastro'] ?? null) == 'ativo'
             &&
@@ -361,6 +365,10 @@ class Auth
             ||
             empty($usuario['CLI_DataLiberacao'])
         ){
+            return false;
+        }
+
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
             return false;
         }
 
@@ -396,6 +404,10 @@ class Auth
             ||
             ($usuario['CLI_StatusCadastro'] ?? null) != 'ativo'
         ){
+            return $dados;
+        }
+
+        if(self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado()){
             return $dados;
         }
 
