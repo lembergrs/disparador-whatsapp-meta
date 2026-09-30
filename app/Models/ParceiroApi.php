@@ -91,7 +91,9 @@ class ParceiroApi
             WHERE pc.PAR_ID=? AND pc.CLI_ID=? AND pc.MTA_ID=?
               AND c.CLI_TipoConta='cliente'
         ")->execute([(int)$parceiroId,(int)$clienteId,(int)$metaId]);
-        if($sql->rowCount() < 1){ throw new \RuntimeException('Cliente/número inválido para vínculo partner.'); }
+        $check=$this->db->prepare("SELECT PAC_ID FROM parceiro_clientes WHERE PAR_ID=? AND CLI_ID=? AND MTA_ID=? AND PAC_Ativo='S' LIMIT 1");
+        $check->execute([(int)$parceiroId,(int)$clienteId,(int)$metaId]);
+        if(!$check->fetchColumn()){ throw new \RuntimeException('Cliente/número inválido para vínculo partner.'); }
     }
 
     public function inativarVinculoAdmin($parceiroId, $vinculoId)
