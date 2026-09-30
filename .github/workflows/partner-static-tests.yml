@@ -9,6 +9,9 @@ on:
       - 'app/Services/FinanceiroWorkflowService.php'
       - 'app/Controllers/ParceiroAdminController.php'
       - 'app/Controllers/ParceiroCadastroController.php'
+      - 'app/Core/Auth.php'
+      - 'app/Controllers/ConfiguracaoController.php'
+      - 'app/Models/MetaConta.php'
       - 'app/Services/ParceiroCadastroService.php'
       - 'app/Views/parceiros/**'
       - 'database/migrations/*partner*'
@@ -33,6 +36,9 @@ jobs:
           php -l app/Services/FinanceiroWorkflowService.php
           php -l app/Services/ParceiroCadastroService.php
           php -l app/Controllers/ParceiroCadastroController.php
+          php -l app/Core/Auth.php
+          php -l app/Controllers/ConfiguracaoController.php
+          php -l app/Models/MetaConta.php
       - name: Partner static tests
         run: |
           for test in tests/Partner*Test.php; do

@@ -157,6 +157,14 @@ A aprovação é administrativa. Enquanto `PAR_StatusCadastro` não for `aprovad
 
 A aprovação do cadastro não cria cobrança automaticamente. A validação inicial (inclusive Coexistence, quando aplicável) permanece anterior à cobrança de implantação.
 
+### Número próprio do parceiro
+
+Depois da aprovação administrativa, o `cliente_partner` também pode operar como conta do Disparador para conectar **o número WhatsApp da própria empresa** em `Configuração > Números WhatsApp`. O Embedded Signup usa o mesmo fluxo seguro já existente para clientes, incluindo Coexistence quando elegível.
+
+A autorização especial vale apenas para o primeiro número próprio do Partner enquanto ele ainda não possui um plano Disparador comum. O número é persistido em `meta_contas` com o `CLI_ID` do próprio `cliente_partner`.
+
+Isso não mistura os clientes do integrador com a conta dele: números de clientes finais continuam pertencendo aos respectivos `cliente_partner_vinculado` e são autorizados separadamente em `parceiro_clientes`.
+
 ## Ciclo comercial e financeiro
 
 O cadastro Partner utiliza o mesmo cadastro empresarial/fiscal de `clientes` usado pelo financeiro do Disparador. Isso permite que cobrança, confirmação de pagamento e NFS-e permaneçam no fluxo financeiro já existente.
