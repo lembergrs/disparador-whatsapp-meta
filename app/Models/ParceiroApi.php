@@ -28,6 +28,10 @@ class ParceiroApi
                 p.PAR_WebhookUrl
             FROM parceiro_api_keys k
             INNER JOIN parceiros_api p ON p.PAR_ID = k.PAR_ID
+            INNER JOIN clientes cp
+                ON cp.CLI_ID = p.CLI_ID
+               AND cp.CLI_TipoConta = 'cliente_partner'
+               AND cp.CLI_Ativo = 'S'
             WHERE k.PAK_Hash = ?
               AND k.PAK_Ativo = 'S'
               AND k.PAK_RevogadaEm IS NULL
@@ -61,6 +65,10 @@ class ParceiroApi
                 m.MTA_Status,
                 m.MTA_OnboardingType
             FROM parceiro_clientes pc
+            INNER JOIN clientes c
+                ON c.CLI_ID = pc.CLI_ID
+               AND c.CLI_TipoConta = 'cliente_partner_vinculado'
+               AND c.CLI_Ativo = 'S'
             INNER JOIN meta_contas m
                 ON m.MTA_ID = pc.MTA_ID
                AND m.CLI_ID = pc.CLI_ID
@@ -78,6 +86,10 @@ class ParceiroApi
         $sql = $this->db->prepare("
             SELECT pc.*, m.MTA_Status, m.MTA_NumeroTelefone
             FROM parceiro_clientes pc
+            INNER JOIN clientes c
+                ON c.CLI_ID = pc.CLI_ID
+               AND c.CLI_TipoConta = 'cliente_partner_vinculado'
+               AND c.CLI_Ativo = 'S'
             INNER JOIN meta_contas m
                 ON m.MTA_ID = pc.MTA_ID
                AND m.CLI_ID = pc.CLI_ID
