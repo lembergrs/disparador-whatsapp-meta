@@ -483,7 +483,7 @@ class Auth
         $clienteId = (int) ($clienteId ?? ($usuario['CLI_ID'] ?? 0));
         if($clienteId <= 0){ return false; }
         $db = Database::getInstance();
-        $sql = $db->prepare("SELECT 1 FROM clientes c INNER JOIN parceiro_convites i ON i.CLI_ID=c.CLI_ID AND i.PCI_Status='aceito' INNER JOIN parceiros_api p ON p.PAR_ID=i.PAR_ID AND p.PAR_Ativo='S' AND p.PAR_StatusCadastro='aprovado' WHERE c.CLI_ID=? AND c.CLI_TipoConta='cliente_partner_vinculado' AND c.CLI_Ativo='S' AND c.CLI_StatusCadastro='ativo' LIMIT 1");
+        $sql = $db->prepare("SELECT 1 FROM clientes WHERE CLI_ID=? AND CLI_TipoConta='cliente_partner_vinculado' AND CLI_Ativo='S' AND CLI_StatusCadastro='ativo' LIMIT 1");
         $sql->execute([$clienteId]);
         return (bool) $sql->fetchColumn();
     }
