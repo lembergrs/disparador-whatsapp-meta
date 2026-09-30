@@ -123,7 +123,29 @@ if(!function_exists('formatarNumeroBR')){
                     value="<?= htmlspecialchars(\Core\Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>"
                 >
 
-                <div class="input-group">
+                <div class="input-group position-relative">
+
+                    <div class="input-group-prepend">
+                        <button
+                            type="button"
+                            class="btn btn-outline-secondary"
+                            id="btnEmojiMensagem"
+                            title="Inserir emoji"
+                            aria-label="Inserir emoji"
+                        >
+                            <i class="far fa-smile"></i>
+                        </button>
+                    </div>
+
+                    <div
+                        id="seletorEmojiMensagem"
+                        class="bg-white border rounded shadow-sm p-2 d-none"
+                        style="position:absolute;bottom:44px;left:0;z-index:1050;width:250px;"
+                    >
+                        <?php foreach(['😀','😃','😄','😁','😂','🤣','😊','😍','🥰','😘','😉','😎','🤔','😢','😭','😡','👍','👎','👏','🙏','❤️','🔥','🎉','✅','👀'] as $emoji){ ?>
+                            <button type="button" class="btn btn-light btn-sm js-inserir-emoji" style="font-size:20px;width:38px;height:38px;padding:0;"><?= htmlspecialchars($emoji, ENT_QUOTES, 'UTF-8'); ?></button>
+                        <?php } ?>
+                    </div>
 
                     <input
                         type="text"
