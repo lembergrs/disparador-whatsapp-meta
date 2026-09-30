@@ -4,6 +4,8 @@ use Core\Auth;
 use Models\Conversa;
 
 $usuario = Auth::usuario();
+$clientePartnerVinculado = $usuario && Auth::nivelCliente($usuario['nivel'] ?? null) ? Auth::clienteEhPartnerVinculado() : false;
+$clientePartnerAprovado = $usuario && Auth::nivelCliente($usuario['nivel'] ?? null) ? Auth::clienteEhPartnerAprovado() : false;
 
 $url = $_GET['url'] ?? 'dashboard';
 
@@ -159,10 +161,12 @@ href="#"
         <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=conta#seguranca">
             <i class="fas fa-lock mr-2"></i> Alterar Senha
         </a>
+        <?php if(!$clientePartnerVinculado){ ?>
         <div class="dropdown-divider"></div>
         <a class="dropdown-item" href="<?= BASE_URL; ?>/index.php?url=financeiro">
             <i class="fas fa-dollar-sign mr-2"></i> Financeiro
         </a>
+        <?php } ?>
         <div class="dropdown-divider"></div>
         <form method="post" action="<?= BASE_URL; ?>/index.php?url=login/sair" class="m-0">
             <button type="submit" class="dropdown-item">
@@ -473,7 +477,11 @@ $usuario = Auth::usuario();
 </li>
 <?php } ?>
 
-<?php if($podeGerenciarConta){ ?>
+<?php if($clientePartnerAprovado){ ?>
+<li class="nav-item"><a href="<?= BASE_URL; ?>/index.php?url=parceiroClientes" class="nav-link <?= str_contains($url, 'parceiroClientes') ? 'active' : ''; ?>"><i class="nav-icon fas fa-user-plus"></i><p>Clientes Partner</p></a></li>
+<?php } ?>
+
+<?php if($podeGerenciarConta && !$clientePartnerVinculado){ ?>
 <li class="nav-item">
     <a href="<?= BASE_URL; ?>/index.php?url=usuario" class="nav-link <?= str_contains($url, 'usuario') ? 'active' : ''; ?>">
         <i class="nav-icon fas fa-users"></i>
@@ -482,6 +490,7 @@ $usuario = Auth::usuario();
 </li>
 <?php } ?>
 
+<?php if(!$clientePartnerVinculado){ ?>
 <li class="nav-item">
     <a href="<?= BASE_URL; ?>/index.php?url=depoimento" class="nav-link <?= $url === 'depoimento' ? 'active' : ''; ?>">
         <i class="nav-icon fas fa-comment-dots"></i><p>Meu depoimento</p>
@@ -521,6 +530,7 @@ class="nav-link <?= str_contains($url, 'importacao') ? 'active' : ''; ?>"
 </a>
 
 </li -->
+<?php } ?>
 
 <li class="nav-item">
 
@@ -539,6 +549,7 @@ class="nav-link <?= str_contains($url, 'template') ? 'active' : ''; ?>"
 
 </li>
 
+<?php if(!$clientePartnerVinculado){ ?>
 <li class="nav-item">
 
 <a
@@ -611,6 +622,7 @@ Conversas
 </a>
 
 </li>
+<?php } ?>
 
 <?php } ?>
 
