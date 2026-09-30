@@ -473,6 +473,17 @@ class Auth
         return (bool) $sql->fetchColumn();
     }
 
+    public static function clienteEhPartnerVinculado($clienteId = null)
+    {
+        $usuario = self::usuario();
+        $clienteId = (int) ($clienteId ?? ($usuario['CLI_ID'] ?? 0));
+        if($clienteId <= 0){ return false; }
+        $db = Database::getInstance();
+        $sql = $db->prepare("SELECT 1 FROM clientes c INNER JOIN parceiro_convites i ON i.CLI_ID=c.CLI_ID AND i.PCI_Status='aceito' INNER JOIN parceiros_api p ON p.PAR_ID=i.PAR_ID AND p.PAR_Ativo='S' AND p.PAR_StatusCadastro='aprovado' WHERE c.CLI_ID=? AND c.CLI_TipoConta='cliente_partner_vinculado' AND c.CLI_Ativo='S' AND c.CLI_StatusCadastro='ativo' LIMIT 1");
+        $sql->execute([$clienteId]);
+        return (bool) $sql->fetchColumn();
+    }
+
     public static function clientePodeConectarMeta()
     {
         $usuario = self::usuario();
@@ -493,7 +504,7 @@ class Auth
 
         $usuario = self::usuario();
 
-        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado();
+        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado() || self::clienteEhPartnerVinculado();
     }
 
     public static function podeConectarPrimeiroNumero($clienteId, $numerosAtivos)
@@ -510,7 +521,7 @@ class Auth
             return false;
         }
 
-        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado($clienteId);
+        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado($clienteId) || self::clienteEhPartnerVinculado($clienteId);
     }
 
     public static function validarBloqueioFinanceiro()
@@ -526,6 +537,11 @@ class Auth
         }
 
         self::atualizarStatusCliente();
+
+        if(self::clienteEhPartnerVinculado()){
+            self::validarRotaPartnerVinculado();
+            return;
+        }
 
         if(self::rotaFinanceiraLiberada()){
             return;
@@ -613,6 +629,15 @@ class Auth
             (int) $cliente['CMS_MensagensMesAtual'];
     }
 
+    private static function validarRotaPartnerVinculado()
+    {
+        $url=trim((string)($_GET['url'] ?? 'dashboard'),'/');
+        $controller=explode('/',$url)[0] ?? 'dashboard';
+        if(in_array($controller,['dashboard','template','configuracao','conta','login','onboardingSuporte'],true)){ return; }
+        header('Location: '.BASE_URL.'/index.php?url=template');
+        exit;
+    }
+
     private static function rotaFinanceiraLiberada()
     {
         $url = trim(
@@ -654,6 +679,10 @@ class Auth
 
         if($controller == 'configuracao'){
             return self::clientePodeConectarMeta();
+        }
+
+        if($controller == 'parceiroClientes'){
+            return self::clienteEhPartnerAprovado();
         }
 
         return false;
