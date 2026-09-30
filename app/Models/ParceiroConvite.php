@@ -42,6 +42,27 @@ class ParceiroConvite
         return $q->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function buscarClienteGerenciavel($parceiroId,$clienteId)
+    {
+        $q=$this->db->prepare("SELECT c.CLI_ID,c.CLI_Nome,c.CLI_Email FROM parceiro_convites i INNER JOIN clientes c ON c.CLI_ID=i.CLI_ID WHERE i.PAR_ID=? AND i.CLI_ID=? AND i.PCI_Status='aceito' AND c.CLI_TipoConta='cliente_partner_vinculado' AND c.CLI_Ativo='S' AND c.CLI_StatusCadastro='ativo' LIMIT 1");
+        $q->execute([(int)$parceiroId,(int)$clienteId]);
+        return $q->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function listarCanaisGerenciaveis($parceiroId,$clienteId)
+    {
+        $q=$this->db->prepare("SELECT DISTINCT m.MTA_ID,m.MTA_Nome,m.MTA_NumeroTelefone,m.MTA_Status FROM parceiro_clientes pc INNER JOIN meta_contas m ON m.MTA_ID=pc.MTA_ID AND m.CLI_ID=pc.CLI_ID WHERE pc.PAR_ID=? AND pc.CLI_ID=? AND pc.PAC_Ativo='S' AND m.MTA_Ativo='S' ORDER BY m.MTA_ID DESC");
+        $q->execute([(int)$parceiroId,(int)$clienteId]);
+        return $q->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function buscarCanalGerenciavel($parceiroId,$clienteId,$metaId)
+    {
+        $q=$this->db->prepare("SELECT m.* FROM parceiro_clientes pc INNER JOIN meta_contas m ON m.MTA_ID=pc.MTA_ID AND m.CLI_ID=pc.CLI_ID WHERE pc.PAR_ID=? AND pc.CLI_ID=? AND pc.MTA_ID=? AND pc.PAC_Ativo='S' AND m.MTA_Ativo='S' LIMIT 1");
+        $q->execute([(int)$parceiroId,(int)$clienteId,(int)$metaId]);
+        return $q->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
     public function buscarPorToken($token)
     {
         $hash=hash('sha256',(string)$token);
