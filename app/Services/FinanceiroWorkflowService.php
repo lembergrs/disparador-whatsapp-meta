@@ -304,6 +304,10 @@ class FinanceiroWorkflowService
                 $this->cobrancas->atualizarIntegracaoProvider($cobranca['COB_ID'], ['status'=>'vencido']);
                 $resultado['cobrancas_vencidas']++;
                 $clienteId = (int) $cobranca['CLI_ID'];
+                if(($cobranca['COB_Origem'] ?? '') === 'partner_api'){
+                    $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'vencido');
+                    return;
+                }
                 if(!isset($clientes[$clienteId])){
                     $this->clientes->atualizarEstadoFinanceiro($clienteId, ['status_pagamento'=>'pendente']);
                     $clientes[$clienteId] = true;
