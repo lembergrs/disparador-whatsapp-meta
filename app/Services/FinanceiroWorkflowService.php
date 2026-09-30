@@ -8,6 +8,7 @@ use Models\Cobranca;
 use Models\FinanceiroTransacao;
 use Models\MetaConta;
 use Models\Plano;
+use Models\ParceiroFinanceiro;
 use Services\Indicacao\IndicacaoDescontoService;
 use Services\Indicacao\IndicacaoAuditoriaService;
 use Services\Indicacao\IndicacaoPrimeiroPagamentoService;
@@ -27,6 +28,7 @@ class FinanceiroWorkflowService
     private $primeiroPagamentoIndicacao;
     private $descontoBoasVindas;
     private $notificacoesFinanceiras;
+    private $parceiroFinanceiro;
 
     public function __construct($clientes = null, $assinaturas = null, $cobrancas = null, $planos = null, $asaas = null, $recorrencia = null, $transacao = null, $metas = null, $descontosIndicacao = null, $auditoriaIndicacao = null, $primeiroPagamentoIndicacao = null, $descontoBoasVindas = null, $notificacoesFinanceiras = null)
     {
@@ -43,6 +45,7 @@ class FinanceiroWorkflowService
         $this->primeiroPagamentoIndicacao = $primeiroPagamentoIndicacao;
         $this->descontoBoasVindas = $descontoBoasVindas ?: new DescontoBoasVindasService($this->cobrancas);
         $this->notificacoesFinanceiras = $notificacoesFinanceiras;
+        $this->parceiroFinanceiro = new ParceiroFinanceiro();
     }
 
     public function contratarPlano(int $clienteId, int $planoId, string $ciclo): array
@@ -180,9 +183,9 @@ class FinanceiroWorkflowService
             if(!$this->cobrancas->marcarPago($cobrancaId)){
                 throw new \RuntimeException('Não foi possível lançar o pagamento.');
             }
-            $this->ativarAssinaturaDaCobranca($cobranca);
+            $this->aplicarPagamentoDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
-            $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+            if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
             $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado($cobrancaId, $situacaoAnterior);
         });
         $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
@@ -227,13 +230,15 @@ class FinanceiroWorkflowService
 
             if($status === 'pago'){
                 $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
-                $this->ativarAssinaturaDaCobranca($cobranca);
+                $this->aplicarPagamentoDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
-                $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
                 $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado((int)$cobranca['COB_ID'], $situacaoAnterior);
             }elseif($status === 'vencido'){
+                $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'vencido');
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($status === 'cancelado' && strtolower((string) $atualizada['COB_Status']) !== 'pago'){
+                $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'cancelado');
                 $this->liberarDescontoIndicacao($atualizada, 'cobranca_cancelada_provider');
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pendente']);
             }elseif($evento === 'PAYMENT_REFUNDED'){
@@ -852,6 +857,27 @@ class FinanceiroWorkflowService
     {
         $proxima = $this->recorrencia->calcularProximaData($assinatura['ASS_Ciclo'], $cicloProcessado);
         $this->assinaturas->avancarProximaCobrancaSeCiclo($assinatura['ASS_ID'], $cicloProcessado, $proxima);
+    }
+
+    public function integrarCobrancaPartner(int $cobrancaId, string $descricao): array
+    {
+        $cobranca=$this->cobrancas->buscar($cobrancaId);
+        if(!$cobranca || ($cobranca['COB_Origem'] ?? '') !== 'partner_api'){
+            throw new \DomainException('Cobrança Partner inválida.');
+        }
+        return $this->integrarCobrancaAsaas((int)$cobranca['CLI_ID'],$cobrancaId,[
+            'PLA_Publico'=>'N',
+            'PLA_Nome'=>$descricao
+        ],'mensal');
+    }
+
+    private function aplicarPagamentoDaCobranca(array $cobranca): void
+    {
+        if(($cobranca['COB_Origem'] ?? '') === 'partner_api'){
+            $this->parceiroFinanceiro->marcarPagamentoPartner($cobranca);
+            return;
+        }
+        $this->ativarAssinaturaDaCobranca($cobranca);
     }
 
     private function ativarAssinaturaDaCobranca(array $cobranca): void

@@ -10,12 +10,14 @@ class ParceiroFinanceiroService
     private $db;
     private $financeiro;
     private $cobrancas;
+    private $workflow;
 
-    public function __construct($financeiro=null,$cobrancas=null,$db=null)
+    public function __construct($financeiro=null,$cobrancas=null,$db=null,$workflow=null)
     {
         $this->db=$db ?: Database::getInstance();
         $this->financeiro=$financeiro ?: new ParceiroFinanceiro($this->db);
         $this->cobrancas=$cobrancas ?: new Cobranca();
+        $this->workflow=$workflow;
     }
 
     public function calcularCompetencia($parceiroId,$competencia=null)
@@ -37,29 +39,40 @@ class ParceiroFinanceiroService
         $parceiro=$this->buscarParceiro($parceiroId);
         $assinatura=$this->financeiro->assinaturaAtiva($parceiroId);
         if(!$assinatura){ throw new \DomainException('Crie a assinatura Partner antes da cobrança de implantação.'); }
-        return (int)$this->cobrancas->criar([
-            'cliente'=>(int)$parceiro['CLI_ID'],'plano'=>null,'valor'=>$valor,'vencimento'=>$vencimento,
+        $cobrancaId=(int)$this->cobrancas->criar([
+            'cliente'=>(int)$parceiro['CLI_ID'],'plano'=>null,'valor'=>$valor,'vencimento'=>$vencimento,'vencimento_efetivo'=>$vencimento,
             'tipo'=>'implantacao_partner','parceiro'=>$parceiroId,'assinatura_partner'=>(int)$assinatura['PAS_ID'],
             'origem'=>'partner_api','provider'=>'asaas','provider_status'=>'local_pendente'
         ]);
+        $this->db->prepare("UPDATE parceiros_api SET PAR_StatusImplantacao='aguardando_pagamento',PAR_StatusApi='bloqueada' WHERE PAR_ID=?")->execute([(int)$parceiroId]);
+        $integracao=$this->workflow()->integrarCobrancaPartner($cobrancaId,'Implantação Partner API');
+        return ['cobranca_id'=>$cobrancaId,'integracao'=>$integracao];
     }
 
     public function criarCobrancaMensal($parceiroId,$competencia=null,$vencimento=null)
     {
         $calculo=$this->calcularCompetencia($parceiroId,$competencia);
         $snapshot=$this->financeiro->buscarCompetencia($calculo['competencia_id']);
-        if(!empty($snapshot['COB_ID'])){ return (int)$snapshot['COB_ID']; }
+        if(!empty($snapshot['COB_ID'])){ return ['cobranca_id'=>(int)$snapshot['COB_ID'],'integracao'=>['sucesso'=>true,'reconciliada'=>true],'calculo'=>$calculo]; }
 
         $parceiro=$this->buscarParceiro($parceiroId);
         $assinatura=$this->financeiro->assinaturaAtiva($parceiroId);
         $cobrancaId=(int)$this->cobrancas->criar([
             'cliente'=>(int)$parceiro['CLI_ID'],'plano'=>null,'valor'=>$calculo['valor'],
             'vencimento'=>$vencimento ?: date('Y-m-d',strtotime('+3 days')),
+            'vencimento_efetivo'=>$vencimento ?: date('Y-m-d',strtotime('+3 days')),
             'tipo'=>'mensalidade_partner','parceiro'=>$parceiroId,'assinatura_partner'=>(int)$assinatura['PAS_ID'],
             'origem'=>'partner_api','provider'=>'asaas','provider_status'=>'local_pendente'
         ]);
         $this->financeiro->vincularCobrancaCompetencia($calculo['competencia_id'],$cobrancaId);
-        return $cobrancaId;
+        $integracao=$this->workflow()->integrarCobrancaPartner($cobrancaId,'Mensalidade Partner API');
+        return ['cobranca_id'=>$cobrancaId,'integracao'=>$integracao,'calculo'=>$calculo];
+    }
+
+    private function workflow()
+    {
+        if(!$this->workflow){ $this->workflow=new FinanceiroWorkflowService(); }
+        return $this->workflow;
     }
 
     private function buscarParceiro($id)

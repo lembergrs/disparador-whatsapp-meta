@@ -157,7 +157,9 @@ Cadastro ou convite, isoladamente, **não gera mensalidade**.
 
 A implantação é uma cobrança de origem `partner_api` e tipo `implantacao_partner`. Ela pertence ao `CLI_ID` do próprio parceiro e pode ser sincronizada com o mesmo provider financeiro usado pelo Disparador.
 
-A liberação para homologação/ativação da API deve ocorrer somente após a confirmação idempotente do pagamento.
+A liberação para homologação/ativação da API ocorre somente após a confirmação idempotente do pagamento. A cobrança é sincronizada com o Asaas pelo mesmo workflow financeiro do Disparador. Quando a implantação é confirmada, `PAR_StatusImplantacao` passa para `paga` e uma API ainda bloqueada passa para `homologacao`.
+
+Cobranças Partner são identificadas por `COB_Origem=partner_api`. O webhook financeiro distingue essas cobranças das assinaturas comuns: Partner atualiza `PAS_ID`/`parceiro_*`; cobranças normais continuam atualizando `ASS_ID`/`assinaturas`.
 
 ### Mensalidade variável
 
