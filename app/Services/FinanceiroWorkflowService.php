@@ -185,7 +185,7 @@ class FinanceiroWorkflowService
             }
             $this->aplicarPagamentoDaCobranca($cobranca);
             $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago', 'status_cadastro'=>'ativo', 'liberar_se_vazio'=>true]);
-            $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+            if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
             $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado($cobrancaId, $situacaoAnterior);
         });
         $this->log('pagamento_manual', ['cobranca_id'=>$cobrancaId, 'origem'=>'manual', 'valor_pago_centavos'=>$valorPagoCentavos, 'decisao_indicacao'=>$decisaoIndicacao, 'valor_divergente'=>$divergente, 'usuario_id'=>$usuarioId]);
@@ -232,7 +232,7 @@ class FinanceiroWorkflowService
                 $this->reconciliarDescontoIndicacaoNoPagamento($atualizada, $payment);
                 $this->aplicarPagamentoDaCobranca($cobranca);
                 $this->clientes->atualizarEstadoFinanceiro($cobranca['CLI_ID'], ['status_pagamento'=>'pago','status_cadastro'=>'ativo','ativo'=>'S']);
-                $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now'));
+                if(($cobranca['COB_Origem'] ?? '') !== 'partner_api'){ $this->processarIndicacaoNoPrimeiroPagamento($cobranca, new \DateTimeImmutable('now')); }
                 $this->servicoNotificacoesFinanceiras()->agendarPagamentoConfirmado((int)$cobranca['COB_ID'], $situacaoAnterior);
             }elseif($status === 'vencido'){
                 $this->parceiroFinanceiro->marcarStatusCobrancaPartner($cobranca, 'vencido');
