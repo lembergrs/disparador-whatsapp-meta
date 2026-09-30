@@ -548,6 +548,13 @@ class TemplateMeta
 
 
 
+    public function listarPorClienteConta($clienteId,$metaId)
+    {
+        $sql=$this->db->prepare("SELECT t.*,m.MTA_Nome FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=? AND t.MTA_ID=? AND t.TMP_Ativo='S' AND m.MTA_Ativo='S' ORDER BY t.TMP_ID DESC");
+        $sql->execute([(int)$clienteId,(int)$metaId]);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function listarAprovadosParaEnvioPorCliente($clienteId)
     {
         $sql = $this->db->prepare("
