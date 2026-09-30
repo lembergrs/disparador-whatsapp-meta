@@ -445,6 +445,34 @@ class Auth
         return $dados;
     }
 
+    public static function clienteEhPartnerAprovado($clienteId = null)
+    {
+        $usuario = self::usuario();
+        $clienteId = (int) ($clienteId ?? ($usuario['CLI_ID'] ?? 0));
+
+        if($clienteId <= 0){
+            return false;
+        }
+
+        $db = Database::getInstance();
+        $sql = $db->prepare("
+            SELECT 1
+            FROM clientes c
+            INNER JOIN parceiros_api p
+                ON p.CLI_ID = c.CLI_ID
+               AND p.PAR_Ativo = 'S'
+               AND p.PAR_StatusCadastro = 'aprovado'
+            WHERE c.CLI_ID = ?
+              AND c.CLI_TipoConta = 'cliente_partner'
+              AND c.CLI_Ativo = 'S'
+              AND c.CLI_StatusCadastro = 'ativo'
+            LIMIT 1
+        ");
+        $sql->execute([$clienteId]);
+
+        return (bool) $sql->fetchColumn();
+    }
+
     public static function clientePodeConectarMeta()
     {
         $usuario = self::usuario();
@@ -465,7 +493,7 @@ class Auth
 
         $usuario = self::usuario();
 
-        return self::clienteEmPreTrial();
+        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado();
     }
 
     public static function podeConectarPrimeiroNumero($clienteId, $numerosAtivos)
@@ -482,7 +510,7 @@ class Auth
             return false;
         }
 
-        return self::clienteEmPreTrial();
+        return self::clienteEmPreTrial() || self::clienteEhPartnerAprovado($clienteId);
     }
 
     public static function validarBloqueioFinanceiro()
