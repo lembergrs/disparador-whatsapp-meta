@@ -176,7 +176,10 @@ class Cobranca
             'COB_LinkPagamento' => 'link_pagamento',
             'COB_PixCopiaCola' => 'pix_copia_cola',
             'COB_QrCode' => 'qr_code',
-            'COB_LinhaDigitavel' => 'linha_digitavel'
+            'COB_LinhaDigitavel' => 'linha_digitavel',
+            'PAR_ID' => 'parceiro',
+            'PAS_ID' => 'assinatura_partner',
+            'COB_Origem' => 'origem'
         ];
 
         foreach($camposOpcionais as $coluna => $chave){
