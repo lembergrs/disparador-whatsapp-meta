@@ -143,6 +143,20 @@ As próximas implementações devem manter:
 - nenhuma exposição de credenciais Meta.
 
 
+## Cadastro self-service do parceiro
+
+O administrador pode enviar ao integrador o endereço público:
+
+`GET /index.php?url=parceiroCadastro`
+
+O formulário cria, em uma única transação, o cadastro empresarial `clientes` como `cliente_partner`, o usuário administrador e o registro em `parceiros_api`. O Partner nasce com cadastro `pendente`, implantação `aguardando_validacao` e API `bloqueada`.
+
+O cadastro coleta CNPJ, razão social e endereço fiscal completo, incluindo código IBGE, usando os mesmos campos `CLI_NFSe_*` do financeiro existente. Isso prepara o parceiro pagador para a validação fiscal antes de uma eventual NFS-e.
+
+A aprovação é administrativa. Enquanto `PAR_StatusCadastro` não for `aprovado`, não é permitido gerar API key e a autenticação da Partner API rejeita credenciais eventualmente existentes.
+
+A aprovação do cadastro não cria cobrança automaticamente. A validação inicial (inclusive Coexistence, quando aplicável) permanece anterior à cobrança de implantação.
+
 ## Ciclo comercial e financeiro
 
 O cadastro Partner utiliza o mesmo cadastro empresarial/fiscal de `clientes` usado pelo financeiro do Disparador. Isso permite que cobrança, confirmação de pagamento e NFS-e permaneçam no fluxo financeiro já existente.
