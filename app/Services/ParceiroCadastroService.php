@@ -21,10 +21,12 @@ class ParceiroCadastroService
         $razao=trim((string)($d['razao_social'] ?? ''));
         $senha=(string)($d['senha'] ?? '');
 
-        if($nome==='' || $razao==='' || !filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($cnpj)!==14 || strlen($cep)!==8 || strlen($ibge)!==7){
+        if($nome==='' || $razao==='' || strlen($cep)!==8 || strlen($ibge)!==7){
             throw new \InvalidArgumentException('Preencha corretamente os dados empresariais e fiscais obrigatórios.');
         }
-        if(!DocumentoFiscalValidator::valido($cnpj)){ throw new \InvalidArgumentException('Informe um CNPJ válido.'); }
+        if(!filter_var($email,FILTER_VALIDATE_EMAIL)){ throw new \InvalidArgumentException('Informe um e-mail válido.'); }
+        if(strlen($telefone)!==10 && strlen($telefone)!==11){ throw new \InvalidArgumentException('Informe um WhatsApp / telefone válido com DDD.'); }
+        if(strlen($cnpj)!==14 || !DocumentoFiscalValidator::valido($cnpj)){ throw new \InvalidArgumentException('Informe um CNPJ válido.'); }
         if(!SenhaForteValidator::forte($senha)){ throw new \InvalidArgumentException(SenhaForteValidator::mensagem()); }
         foreach(['logradouro','numero','bairro','municipio'] as $campo){
             if(trim((string)($d[$campo] ?? ''))===''){ throw new \InvalidArgumentException('Preencha o endereço fiscal completo.'); }
