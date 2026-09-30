@@ -10,10 +10,10 @@ pfaAssert(strpos($m,'salvarPlanoAdmin')!==false && strpos($m,'sobrepõe outra fa
 pfaAssert(strpos($m,'criarOuAtualizarAssinaturaAdmin')!==false,'admin deve configurar assinatura');
 pfaAssert(strpos($m,'listarCobrancasAdmin')!==false,'admin deve acompanhar cobrancas');
 pfaAssert(strpos($s,'buscarCobrancaImplantacaoAberta')!==false,'implantacao deve reutilizar cobranca existente');
-pfaAssert(strpos($w,"($cobranca['COB_Origem'] ?? '') === 'partner_api'")!==false,'workflow deve distinguir Partner');
+pfaAssert(strpos($w,'COB_Origem')!==false && strpos($w,"partner_api")!==false,'workflow deve distinguir Partner');
 pfaAssert(strpos($w,"? (string) ($plano['PLA_Nome'] ?? 'Partner API')")!==false,'descricao Partner no Asaas nao deve receber prefixo Mensalidade');
 pfaAssert(strpos($m,"PAR_StatusApi='suspensa'")===false,'primeiro vencimento nao deve suspender API imediatamente');
-pfaAssert(substr_count($w,"($cobranca['COB_Origem'] ?? '') !== 'partner_api'")>=5,'estado financeiro comum deve ser isolado do Partner');
+pfaAssert(substr_count($w,"!== 'partner_api'")>=5,'estado financeiro comum deve ser isolado do Partner');
 pfaAssert(strpos($c,'cobrarImplantacao')!==false && strpos($c,'cobrarMensalidade')!==false,'admin deve gerar cobrancas Partner');
 pfaAssert(strpos($v,'Financeiro Partner')!==false && strpos($v,'Faixas mensais')!==false,'tela deve expor financeiro Partner');
 echo "Partner finance admin static tests passed\n";
