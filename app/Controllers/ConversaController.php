@@ -740,6 +740,86 @@ class ConversaController extends Controller
     }
 
 
+    public function reagirAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
+        try{
+            $usuario = Auth::usuario();
+            $conversaId = (int) ($_POST['conversa_id'] ?? 0);
+            $mensagemId = (int) ($_POST['mensagem_id'] ?? 0);
+            $emoji = trim((string) ($_POST['emoji'] ?? ''));
+            $emojisPermitidos = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+            if($conversaId <= 0 || $mensagemId <= 0 || !in_array($emoji, $emojisPermitidos, true)){
+                $this->jsonResponse(['sucesso'=>false, 'erro'=>'Reação inválida.'], 422);
+            }
+
+            $conversa = $this->conversaModel->buscarAcessivel(
+                $conversaId,
+                $usuario['CLI_ID'],
+                $usuario
+            );
+            $mensagem = $this->conversaModel->buscarMensagemAcessivel(
+                $mensagemId,
+                $usuario['CLI_ID'],
+                $usuario
+            );
+
+            if(!$conversa || !$mensagem || (int) ($mensagem['CVS_ID'] ?? 0) !== $conversaId){
+                $this->acessoPerdidoAjax(true);
+                return;
+            }
+
+            $metaMessageId = trim((string) ($mensagem['MSG_MetaMessageId'] ?? ''));
+            if($metaMessageId === ''){
+                $this->jsonResponse(['sucesso'=>false, 'erro'=>'Esta mensagem ainda não pode receber reação.'], 422);
+            }
+
+            if(!$this->janelaAtendimentoAberta($conversaId)){
+                $this->jsonResponse(['sucesso'=>false, 'erro'=>'A janela de atendimento de 24 horas está fechada.'], 422);
+            }
+
+            $response = (new MetaService($conversa['MTA_ID']))->enviarReaction(
+                $conversa['CVS_Numero'],
+                $metaMessageId,
+                $emoji
+            );
+
+            $reactionMessageId = $response['response']['messages'][0]['id'] ?? null;
+            if(!$reactionMessageId){
+                $this->jsonResponse([
+                    'sucesso'=>false,
+                    'erro'=>$response['response']['error']['message'] ?? 'Erro ao enviar reação.'
+                ], 422);
+            }
+
+            $this->conversaModel->salvarMensagem([
+                'conversa_id'=>$conversaId,
+                'direcao'=>'enviada',
+                'tipo'=>'reaction',
+                'texto'=>null,
+                'message_id'=>$reactionMessageId,
+                'status'=>'aguardando_confirmacao',
+                'retorno'=>$response,
+                'reacao_message_id'=>$metaMessageId,
+                'reacao_emoji'=>$emoji,
+                'data_mensagem'=>date('Y-m-d H:i:s')
+            ]);
+
+            $this->jsonResponse([
+                'sucesso'=>true,
+                'message_id'=>$reactionMessageId
+            ]);
+        }catch(\Exception $e){
+            $this->jsonResponse(['sucesso'=>false, 'erro'=>$e->getMessage()], 500);
+        }
+    }
+
     public function templatesAprovadosAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
