@@ -740,6 +740,107 @@ class ConversaController extends Controller
     }
 
 
+    public function enviarMidiaAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        if(!$this->validarCsrfAjax()){
+            return;
+        }
+
+        try{
+            $usuario = Auth::usuario();
+            $conversaId = (int) ($_POST['conversa_id'] ?? 0);
+            $caption = trim((string) ($_POST['mensagem'] ?? ''));
+            $arquivo = $_FILES['arquivo'] ?? null;
+
+            if($conversaId <= 0 || !$arquivo){
+                $this->jsonResponse(['sucesso'=>false, 'erro'=>'Selecione um arquivo para enviar.'], 422);
+            }
+
+            $conversa = $this->conversaModel->buscarAcessivel(
+                $conversaId,
+                $usuario['CLI_ID'],
+                $usuario
+            );
+
+            if(!$conversa){
+                $this->acessoPerdidoAjax(true);
+                return;
+            }
+
+            if(!$this->janelaAtendimentoAberta($conversaId)){
+                $this->jsonResponse([
+                    'sucesso'=>false,
+                    'erro'=>'A janela de atendimento de 24 horas está fechada. Use um template aprovado para iniciar nova conversa.'
+                ], 422);
+            }
+
+            $extensao = strtolower(pathinfo((string) ($arquivo['name'] ?? ''), PATHINFO_EXTENSION));
+            if(in_array($extensao, ['jpg', 'jpeg', 'png', 'webp'], true)){
+                $tipoUpload = MetaMediaService::TIPO_IMAGE;
+                $tipoMensagem = 'image';
+            }elseif(in_array($extensao, ['mp4', '3gpp'], true)){
+                $tipoUpload = MetaMediaService::TIPO_VIDEO;
+                $tipoMensagem = 'video';
+            }elseif($extensao === 'pdf'){
+                $tipoUpload = MetaMediaService::TIPO_DOCUMENT;
+                $tipoMensagem = 'document';
+            }else{
+                $this->jsonResponse([
+                    'sucesso'=>false,
+                    'erro'=>'Formato não permitido. Envie imagem, PDF ou vídeo MP4/3GPP.'
+                ], 422);
+            }
+
+            $media = (new MetaMediaService(
+                $conversa['MTA_ID'],
+                $usuario['CLI_ID']
+            ))->uploadMensagemMedia($arquivo, $tipoUpload);
+
+            $response = (new MetaService(
+                $conversa['MTA_ID'],
+                $usuario['CLI_ID']
+            ))->enviarMidia(
+                $conversa['CVS_Numero'],
+                $tipoMensagem,
+                $media['media_id'],
+                $caption,
+                $media['nome_original'] ?? ''
+            );
+
+            $messageId = $response['response']['messages'][0]['id'] ?? null;
+            if(!$messageId){
+                $this->jsonResponse([
+                    'sucesso'=>false,
+                    'erro'=>$response['response']['error']['message'] ?? 'Erro ao enviar anexo.'
+                ], 422);
+            }
+
+            $this->conversaModel->salvarMensagem([
+                'conversa_id'=>$conversaId,
+                'direcao'=>'enviada',
+                'tipo'=>$tipoMensagem,
+                'texto'=>$caption,
+                'message_id'=>$messageId,
+                'status'=>'aguardando_confirmacao',
+                'retorno'=>$response,
+                'media_id'=>$media['media_id'],
+                'media_mime_type'=>$media['mime'] ?? null,
+                'media_nome'=>$media['nome_original'] ?? null,
+                'data_mensagem'=>date('Y-m-d H:i:s')
+            ]);
+
+            $this->jsonResponse([
+                'sucesso'=>true,
+                'message_id'=>$messageId,
+                'tipo'=>$tipoMensagem
+            ]);
+        }catch(\Exception $e){
+            $this->jsonResponse(['sucesso'=>false, 'erro'=>$e->getMessage()], 422);
+        }
+    }
+
     public function reagirAjax()
     {
         header('Content-Type: application/json; charset=utf-8');
