@@ -5,15 +5,19 @@ use Core\Auth;
 use Core\Controller;
 use Core\Session;
 use Models\ParceiroApi;
+use Models\ParceiroFinanceiro;
+use Services\ParceiroFinanceiroService;
 
 class ParceiroAdminController extends Controller
 {
     private $model;
+    private $financeiro;
 
     public function __construct()
     {
         Auth::admin();
         $this->model=new ParceiroApi();
+        $this->financeiro=new ParceiroFinanceiro();
     }
 
     public function index()
@@ -47,7 +51,11 @@ class ParceiroAdminController extends Controller
             'chaves'=>$this->model->listarChavesAdmin($id),
             'clientes'=>$clientes,
             'contasPorCliente'=>$contas,
-            'novaApiKey'=>Session::get('partner_api_key_once')
+            'novaApiKey'=>Session::get('partner_api_key_once'),
+            'planosPartner'=>$this->financeiro->listarPlanosAdmin(),
+            'assinaturaPartner'=>$this->financeiro->assinaturaAtiva($id),
+            'cobrancasPartner'=>$this->financeiro->listarCobrancasAdmin($id),
+            'clientesFaturaveis'=>$this->financeiro->contarClientesFaturaveis($id)
         ]);
     }
 
@@ -89,6 +97,77 @@ class ParceiroAdminController extends Controller
         if(!$this->model->buscarAdmin($parceiroId)){ Session::flash('error','Parceiro não encontrado.'); $this->redirect('parceiroAdmin'); }
         $this->model->aprovarAdmin($parceiroId);
         Session::flash('success','Cadastro Partner aprovado. A validação/onboarding e a cobrança de implantação podem seguir pelas próximas etapas.');
+        $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
+    }
+
+    public function salvarPlanoFinanceiro()
+    {
+        $this->validarCsrfPost();
+        try{
+            $nome=trim($_POST['nome'] ?? '');
+            if($nome===''){ throw new \DomainException('Informe o nome da faixa.'); }
+            $valor=str_replace(',','.',trim((string)($_POST['valor'] ?? '0')));
+            $this->financeiro->salvarPlanoAdmin($nome,(int)($_POST['min_clientes'] ?? 1),$_POST['max_clientes'] ?? null,(float)$valor);
+            Session::flash('success','Faixa Partner cadastrada.');
+        }catch(\Throwable $e){ Session::flash('error',$e->getMessage()); }
+        $this->redirect('parceiroAdmin/detalhe&id='.(int)($_POST['parceiro_id'] ?? 0));
+    }
+
+    public function inativarPlanoFinanceiro()
+    {
+        $this->validarCsrfPost();
+        $this->financeiro->inativarPlanoAdmin((int)($_POST['plano_id'] ?? 0));
+        Session::flash('success','Faixa Partner inativada.');
+        $this->redirect('parceiroAdmin/detalhe&id='.(int)($_POST['parceiro_id'] ?? 0));
+    }
+
+    public function salvarAssinaturaFinanceira()
+    {
+        $this->validarCsrfPost();
+        $parceiroId=(int)($_POST['parceiro_id'] ?? 0);
+        $parceiro=$this->model->buscarAdmin($parceiroId);
+        if(!$parceiro || ($parceiro['PAR_StatusCadastro'] ?? '')!=='aprovado'){
+            Session::flash('error','Aprove o cadastro Partner antes de configurar a assinatura.');
+            $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
+        }
+        try{
+            $valor=(float)str_replace(',','.',trim((string)($_POST['valor_implantacao'] ?? '0')));
+            if($valor < 0){ throw new \DomainException('Valor de implantação inválido.'); }
+            $this->financeiro->criarOuAtualizarAssinaturaAdmin($parceiroId,$valor,(int)($_POST['dia_vencimento'] ?? 10));
+            Session::flash('success','Configuração financeira Partner salva.');
+        }catch(\Throwable $e){ Session::flash('error',$e->getMessage()); }
+        $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
+    }
+
+    public function cobrarImplantacao()
+    {
+        $this->validarCsrfPost();
+        $parceiroId=(int)($_POST['parceiro_id'] ?? 0);
+        try{
+            $assinatura=$this->financeiro->assinaturaAtiva($parceiroId);
+            if(!$assinatura){ throw new \DomainException('Configure a assinatura Partner antes de gerar a cobrança.'); }
+            $vencimento=trim((string)($_POST['vencimento'] ?? ''));
+            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$vencimento)){ throw new \DomainException('Informe um vencimento válido.'); }
+            $resultado=(new ParceiroFinanceiroService())->criarCobrancaImplantacao($parceiroId,(float)$assinatura['PAS_ValorImplantacao'],$vencimento);
+            $msg=!empty($resultado['integracao']['sucesso']) ? 'Cobrança de implantação disponível no Asaas.' : ($resultado['integracao']['mensagem'] ?? 'Cobrança criada, mas a integração com o Asaas precisa ser revisada.');
+            Session::flash(!empty($resultado['integracao']['sucesso'])?'success':'error',$msg);
+        }catch(\Throwable $e){ Session::flash('error',$e->getMessage()); }
+        $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
+    }
+
+    public function cobrarMensalidade()
+    {
+        $this->validarCsrfPost();
+        $parceiroId=(int)($_POST['parceiro_id'] ?? 0);
+        try{
+            $competencia=preg_replace('/\D/','',(string)($_POST['competencia'] ?? ''));
+            if(!preg_match('/^\d{6}$/',$competencia)){ throw new \DomainException('Competência inválida.'); }
+            $vencimento=trim((string)($_POST['vencimento'] ?? ''));
+            if(!preg_match('/^\d{4}-\d{2}-\d{2}$/',$vencimento)){ throw new \DomainException('Informe um vencimento válido.'); }
+            $resultado=(new ParceiroFinanceiroService())->criarCobrancaMensal($parceiroId,$competencia,$vencimento);
+            $msg=!empty($resultado['integracao']['sucesso']) ? 'Mensalidade Partner gerada no Asaas.' : ($resultado['integracao']['mensagem'] ?? 'Mensalidade criada, mas a integração com o Asaas precisa ser revisada.');
+            Session::flash(!empty($resultado['integracao']['sucesso'])?'success':'error',$msg);
+        }catch(\Throwable $e){ Session::flash('error',$e->getMessage()); }
         $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
     }
 
