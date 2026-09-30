@@ -36,6 +36,7 @@ jobs:
           php -l app/Services/FinanceiroWorkflowService.php
           php -l app/Services/ParceiroCadastroService.php
           php -l app/Controllers/ParceiroCadastroController.php
+          php -l app/Views/parceiros/cadastro_publico.php
           php -l app/Controllers/ParceiroAdminController.php
           php -l app/Views/parceiros/detalhe.php
           php -l app/Core/Auth.php
