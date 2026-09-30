@@ -703,6 +703,7 @@ role="alert"
             response_type: 'code',
             override_default_response_type: true,
             extras: {
+                setup: {},
                 sessionInfoVersion: '3',
                 version: 'v4',
                 state: resp.state
