@@ -42,6 +42,11 @@ class ParceiroAdminController extends Controller
             $contas[(int)$cliente['CLI_ID']]=$this->model->listarContasClienteAdmin($cliente['CLI_ID']);
         }
 
+        $novaApiKey=Session::get('partner_api_key_once');
+        if($novaApiKey !== null){
+            Session::remove('partner_api_key_once');
+        }
+
         $this->view('parceiros/detalhe',[
             'titulo'=>'Parceiro API',
             'parceiro'=>$parceiro,
@@ -49,7 +54,7 @@ class ParceiroAdminController extends Controller
             'chaves'=>$this->model->listarChavesAdmin($id),
             'clientes'=>$clientes,
             'contasPorCliente'=>$contas,
-            'novaApiKey'=>Session::get('partner_api_key_once'),
+            'novaApiKey'=>$novaApiKey,
             'planosPartner'=>$this->financeiro->listarPlanosAdmin(),
             'assinaturaPartner'=>$this->financeiro->assinaturaAtiva($id),
             'cobrancasPartner'=>$this->financeiro->listarCobrancasAdmin($id),
@@ -197,7 +202,9 @@ class ParceiroAdminController extends Controller
         $parceiroId=(int)($_POST['parceiro_id'] ?? 0);
         $nome=trim($_POST['nome'] ?? 'Integração');
         $segredo=$this->model->gerarChaveAdmin($parceiroId,$nome ?: 'Integração');
-        Session::flash('partner_api_key_once',$segredo);
+        // A API key precisa de armazenamento próprio: Session::flash() usa uma única
+        // chave global ('flash'), então a mensagem de sucesso sobrescrevia o segredo.
+        Session::set('partner_api_key_once',$segredo);
         Session::flash('success','API key gerada. Copie agora: ela não será exibida novamente.');
         $this->redirect('parceiroAdmin/detalhe&id='.$parceiroId);
     }
