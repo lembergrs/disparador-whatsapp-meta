@@ -266,6 +266,16 @@ class="nav-link <?= str_contains($url, 'cliente') ? 'active' : ''; ?>"
 
 <li class="nav-item">
 <a
+href="<?= BASE_URL; ?>/index.php?url=parceiroAdmin"
+class="nav-link <?= str_contains($url, 'parceiroAdmin') ? 'active' : ''; ?>"
+>
+<i class="nav-icon fas fa-plug"></i>
+<p>Parceiros API</p>
+</a>
+</li>
+
+<li class="nav-item">
+<a
 href="<?= BASE_URL; ?>/index.php?url=onboardingSuporteAdmin"
 class="nav-link <?= str_contains($url, 'onboardingSuporteAdmin') ? 'active' : ''; ?>"
 >
