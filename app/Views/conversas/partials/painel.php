@@ -188,6 +188,12 @@ if(!function_exists('formatarNumeroBR')){
 
                 </div>
 
+                <div id="arquivoMensagemSelecionado" class="small text-muted mt-1 d-none">
+                    <i class="fas fa-paperclip mr-1"></i>
+                    <span class="nome-arquivo"></span>
+                    <button type="button" class="btn btn-link btn-sm text-danger p-0 ml-2" id="btnRemoverArquivoMensagem">Remover</button>
+                </div>
+
             </form>
 
         <?php }else{ ?>
