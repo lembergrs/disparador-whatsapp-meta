@@ -1,0 +1,15 @@
+[Unit]
+Description=Disparador Partner Webhook Worker
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/disparador-app
+ExecStart=/usr/bin/php /opt/disparador-app/partner-webhook-worker.php
+Restart=always
+RestartSec=2
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target

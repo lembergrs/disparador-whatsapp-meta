@@ -6,7 +6,7 @@ $e=file_get_contents($r.'/app/Services/PartnerWebhookEventService.php');
 $d=file_get_contents($r.'/app/Services/PartnerWebhookDeliveryService.php');
 $i=file_get_contents($r.'/app/Services/MetaWebhookMessageIngestionService.php');
 $s=file_get_contents($r.'/app/Services/MetaStatusWebhookService.php');
-$w=file_get_contents($r.'/app/Services/WorkerService.php');
+$w=file_get_contents($r.'/partner-webhook-worker.php');
 $h=file_get_contents($r.'/public/webhook/meta.php');
 $g=file_get_contents($r.'/database/migrations/20261001_create_partner_webhook_queue.sql');
 pwdAssert(strpos($g,'parceiro_webhook_eventos')!==false && strpos($g,'PWE_EventId')!==false,'migration deve criar fila/historico');
@@ -19,6 +19,6 @@ pwdAssert(strpos($d,'CURLOPT_FOLLOWLOCATION=>false')!==false && strpos($d,'FILTE
 pwdAssert(strpos($d,'2**')!==false && strpos($d,'PWE_MaxTentativas')!==false,'entrega deve ter retry exponencial');
 pwdAssert(strpos($i,'partnerWebhook')!==false,'ingestao deve publicar inbound');
 pwdAssert(strpos($s,'partnerWebhook')!==false,'status deve publicar eventos');
-pwdAssert(strpos($w,'partner_webhooks')!==false,'worker existente deve processar fila Partner');
+pwdAssert(strpos($w,'PartnerWebhookDeliveryService')!==false && strpos($w,'processarPendentes(50)')!==false,'worker dedicado deve processar fila Partner');
 pwdAssert(strpos($h,'PartnerWebhookEventService')!==false,'webhook Meta deve conectar publicadores');
 echo "Partner webhook delivery static tests passed\n";

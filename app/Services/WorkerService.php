@@ -17,7 +17,6 @@ class WorkerService
     private $campanhaQueue;
     private $disparoManualQueue;
     private $historyQueue;
-    private $partnerWebhookDelivery;
 
     public function __construct(array $opcoes = [])
     {
@@ -33,7 +32,6 @@ class WorkerService
         $this->campanhaQueue = new CampanhaQueueService($this->modoTeste, $validator);
         $this->disparoManualQueue = new DisparoManualQueueService($this->modoTeste);
         $this->historyQueue = $opcoes['history_queue'] ?? new MetaCoexistenceHistoryQueueService();
-        $this->partnerWebhookDelivery = $opcoes['partner_webhook_delivery'] ?? new PartnerWebhookDeliveryService();
     }
 
     public function __destruct()
@@ -84,7 +82,6 @@ class WorkerService
                 'total' => 0
             ],
             'coexistence_history' => ['recuperados'=>0,'reservados'=>0,'processados'=>0,'erros'=>0],
-            'partner_webhooks' => ['recuperados'=>0,'reservados'=>0,'entregues'=>0,'retries'=>0,'falhas'=>0],
             'excecoes' => [],
             'lock_compartilhado' => 'nao_adquirido'
         ];
@@ -151,12 +148,6 @@ class WorkerService
             $resumo['coexistence_history'] = $this->historyQueue->processarPendentes(5, $this->workerId);
         }catch(\Throwable $e){
             $this->registrarExcecao($resumo, 'coexistence_history', $e);
-        }
-
-        try{
-            $resumo['partner_webhooks'] = $this->partnerWebhookDelivery->processarPendentes(20);
-        }catch(\Throwable $e){
-            $this->registrarExcecao($resumo, 'partner_webhooks', $e);
         }
 
         $this->liberarLockCompartilhado();
