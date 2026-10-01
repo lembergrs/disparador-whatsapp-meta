@@ -26,7 +26,7 @@ class ParceiroClientesController extends Controller
     {
         $p=$this->parceiro();
         $webhookPagina=max(1,(int)($_GET['webhook_page'] ?? 1));
-        $webhookPorPagina=50;
+        $webhookPorPagina=10;
         $webhookModel=new ParceiroWebhookEvento();
         $webhookTotal=$webhookModel->contarPartner((int)$p['PAR_ID']);
         $webhookPaginas=max(1,(int)ceil($webhookTotal/$webhookPorPagina));
