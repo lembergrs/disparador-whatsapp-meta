@@ -236,7 +236,16 @@ Ao concluir o Embedded Signup, o Disparador cria automaticamente a autorização
 
 ## Envio de mensagens
 
-`POST /index.php?url=api/v1/messages`
+`
+### Idempotência de envio
+
+Todo `POST /index.php?url=api/v1/messages` deve enviar o header `Idempotency-Key` (8 a 120 caracteres). Gere uma chave nova para cada intenção de envio e reutilize exatamente a mesma chave ao repetir uma requisição após timeout ou perda de resposta.
+
+- mesma chave + mesmo corpo: retorna a resposta original sem reenviar à Meta e inclui `Idempotency-Replayed: true`;
+- mesma chave + corpo diferente: HTTP 409 `idempotency_conflict`;
+- mesma chave enquanto a primeira requisição ainda está em processamento: HTTP 409 `request_in_progress`.
+
+POST /index.php?url=api/v1/messages`
 
 Headers:
 
