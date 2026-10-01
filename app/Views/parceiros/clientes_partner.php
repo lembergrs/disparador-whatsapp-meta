@@ -27,7 +27,25 @@ $eventosDisponiveis=[
 <table class="table table-sm table-bordered"><thead><tr><th>Evento</th><th>Tipo</th><th>Status</th><th>Tentativas</th><th>HTTP</th><th>Criado</th><th>Entregue</th><th>Erro</th></tr></thead><tbody>
 <?php foreach(($webhookEntregas??[]) as $e){ ?><tr><td><code><?= htmlspecialchars($e['PWE_EventId']) ?></code></td><td><?= htmlspecialchars($e['PWE_Tipo']) ?></td><td><?= htmlspecialchars($e['PWE_Status']) ?></td><td><?= (int)$e['PWE_Tentativas'] ?></td><td><?= $e['PWE_UltimoHttpStatus']!==null?(int)$e['PWE_UltimoHttpStatus']:'—' ?></td><td><?= htmlspecialchars($e['PWE_CriadoEm']) ?></td><td><?= htmlspecialchars($e['PWE_EntregueEm']??'—') ?></td><td><?= htmlspecialchars($e['PWE_UltimoErro']??'') ?></td></tr><?php } ?>
 <?php if(empty($webhookEntregas)){ ?><tr><td colspan="8" class="text-muted text-center">Nenhuma entrega registrada.</td></tr><?php } ?>
-</tbody></table></div></div>
+</tbody></table>
+<?php if(($webhookTotal??0)>0){ ?>
+<div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
+<small class="text-muted"><?= (int)$webhookTotal ?> entrega(s) registrada(s) · 50 por página</small>
+<?php if(($webhookPaginas??1)>1){ ?>
+<nav aria-label="Paginação das entregas do webhook"><ul class="pagination pagination-sm mb-0">
+<li class="page-item <?= ($webhookPagina??1)<=1?'disabled':'' ?>"><a class="page-link" href="<?= BASE_URL ?>/index.php?url=parceiroClientes&webhook_page=<?= max(1,($webhookPagina??1)-1) ?>">Anterior</a></li>
+<?php
+$inicio=max(1,($webhookPagina??1)-2);
+$fim=min(($webhookPaginas??1),($webhookPagina??1)+2);
+for($pagina=$inicio;$pagina<=$fim;$pagina++){ ?>
+<li class="page-item <?= $pagina===($webhookPagina??1)?'active':'' ?>"><a class="page-link" href="<?= BASE_URL ?>/index.php?url=parceiroClientes&webhook_page=<?= $pagina ?>"><?= $pagina ?></a></li>
+<?php } ?>
+<li class="page-item <?= ($webhookPagina??1)>=($webhookPaginas??1)?'disabled':'' ?>"><a class="page-link" href="<?= BASE_URL ?>/index.php?url=parceiroClientes&webhook_page=<?= min(($webhookPaginas??1),($webhookPagina??1)+1) ?>">Próxima</a></li>
+</ul></nav>
+<?php } ?>
+</div>
+<?php } ?>
+</div></div>
 <div class="card"><div class="card-header"><h3 class="card-title">Convidar cliente</h3></div><div class="card-body">
 <p class="text-muted">Gere um link para o cliente cadastrar a própria empresa. O cadastro não gera cobrança; o cliente passa a ser faturável somente após conectar e ativar o WhatsApp.</p>
 <form method="post" action="<?= BASE_URL ?>/index.php?url=parceiroClientes/gerarConvite" class="form-inline"><?= \Core\Csrf::input() ?><input name="nome_referencia" class="form-control mr-2" maxlength="150" placeholder="Identificação opcional do cliente"><button class="btn btn-primary"><i class="fas fa-link mr-1"></i> Gerar link</button></form>
