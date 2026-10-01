@@ -39,7 +39,7 @@ class PartnerWebhookEventService
             'source'=>'business_app',
             'human'=>true
         ];
-        if(!empty($dados['media_id'])) $data['media']=['id'=>$dados['media_id'],'mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null];
+        if(!empty($dados['media_id'])) $data['media']=['mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null,'download_url'=>$this->mediaUrl((int)($persistencia['id']??0))];
         if($dados['tipo']==='reaction') $data['reaction']=['message_id'=>$dados['reacao_message_id']??null,'emoji'=>$dados['reacao_emoji']??null];
         return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'echo:'.$dados['message_id']);
     }
