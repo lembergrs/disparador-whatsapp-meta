@@ -4,6 +4,7 @@ namespace Controllers;
 
 use Core\Controller;
 use Models\ParceiroApi;
+use Models\ParceiroApiIdempotencia;
 use Services\PartnerApiAuthService;
 use Services\PartnerMessageService;
 use Services\PartnerApiException;
@@ -76,12 +77,40 @@ class ApiV1Controller extends Controller
             $this->json(['error'=>['code'=>'invalid_json','message'=>'Envie um corpo JSON válido.']],400);
         }
 
+        $idempotencyKey=trim((string)($_SERVER['HTTP_IDEMPOTENCY_KEY'] ?? ''));
+        if($idempotencyKey==='' || strlen($idempotencyKey)<8 || strlen($idempotencyKey)>120 || !preg_match('/^[A-Za-z0-9._:-]+$/',$idempotencyKey)){
+            $this->json(['error'=>['code'=>'invalid_idempotency_key','message'=>'Envie Idempotency-Key com 8 a 120 caracteres usando letras, números, ponto, hífen, sublinhado ou dois-pontos.']],400);
+        }
+
+        $requestHash=hash('sha256',(string)$raw);
+        $idempotencias=new ParceiroApiIdempotencia();
+        $reserva=$idempotencias->iniciar((int)$parceiro['PAR_ID'],$idempotencyKey,$requestHash);
+        if(!$reserva['novo']){
+            $registro=$reserva['registro'];
+            if(!$registro || !hash_equals((string)$registro['PAI_RequestHash'],$requestHash)){
+                $this->json(['error'=>['code'=>'idempotency_conflict','message'=>'Esta Idempotency-Key já foi usada com outro corpo de requisição.']],409);
+            }
+            if(($registro['PAI_Status']??'')==='concluido' && !empty($registro['PAI_Resposta'])){
+                $payload=json_decode((string)$registro['PAI_Resposta'],true);
+                if(is_array($payload)){
+                    header('Idempotency-Replayed: true');
+                    $this->json($payload,(int)($registro['PAI_HttpStatus']?:202));
+                }
+            }
+            $this->json(['error'=>['code'=>'request_in_progress','message'=>'Uma requisição com esta Idempotency-Key ainda está em processamento.']],409);
+        }
+
         try{
             $resultado=(new PartnerMessageService($this->parceiroModel))->enviar($parceiro,$dados);
-            $this->json(['data'=>$resultado],202);
+            $payload=['data'=>$resultado];
+            $idempotencias->concluir((int)$parceiro['PAR_ID'],$idempotencyKey,202,$payload);
+            $this->json($payload,202);
         }catch(PartnerApiException $e){
-            $this->json(['error'=>['code'=>$e->apiCode(),'message'=>$e->getMessage()]],$e->httpStatus());
+            $payload=['error'=>['code'=>$e->apiCode(),'message'=>$e->getMessage()]];
+            $idempotencias->concluir((int)$parceiro['PAR_ID'],$idempotencyKey,$e->httpStatus(),$payload);
+            $this->json($payload,$e->httpStatus());
         }catch(\Throwable $e){
+            $idempotencias->removerProcessando((int)$parceiro['PAR_ID'],$idempotencyKey);
             error_log('Partner API messages: '.$e->getMessage());
             $this->json(['error'=>['code'=>'internal_error','message'=>'Não foi possível processar o envio.']],500);
         }
