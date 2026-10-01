@@ -20,7 +20,7 @@ class PartnerWebhookEventService
             'text'=>$dados['texto'],
             'timestamp'=>$this->iso($dados['data_mensagem']??null)
         ];
-        if(!empty($dados['media_id'])) $data['media']=['id'=>$dados['media_id'],'mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null];
+        if(!empty($dados['media_id'])) $data['media']=['mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null,'download_url'=>$this->mediaUrl((int)($persistencia['id']??0))];
         if($dados['tipo']==='reaction') $data['reaction']=['message_id'=>$dados['reacao_message_id']??null,'emoji'=>$dados['reacao_emoji']??null];
         return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'in:'.$dados['message_id']);
     }
@@ -77,6 +77,12 @@ class PartnerWebhookEventService
             if(!empty($r['criado']))$total++;
         }
         return $total;
+    }
+
+    private function mediaUrl($mensagemId)
+    {
+        $base=defined('BASE_URL') ? rtrim((string)BASE_URL,'/') : '';
+        return $base.'/index.php?url=api/v1/media&id='.(int)$mensagemId;
     }
 
     private function iso($data){$t=$data?strtotime((string)$data):false;return date(DATE_ATOM,$t?:time());}
