@@ -368,3 +368,29 @@ Quando uma mensagem ou reação é enviada manualmente pelo WhatsApp Business Ap
 Esses payloads incluem `"source":"business_app"` e `"human":true`, permitindo que o integrador pause automações, sincronize a conversa ou trate a intervenção humana sem confundi-la com um envio originado pela Partner API.
 
 Echoes duplicados não geram novos eventos Partner.
+
+## Mídia recebida
+
+Para mensagens recebidas dos tipos `audio`, `image` e `document`, o webhook inclui `data.media.download_url`, além de `mime_type` e `filename` quando disponíveis. A URL aponta para o Disparador e não expõe URL temporária nem token da Meta.
+
+O Partner deve fazer `GET` nessa URL enviando a mesma autenticação `Authorization: Bearer <API_KEY>`. O endpoint valida se a mensagem pertence a um cliente/canal autorizado ao Partner antes de entregar o arquivo.
+
+Exemplo:
+
+```json
+{
+  "event": "message.received",
+  "data": {
+    "client_id": 10,
+    "channel_id": 9,
+    "type": "audio",
+    "media": {
+      "mime_type": "audio/ogg",
+      "filename": null,
+      "download_url": "https://disparador.net/index.php?url=api/v1/media&id=12345"
+    }
+  }
+}
+```
+
+O download retorna `404 media_not_found` quando a mídia não existe ou não pertence ao escopo autorizado e `502 media_unavailable` quando a mídia não pode ser obtida da Meta/cache.
