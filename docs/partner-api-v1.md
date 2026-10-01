@@ -297,3 +297,16 @@ Resposta aceita:
 Erros usam o formato `{"error":{"code":"...","message":"..."}}`. Códigos iniciais: `unauthorized`, `invalid_json`, `validation_error`, `unsupported_message_type`, `channel_not_authorized`, `channel_not_ready`, `customer_care_window_closed`, `template_not_available`, `meta_send_failed` e `internal_error`.
 
 O endpoint nunca recebe nem retorna token da Meta. A autorização é sempre resolvida pela API key do Partner e pelo vínculo ativo `PAR_ID + CLI_ID + MTA_ID`.
+
+
+## Webhooks do Partner
+
+Cada Partner configura um único endpoint HTTPS no próprio painel. O Disparador roteará para esse endpoint os eventos dos clientes/canais explicitamente autorizados ao Partner, identificando `client_id` e `channel_id` no payload.
+
+Eventos previstos na v1: `message.received`, `message.sent`, `message.delivered`, `message.read`, `message.failed` e `message.reaction`.
+
+O segredo de assinatura é individual por Partner e deve ser copiado quando gerado/regenerado. Ele não é persistido em texto puro: o Disparador o deriva de `PARTNER_WEBHOOK_SIGNING_KEY` e de um salt aleatório por Partner, mantendo apenas o salt e o hash de conferência no banco.
+
+A configuração do endpoint é independente das API keys. Desativar o webhook não revoga o acesso REST do Partner.
+
+> A entrega assíncrona, assinatura dos requests, retries e histórico de tentativas serão implementados na etapa de entrega de eventos.
