@@ -11,6 +11,7 @@ class MetaMediaService
     const TIPO_IMAGE = 'IMAGE';
     const TIPO_VIDEO = 'VIDEO';
     const TIPO_DOCUMENT = 'DOCUMENT';
+    const TIPO_AUDIO = 'AUDIO';
 
     private $db;
     private $conta;
@@ -19,18 +20,21 @@ class MetaMediaService
         self::TIPO_IMAGE => 5 * 1024 * 1024,
         self::TIPO_VIDEO => 16 * 1024 * 1024,
         self::TIPO_DOCUMENT => 10 * 1024 * 1024,
+        self::TIPO_AUDIO => 16 * 1024 * 1024,
     ];
 
     private $extensoes = [
         self::TIPO_IMAGE => ['jpg', 'jpeg', 'png', 'webp'],
         self::TIPO_VIDEO => ['mp4', '3gpp'],
         self::TIPO_DOCUMENT => ['pdf'],
+        self::TIPO_AUDIO => ['aac', 'amr', 'mp3', 'm4a', 'ogg'],
     ];
 
     private $mimes = [
         self::TIPO_IMAGE => ['image/jpeg', 'image/png', 'image/webp'],
         self::TIPO_VIDEO => ['video/mp4', 'video/3gpp'],
         self::TIPO_DOCUMENT => ['application/pdf'],
+        self::TIPO_AUDIO => ['audio/aac', 'audio/amr', 'audio/mpeg', 'audio/mp4', 'audio/ogg'],
     ];
 
     public function __construct($metaId, $clienteId = null)
