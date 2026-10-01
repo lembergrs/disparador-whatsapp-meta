@@ -6,6 +6,7 @@ use Core\Controller;
 use Models\ParceiroApi;
 use Models\ParceiroApiIdempotencia;
 use Models\Conversa;
+use Models\TemplateMeta;
 use Services\MetaMediaService;
 use Services\PartnerApiAuthService;
 use Services\PartnerMessageService;
@@ -116,6 +117,49 @@ class ApiV1Controller extends Controller
             error_log('Partner API messages: '.$e->getMessage());
             $this->json(['error'=>['code'=>'internal_error','message'=>'Não foi possível processar o envio.']],500);
         }
+    }
+
+    public function templates()
+    {
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET'){
+            header('Allow: GET');
+            $this->json(['error'=>['code'=>'method_not_allowed','message'=>'Método não permitido.']],405);
+        }
+
+        $parceiro=$this->authService->autenticar();
+        if(!$parceiro){
+            header('WWW-Authenticate: Bearer');
+            $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
+        }
+
+        $clienteId=(int)($_GET['client_id']??0);
+        $metaId=(int)($_GET['channel_id']??0);
+        if($clienteId<=0 || $metaId<=0){
+            $this->json(['error'=>['code'=>'validation_error','message'=>'Informe client_id e channel_id válidos.']],422);
+        }
+
+        $canal=$this->parceiroModel->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
+        if(!$canal || ($canal['PAC_Status']??'')!=='ativo'){
+            $this->json(['error'=>['code'=>'channel_not_authorized','message'=>'Canal não autorizado ou inativo para este Partner.']],403);
+        }
+
+        $templates=(new TemplateMeta())->listarAprovadosParaPartner($clienteId,$metaId);
+        $data=array_map(function($template){
+            $componentes=json_decode((string)($template['TMP_Componentes']??'[]'),true);
+            if(!is_array($componentes)) $componentes=[];
+            $variaveis=(new TemplateMeta())->extrairVariaveis((string)($template['TMP_Componentes']??'[]'));
+            return [
+                'id'=>(int)$template['TMP_ID'],
+                'name'=>$template['TMP_Nome'],
+                'language'=>$template['TMP_Idioma'],
+                'category'=>$template['TMP_Categoria']??null,
+                'status'=>$template['TMP_Status'],
+                'variables'=>array_values($variaveis),
+                'components'=>$componentes
+            ];
+        },$templates);
+
+        $this->json(['data'=>$data]);
     }
 
     public function media()
