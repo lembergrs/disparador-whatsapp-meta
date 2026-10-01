@@ -11,6 +11,7 @@ use Services\MetaMediaService;
 use Services\PartnerApiAuthService;
 use Services\PartnerMessageService;
 use Services\PartnerApiException;
+use Services\PartnerApiRateLimitService;
 
 class ApiV1Controller extends Controller
 {
@@ -34,6 +35,8 @@ class ApiV1Controller extends Controller
             header('WWW-Authenticate: Bearer');
             $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']], 401);
         }
+
+        $this->aplicarRateLimit($parceiro,'read');
 
         $canais = $this->parceiroModel->listarCanaisAutorizados($parceiro['PAR_ID']);
 
@@ -73,6 +76,8 @@ class ApiV1Controller extends Controller
             header('WWW-Authenticate: Bearer');
             $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
         }
+
+        $this->aplicarRateLimit($parceiro,'messages');
 
         $raw=file_get_contents('php://input');
         $dados=json_decode((string)$raw,true);
@@ -132,6 +137,8 @@ class ApiV1Controller extends Controller
             $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
         }
 
+        $this->aplicarRateLimit($parceiro,'read');
+
         $clienteId=(int)($_GET['client_id']??0);
         $metaId=(int)($_GET['channel_id']??0);
         if($clienteId<=0 || $metaId<=0){
@@ -177,6 +184,7 @@ class ApiV1Controller extends Controller
         }
 
         if($method==='POST'){
+            $this->aplicarRateLimit($parceiro,'media_upload');
             $clienteId=(int)($_POST['client_id']??0);
             $metaId=(int)($_POST['channel_id']??0);
             $tipo=strtolower(trim((string)($_POST['type']??'')));
@@ -201,6 +209,8 @@ class ApiV1Controller extends Controller
                 $this->json(['error'=>['code'=>'media_upload_failed','message'=>$e->getMessage()]],422);
             }
         }
+
+        $this->aplicarRateLimit($parceiro,'read');
 
         $mensagemId=(int)($_GET['id']??0);
         if($mensagemId<=0){
@@ -240,6 +250,32 @@ class ApiV1Controller extends Controller
         }catch(\Throwable $e){
             error_log('Partner API media: '.$e->getMessage());
             $this->json(['error'=>['code'=>'media_unavailable','message'=>'Não foi possível obter a mídia.']],502);
+        }
+    }
+
+    private function aplicarRateLimit(array $parceiro, $grupo)
+    {
+        try{
+            $resultado=(new PartnerApiRateLimitService())->consumir(
+                (int)$parceiro['PAR_ID'],
+                (int)($parceiro['PAK_ID']??0),
+                $grupo
+            );
+        }catch(\Throwable $e){
+            error_log('Partner API rate limit: '.$e->getMessage());
+            $this->json(['error'=>['code'=>'rate_limit_unavailable','message'=>'Não foi possível validar o limite da API.']],503);
+        }
+
+        header('X-RateLimit-Limit: '.$resultado['limit']);
+        header('X-RateLimit-Remaining: '.$resultado['remaining']);
+        header('X-RateLimit-Reset: '.$resultado['reset']);
+
+        if(!$resultado['allowed']){
+            header('Retry-After: '.$resultado['retry_after']);
+            $this->json(['error'=>[
+                'code'=>'rate_limit_exceeded',
+                'message'=>'Limite de requisições excedido. Aguarde antes de tentar novamente.'
+            ]],429);
         }
     }
 
