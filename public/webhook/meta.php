@@ -161,7 +161,11 @@ $messageIngestionService = new MetaWebhookMessageIngestionService(
     function($acao, array $dados){
         registrarLogWebhookMeta($acao, $dados);
     },
-    function(array $metaConta, array $dados, array $persistencia) use ($partnerWebhookEventService){
+    function(array $metaConta, array $dados, array $persistencia, $origem = 'api') use ($partnerWebhookEventService){
+        if($origem === 'business_app'){
+            $partnerWebhookEventService->businessAppEcho($metaConta, $dados, $persistencia);
+            return;
+        }
         $partnerWebhookEventService->inbound($metaConta, $dados, $persistencia);
     }
 );
