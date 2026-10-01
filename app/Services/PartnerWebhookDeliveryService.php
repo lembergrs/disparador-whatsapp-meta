@@ -16,13 +16,13 @@ class PartnerWebhookDeliveryService
         for($i=0;$i<max(1,(int)$limite);$i++){
             $e=$this->eventos->reservarProximo(); if(!$e)break; $r['reservados']++;
             try{
-                $this->validarDestino($e['PAR_WebhookUrl']);
+                $destino=$this->validarDestino($e['PAR_WebhookUrl']);
                 $secret=$this->api->segredoWebhook((int)$e['PAR_ID']);
                 if(!$secret) throw new \RuntimeException('Segredo de assinatura do webhook indisponível.');
                 $body=(string)$e['PWE_Payload'];
                 $timestamp=(string)time();
                 $signature=hash_hmac('sha256',$timestamp.'.'.$body,$secret);
-                [$http,$erro]=$this->post($e['PAR_WebhookUrl'],$body,$timestamp,$signature,$e['PWE_EventId']);
+                [$http,$erro]=$this->post($e['PAR_WebhookUrl'],$body,$timestamp,$signature,$e['PWE_EventId'],$destino);
                 if($http>=200&&$http<300){$this->eventos->marcarEntregue($e['PWE_ID'],$http);$r['entregues']++;continue;}
                 $msg=$erro ?: 'HTTP '.$http;
                 $this->retry($e,$http,$msg); ((int)$e['PWE_Tentativas'] >= (int)$e['PWE_MaxTentativas'])?$r['falhas']++:$r['retries']++;
@@ -40,12 +40,13 @@ class PartnerWebhookDeliveryService
         $this->eventos->marcarFalhaOuRetry($e,$http,$erro,$delay);
     }
 
-    private function post($url,$body,$timestamp,$signature,$eventId)
+    private function post($url,$body,$timestamp,$signature,$eventId,array $destino)
     {
         $ch=curl_init();
         curl_setopt_array($ch,[
             CURLOPT_URL=>$url,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>$body,CURLOPT_RETURNTRANSFER=>true,
             CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>15,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_MAXREDIRS=>0,
+            CURLOPT_RESOLVE=>[$destino['resolve']],
             CURLOPT_HTTPHEADER=>[
                 'Content-Type: application/json','User-Agent: Disparador-Partner-Webhook/1.0',
                 'X-Disparador-Event-Id: '.$eventId,'X-Disparador-Timestamp: '.$timestamp,
@@ -74,5 +75,10 @@ class PartnerWebhookDeliveryService
         foreach($ips as $ip){
             if(filter_var($ip,FILTER_VALIDATE_IP,FILTER_FLAG_NO_PRIV_RANGE|FILTER_FLAG_NO_RES_RANGE)===false) throw new \RuntimeException('Destino privado ou reservado não permitido.');
         }
+        $port=(int)($parts['port']??443);
+        if($port!==443) throw new \RuntimeException('Webhook deve usar HTTPS na porta 443.');
+        $ip=$ips[0];
+        $resolveIp=strpos($ip,':')!==false ? '['.$ip.']' : $ip;
+        return ['resolve'=>$host.':'.$port.':'.$resolveIp];
     }
 }
