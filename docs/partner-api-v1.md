@@ -347,3 +347,15 @@ Exemplo normalizado de mensagem recebida:
 Status de saída são publicados somente para mensagens originadas pela Partner API, evitando que o integrador receba como próprios os envios manuais da Central ou do WhatsApp Business App.
 
 Por segurança, o destino deve ser HTTPS público na porta 443. Endereços privados/reservados, localhost, credenciais embutidas na URL e redirects HTTP não são aceitos.
+
+
+### Intervenção humana em Coexistence
+
+Quando uma mensagem ou reação é enviada manualmente pelo WhatsApp Business App/Web associado ao canal em Coexistence, o Disparador recebe um `message_echoes`. Se o canal estiver autorizado ao Partner, o echo novo também é publicado:
+
+- mensagem manual: `message.sent`
+- reação manual: `message.reaction`
+
+Esses payloads incluem `"source":"business_app"` e `"human":true`, permitindo que o integrador pause automações, sincronize a conversa ou trate a intervenção humana sem confundi-la com um envio originado pela Partner API.
+
+Echoes duplicados não geram novos eventos Partner.
