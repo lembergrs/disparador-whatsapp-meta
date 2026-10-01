@@ -7,6 +7,8 @@ on:
       - 'app/Models/ParceiroFinanceiro.php'
       - 'app/Services/ParceiroFinanceiroService.php'
       - 'app/Services/PartnerWebhook*.php'
+      - 'app/Services/PartnerApiRateLimitService.php'
+      - 'app/Controllers/ApiV1Controller.php'
       - 'app/Services/MetaWebhookMessageIngestionService.php'
       - 'app/Services/MetaStatusWebhookService.php'
       - 'app/Services/WorkerService.php'
@@ -41,6 +43,8 @@ jobs:
           php -l app/Models/ParceiroWebhookEvento.php
           php -l app/Services/PartnerWebhookEventService.php
           php -l app/Services/PartnerWebhookDeliveryService.php
+          php -l app/Services/PartnerApiRateLimitService.php
+          php -l app/Controllers/ApiV1Controller.php
           php -l app/Services/MetaWebhookMessageIngestionService.php
           php -l app/Services/MetaStatusWebhookService.php
           php -l app/Services/WorkerService.php
