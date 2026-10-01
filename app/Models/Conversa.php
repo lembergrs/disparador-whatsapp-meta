@@ -574,6 +574,19 @@ class Conversa
         return $query->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function buscarMensagemPartner($mensagemId, $clienteId, $metaId)
+    {
+        $sql = $this->db->prepare("
+            SELECT m.*, c.CLI_ID, c.MTA_ID
+            FROM conversa_mensagens m
+            INNER JOIN conversas c ON c.CVS_ID = m.CVS_ID
+            WHERE m.MSG_ID=? AND c.CLI_ID=? AND c.MTA_ID=?
+            LIMIT 1
+        ");
+        $sql->execute([(int)$mensagemId,(int)$clienteId,(int)$metaId]);
+        return $sql->fetch(PDO::FETCH_ASSOC) ?: false;
+    }
+
     public function buscarMensagemAcessivel($mensagemId, $clienteId, $usuario)
     {
         $where = ['m.MSG_ID = ?'];
