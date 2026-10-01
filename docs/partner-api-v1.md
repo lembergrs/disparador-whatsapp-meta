@@ -447,3 +447,13 @@ Exemplo:
 ```
 
 O campo `id` é o `template.id` que deve ser utilizado no `POST /api/v1/messages`. `variables` lista as variáveis encontradas nos textos dos componentes e `components` preserva a estrutura sincronizada da Meta necessária para o integrador montar a mensagem. Templates de outro cliente/canal não são retornados.
+
+## Rate limiting
+
+A Partner API aplica limites por Partner + API key em janelas de 60 segundos:
+
+- `POST /messages`: 60 requisições/minuto.
+- `POST /media`: 20 uploads/minuto.
+- leituras (`GET /status`, `GET /templates`, `GET /media`): 120 requisições/minuto.
+
+Respostas autenticadas incluem `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset` (Unix timestamp). Quando o limite é excedido, a API responde `429 Too Many Requests`, `Retry-After` em segundos e `error.code = rate_limit_exceeded`. O integrador deve respeitar `Retry-After` antes de repetir a chamada. O limite de envio é adicional aos limites e políticas da Meta.
