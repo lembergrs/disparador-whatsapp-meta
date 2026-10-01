@@ -25,6 +25,25 @@ class PartnerWebhookEventService
         return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'in:'.$dados['message_id']);
     }
 
+    public function businessAppEcho(array $metaConta,array $dados,array $persistencia)
+    {
+        if(empty($persistencia['created'])) return 0;
+        $tipo=$dados['tipo']==='reaction' ? 'message.reaction' : 'message.sent';
+        $data=[
+            'message_id'=>$dados['message_id'],
+            'local_message_id'=>(int)($persistencia['id']??0),
+            'to'=>$dados['participante'],
+            'type'=>$dados['tipo'],
+            'text'=>$dados['texto'],
+            'timestamp'=>$this->iso($dados['data_mensagem']??null),
+            'source'=>'business_app',
+            'human'=>true
+        ];
+        if(!empty($dados['media_id'])) $data['media']=['id'=>$dados['media_id'],'mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null];
+        if($dados['tipo']==='reaction') $data['reaction']=['message_id'=>$dados['reacao_message_id']??null,'emoji'=>$dados['reacao_emoji']??null];
+        return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'echo:'.$dados['message_id']);
+    }
+
     public function status(array $metaConta,array $status)
     {
         $messageId=trim((string)($status['id']??''));
