@@ -104,7 +104,14 @@ class MetaWebhookMessageIngestionService
                 );
             });
 
-            empty($persistencia['created']) ? $resultado['duplicadas']++ : $resultado['criadas']++;
+            if(empty($persistencia['created'])){
+                $resultado['duplicadas']++;
+            }else{
+                $resultado['criadas']++;
+                if($this->partnerWebhook){
+                    try{ call_user_func($this->partnerWebhook, $metaConta, $dados, $persistencia, 'business_app'); }catch(\Throwable $e){ $this->log('partner_webhook_echo_enqueue_falhou',['message_id'=>$this->identificadorSeguro($dados['message_id']),'exception'=>get_class($e)]); }
+                }
+            }
         }
 
         return $resultado;
