@@ -421,3 +421,29 @@ Exemplo áudio:
 ```json
 {"client_id":10,"channel_id":9,"to":"5541999999999","type":"audio","audio":{"media_id":"123"}}
 ```
+
+## Consulta de templates aprovados
+
+`GET /index.php?url=api/v1/templates&client_id=123&channel_id=456`
+
+Requer `Authorization: Bearer <API_KEY>`. O canal deve estar explicitamente autorizado e ativo para o Partner. A resposta contém somente templates ativos e `APPROVED` do `client_id + channel_id` informado.
+
+Exemplo:
+
+```json
+{
+  "data": [
+    {
+      "id": 42,
+      "name": "whats_nao_conectato",
+      "language": "pt_BR",
+      "category": "UTILITY",
+      "status": "APPROVED",
+      "variables": ["1"],
+      "components": []
+    }
+  ]
+}
+```
+
+O campo `id` é o `template.id` que deve ser utilizado no `POST /api/v1/messages`. `variables` lista as variáveis encontradas nos textos dos componentes e `components` preserva a estrutura sincronizada da Meta necessária para o integrador montar a mensagem. Templates de outro cliente/canal não são retornados.
