@@ -25,6 +25,12 @@ class ParceiroClientesController extends Controller
     public function index()
     {
         $p=$this->parceiro();
+        $webhookPagina=max(1,(int)($_GET['webhook_page'] ?? 1));
+        $webhookPorPagina=50;
+        $webhookModel=new ParceiroWebhookEvento();
+        $webhookTotal=$webhookModel->contarPartner((int)$p['PAR_ID']);
+        $webhookPaginas=max(1,(int)ceil($webhookTotal/$webhookPorPagina));
+        if($webhookPagina>$webhookPaginas) $webhookPagina=$webhookPaginas;
         $this->view('parceiros/clientes_partner',[
             'titulo'=>'Clientes Partner',
             'parceiro'=>$p,
@@ -32,7 +38,10 @@ class ParceiroClientesController extends Controller
             'clientesPartner'=>$this->model->listarClientes($p['PAR_ID']),
             'novoConvite'=>Session::get('partner_invite_url_once'),
             'novoWebhookSecret'=>Session::get('partner_webhook_secret_once'),
-            'webhookEntregas'=>(new ParceiroWebhookEvento())->listarPartner((int)$p['PAR_ID'],50)
+            'webhookEntregas'=>$webhookModel->listarPartner((int)$p['PAR_ID'],$webhookPorPagina,($webhookPagina-1)*$webhookPorPagina),
+            'webhookPagina'=>$webhookPagina,
+            'webhookPaginas'=>$webhookPaginas,
+            'webhookTotal'=>$webhookTotal
         ]);
         Session::remove('partner_invite_url_once');
         Session::remove('partner_webhook_secret_once');

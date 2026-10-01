@@ -86,11 +86,19 @@ class ParceiroWebhookEvento
         }
     }
 
-    public function listarPartner($parceiroId,$limite=50)
+    public function listarPartner($parceiroId,$limite=50,$offset=0)
     {
         $limite=max(1,min(200,(int)$limite));
-        $q=$this->db->prepare("SELECT PWE_EventId,PWE_Tipo,PWE_Status,PWE_Tentativas,PWE_UltimoHttpStatus,PWE_UltimoErro,PWE_CriadoEm,PWE_EntregueEm FROM parceiro_webhook_eventos WHERE PAR_ID=? ORDER BY PWE_ID DESC LIMIT {$limite}");
+        $offset=max(0,(int)$offset);
+        $q=$this->db->prepare("SELECT PWE_EventId,PWE_Tipo,PWE_Status,PWE_Tentativas,PWE_UltimoHttpStatus,PWE_UltimoErro,PWE_CriadoEm,PWE_EntregueEm FROM parceiro_webhook_eventos WHERE PAR_ID=? ORDER BY PWE_ID DESC LIMIT {$limite} OFFSET {$offset}");
         $q->execute([(int)$parceiroId]);
         return $q->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function contarPartner($parceiroId)
+    {
+        $q=$this->db->prepare("SELECT COUNT(*) FROM parceiro_webhook_eventos WHERE PAR_ID=?");
+        $q->execute([(int)$parceiroId]);
+        return (int)$q->fetchColumn();
     }
 }
