@@ -5,6 +5,8 @@ namespace Controllers;
 use Core\Controller;
 use Models\ParceiroApi;
 use Models\ParceiroApiIdempotencia;
+use Models\Conversa;
+use Services\MetaMediaService;
 use Services\PartnerApiAuthService;
 use Services\PartnerMessageService;
 use Services\PartnerApiException;
@@ -113,6 +115,60 @@ class ApiV1Controller extends Controller
             $idempotencias->removerProcessando((int)$parceiro['PAR_ID'],$idempotencyKey);
             error_log('Partner API messages: '.$e->getMessage());
             $this->json(['error'=>['code'=>'internal_error','message'=>'Não foi possível processar o envio.']],500);
+        }
+    }
+
+    public function media()
+    {
+        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET'){
+            header('Allow: GET');
+            $this->json(['error'=>['code'=>'method_not_allowed','message'=>'Método não permitido.']],405);
+        }
+
+        $parceiro=$this->authService->autenticar();
+        if(!$parceiro){
+            header('WWW-Authenticate: Bearer');
+            $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
+        }
+
+        $mensagemId=(int)($_GET['id']??0);
+        if($mensagemId<=0){
+            $this->json(['error'=>['code'=>'media_not_found','message'=>'Mídia não encontrada.']],404);
+        }
+
+        $canais=$this->parceiroModel->listarCanaisAutorizados((int)$parceiro['PAR_ID']);
+        $mensagem=null;
+        foreach($canais as $canal){
+            $mensagem=(new Conversa())->buscarMensagemPartner($mensagemId,(int)$canal['CLI_ID'],(int)$canal['MTA_ID']);
+            if($mensagem) break;
+        }
+
+        $tiposPermitidos=['audio','image','document'];
+        if(!$mensagem || empty($mensagem['MSG_MediaId']) || !in_array(strtolower((string)($mensagem['MSG_Tipo']??'')),$tiposPermitidos,true)){
+            $this->json(['error'=>['code'=>'media_not_found','message'=>'Mídia não encontrada.']],404);
+        }
+
+        try{
+            $media=(new MetaMediaService((int)$mensagem['MTA_ID'],(int)$mensagem['CLI_ID']))->obterMidiaMensagem(
+                $mensagem['MSG_MediaId'],
+                $mensagem['MSG_MediaMimeType']??null,
+                $mensagem['MSG_MediaSha256']??null
+            );
+            $mime=trim((string)($media['mime']??'')) ?: 'application/octet-stream';
+            $nome=trim((string)($mensagem['MSG_MediaNome']??''));
+            if($nome==='') $nome='media-'.(int)$mensagem['MSG_ID'];
+            $nome=preg_replace('/[^A-Za-z0-9._-]+/','_',basename($nome));
+
+            header('Content-Type: '.$mime);
+            header('Content-Length: '.filesize($media['arquivo']));
+            header('Content-Disposition: attachment; filename="'.$nome.'"');
+            header('Cache-Control: private, no-store');
+            header('X-Content-Type-Options: nosniff');
+            readfile($media['arquivo']);
+            exit;
+        }catch(\Throwable $e){
+            error_log('Partner API media: '.$e->getMessage());
+            $this->json(['error'=>['code'=>'media_unavailable','message'=>'Não foi possível obter a mídia.']],502);
         }
     }
 
