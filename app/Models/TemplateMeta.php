@@ -578,6 +578,23 @@ class TemplateMeta
         return $sql->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function listarAprovadosParaPartner($clienteId, $metaId)
+    {
+        $sql = $this->db->prepare("
+            SELECT t.*
+            FROM templates_meta t
+            INNER JOIN meta_contas m ON m.MTA_ID = t.MTA_ID
+            WHERE m.CLI_ID = ?
+              AND t.MTA_ID = ?
+              AND t.TMP_Ativo = 'S'
+              AND t.TMP_Status = 'APPROVED'
+              AND m.MTA_Ativo = 'S'
+            ORDER BY t.TMP_Nome ASC, t.TMP_Idioma ASC, t.TMP_ID ASC
+        ");
+        $sql->execute([(int)$clienteId,(int)$metaId]);
+        return $sql->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function buscarAprovadoParaEnvioPorCliente($id, $clienteId)
     {
         $sql = $this->db->prepare("
