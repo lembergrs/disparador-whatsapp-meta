@@ -157,7 +157,11 @@ class ParceiroApi
 
         $salt=(string)($atual['PAR_WebhookSecretSalt'] ?? '');
         $novoSegredo=null;
-        if($regenerarSegredo || $salt===''){
+        $masterDisponivel=defined('PARTNER_WEBHOOK_SIGNING_KEY') && trim((string)PARTNER_WEBHOOK_SIGNING_KEY)!=='';
+        if(($regenerarSegredo || ($ativo==='S' && $salt==='')) && !$masterDisponivel){
+            throw new \DomainException('Configure PARTNER_WEBHOOK_SIGNING_KEY antes de gerar ou ativar webhooks.');
+        }
+        if($regenerarSegredo || ($ativo==='S' && $salt==='')){
             $salt=bin2hex(random_bytes(32));
             $novoSegredo=$this->derivarSegredoWebhook($parceiroId,$salt);
         }
@@ -166,8 +170,8 @@ class ParceiroApi
             throw new \DomainException('Configure PARTNER_WEBHOOK_SIGNING_KEY antes de ativar webhooks.');
         }
 
-        $hash=$this->derivarSegredoWebhook($parceiroId,$salt);
-        $hash=$hash!=='' ? hash('sha256',$hash) : null;
+        $segredoAtual=$salt!=='' ? $this->derivarSegredoWebhook($parceiroId,$salt) : '';
+        $hash=$segredoAtual!=='' ? hash('sha256',$segredoAtual) : null;
         $sql=$this->db->prepare("UPDATE parceiros_api SET PAR_WebhookUrl=?,PAR_WebhookAtivo=?,PAR_WebhookEventos=?,PAR_WebhookSecretSalt=?,PAR_WebhookSecretHash=? WHERE PAR_ID=?");
         $sql->execute([$url ?: null,$ativo,json_encode($eventos,JSON_UNESCAPED_UNICODE),$salt ?: null,$hash,(int)$parceiroId]);
         return $novoSegredo;
