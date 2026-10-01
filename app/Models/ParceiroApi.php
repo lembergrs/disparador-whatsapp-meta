@@ -134,6 +134,60 @@ class ParceiroApi
         return $sql->execute([(int)$chaveId,(int)$parceiroId]);
     }
 
+
+    public function salvarWebhookParceiro($parceiroId, $url, array $eventos, $ativo, $regenerarSegredo = false)
+    {
+        $permitidos=['message.received','message.sent','message.delivered','message.read','message.failed','message.reaction'];
+        $eventos=array_values(array_unique(array_intersect($permitidos,$eventos)));
+        $url=trim((string)$url);
+        $ativo=$ativo==='S' ? 'S' : 'N';
+
+        if($url!=='' && !filter_var($url,FILTER_VALIDATE_URL)){
+            throw new \DomainException('URL de webhook inválida.');
+        }
+        if($ativo==='S' && $url===''){
+            throw new \DomainException('Informe a URL antes de ativar o webhook.');
+        }
+        if($ativo==='S' && !$eventos){
+            throw new \DomainException('Selecione ao menos um evento para ativar o webhook.');
+        }
+
+        $atual=$this->buscarAdmin($parceiroId);
+        if(!$atual){ throw new \DomainException('Partner não encontrado.'); }
+
+        $salt=(string)($atual['PAR_WebhookSecretSalt'] ?? '');
+        $novoSegredo=null;
+        if($regenerarSegredo || $salt===''){
+            $salt=bin2hex(random_bytes(32));
+            $novoSegredo=$this->derivarSegredoWebhook($parceiroId,$salt);
+        }
+
+        if($ativo==='S' && $this->derivarSegredoWebhook($parceiroId,$salt)===''){
+            throw new \DomainException('Configure PARTNER_WEBHOOK_SIGNING_KEY antes de ativar webhooks.');
+        }
+
+        $hash=$this->derivarSegredoWebhook($parceiroId,$salt);
+        $hash=$hash!=='' ? hash('sha256',$hash) : null;
+        $sql=$this->db->prepare("UPDATE parceiros_api SET PAR_WebhookUrl=?,PAR_WebhookAtivo=?,PAR_WebhookEventos=?,PAR_WebhookSecretSalt=?,PAR_WebhookSecretHash=? WHERE PAR_ID=?");
+        $sql->execute([$url ?: null,$ativo,json_encode($eventos,JSON_UNESCAPED_UNICODE),$salt ?: null,$hash,(int)$parceiroId]);
+        return $novoSegredo;
+    }
+
+    public function segredoWebhook($parceiroId)
+    {
+        $p=$this->buscarAdmin($parceiroId);
+        if(!$p || empty($p['PAR_WebhookSecretSalt'])) return null;
+        $segredo=$this->derivarSegredoWebhook($parceiroId,$p['PAR_WebhookSecretSalt']);
+        return $segredo!=='' ? $segredo : null;
+    }
+
+    private function derivarSegredoWebhook($parceiroId,$salt)
+    {
+        $master=defined('PARTNER_WEBHOOK_SIGNING_KEY') ? trim((string)PARTNER_WEBHOOK_SIGNING_KEY) : '';
+        if($master==='') return '';
+        return 'dsp_whsec_' . hash_hmac('sha256','partner:'.(int)$parceiroId.':'.$salt,$master);
+    }
+
     public function autenticarPorToken($token)
     {
         $hash = hash('sha256', (string) $token);
