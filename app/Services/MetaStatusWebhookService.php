@@ -9,7 +9,8 @@ class MetaStatusWebhookService
     private $notificacoes;
     private $logger;
     private $estornoConsumo;
-    public function __construct($conversas, callable $secundario = null, callable $notificacoes = null, callable $logger = null, callable $estornoConsumo = null){ $this->conversas=$conversas; $this->secundario=$secundario; $this->notificacoes=$notificacoes; $this->logger=$logger; $this->estornoConsumo=$estornoConsumo; }
+    private $partnerWebhook;
+    public function __construct($conversas, callable $secundario = null, callable $notificacoes = null, callable $logger = null, callable $estornoConsumo = null, callable $partnerWebhook = null){ $this->conversas=$conversas; $this->secundario=$secundario; $this->notificacoes=$notificacoes; $this->logger=$logger; $this->estornoConsumo=$estornoConsumo; $this->partnerWebhook=$partnerWebhook; }
 
     public function processarLote(array $statuses, $metaId = null)
     {
@@ -43,6 +44,7 @@ class MetaStatusWebhookService
                     try{ call_user_func($this->estornoConsumo, $messageId, $erro, $timestamp); }catch(\Throwable $e){ $resumo['erros']++; $this->logFalhaPersistencia('estorno_consumo_meta_falhou', $messageId, $metaId, $novo, $e); }
                 }
                 try{ if($this->notificacoes) $alterou = (bool)call_user_func($this->notificacoes, $messageId, $novo, $erro, $timestamp) || $alterou; }catch(\Throwable $e){ $resumo['erros']++; }
+                try{ if($this->partnerWebhook) call_user_func($this->partnerWebhook, $status); }catch(\Throwable $e){ $resumo['erros']++; $this->logFalhaPersistencia('partner_webhook_status_enqueue_falhou',$messageId,$metaId,$novo,$e); }
                 $alterou ? $resumo['processados']++ : $resumo['ignorados']++;
             }catch(\Throwable $e){ $resumo['erros']++; }
         }
