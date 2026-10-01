@@ -523,7 +523,7 @@ class MetaService
         $tipo = strtolower(trim((string) $tipo));
         $mediaId = trim((string) $mediaId);
 
-        if(!in_array($tipo, ['image', 'video', 'document'], true)){
+        if(!in_array($tipo, ['image', 'video', 'document', 'audio'], true)){
             throw new Exception('Tipo de mídia não permitido para envio.');
         }
 
