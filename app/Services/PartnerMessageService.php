@@ -28,8 +28,8 @@ class PartnerMessageService
         if($clienteId<=0 || $metaId<=0 || strlen($to)<10 || strlen($to)>15){
             throw new PartnerApiException('validation_error','Informe client_id, channel_id e to válidos.',422);
         }
-        if(!in_array($type,['text','template'],true)){
-            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text ou template.',422);
+        if(!in_array($type,['text','template','image','document'],true)){
+            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text, template, image ou document.',422);
         }
 
         $canal=$this->parceiros->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
@@ -51,6 +51,21 @@ class PartnerMessageService
             }
             $retorno=$meta->enviarTexto($to,$body);
             return $this->finalizar($retorno,$conversaId,'text',$body);
+        }
+
+        if(in_array($type,['image','document'],true)){
+            if(!$this->janelaAberta($conversaId)){
+                throw new PartnerApiException('customer_care_window_closed','A janela de atendimento de 24 horas está fechada. Envie um template aprovado.',409);
+            }
+            $mediaId=trim((string)($dados[$type]['media_id']??''));
+            if($mediaId===''){ throw new PartnerApiException('validation_error','Informe '.$type.'.media_id.',422); }
+            $caption=trim((string)($dados[$type]['caption']??''));
+            $filename=$type==='document' ? trim((string)($dados[$type]['filename']??'')) : '';
+            $retorno=$meta->enviarMidia($to,$type,$mediaId,$caption,$filename);
+            return $this->finalizar($retorno,$conversaId,$type,$caption!==''?$caption:'['.strtoupper($type).']',[
+                'media_id'=>$mediaId,
+                'media_nome'=>$filename!==''?$filename:null
+            ]);
         }
 
         $templateId=(int)($dados['template']['id']??0);
@@ -90,7 +105,8 @@ class PartnerMessageService
         $localId=$this->conversas->salvarMensagem([
             'conversa_id'=>$conversaId,'direcao'=>'enviada','origem'=>'partner_api','tipo'=>$tipo,
             'texto'=>$texto,'message_id'=>$messageId,'status'=>'aguardando_confirmacao',
-            'retorno'=>$retorno,'data_mensagem'=>date('Y-m-d H:i:s')
+            'retorno'=>$retorno,'data_mensagem'=>date('Y-m-d H:i:s'),
+            'media_id'=>$extra['media_id']??null,'media_nome'=>$extra['media_nome']??null
         ]);
 
         return array_merge([
