@@ -30,7 +30,7 @@ $eventosDisponiveis=[
 </tbody></table>
 <?php if(($webhookTotal??0)>0){ ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center mt-3">
-<small class="text-muted"><?= (int)$webhookTotal ?> entrega(s) registrada(s) · 50 por página</small>
+<small class="text-muted"><?= (int)$webhookTotal ?> entrega(s) registrada(s) · 10 por página</small>
 <?php if(($webhookPaginas??1)>1){ ?>
 <nav aria-label="Paginação das entregas do webhook"><ul class="pagination pagination-sm mb-0">
 <li class="page-item <?= ($webhookPagina??1)<=1?'disabled':'' ?>"><a class="page-link" href="<?= BASE_URL ?>/index.php?url=parceiroClientes&webhook_page=<?= max(1,($webhookPagina??1)-1) ?>">Anterior</a></li>
