@@ -25,7 +25,7 @@ class ParceiroWebhookEvento
 
     public function mensagemPartnerPorMetaId($metaId,$messageId)
     {
-        $q=$this->db->prepare("SELECT MSG_ID,MSG_Origem FROM conversa_mensagens WHERE MTA_ID=? AND MSG_MessageId=? LIMIT 1");
+        $q=$this->db->prepare("SELECT m.MSG_ID,m.MSG_Origem FROM conversa_mensagens m INNER JOIN conversas c ON c.CVS_ID=m.CVS_ID WHERE c.MTA_ID=? AND m.MSG_MetaMessageId=? ORDER BY m.MSG_ID ASC LIMIT 1");
         $q->execute([(int)$metaId,trim((string)$messageId)]);
         return $q->fetch(PDO::FETCH_ASSOC) ?: null;
     }
