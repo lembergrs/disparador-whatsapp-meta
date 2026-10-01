@@ -11,7 +11,7 @@ $h=file_get_contents($r.'/public/webhook/meta.php');
 $g=file_get_contents($r.'/database/migrations/20261001_create_partner_webhook_queue.sql');
 pwdAssert(strpos($g,'parceiro_webhook_eventos')!==false && strpos($g,'PWE_EventId')!==false,'migration deve criar fila/historico');
 pwdAssert(strpos($e,"'message.received'")!==false && strpos($e,"'message.reaction'")!==false,'inbound deve ser normalizado');
-pwdAssert(strpos($e,"'message.sent'")===false,'message.sent nao deve ser inventado no inbound');
+pwdAssert(strpos($e,'$tipo=$dados[\'tipo\']===\'reaction\' ? \'message.reaction\' : \'message.received\';')!==false,'inbound deve continuar mapeando mensagem comum para message.received');
 pwdAssert(strpos($e,"MSG_Origem")!==false && strpos($e,"partner_api")!==false,'status deve restringir eventos a mensagens originadas pela Partner API');
 pwdAssert(strpos($m,"MSG_Origem")!==false,'modelo deve retornar a origem persistida da mensagem');
 pwdAssert(strpos($d,'hash_hmac')!==false && strpos($d,'X-Disparador-Signature: sha256=')!==false,'entrega deve assinar HMAC');
