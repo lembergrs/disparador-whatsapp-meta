@@ -120,8 +120,9 @@ class ApiV1Controller extends Controller
 
     public function media()
     {
-        if(($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET'){
-            header('Allow: GET');
+        $method=$_SERVER['REQUEST_METHOD'] ?? 'GET';
+        if(!in_array($method,['GET','POST'],true)){
+            header('Allow: GET, POST');
             $this->json(['error'=>['code'=>'method_not_allowed','message'=>'Método não permitido.']],405);
         }
 
@@ -129,6 +130,32 @@ class ApiV1Controller extends Controller
         if(!$parceiro){
             header('WWW-Authenticate: Bearer');
             $this->json(['error'=>['code'=>'unauthorized','message'=>'API key inválida ou ausente.']],401);
+        }
+
+        if($method==='POST'){
+            $clienteId=(int)($_POST['client_id']??0);
+            $metaId=(int)($_POST['channel_id']??0);
+            $tipo=strtolower(trim((string)($_POST['type']??'')));
+            $map=['image'=>'IMAGE','document'=>'DOCUMENT'];
+            if($clienteId<=0 || $metaId<=0 || !isset($map[$tipo]) || empty($_FILES['file'])){
+                $this->json(['error'=>['code'=>'validation_error','message'=>'Informe client_id, channel_id, type (image ou document) e file.']],422);
+            }
+            $canal=$this->parceiroModel->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
+            if(!$canal || ($canal['PAC_Status']??'')!=='ativo'){
+                $this->json(['error'=>['code'=>'channel_not_authorized','message'=>'Canal não autorizado ou inativo para este Partner.']],403);
+            }
+            try{
+                $upload=(new MetaMediaService($metaId,$clienteId))->uploadMensagemMedia($_FILES['file'],$map[$tipo]);
+                $this->json(['data'=>[
+                    'media_id'=>(string)$upload['media_id'],
+                    'type'=>$tipo,
+                    'mime_type'=>$upload['mime']??null,
+                    'filename'=>$upload['nome_original']??null,
+                    'size'=>(int)($upload['tamanho']??0)
+                ]],201);
+            }catch(\Throwable $e){
+                $this->json(['error'=>['code'=>'media_upload_failed','message'=>$e->getMessage()]],422);
+            }
         }
 
         $mensagemId=(int)($_GET['id']??0);

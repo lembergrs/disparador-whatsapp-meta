@@ -394,3 +394,24 @@ Exemplo:
 ```
 
 O download retorna `404 media_not_found` quando a mídia não existe ou não pertence ao escopo autorizado e `502 media_unavailable` quando a mídia não pode ser obtida da Meta/cache.
+
+## Envio de mídia
+
+A primeira fase de mídia de saída suporta **imagem** e **documento PDF** em duas etapas.
+
+1. Faça `POST /index.php?url=api/v1/media` como `multipart/form-data`, com `client_id`, `channel_id`, `type` (`image` ou `document`) e `file`. A autenticação é `Authorization: Bearer <API_KEY>`. O retorno `201` contém um `media_id` temporário para o envio.
+2. Faça o `POST /index.php?url=api/v1/messages` normal, com `Idempotency-Key`, usando `type: image` ou `type: document` e o `media_id` retornado. O envio de mídia livre exige janela de atendimento de 24 horas aberta.
+
+Exemplo imagem:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"image","image":{"media_id":"123","caption":"Foto"}}
+```
+
+Exemplo documento:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"document","document":{"media_id":"123","caption":"Arquivo","filename":"arquivo.pdf"}}
+```
+
+Limites atuais do upload: imagem JPG/JPEG/PNG/WEBP até 5 MB e documento PDF até 10 MB. Áudio de saída será adicionado em etapa própria porque o serviço atual de upload da Central ainda não contempla áudio.
