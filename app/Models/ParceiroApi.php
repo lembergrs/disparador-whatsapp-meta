@@ -142,8 +142,8 @@ class ParceiroApi
         $url=trim((string)$url);
         $ativo=$ativo==='S' ? 'S' : 'N';
 
-        if($url!=='' && !filter_var($url,FILTER_VALIDATE_URL)){
-            throw new \DomainException('URL de webhook inválida.');
+        if($url!=='' && (!filter_var($url,FILTER_VALIDATE_URL) || strtolower((string)parse_url($url,PHP_URL_SCHEME))!=='https')){
+            throw new \DomainException('Informe uma URL HTTPS válida para o webhook.');
         }
         if($ativo==='S' && $url===''){
             throw new \DomainException('Informe a URL antes de ativar o webhook.');
