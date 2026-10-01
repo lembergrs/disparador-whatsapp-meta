@@ -7,12 +7,14 @@ class MetaWebhookMessageIngestionService
     private $conversaModel;
     private $autoResponder;
     private $logger;
+    private $partnerWebhook;
 
-    public function __construct($conversaModel, callable $autoResponder = null, callable $logger = null)
+    public function __construct($conversaModel, callable $autoResponder = null, callable $logger = null, callable $partnerWebhook = null)
     {
         $this->conversaModel = $conversaModel;
         $this->autoResponder = $autoResponder;
         $this->logger = $logger;
+        $this->partnerWebhook = $partnerWebhook;
     }
 
     public function processarInbound(array $value, array $metaConta)
@@ -54,6 +56,9 @@ class MetaWebhookMessageIngestionService
             }
 
             $resultado['criadas']++;
+            if($this->partnerWebhook){
+                try{ call_user_func($this->partnerWebhook, $metaConta, $dados, $persistencia); }catch(\Throwable $e){ $this->log('partner_webhook_enqueue_falhou',['message_id'=>$this->identificadorSeguro($dados['message_id']),'exception'=>get_class($e)]); }
+            }
             if($this->autoResponder && $dados['tipo'] !== 'reaction'){
                 call_user_func($this->autoResponder, $metaConta, $conversaId, $dados['participante']);
             }
