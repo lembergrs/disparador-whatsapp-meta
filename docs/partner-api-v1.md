@@ -397,10 +397,10 @@ O download retorna `404 media_not_found` quando a mídia não existe ou não per
 
 ## Envio de mídia
 
-A primeira fase de mídia de saída suporta **imagem** e **documento PDF** em duas etapas.
+A mídia de saída suporta **imagem**, **documento PDF** e **áudio** em duas etapas.
 
-1. Faça `POST /index.php?url=api/v1/media` como `multipart/form-data`, com `client_id`, `channel_id`, `type` (`image` ou `document`) e `file`. A autenticação é `Authorization: Bearer <API_KEY>`. O retorno `201` contém um `media_id` temporário para o envio.
-2. Faça o `POST /index.php?url=api/v1/messages` normal, com `Idempotency-Key`, usando `type: image` ou `type: document` e o `media_id` retornado. O envio de mídia livre exige janela de atendimento de 24 horas aberta.
+1. Faça `POST /index.php?url=api/v1/media` como `multipart/form-data`, com `client_id`, `channel_id`, `type` (`image`, `document` ou `audio`) e `file`. A autenticação é `Authorization: Bearer <API_KEY>`. O retorno `201` contém um `media_id` temporário para o envio.
+2. Faça o `POST /index.php?url=api/v1/messages` normal, com `Idempotency-Key`, usando `type: image`, `type: document` ou `type: audio` e o `media_id` retornado. O envio de mídia livre exige janela de atendimento de 24 horas aberta.
 
 Exemplo imagem:
 
@@ -414,4 +414,10 @@ Exemplo documento:
 {"client_id":10,"channel_id":9,"to":"5541999999999","type":"document","document":{"media_id":"123","caption":"Arquivo","filename":"arquivo.pdf"}}
 ```
 
-Limites atuais do upload: imagem JPG/JPEG/PNG/WEBP até 5 MB e documento PDF até 10 MB. Áudio de saída será adicionado em etapa própria porque o serviço atual de upload da Central ainda não contempla áudio.
+Limites atuais do upload: imagem JPG/JPEG/PNG/WEBP até 5 MB, documento PDF até 10 MB e áudio AAC/AMR/MP3/M4A/OGG até 16 MB. O envio de áudio livre também exige janela de atendimento de 24 horas aberta.
+
+Exemplo áudio:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"audio","audio":{"media_id":"123"}}
+```
