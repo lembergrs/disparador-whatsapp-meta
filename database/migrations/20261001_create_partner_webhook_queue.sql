@@ -1,0 +1,27 @@
+-- Fila e histórico de entrega dos webhooks da Partner API.
+CREATE TABLE parceiro_webhook_eventos (
+    PWE_ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    PWE_EventId VARCHAR(80) NOT NULL,
+    PAR_ID INT UNSIGNED NOT NULL,
+    CLI_ID INT NOT NULL,
+    MTA_ID INT NOT NULL,
+    PWE_Tipo VARCHAR(60) NOT NULL,
+    PWE_Payload LONGTEXT NOT NULL,
+    PWE_Status ENUM('pendente','processando','entregue','falha') NOT NULL DEFAULT 'pendente',
+    PWE_Tentativas TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    PWE_MaxTentativas TINYINT UNSIGNED NOT NULL DEFAULT 6,
+    PWE_ProximaTentativaEm DATETIME NULL,
+    PWE_ReservadaEm DATETIME NULL,
+    PWE_EntregueEm DATETIME NULL,
+    PWE_UltimoHttpStatus SMALLINT UNSIGNED NULL,
+    PWE_UltimoErro VARCHAR(500) NULL,
+    PWE_CriadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PWE_AtualizadoEm DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (PWE_ID),
+    UNIQUE KEY UK_partner_webhook_event_id (PWE_EventId),
+    KEY IDX_partner_webhook_fila (PWE_Status,PWE_ProximaTentativaEm,PWE_CriadoEm),
+    KEY IDX_partner_webhook_partner (PAR_ID,PWE_CriadoEm),
+    CONSTRAINT FK_partner_webhook_partner FOREIGN KEY (PAR_ID) REFERENCES parceiros_api (PAR_ID),
+    CONSTRAINT FK_partner_webhook_cliente FOREIGN KEY (CLI_ID) REFERENCES clientes (CLI_ID),
+    CONSTRAINT FK_partner_webhook_meta FOREIGN KEY (MTA_ID) REFERENCES meta_contas (MTA_ID)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
