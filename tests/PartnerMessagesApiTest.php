@@ -23,7 +23,7 @@ pamAssert(strpos($idemMigration,"ENUM('processando','concluido')")!==false,'migr
 pamAssert(strpos($s,'buscarCanalAutorizado')!==false,'serviço deve validar canal autorizado');
 pamAssert(strpos($m,"pc.PAC_Status = 'ativo'")!==false,'canal deve estar ativo');
 pamAssert(strpos($m,'PAC_FaturavelDesde IS NOT NULL')!==false,'canal deve estar faturável');
-pamAssert(strpos($s,"['text','template']")!==false,'primeira versão deve limitar texto e template');
+pamAssert(strpos($s,"['text','template','image','document']")!==false,'API deve limitar os tipos suportados');
 pamAssert(strpos($s,'ultimaMensagemRecebida')!==false && strpos($s,'86400')!==false,'texto deve respeitar janela de 24 horas');
 pamAssert(strpos($s,'buscarAprovadoParaEnvioPorCliente')!==false,'template deve pertencer ao cliente e estar aprovado');
 pamAssert(strpos($s,"(int)\$template['MTA_ID']!==\$metaId")!==false,'template deve pertencer ao canal');
