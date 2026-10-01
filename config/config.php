@@ -102,6 +102,13 @@ defined('META_COEXISTENCE_TEST_CLIENT_IDS') || define(
     'META_COEXISTENCE_TEST_CLIENT_IDS',
     env_valor('META_COEXISTENCE_TEST_CLIENT_IDS', '')
 );
+
+// Chave mestra usada para derivar os segredos HMAC dos webhooks da Partner API.
+// Deve ser um segredo forte e exclusivo do ambiente de produção.
+defined('PARTNER_WEBHOOK_SIGNING_KEY') || define(
+    'PARTNER_WEBHOOK_SIGNING_KEY',
+    env_valor('PARTNER_WEBHOOK_SIGNING_KEY', '')
+);
 defined('WHATSAPP_INSTITUCIONAL_PHONE_NUMBER_ID') || define('WHATSAPP_INSTITUCIONAL_PHONE_NUMBER_ID', env_valor('WHATSAPP_INSTITUCIONAL_PHONE_NUMBER_ID', ''));
 defined('WHATSAPP_INSTITUCIONAL_WABA_ID') || define('WHATSAPP_INSTITUCIONAL_WABA_ID', env_valor('WHATSAPP_INSTITUCIONAL_WABA_ID', ''));
 defined('WHATSAPP_INSTITUCIONAL_ACCESS_TOKEN') || define('WHATSAPP_INSTITUCIONAL_ACCESS_TOKEN', env_valor('WHATSAPP_INSTITUCIONAL_ACCESS_TOKEN', ''));
