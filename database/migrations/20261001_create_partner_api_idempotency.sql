@@ -1,6 +1,6 @@
 CREATE TABLE parceiro_api_idempotencias (
     PAI_ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    PAR_ID INT NOT NULL,
+    PAR_ID INT UNSIGNED NOT NULL,
     PAI_Chave VARCHAR(120) NOT NULL,
     PAI_RequestHash CHAR(64) NOT NULL,
     PAI_Status ENUM('processando','concluido') NOT NULL DEFAULT 'processando',
