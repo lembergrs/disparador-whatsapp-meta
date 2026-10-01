@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Session;
 use Models\ParceiroConvite;
 use Models\ParceiroApi;
+use Models\ParceiroWebhookEvento;
 
 class ParceiroClientesController extends Controller
 {
@@ -30,7 +31,8 @@ class ParceiroClientesController extends Controller
             'convites'=>$this->model->listar($p['PAR_ID']),
             'clientesPartner'=>$this->model->listarClientes($p['PAR_ID']),
             'novoConvite'=>Session::get('partner_invite_url_once'),
-            'novoWebhookSecret'=>Session::get('partner_webhook_secret_once')
+            'novoWebhookSecret'=>Session::get('partner_webhook_secret_once'),
+            'webhookEntregas'=>(new ParceiroWebhookEvento())->listarPartner((int)$p['PAR_ID'],50)
         ]);
         Session::remove('partner_invite_url_once');
         Session::remove('partner_webhook_secret_once');

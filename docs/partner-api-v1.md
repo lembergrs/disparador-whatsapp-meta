@@ -310,3 +310,40 @@ O segredo de assinatura é individual por Partner e deve ser copiado quando gera
 A configuração do endpoint é independente das API keys. Desativar o webhook não revoga o acesso REST do Partner.
 
 > A entrega assíncrona, assinatura dos requests, retries e histórico de tentativas serão implementados na etapa de entrega de eventos.
+
+
+## Entrega de eventos webhook
+
+Os eventos configurados pelo Partner são persistidos antes da entrega e processados de forma assíncrona pelo worker do Disparador. Falhas temporárias usam retry com backoff exponencial, até 6 tentativas. O painel Partner exibe as últimas entregas, HTTP retornado, quantidade de tentativas e erro resumido.
+
+Cada POST usa `Content-Type: application/json` e os headers:
+
+- `X-Disparador-Event-Id`: identificador idempotente do evento.
+- `X-Disparador-Timestamp`: Unix timestamp usado na assinatura.
+- `X-Disparador-Signature: sha256=<hex>`: HMAC-SHA256 de `<timestamp>.<corpo JSON bruto>` usando o segredo individual do webhook.
+
+O receptor deve calcular o HMAC sobre o corpo bruto recebido e comparar em tempo constante. O `event_id` também deve ser tratado como idempotente pelo integrador.
+
+Exemplo normalizado de mensagem recebida:
+
+```json
+{
+  "event_id": "evt_...",
+  "event": "message.received",
+  "created_at": "2026-10-01T10:30:00-03:00",
+  "data": {
+    "client_id": 123,
+    "channel_id": 45,
+    "message_id": "wamid...",
+    "local_message_id": 678,
+    "from": "5541999999999",
+    "type": "text",
+    "text": "Olá",
+    "timestamp": "2026-10-01T10:29:59-03:00"
+  }
+}
+```
+
+Status de saída são publicados somente para mensagens originadas pela Partner API, evitando que o integrador receba como próprios os envios manuais da Central ou do WhatsApp Business App.
+
+Por segurança, o destino deve ser HTTPS público na porta 443. Endereços privados/reservados, localhost, credenciais embutidas na URL e redirects HTTP não são aceitos.

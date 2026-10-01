@@ -29,6 +29,7 @@ use Services\MetaWebhookMessageIngestionService;
 use Services\MetaWebhookStateSyncService;
 use Services\MetaCoexistenceHistoryQueueService;
 use Services\MetaCoexistenceLifecycleService;
+use Services\PartnerWebhookEventService;
 
 $db = Database::getInstance();
 
@@ -131,6 +132,7 @@ $conversaModel =
     new Conversa();
 $notificacaoModel = new Notificacao($db);
 $billingConsumptionReversalService = new MetaBillingConsumptionReversalService($db);
+$partnerWebhookEventService = new PartnerWebhookEventService();
 
 $statusWebhookService = new MetaStatusWebhookService(
     $conversaModel,
@@ -146,6 +148,9 @@ $statusWebhookService = new MetaStatusWebhookService(
     },
     function($messageId, array $erro) use ($billingConsumptionReversalService){
         return $billingConsumptionReversalService->processar($messageId, $erro);
+    },
+    function(array $status) use (&$metaConta, $partnerWebhookEventService){
+        if(!empty($metaConta)) $partnerWebhookEventService->status($metaConta, $status);
     }
 );
 $messageIngestionService = new MetaWebhookMessageIngestionService(
@@ -155,6 +160,9 @@ $messageIngestionService = new MetaWebhookMessageIngestionService(
     },
     function($acao, array $dados){
         registrarLogWebhookMeta($acao, $dados);
+    },
+    function(array $metaConta, array $dados, array $persistencia) use ($partnerWebhookEventService){
+        $partnerWebhookEventService->inbound($metaConta, $dados, $persistencia);
     }
 );
 $stateSyncService = new MetaWebhookStateSyncService(

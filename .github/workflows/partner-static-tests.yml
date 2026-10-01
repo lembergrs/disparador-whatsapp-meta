@@ -6,6 +6,11 @@ on:
       - 'app/Models/ParceiroApi.php'
       - 'app/Models/ParceiroFinanceiro.php'
       - 'app/Services/ParceiroFinanceiroService.php'
+      - 'app/Services/PartnerWebhook*.php'
+      - 'app/Services/MetaWebhookMessageIngestionService.php'
+      - 'app/Services/MetaStatusWebhookService.php'
+      - 'app/Services/WorkerService.php'
+      - 'public/webhook/meta.php'
       - 'app/Services/FinanceiroWorkflowService.php'
       - 'app/Controllers/ParceiroAdminController.php'
       - 'app/Controllers/ParceiroCadastroController.php'
@@ -33,6 +38,15 @@ jobs:
           php -l app/Models/ParceiroApi.php
           php -l app/Models/ParceiroFinanceiro.php
           php -l app/Services/ParceiroFinanceiroService.php
+          php -l app/Models/ParceiroWebhookEvento.php
+          php -l app/Services/PartnerWebhookEventService.php
+          php -l app/Services/PartnerWebhookDeliveryService.php
+          php -l app/Services/MetaWebhookMessageIngestionService.php
+          php -l app/Services/MetaStatusWebhookService.php
+          php -l app/Services/WorkerService.php
+          php -l public/webhook/meta.php
+          php -l app/Controllers/ParceiroClientesController.php
+          php -l app/Views/parceiros/clientes_partner.php
           php -l app/Services/FinanceiroWorkflowService.php
           php -l app/Services/ParceiroCadastroService.php
           php -l app/Controllers/ParceiroCadastroController.php
