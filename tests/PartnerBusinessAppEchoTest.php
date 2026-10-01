@@ -9,5 +9,5 @@ pbeAssert(strpos($e,'businessAppEcho')!==false,'service Partner deve tratar echo
 pbeAssert(strpos($e,"'source'=>'business_app'")!==false && strpos($e,"'human'=>true")!==false,'payload deve identificar intervencao humana');
 pbeAssert(strpos($e,"'message.reaction'")!==false && strpos($e,"'message.sent'")!==false,'echo deve publicar reacao ou mensagem enviada');
 pbeAssert(strpos($e,"'echo:'")!==false,'echo deve ter chave idempotente propria');
-pbeAssert(strpos($h,"$origem === 'business_app'")!==false && strpos($h,'businessAppEcho')!==false,'webhook Meta deve rotear business_app');
+pbeAssert(strpos($h,'$origem === \'business_app\'')!==false && strpos($h,'businessAppEcho')!==false,'webhook Meta deve rotear business_app');
 echo "Partner business app echo static tests passed\n";
