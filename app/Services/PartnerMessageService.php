@@ -28,8 +28,8 @@ class PartnerMessageService
         if($clienteId<=0 || $metaId<=0 || strlen($to)<10 || strlen($to)>15){
             throw new PartnerApiException('validation_error','Informe client_id, channel_id e to válidos.',422);
         }
-        if(!in_array($type,['text','template','image','document'],true)){
-            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text, template, image ou document.',422);
+        if(!in_array($type,['text','template','image','document','audio'],true)){
+            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text, template, image, document ou audio.',422);
         }
 
         $canal=$this->parceiros->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
@@ -53,7 +53,7 @@ class PartnerMessageService
             return $this->finalizar($retorno,$conversaId,'text',$body);
         }
 
-        if(in_array($type,['image','document'],true)){
+        if(in_array($type,['image','document','audio'],true)){
             if(!$this->janelaAberta($conversaId)){
                 throw new PartnerApiException('customer_care_window_closed','A janela de atendimento de 24 horas está fechada. Envie um template aprovado.',409);
             }
