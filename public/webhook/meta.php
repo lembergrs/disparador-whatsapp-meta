@@ -30,6 +30,7 @@ use Services\MetaWebhookStateSyncService;
 use Services\MetaCoexistenceHistoryQueueService;
 use Services\MetaCoexistenceLifecycleService;
 use Services\PartnerWebhookEventService;
+use Services\MetaErrorMessageService;
 
 $db = Database::getInstance();
 
@@ -536,7 +537,10 @@ function atualizarRegistrosSecundariosStatus($db, $messageId, $status, array $er
         $setAtualizacao = $campoAtualizacao ? ", {$campoAtualizacao}=NOW()" : '';
         $sql = $db->prepare("UPDATE {$tabela} SET {$campoStatus}=?, {$campoRetorno}=?{$setErro}{$setAtualizacao} WHERE {$campoId}=? AND ({$campoStatus} IS NULL OR {$campoStatus} IN ({$placeholders}))");
         $params = [$status, $retornoSeguro];
-        if($campoErro){ $params[]=$status; $params[]=MensagemStatusService::sanitizarErro($erro['mensagem'] ?? null); }
+        if($campoErro){
+            $params[]=$status;
+            $params[]=MetaErrorMessageService::amigavel($erro['codigo'] ?? null, $erro['mensagem'] ?? null);
+        }
         $params[]=$messageId; $params=array_merge($params,$permitidos); $sql->execute($params);
     }
 }
