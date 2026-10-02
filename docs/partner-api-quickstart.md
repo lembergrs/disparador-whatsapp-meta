@@ -38,7 +38,7 @@ Use o `id` retornado como `template.id` no envio. Somente templates ativos e apr
 
 ## 4. Enviar mensagem
 
-Todo `POST /messages` exige `Idempotency-Key`, com 8 a 120 caracteres. Gere uma chave nova para cada intenção de envio e reutilize a mesma chave apenas ao repetir a mesma requisição.
+Todo `POST /messages` exige `Idempotency-Key`, com 8 a 120 caracteres. A chave aceita letras, números, ponto (`.`), hífen (`-`), sublinhado (`_`) e dois-pontos (`:`). Gere uma chave nova para cada intenção de envio e reutilize a mesma chave apenas ao repetir a mesma requisição.
 
 Texto livre exige janela de atendimento de 24 horas aberta:
 
@@ -67,7 +67,18 @@ Fora da janela de 24 horas, utilize template aprovado:
 }
 ```
 
-Uma requisição aceita retorna HTTP 202 com `message_id`, `local_message_id`, `status: accepted` e `type`.
+Uma requisição aceita retorna HTTP 202:
+
+```json
+{
+  "data": {
+    "message_id": "wamid...",
+    "local_message_id": 321,
+    "status": "accepted",
+    "type": "text"
+  }
+}
+```
 
 ## 5. Enviar mídia
 
@@ -82,7 +93,21 @@ curl -sS -X POST "https://disparador.net/index.php?url=api/v1/media" \
   -F "file=@foto.jpg"
 ```
 
-O HTTP 201 retorna `media_id`. Depois use esse identificador no `POST /messages`:
+O HTTP 201 retorna, por exemplo:
+
+```json
+{
+  "data": {
+    "media_id": "MEDIA_ID",
+    "type": "image",
+    "mime_type": "image/jpeg",
+    "filename": "foto.jpg",
+    "size": 123456
+  }
+}
+```
+
+Depois use esse identificador no `POST /messages`:
 
 ```json
 {
@@ -110,7 +135,7 @@ O Partner pode receber:
 - `message.failed`
 - `message.reaction`
 
-O endpoint do integrador deve ser HTTPS público na porta 443. Cada POST contém:
+O endpoint do integrador deve ser HTTPS público na porta 443. URLs com localhost, endereços privados/reservados ou credenciais embutidas não são aceitas, e o Disparador não segue redirects HTTP. Cada POST contém:
 
 ```text
 X-Disparador-Event-Id: evt_...
@@ -127,7 +152,7 @@ HMAC-SHA256(
 )
 ```
 
-Compare a assinatura em tempo constante. Valide também a idade de `X-Disparador-Timestamp` conforme a política do seu sistema e rejeite timestamps antigos. Persista `X-Disparador-Event-Id` e ignore eventos já processados. O Disparador pode reenviar uma entrega em caso de falha; há até 6 tentativas com backoff.
+Compare a assinatura em tempo constante. Valide também a idade de `X-Disparador-Timestamp` conforme a política do seu sistema e rejeite timestamps antigos. Persista `X-Disparador-Event-Id` e ignore eventos já processados. Responda com qualquer HTTP 2xx somente depois de aceitar/persistir o evento no seu sistema. Respostas fora de 2xx são consideradas falha e podem ser reenviadas. Há até 6 tentativas com backoff.
 
 Em canais Coexistence, uma ação manual no WhatsApp Business App pode gerar `message.sent` ou `message.reaction` com:
 
@@ -173,9 +198,9 @@ O formato padrão é:
 {"error":{"code":"validation_error","message":"..."}}
 ```
 
-Entre os códigos relevantes estão `unauthorized`, `invalid_json`, `invalid_idempotency_key`, `validation_error`, `unsupported_message_type`, `channel_not_authorized`, `channel_not_ready`, `customer_care_window_closed`, `template_not_available`, `meta_send_failed`, `media_upload_failed`, `media_not_found`, `media_unavailable`, `rate_limit_exceeded`, `payload_too_large`, `idempotency_conflict`, `request_in_progress` e `internal_error`.
+Entre os códigos relevantes estão `unauthorized`, `invalid_json`, `invalid_idempotency_key`, `validation_error`, `unsupported_message_type`, `channel_not_authorized`, `channel_not_ready`, `customer_care_window_closed`, `template_not_available`, `meta_send_failed`, `media_upload_failed`, `media_not_found`, `media_unavailable`, `rate_limit_exceeded`, `rate_limit_unavailable`, `payload_too_large`, `idempotency_conflict`, `request_in_progress`, `method_not_allowed` e `internal_error`.
 
-Não faça retry cego em erros 4xx. Para 429, aguarde `Retry-After`. Para falhas transitórias 5xx, repita `POST /messages` usando a **mesma** `Idempotency-Key` e o **mesmo corpo**.
+Não faça retry cego em erros 4xx. Para 429, aguarde `Retry-After`. Para `request_in_progress`, aguarde antes de consultar/repetir a mesma intenção. Em timeout ou falha transitória 5xx de `POST /messages`, repita usando a **mesma** `Idempotency-Key` e o **mesmo corpo**. A idempotência reduz reenvios acidentais, mas o integrador não deve assumir garantia absoluta de exactly-once em falhas excepcionais de infraestrutura.
 
 ## 10. Checklist de homologação
 
