@@ -17,6 +17,7 @@ use Models\Cliente;
 use Services\ControlePlanoService;
 use Services\DisparoManualQueueService;
 use Services\MetaHealthService;
+use Services\MetaErrorMessageService;
 
 class DisparoController extends Controller
 {
@@ -294,7 +295,7 @@ class DisparoController extends Controller
             'data_cadastro' => $this->formatarDataHoraDisparo($item['DMI_DataCadastro'] ?? ''),
             'data_envio' => $this->formatarDataHoraDisparo($item['DMI_DataEnvio'] ?? ''),
             'data_atualizacao' => $this->formatarDataHoraDisparo($item['DMI_DataAtualizacao'] ?? ''),
-            'erro' => $this->erroAmigavelDisparo($erro)
+            'erro' => $this->erroAmigavelDisparo($erro, $item['DMI_Retorno'] ?? null)
         ];
     }
 
@@ -392,8 +393,13 @@ class DisparoController extends Controller
         return date('d/m/Y H:i:s', $timestamp);
     }
 
-    private function erroAmigavelDisparo($erro)
+    private function erroAmigavelDisparo($erro, $retorno = null)
     {
+        $codigo = MetaErrorMessageService::codigoDoRetorno($retorno);
+        if($codigo !== ''){
+            return MetaErrorMessageService::amigavel($codigo, $erro);
+        }
+
         $erro = strtolower((string) $erro);
 
         if(trim($erro) === ''){
