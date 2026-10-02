@@ -48,6 +48,7 @@ jobs:
           php -l app/Services/PartnerWebhookEventService.php
           php -l app/Services/PartnerWebhookDeliveryService.php
           php -l app/Services/PartnerApiRateLimitService.php
+          php -l app/Services/PartnerMessageService.php
           php -l app/Controllers/ApiV1Controller.php
           php -l app/Services/MetaErrorMessageService.php
           php -l app/Controllers/DisparoController.php
