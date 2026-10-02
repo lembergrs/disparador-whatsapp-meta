@@ -14,9 +14,9 @@ Enquanto a API utiliza o roteador MVC atual, os endpoints são publicados sob:
 
 `/index.php?url=api/v1/{endpoint}`
 
-### Homologação / sandbox
+### Homologação
 
-Será disponibilizado antes da primeira integração externa. A URL e as credenciais de teste serão documentadas aqui. O ambiente de homologação deverá usar API key própria e não compartilhar credenciais com produção.
+A homologação inicial é feita com credencial Partner própria e canais explicitamente autorizados para teste. Não existe, neste momento, um sandbox público separado da infraestrutura principal. As credenciais e os canais de homologação são provisionados individualmente pelo Disparador.net e não devem ser reutilizados fora do escopo autorizado.
 
 ## Autenticação
 
@@ -66,9 +66,9 @@ Accept: application/json
 
 e execute primeiro o endpoint `GET /status`. Uma resposta HTTP 200 confirma a autenticação e mostra apenas os canais autorizados para aquela credencial.
 
-> As credenciais de homologação terão prefixo/ambiente próprios quando o sandbox for disponibilizado. Não reutilize uma chave de produção em homologação.
+> Use somente a credencial e os canais fornecidos para a homologação. Nunca compartilhe a API key em documentação, tickets, logs públicos ou código-fonte.
 
-## Endpoint disponível
+## Endpoints disponíveis
 
 ### GET /status
 
@@ -129,9 +129,9 @@ Exemplo de resposta:
 
 O endpoint foi chamado com um método HTTP não suportado.
 
-## Convenções para os próximos endpoints
+## Convenções da API
 
-As próximas implementações devem manter:
+A v1 mantém:
 
 - versionamento em `/api/v1`;
 - JSON como formato de request/response;
@@ -215,15 +215,9 @@ A NFS-e continua sendo emitida pela RL2 Net para o tomador identificado pelo `CL
 
 Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do parceiro. A Partner API não cria uma segunda estrutura fiscal.
 
-## Roadmap da integração
+## Estado atual da integração
 
-1. administração de parceiros, clientes vinculados e API keys;
-2. `POST /messages` para texto e templates;
-3. mídia;
-4. webhooks de saída;
-5. HMAC, retries, idempotência e logs;
-6. ambiente de homologação/sandbox e credenciais de teste.
-
+A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Vídeo e localização não fazem parte do contrato atual.
 
 ## Onboarding de clientes do Partner
 
@@ -236,7 +230,6 @@ Ao concluir o Embedded Signup, o Disparador cria automaticamente a autorização
 
 ## Envio de mensagens
 
-`
 ### Idempotência de envio
 
 Todo `POST /index.php?url=api/v1/messages` deve enviar o header `Idempotency-Key` (8 a 120 caracteres). Gere uma chave nova para cada intenção de envio e reutilize exatamente a mesma chave ao repetir uma requisição após timeout ou perda de resposta.
@@ -312,14 +305,13 @@ O endpoint nunca recebe nem retorna token da Meta. A autorização é sempre res
 
 Cada Partner configura um único endpoint HTTPS no próprio painel. O Disparador roteará para esse endpoint os eventos dos clientes/canais explicitamente autorizados ao Partner, identificando `client_id` e `channel_id` no payload.
 
-Eventos previstos na v1: `message.received`, `message.sent`, `message.delivered`, `message.read`, `message.failed` e `message.reaction`.
+Eventos disponíveis na v1: `message.received`, `message.sent`, `message.delivered`, `message.read`, `message.failed` e `message.reaction`.
 
 O segredo de assinatura é individual por Partner e deve ser copiado quando gerado/regenerado. Ele não é persistido em texto puro: o Disparador o deriva de `PARTNER_WEBHOOK_SIGNING_KEY` e de um salt aleatório por Partner, mantendo apenas o salt e o hash de conferência no banco.
 
 A configuração do endpoint é independente das API keys. Desativar o webhook não revoga o acesso REST do Partner.
 
-> A entrega assíncrona, assinatura dos requests, retries e histórico de tentativas serão implementados na etapa de entrega de eventos.
-
+A entrega é assíncrona, assinada e possui retries e histórico de tentativas, conforme a seção seguinte.
 
 ## Entrega de eventos webhook
 
@@ -469,4 +461,4 @@ Além do rate limiting, a API rejeita requests excessivos antes do processamento
 - `template.variables`: máximo de 100 entradas; cada valor deve ser uma string de no máximo 1024 caracteres;
 - uploads continuam sujeitos aos limites efetivos por arquivo validados pelo serviço de mídia (imagem 5 MB, PDF 10 MB, áudio 16 MB). O limite global do request multipart deve ser configurado na camada HTTP/PHP, antes do parsing do upload.
 
-Requests que excedem os limites de conteúdo retornam `422 validation_error`; requests HTTP grandes demais retornam `413 payload_too_large`. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
+Campos que excedem os limites de conteúdo retornam `422 validation_error`. No `POST /messages`, corpo JSON acima de 64 KB retorna `413 payload_too_large`. Uploads multipart seguem os limites por arquivo e também dependem do limite global configurado na camada HTTP/PHP. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
