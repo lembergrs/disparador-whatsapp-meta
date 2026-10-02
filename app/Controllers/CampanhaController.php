@@ -19,6 +19,7 @@ use Models\ConsumoMensal;
 use Services\AnalyticsService;
 use Services\MetaHealthService;
 
+use Services\MetaErrorMessageService;
 class CampanhaController extends Controller
 {
     private $campanhaModel;
@@ -219,6 +220,16 @@ class CampanhaController extends Controller
 
         $fila =
             $this->campanhaModel->listarFilaPorCliente($id, $usuario['CLI_ID']);
+
+        foreach($fila as &$itemFila){
+            if(($itemFila['FIL_Status'] ?? '') === 'failed' || ($itemFila['FIL_Status'] ?? '') === 'erro'){
+                $codigo=MetaErrorMessageService::codigoDoRetorno($itemFila['FIL_Retorno'] ?? null);
+                if($codigo !== ''){
+                    $itemFila['FIL_Erro']=MetaErrorMessageService::amigavel($codigo, $itemFila['FIL_Erro'] ?? null);
+                }
+            }
+        }
+        unset($itemFila);
 
         $this->view(
             'campanhas/detalhes',
