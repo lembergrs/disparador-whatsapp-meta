@@ -6,6 +6,7 @@ use Core\Controller;
 use Core\Session;
 use Models\ParceiroApi;
 use Models\ParceiroFinanceiro;
+use Models\ParceiroApiAuditoria;
 use Services\ParceiroFinanceiroService;
 
 class ParceiroAdminController extends Controller
@@ -59,6 +60,23 @@ class ParceiroAdminController extends Controller
             'assinaturaPartner'=>$this->financeiro->assinaturaAtiva($id),
             'cobrancasPartner'=>$this->financeiro->listarCobrancasAdmin($id),
             'clientesFaturaveis'=>$this->financeiro->contarClientesFaturaveis($id)
+        ]);
+    }
+
+    public function auditoria()
+    {
+        $filtros=[
+            'parceiro_id'=>(int)($_GET['parceiro_id']??0),
+            'evento'=>trim((string)($_GET['evento']??'')),
+            'severidade'=>trim((string)($_GET['severidade']??'')),
+            'data_inicio'=>trim((string)($_GET['data_inicio']??'')),
+            'data_fim'=>trim((string)($_GET['data_fim']??''))
+        ];
+        $this->view('parceiros/auditoria',[
+            'titulo'=>'Auditoria Partner API',
+            'registros'=>(new ParceiroApiAuditoria())->listarAdmin($filtros,200),
+            'parceiros'=>$this->model->listarAdmin(),
+            'filtros'=>$filtros
         ]);
     }
 

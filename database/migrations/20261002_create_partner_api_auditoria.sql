@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS parceiro_api_auditoria (
+    PAA_ID BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    PAR_ID BIGINT UNSIGNED NULL,
+    PAK_ID BIGINT UNSIGNED NULL,
+    PAA_DataHora DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PAA_Severidade ENUM('info','warning','security') NOT NULL DEFAULT 'warning',
+    PAA_Evento VARCHAR(80) NOT NULL,
+    PAA_Metodo VARCHAR(10) NULL,
+    PAA_Endpoint VARCHAR(160) NULL,
+    PAA_HttpStatus SMALLINT UNSIGNED NULL,
+    PAA_Ip VARCHAR(45) NULL,
+    PAA_ErroCodigo VARCHAR(100) NULL,
+    PAA_ErroMensagem VARCHAR(500) NULL,
+    PAA_Payload LONGTEXT NULL,
+    PAA_PayloadTruncado ENUM('S','N') NOT NULL DEFAULT 'N',
+    PRIMARY KEY (PAA_ID),
+    KEY idx_paa_data (PAA_DataHora),
+    KEY idx_paa_partner_data (PAR_ID,PAA_DataHora),
+    KEY idx_paa_evento_data (PAA_Evento,PAA_DataHora),
+    CONSTRAINT fk_paa_partner FOREIGN KEY (PAR_ID) REFERENCES parceiros_api(PAR_ID) ON DELETE SET NULL,
+    CONSTRAINT fk_paa_key FOREIGN KEY (PAK_ID) REFERENCES parceiro_api_keys(PAK_ID) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
