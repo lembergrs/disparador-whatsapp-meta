@@ -79,7 +79,15 @@ class ApiV1Controller extends Controller
 
         $this->aplicarRateLimit($parceiro,'messages');
 
-        $raw=file_get_contents('php://input');
+        $contentLength=(int)($_SERVER['CONTENT_LENGTH']??0);
+        if($contentLength>65536){
+            $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
+        }
+
+        $raw=file_get_contents('php://input',false,null,0,65537);
+        if(strlen((string)$raw)>65536){
+            $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
+        }
         $dados=json_decode((string)$raw,true);
         if(!is_array($dados)){
             $this->json(['error'=>['code'=>'invalid_json','message'=>'Envie um corpo JSON válido.']],400);

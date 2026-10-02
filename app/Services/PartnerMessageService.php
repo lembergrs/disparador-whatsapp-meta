@@ -46,6 +46,7 @@ class PartnerMessageService
         if($type==='text'){
             $body=trim((string)($dados['text']['body']??''));
             if($body===''){ throw new PartnerApiException('validation_error','Informe text.body.',422); }
+            if($this->tamanhoUtf8($body)>4096){ throw new PartnerApiException('validation_error','text.body excede o limite de 4096 caracteres.',422); }
             if(!$this->janelaAberta($conversaId)){
                 throw new PartnerApiException('customer_care_window_closed','A janela de atendimento de 24 horas está fechada. Envie um template aprovado.',409);
             }
@@ -60,7 +61,9 @@ class PartnerMessageService
             $mediaId=trim((string)($dados[$type]['media_id']??''));
             if($mediaId===''){ throw new PartnerApiException('validation_error','Informe '.$type.'.media_id.',422); }
             $caption=trim((string)($dados[$type]['caption']??''));
+            if($caption!=='' && $this->tamanhoUtf8($caption)>1024){ throw new PartnerApiException('validation_error',$type.'.caption excede o limite de 1024 caracteres.',422); }
             $filename=$type==='document' ? trim((string)($dados[$type]['filename']??'')) : '';
+            if($filename!=='' && $this->tamanhoUtf8($filename)>255){ throw new PartnerApiException('validation_error','document.filename excede o limite de 255 caracteres.',422); }
             $retorno=$meta->enviarMidia($to,$type,$mediaId,$caption,$filename);
             return $this->finalizar($retorno,$conversaId,$type,$caption!==''?$caption:'['.strtoupper($type).']',[
                 'media_id'=>$mediaId,
@@ -76,6 +79,15 @@ class PartnerMessageService
         }
         $variables=$dados['template']['variables']??[];
         if(!is_array($variables)){ throw new PartnerApiException('validation_error','template.variables deve ser um objeto ou array.',422); }
+        if(count($variables)>100){ throw new PartnerApiException('validation_error','template.variables excede o limite de 100 variáveis.',422); }
+        foreach($variables as $chave=>$valor){
+            if(!is_string($valor)){
+                throw new PartnerApiException('validation_error','Cada variável de template deve ser uma string de no máximo 1024 caracteres.',422);
+            }
+            if($this->tamanhoUtf8($valor)>1024){
+                throw new PartnerApiException('validation_error','Cada variável de template deve ser uma string de no máximo 1024 caracteres.',422);
+            }
+        }
         $header=$dados['template']['header_media']??null;
         if($header!==null && !is_array($header)){ throw new PartnerApiException('validation_error','template.header_media deve ser um objeto.',422); }
 
@@ -85,6 +97,12 @@ class PartnerMessageService
             'template_name'=>$template['TMP_Nome'],
             'language'=>$template['TMP_Idioma']
         ]);
+    }
+
+    private function tamanhoUtf8($valor)
+    {
+        $valor=(string)$valor;
+        return function_exists('mb_strlen') ? mb_strlen($valor,'UTF-8') : strlen($valor);
     }
 
     private function janelaAberta($conversaId)
