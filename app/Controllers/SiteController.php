@@ -458,6 +458,20 @@ class SiteController extends Controller
         return is_string($codigo) && $codigo !== '' ? $codigo : null;
     }
 
+
+    public function partnerApi()
+    {
+        header('X-Robots-Tag: noindex, nofollow, noarchive', true);
+
+        $this->view(
+            'site/partner_api',
+            [
+                'titulo' => 'Partner API v1 — Documentação de Integração'
+            ],
+            false
+        );
+    }
+
     public function politicaPrivacidade()
     {
         $this->view(
