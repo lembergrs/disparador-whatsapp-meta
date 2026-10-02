@@ -12,6 +12,7 @@ use Services\PartnerApiAuthService;
 use Services\PartnerMessageService;
 use Services\PartnerApiException;
 use Services\PartnerApiRateLimitService;
+use Services\PartnerApiAuditService;
 
 class ApiV1Controller extends Controller
 {
@@ -81,11 +82,13 @@ class ApiV1Controller extends Controller
 
         $contentLength=(int)($_SERVER['CONTENT_LENGTH']??0);
         if($contentLength>65536){
+            $this->auditar($parceiro,'payload_too_large',413,'payload_too_large','O corpo JSON excede o limite de 64 KB.',['content_length'=>$contentLength],'warning');
             $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
         }
 
         $raw=file_get_contents('php://input',false,null,0,65537);
         if(strlen((string)$raw)>65536){
+            $this->auditar($parceiro,'payload_too_large',413,'payload_too_large','O corpo JSON excede o limite de 64 KB.',$raw,'warning');
             $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
         }
         $dados=json_decode((string)$raw,true);
@@ -123,6 +126,9 @@ class ApiV1Controller extends Controller
             $this->json($payload,202);
         }catch(PartnerApiException $e){
             $payload=['error'=>['code'=>$e->apiCode(),'message'=>$e->getMessage()]];
+            if($e->httpStatus()>=400){
+                $this->auditar($parceiro,'api_validation_error',$e->httpStatus(),$e->apiCode(),$e->getMessage(),$dados,'info');
+            }
             $idempotencias->concluir((int)$parceiro['PAR_ID'],$idempotencyKey,$e->httpStatus(),$payload);
             $this->json($payload,$e->httpStatus());
         }catch(\Throwable $e){
@@ -279,12 +285,18 @@ class ApiV1Controller extends Controller
         header('X-RateLimit-Reset: '.$resultado['reset']);
 
         if(!$resultado['allowed']){
+            $this->auditar($parceiro,'rate_limit_exceeded',429,'rate_limit_exceeded','Limite de requisições excedido.',['grupo'=>$grupo,'limit'=>$resultado['limit'],'reset'=>$resultado['reset']],'security');
             header('Retry-After: '.$resultado['retry_after']);
             $this->json(['error'=>[
                 'code'=>'rate_limit_exceeded',
                 'message'=>'Limite de requisições excedido. Aguarde antes de tentar novamente.'
             ]],429);
         }
+    }
+
+    private function auditar(array $parceiro,$evento,$status,$codigo,$mensagem,$payload=null,$severidade='warning')
+    {
+        (new PartnerApiAuditService())->registrar($parceiro,$evento,$status,$codigo,$mensagem,$payload,$severidade);
     }
 
     private function json(array $payload, $status = 200)
