@@ -11,7 +11,7 @@ $idem=file_get_contents($r.'/app/Models/ParceiroApiIdempotencia.php');
 $idemMigration=file_get_contents($r.'/database/migrations/20261001_create_partner_api_idempotency.sql');
 pamAssert(strpos($c,'public function messages()')!==false,'controller deve expor messages');
 pamAssert(strpos($c,"!== 'POST'")!==false,'messages deve aceitar somente POST');
-pamAssert(strpos($c,"file_get_contents('php://input')")!==false,'messages deve ler JSON');
+pamAssert(strpos($c,"file_get_contents('php://input'")!==false,'messages deve ler JSON com leitura limitada');
 pamAssert(strpos($c,'PartnerApiAuthService')!==false,'endpoint deve autenticar API key');
 pamAssert(strpos($c,"HTTP_IDEMPOTENCY_KEY")!==false,'messages deve exigir Idempotency-Key');
 pamAssert(strpos($c,"idempotency_conflict")!==false && strpos($c,"request_in_progress")!==false,'controller deve tratar conflito e processamento concorrente');
