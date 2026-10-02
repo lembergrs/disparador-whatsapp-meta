@@ -9,6 +9,9 @@ on:
       - 'app/Services/PartnerWebhook*.php'
       - 'app/Services/PartnerApiRateLimitService.php'
       - 'app/Services/PartnerMessageService.php'
+      - 'app/Views/parceiros/auditoria.php'
+      - 'app/Services/PartnerApiAuditService.php'
+      - 'app/Models/ParceiroApiAuditoria.php'
       - 'app/Services/MetaErrorMessageService.php'
       - 'app/Controllers/DisparoController.php'
       - 'app/Controllers/CampanhaController.php'
@@ -50,6 +53,9 @@ jobs:
           php -l app/Services/PartnerWebhookDeliveryService.php
           php -l app/Services/PartnerApiRateLimitService.php
           php -l app/Services/PartnerMessageService.php
+          php -l app/Views/parceiros/auditoria.php
+          php -l app/Services/PartnerApiAuditService.php
+          php -l app/Models/ParceiroApiAuditoria.php
           php -l app/Controllers/ApiV1Controller.php
           php -l app/Services/MetaErrorMessageService.php
           php -l app/Controllers/DisparoController.php
