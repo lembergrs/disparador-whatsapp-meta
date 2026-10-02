@@ -466,7 +466,7 @@ Além do rate limiting, a API rejeita requests excessivos antes do processamento
 - `text.body`: máximo de 4096 caracteres;
 - captions de imagem/documento: máximo de 1024 caracteres;
 - `document.filename`: máximo de 255 caracteres;
-- `template.variables`: máximo de 100 entradas; cada valor deve ser escalar e ter no máximo 1024 caracteres;
-- request HTTP multipart de `POST /media`: máximo de 18 MB; os limites efetivos do arquivo continuam mais restritos por tipo (imagem 5 MB, PDF 10 MB, áudio 16 MB).
+- `template.variables`: máximo de 100 entradas; cada valor deve ser uma string de no máximo 1024 caracteres;
+- uploads continuam sujeitos aos limites efetivos por arquivo validados pelo serviço de mídia (imagem 5 MB, PDF 10 MB, áudio 16 MB). O limite global do request multipart deve ser configurado na camada HTTP/PHP, antes do parsing do upload.
 
 Requests que excedem os limites de conteúdo retornam `422 validation_error`; requests HTTP grandes demais retornam `413 payload_too_large`. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
