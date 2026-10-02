@@ -232,7 +232,7 @@ Ao concluir o Embedded Signup, o Disparador cria automaticamente a autorização
 
 ### Idempotência de envio
 
-Todo `POST /index.php?url=api/v1/messages` deve enviar o header `Idempotency-Key` (8 a 120 caracteres). Gere uma chave nova para cada intenção de envio e reutilize exatamente a mesma chave ao repetir uma requisição após timeout ou perda de resposta.
+Todo `POST /index.php?url=api/v1/messages` deve enviar o header `Idempotency-Key` (8 a 120 caracteres), usando letras, números, ponto, hífen, sublinhado ou dois-pontos. Gere uma chave nova para cada intenção de envio e reutilize exatamente a mesma chave ao repetir uma requisição após timeout ou perda de resposta.
 
 - mesma chave + mesmo corpo: retorna a resposta original sem reenviar à Meta e inclui `Idempotency-Replayed: true`;
 - mesma chave + corpo diferente: HTTP 409 `idempotency_conflict`;
@@ -323,7 +323,7 @@ Cada POST usa `Content-Type: application/json` e os headers:
 - `X-Disparador-Timestamp`: Unix timestamp usado na assinatura.
 - `X-Disparador-Signature: sha256=<hex>`: HMAC-SHA256 de `<timestamp>.<corpo JSON bruto>` usando o segredo individual do webhook.
 
-O receptor deve calcular o HMAC sobre o corpo bruto recebido e comparar em tempo constante. O `event_id` também deve ser tratado como idempotente pelo integrador.
+O receptor deve calcular o HMAC sobre o corpo bruto recebido e comparar em tempo constante. O `event_id` também deve ser tratado como idempotente pelo integrador. O receptor deve responder com HTTP 2xx somente depois de aceitar/persistir o evento; respostas fora de 2xx são tratadas como falha e podem gerar nova tentativa.
 
 Exemplo normalizado de mensagem recebida:
 
@@ -347,7 +347,7 @@ Exemplo normalizado de mensagem recebida:
 
 Status de saída são publicados somente para mensagens originadas pela Partner API, evitando que o integrador receba como próprios os envios manuais da Central ou do WhatsApp Business App.
 
-Por segurança, o destino deve ser HTTPS público na porta 443. Endereços privados/reservados, localhost, credenciais embutidas na URL e redirects HTTP não são aceitos.
+Por segurança, o destino deve ser HTTPS público na porta 443. Endereços privados/reservados, localhost e credenciais embutidas na URL não são aceitos. Redirects HTTP não são seguidos.
 
 
 ### Intervenção humana em Coexistence
@@ -462,3 +462,8 @@ Além do rate limiting, a API rejeita requests excessivos antes do processamento
 - uploads continuam sujeitos aos limites efetivos por arquivo validados pelo serviço de mídia (imagem 5 MB, PDF 10 MB, áudio 16 MB). O limite global do request multipart deve ser configurado na camada HTTP/PHP, antes do parsing do upload.
 
 Campos que excedem os limites de conteúdo retornam `422 validation_error`. No `POST /messages`, corpo JSON acima de 64 KB retorna `413 payload_too_large`. Uploads multipart seguem os limites por arquivo e também dependem do limite global configurado na camada HTTP/PHP. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
+
+
+## Observação sobre garantias de entrega
+
+A idempotência do `POST /messages` protege retries normais: depois de uma requisição concluída, a mesma chave com o mesmo corpo reproduz a resposta armazenada sem um novo envio. O integrador, porém, não deve modelar o sistema como uma garantia absoluta de exactly-once diante de falhas excepcionais de infraestrutura. Em timeout ou erro transitório, reutilize sempre a mesma `Idempotency-Key` e o mesmo corpo e mantenha correlação própria pelo `message_id`/`local_message_id` e pelos eventos webhook.
