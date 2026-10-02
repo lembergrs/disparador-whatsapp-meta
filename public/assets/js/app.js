@@ -2315,7 +2315,7 @@ $(document).ready(function(){
                     atualizarResumoFila(retorno.lote || {}, retorno.itens || []);
 
                     if(lotePossuiPendentes(retorno.lote || {}, retorno.itens || [])){
-                        agendarProximoBloco(8000);
+                        agendarProximoBloco(2000);
                     }else{
                         finalizarProcessamentoImediatoLote();
                         consultarLote();
@@ -2409,10 +2409,11 @@ $(document).ready(function(){
                     );
                 });
 
-                processamentoImediatoAtivo = false;
+                processamentoImediatoAtivo = true;
                 $('#textoProgressoDisparo').html(
-                    'Lote criado com sucesso. Aguardando processamento pelos workers...'
+                    'Lote criado com sucesso. Iniciando processamento imediato...'
                 );
+                processarProximoBloco();
                 consultarLote();
             },
             error: function(xhr){
