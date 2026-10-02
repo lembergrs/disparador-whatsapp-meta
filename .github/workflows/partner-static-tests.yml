@@ -8,6 +8,7 @@ on:
       - 'app/Services/ParceiroFinanceiroService.php'
       - 'app/Services/PartnerWebhook*.php'
       - 'app/Services/PartnerApiRateLimitService.php'
+      - 'app/Services/PartnerMessageService.php'
       - 'app/Services/MetaErrorMessageService.php'
       - 'app/Controllers/DisparoController.php'
       - 'app/Controllers/CampanhaController.php'
