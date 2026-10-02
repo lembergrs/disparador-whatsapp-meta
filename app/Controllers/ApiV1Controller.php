@@ -79,7 +79,15 @@ class ApiV1Controller extends Controller
 
         $this->aplicarRateLimit($parceiro,'messages');
 
-        $raw=file_get_contents('php://input');
+        $contentLength=(int)($_SERVER['CONTENT_LENGTH']??0);
+        if($contentLength>65536){
+            $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
+        }
+
+        $raw=file_get_contents('php://input',false,null,0,65537);
+        if(strlen((string)$raw)>65536){
+            $this->json(['error'=>['code'=>'payload_too_large','message'=>'O corpo JSON excede o limite de 64 KB.']],413);
+        }
         $dados=json_decode((string)$raw,true);
         if(!is_array($dados)){
             $this->json(['error'=>['code'=>'invalid_json','message'=>'Envie um corpo JSON válido.']],400);
@@ -185,6 +193,10 @@ class ApiV1Controller extends Controller
 
         if($method==='POST'){
             $this->aplicarRateLimit($parceiro,'media_upload');
+            $contentLength=(int)($_SERVER['CONTENT_LENGTH']??0);
+            if($contentLength>18874368){
+                $this->json(['error'=>['code'=>'payload_too_large','message'=>'O upload excede o limite HTTP permitido de 18 MB.']],413);
+            }
             $clienteId=(int)($_POST['client_id']??0);
             $metaId=(int)($_POST['channel_id']??0);
             $tipo=strtolower(trim((string)($_POST['type']??'')));
