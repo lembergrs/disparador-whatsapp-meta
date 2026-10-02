@@ -457,3 +457,16 @@ A Partner API aplica limites por Partner + API key em janelas de 60 segundos:
 - leituras (`GET /status`, `GET /templates`, `GET /media`): 120 requisições/minuto.
 
 Respostas autenticadas incluem `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset` (Unix timestamp). Quando o limite é excedido, a API responde `429 Too Many Requests`, `Retry-After` em segundos e `error.code = rate_limit_exceeded`. O integrador deve respeitar `Retry-After` antes de repetir a chamada. O limite de envio é adicional aos limites e políticas da Meta.
+
+## Limites de payload e proteção operacional
+
+Além do rate limiting, a API rejeita requests excessivos antes do processamento:
+
+- corpo JSON de `POST /messages`: máximo de 64 KB; acima disso retorna HTTP `413 payload_too_large`;
+- `text.body`: máximo de 4096 caracteres;
+- captions de imagem/documento: máximo de 1024 caracteres;
+- `document.filename`: máximo de 255 caracteres;
+- `template.variables`: máximo de 100 entradas; cada valor deve ser escalar e ter no máximo 1024 caracteres;
+- request HTTP multipart de `POST /media`: máximo de 18 MB; os limites efetivos do arquivo continuam mais restritos por tipo (imagem 5 MB, PDF 10 MB, áudio 16 MB).
+
+Requests que excedem os limites de conteúdo retornam `422 validation_error`; requests HTTP grandes demais retornam `413 payload_too_large`. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
