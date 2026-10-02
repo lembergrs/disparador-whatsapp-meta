@@ -193,10 +193,6 @@ class ApiV1Controller extends Controller
 
         if($method==='POST'){
             $this->aplicarRateLimit($parceiro,'media_upload');
-            $contentLength=(int)($_SERVER['CONTENT_LENGTH']??0);
-            if($contentLength>18874368){
-                $this->json(['error'=>['code'=>'payload_too_large','message'=>'O upload excede o limite HTTP permitido de 18 MB.']],413);
-            }
             $clienteId=(int)($_POST['client_id']??0);
             $metaId=(int)($_POST['channel_id']??0);
             $tipo=strtolower(trim((string)($_POST['type']??'')));
