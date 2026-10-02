@@ -80,9 +80,12 @@ class PartnerMessageService
         $variables=$dados['template']['variables']??[];
         if(!is_array($variables)){ throw new PartnerApiException('validation_error','template.variables deve ser um objeto ou array.',422); }
         if(count($variables)>100){ throw new PartnerApiException('validation_error','template.variables excede o limite de 100 variáveis.',422); }
-        foreach($variables as $valor){
-            if(is_array($valor) || is_object($valor) || $this->tamanhoUtf8((string)$valor)>1024){
-                throw new PartnerApiException('validation_error','Cada variável de template deve ser escalar e ter no máximo 1024 caracteres.',422);
+        foreach($variables as $chave=>$valor){
+            if(!is_string($valor)){
+                throw new PartnerApiException('validation_error','Cada variável de template deve ser uma string de no máximo 1024 caracteres.',422);
+            }
+            if($this->tamanhoUtf8($valor)>1024){
+                throw new PartnerApiException('validation_error','Cada variável de template deve ser uma string de no máximo 1024 caracteres.',422);
             }
         }
         $header=$dados['template']['header_media']??null;
