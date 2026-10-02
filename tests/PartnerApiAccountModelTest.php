@@ -24,7 +24,8 @@ partnerAccountAssert(substr_count($model, 'm.CLI_ID = pc.CLI_ID') >= 2, 'autoriz
 
 partnerAccountAssert(strpos($docs, 'Exemplo de requisição') !== false, 'guia deve conter exemplo de request');
 partnerAccountAssert(strpos($docs, 'Exemplo de resposta') !== false, 'guia deve conter exemplo de response');
-partnerAccountAssert(strpos($docs, 'Homologação / sandbox') !== false, 'guia deve reservar ambiente de homologação');
+partnerAccountAssert(strpos($docs, '### Homologação') !== false, 'guia deve documentar o processo de homologação');
+partnerAccountAssert(strpos($docs, 'Não existe, neste momento, um sandbox público separado') !== false, 'guia não deve prometer sandbox público inexistente');
 partnerAccountAssert(strpos($policy, 'mesmo Pull Request') !== false, 'documentação deve acompanhar alterações públicas');
 
 echo "Partner account/documentation static tests passed\n";
