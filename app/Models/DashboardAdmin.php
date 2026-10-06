@@ -105,7 +105,8 @@ class DashboardAdmin
 
     private function clientesAtivacao30Dias()
     {
-        $sql = "SELECT c.CLI_ID,c.CLI_Nome,c.CLI_NomeFantasia,c.CLI_DataCadastro,
+        $sql = "SELECT c.CLI_ID,c.CLI_Nome,c.CLI_NomeFantasia,c.CLI_DataCadastro,c.CLI_Email,c.CLI_Telefone,c.CLI_StatusCadastro,c.CLI_StatusPagamento,c.CLI_DataLiberacao,
+            EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID) meta_criada,
             EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_Status='conectado') meta_conectada,
             EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_PagamentoMetaStatus='confirmado_cliente') pagamento_meta,
             EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND COALESCE(t.TMP_MetaId,'')<>'') template_criado,
@@ -116,7 +117,41 @@ class DashboardAdmin
             FROM clientes c
             WHERE c.CLI_DataCadastro >= DATE_SUB(NOW(), INTERVAL 30 DAY)
             ORDER BY c.CLI_DataCadastro DESC, c.CLI_ID DESC";
-        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+        $clientes = $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach($clientes as &$cliente){
+            if(!empty($cliente['pagamento'])){
+                $cliente['proxima_etapa'] = 'Cliente pagante';
+                $cliente['acao_sugerida'] = 'Acompanhar uso e retenção.';
+            }elseif(!empty($cliente['contratacao'])){
+                $cliente['proxima_etapa'] = 'Concluir pagamento';
+                $cliente['acao_sugerida'] = 'Verificar cobrança pendente e orientar o cliente.';
+            }elseif(!empty($cliente['primeiro_envio'])){
+                $cliente['proxima_etapa'] = 'Escolher plano';
+                $cliente['acao_sugerida'] = 'Cliente já comprovou o uso; abordar conversão para um plano.';
+            }elseif(!empty($cliente['template_aprovado'])){
+                $cliente['proxima_etapa'] = 'Fazer o primeiro envio';
+                $cliente['acao_sugerida'] = 'Orientar o primeiro disparo com o template já aprovado.';
+            }elseif(!empty($cliente['template_criado'])){
+                $cliente['proxima_etapa'] = 'Aguardar/aprovar template';
+                $cliente['acao_sugerida'] = 'Verificar o status do template e eventual rejeição na Meta.';
+            }elseif(!empty($cliente['pagamento_meta'])){
+                $cliente['proxima_etapa'] = 'Criar ou sincronizar template';
+                $cliente['acao_sugerida'] = 'Orientar a criação/sincronização do primeiro template.';
+            }elseif(!empty($cliente['meta_conectada'])){
+                $cliente['proxima_etapa'] = 'Confirmar pagamento na Meta';
+                $cliente['acao_sugerida'] = 'Orientar a configuração/validação do pagamento da Meta.';
+            }elseif(!empty($cliente['meta_criada'])){
+                $cliente['proxima_etapa'] = 'Concluir conexão do WhatsApp';
+                $cliente['acao_sugerida'] = 'A conta Meta existe, mas não está conectada. Verificar o onboarding.';
+            }else{
+                $cliente['proxima_etapa'] = 'Conectar WhatsApp';
+                $cliente['acao_sugerida'] = 'Cliente ainda não iniciou a conexão. Priorizar contato e orientação do primeiro passo.';
+            }
+        }
+        unset($cliente);
+
+        return $clientes;
     }
 
     private function sqlEnvioEntregue($clienteExpr, $comoExpressao = false)
