@@ -66,7 +66,7 @@ $variacaoCadastros = (int)($resumoAdmin['novosAnterior'] ?? 0) > 0
 .funil-admin{display:flex;gap:6px;overflow-x:auto}.funil-etapa{flex:1;min-width:130px;text-align:center;padding:18px 10px;border-radius:.4rem;background:#eef5ff}
 .funil-etapa:nth-child(2){background:#e8f4ff}.funil-etapa:nth-child(3){background:#e8f8ef}.funil-etapa:nth-child(4){background:#fff4d8}.funil-etapa:nth-child(5){background:#ffeadc}.funil-etapa:nth-child(6){background:#ffe1e5}
 .funil-etapa strong{display:block;font-size:1.55rem}.funil-etapa small{display:block;color:#6c757d}
-.funil-ativacao .funil-etapa{min-width:120px;padding:14px 8px}.etapa-ok{color:#28a745}.etapa-nao{color:#ced4da}.ativacao-scroll{max-height:590px;overflow:auto}.table-ativacao{margin-bottom:0}.table-ativacao th{text-align:center;white-space:nowrap;position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #dee2e6}.table-ativacao th:first-child,.table-ativacao td:first-child{text-align:left}.table-ativacao td{text-align:center;white-space:nowrap;height:54px;vertical-align:middle}
+.funil-ativacao .funil-etapa{min-width:120px;padding:14px 8px}.etapa-ok{color:#28a745}.etapa-nao{color:#ced4da}.ativacao-scroll{max-height:590px;overflow:auto}.table-ativacao{margin-bottom:0}.table-ativacao th{text-align:center;white-space:nowrap;position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #dee2e6}.table-ativacao th:first-child,.table-ativacao td:first-child{text-align:left}.table-ativacao td{text-align:center;white-space:nowrap;height:54px;vertical-align:middle}.cliente-ativacao{cursor:pointer}.cliente-ativacao:hover strong{text-decoration:underline}
 .situacao-item{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:7px 0}.situacao-item:last-child{border:0}
 .situacao-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.chart-admin{width:100%;height:220px;display:block}
 .table-admin td,.table-admin th{vertical-align:middle;font-size:.88rem}.badge-admin{font-size:.75rem;padding:.35rem .5rem}
@@ -138,8 +138,17 @@ foreach($cardsAdmin as $i=>$card){ ?>
    <?php if(empty($clientesAtivacao30)){ ?>
     <tr><td colspan="9" class="text-center text-muted py-4">Nenhum cliente cadastrado nos últimos 30 dias.</td></tr>
    <?php }else{ foreach($clientesAtivacao30 as $cli){ ?>
-    <tr>
-     <td><strong><?= htmlspecialchars($cli['CLI_NomeFantasia'] ?: $cli['CLI_Nome']); ?></strong><br><small class="text-muted">#<?= (int)$cli['CLI_ID']; ?></small></td>
+    <tr class="cliente-ativacao" data-toggle="modal" data-target="#modalDiagnosticoAtivacao"
+     data-cliente="<?= htmlspecialchars($cli['CLI_NomeFantasia'] ?: $cli['CLI_Nome'], ENT_QUOTES, 'UTF-8'); ?>"
+     data-id="<?= (int)$cli['CLI_ID']; ?>"
+     data-cadastro="<?= date('d/m/Y H:i',strtotime($cli['CLI_DataCadastro'])); ?>"
+     data-email="<?= htmlspecialchars($cli['CLI_Email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+     data-telefone="<?= htmlspecialchars($cli['CLI_Telefone'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+     data-status-cadastro="<?= htmlspecialchars($cli['CLI_StatusCadastro'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+     data-status-pagamento="<?= htmlspecialchars($cli['CLI_StatusPagamento'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+     data-proxima-etapa="<?= htmlspecialchars($cli['proxima_etapa'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+     data-acao="<?= htmlspecialchars($cli['acao_sugerida'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+     <td><strong><?= htmlspecialchars($cli['CLI_NomeFantasia'] ?: $cli['CLI_Nome']); ?></strong><br><small class="text-muted">#<?= (int)$cli['CLI_ID']; ?> · clique para diagnosticar</small></td>
      <td><?= date('d/m/Y',strtotime($cli['CLI_DataCadastro'])); ?></td>
      <?php foreach(['meta_conectada','pagamento_meta','template_criado','template_aprovado','primeiro_envio','contratacao','pagamento'] as $etapa){ $ok=!empty($cli[$etapa]); ?>
       <td><i class="fas <?= $ok?'fa-check-circle etapa-ok':'fa-minus-circle etapa-nao'; ?>" title="<?= $ok?'Etapa alcançada':'Sem evidência desta etapa'; ?>"></i></td>
@@ -150,6 +159,22 @@ foreach($cardsAdmin as $i=>$card){ ?>
   </table>
   </div>
  </div>
+</div>
+
+<div class="modal fade" id="modalDiagnosticoAtivacao" tabindex="-1" role="dialog" aria-hidden="true">
+ <div class="modal-dialog modal-lg" role="document"><div class="modal-content">
+  <div class="modal-header"><div><h5 class="modal-title mb-0" id="diagClienteNome">Diagnóstico do cliente</h5><small class="text-muted" id="diagClienteId"></small></div><button type="button" class="close" data-dismiss="modal" aria-label="Fechar"><span aria-hidden="true">&times;</span></button></div>
+  <div class="modal-body">
+   <div class="row">
+    <div class="col-md-6"><p class="mb-1"><strong>Cadastro:</strong> <span id="diagCadastro"></span></p><p class="mb-1"><strong>E-mail:</strong> <span id="diagEmail"></span></p><p class="mb-1"><strong>Telefone:</strong> <span id="diagTelefone"></span></p></div>
+    <div class="col-md-6"><p class="mb-1"><strong>Status do cadastro:</strong> <span id="diagStatusCadastro"></span></p><p class="mb-1"><strong>Status financeiro:</strong> <span id="diagStatusPagamento"></span></p></div>
+   </div>
+   <hr>
+   <div class="alert alert-info mb-2"><strong>Próxima etapa esperada:</strong> <span id="diagProximaEtapa"></span></div>
+   <p class="mb-0"><strong>Ação sugerida:</strong> <span id="diagAcao"></span></p>
+  </div>
+  <div class="modal-footer"><a href="<?= BASE_URL; ?>/index.php?url=cliente" class="btn btn-outline-secondary btn-sm"><i class="fas fa-users mr-1"></i>Gerenciar clientes</a><button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Fechar</button></div>
+ </div></div>
 </div>
 
 <div class="row mt-3">
@@ -186,6 +211,18 @@ foreach($cardsAdmin as $i=>$card){ ?>
 
 <script>
 (function(){
+ $('#modalDiagnosticoAtivacao').on('show.bs.modal', function(event){
+  var row=$(event.relatedTarget);
+  $('#diagClienteNome').text(row.data('cliente') || 'Cliente');
+  $('#diagClienteId').text('#' + (row.data('id') || ''));
+  $('#diagCadastro').text(row.data('cadastro') || '-');
+  $('#diagEmail').text(row.data('email') || '-');
+  $('#diagTelefone').text(row.data('telefone') || '-');
+  $('#diagStatusCadastro').text(row.data('status-cadastro') || '-');
+  $('#diagStatusPagamento').text(row.data('status-pagamento') || '-');
+  $('#diagProximaEtapa').text(row.data('proxima-etapa') || '-');
+  $('#diagAcao').text(row.data('acao') || '-');
+ });
  function desenhar(id, labels, series){
   var canvas=document.getElementById(id); if(!canvas||!canvas.getContext)return;
   var ratio=window.devicePixelRatio||1,w=canvas.clientWidth||600,h=220;canvas.width=w*ratio;canvas.height=h*ratio;
