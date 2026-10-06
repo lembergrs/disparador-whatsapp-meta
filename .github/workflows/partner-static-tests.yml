@@ -33,6 +33,8 @@ on:
       - 'docs/partner-api*.md'
       - 'app/Views/site/partner_api.php'
       - 'app/Controllers/SiteController.php'
+      - 'app/Models/DashboardAdmin.php'
+      - 'app/Views/dashboard/index.php'
       - 'tests/Partner*.php'
       - '.github/workflows/partner-static-tests.yml'
   workflow_dispatch:
@@ -61,6 +63,8 @@ jobs:
           php -l app/Controllers/ApiV1Controller.php
           php -l app/Controllers/SiteController.php
           php -l app/Views/site/partner_api.php
+          php -l app/Models/DashboardAdmin.php
+          php -l app/Views/dashboard/index.php
           php -l app/Services/MetaErrorMessageService.php
           php -l app/Controllers/DisparoController.php
           php -l app/Controllers/CampanhaController.php
