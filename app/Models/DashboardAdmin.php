@@ -72,18 +72,35 @@ class DashboardAdmin
 
     private function funilAtivacao30Dias()
     {
-        $base = "c.CLI_DataCadastro >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
-
-        return [
-            'cadastros'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base}"),
-            'metaConectada'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_Status='conectado')"),
-            'pagamentoMeta'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_PagamentoMetaStatus='confirmado_cliente')"),
-            'templateCriado'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND COALESCE(t.TMP_MetaId,'')<>'')"),
-            'templateAprovado'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND t.TMP_Status='APPROVED' AND COALESCE(t.TMP_MetaId,'')<>'')"),
-            'primeiroEnvio'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND " . $this->sqlEnvioEntregue('c.CLI_ID')),
-            'contratacao'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM assinaturas a WHERE a.CLI_ID=c.CLI_ID)"),
-            'pagamento'=>(int)$this->valor("SELECT COUNT(*) FROM clientes c WHERE {$base} AND EXISTS(SELECT 1 FROM cobrancas co WHERE co.CLI_ID=c.CLI_ID AND co.COB_Status='pago' AND co.COB_Tipo='mensalidade' AND co.COB_DataPagamento IS NOT NULL)")
+        $clientes = $this->clientesAtivacao30Dias();
+        $funil = [
+            'cadastros'=>count($clientes),
+            'metaConectada'=>0,
+            'pagamentoMeta'=>0,
+            'templateCriado'=>0,
+            'templateAprovado'=>0,
+            'primeiroEnvio'=>0,
+            'contratacao'=>0,
+            'pagamento'=>0
         ];
+
+        foreach($clientes as $cliente){
+            foreach([
+                'meta_conectada'=>'metaConectada',
+                'pagamento_meta'=>'pagamentoMeta',
+                'template_criado'=>'templateCriado',
+                'template_aprovado'=>'templateAprovado',
+                'primeiro_envio'=>'primeiroEnvio',
+                'contratacao'=>'contratacao',
+                'pagamento'=>'pagamento'
+            ] as $campo=>$etapa){
+                if(!empty($cliente[$campo])){
+                    $funil[$etapa]++;
+                }
+            }
+        }
+
+        return $funil;
     }
 
     private function clientesAtivacao30Dias()
