@@ -46,11 +46,14 @@ function avisoMetaDashboard($metaConta)
 $da = $dashboardAdmin ?: [];
 $resumoAdmin = $da['resumo'] ?? [];
 $funilAdmin = $da['funil'] ?? [];
+$funilAtivacao30 = $da['funilAtivacao30'] ?? [];
+$clientesAtivacao30 = $da['clientesAtivacao30'] ?? [];
 $situacaoAdmin = $da['situacao'] ?? [];
 $cadastrosAdmin = $da['cadastros'] ?? ['labels'=>[],'valores'=>[]];
 $pagamentosAdmin = $da['pagamentos'] ?? ['labels'=>[],'valores'=>[]];
 $assinaturasAdmin = $da['assinaturas'] ?? ['labels'=>[],'novas'=>[],'canceladas'=>[]];
 $totalFunil = max(1, (int)($funilAdmin['cadastros'] ?? 0));
+$totalFunilAtivacao30 = max(1, (int)($funilAtivacao30['cadastros'] ?? 0));
 $totalSituacao = max(1, array_sum($situacaoAdmin));
 $variacaoCadastros = (int)($resumoAdmin['novosAnterior'] ?? 0) > 0
     ? round((((int)($resumoAdmin['novos30'] ?? 0) - (int)$resumoAdmin['novosAnterior']) / (int)$resumoAdmin['novosAnterior']) * 100)
@@ -63,6 +66,7 @@ $variacaoCadastros = (int)($resumoAdmin['novosAnterior'] ?? 0) > 0
 .funil-admin{display:flex;gap:6px;overflow-x:auto}.funil-etapa{flex:1;min-width:130px;text-align:center;padding:18px 10px;border-radius:.4rem;background:#eef5ff}
 .funil-etapa:nth-child(2){background:#e8f4ff}.funil-etapa:nth-child(3){background:#e8f8ef}.funil-etapa:nth-child(4){background:#fff4d8}.funil-etapa:nth-child(5){background:#ffeadc}.funil-etapa:nth-child(6){background:#ffe1e5}
 .funil-etapa strong{display:block;font-size:1.55rem}.funil-etapa small{display:block;color:#6c757d}
+.funil-ativacao .funil-etapa{min-width:120px;padding:14px 8px}.etapa-ok{color:#28a745}.etapa-nao{color:#ced4da}.ativacao-scroll{max-height:590px;overflow:auto}.table-ativacao{margin-bottom:0}.table-ativacao th{text-align:center;white-space:nowrap;position:sticky;top:0;z-index:2;background:#fff;box-shadow:0 1px 0 #dee2e6}.table-ativacao th:first-child,.table-ativacao td:first-child{text-align:left}.table-ativacao td{text-align:center;white-space:nowrap;height:54px;vertical-align:middle}
 .situacao-item{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:7px 0}.situacao-item:last-child{border:0}
 .situacao-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px}.chart-admin{width:100%;height:220px;display:block}
 .table-admin td,.table-admin th{vertical-align:middle;font-size:.88rem}.badge-admin{font-size:.75rem;padding:.35rem .5rem}
@@ -107,6 +111,45 @@ foreach($cardsAdmin as $i=>$card){ ?>
   <div class="situacao-item"><span><i class="situacao-dot" style="background:<?= $cfg[1]; ?>"></i><?= $cfg[0]; ?></span><strong><?= $v; ?> <small class="text-muted">(<?= round($v/$totalSituacao*100); ?>%)</small></strong></div>
  <?php } ?>
  </div></div></div>
+</div>
+
+<div class="card admin-card mt-3">
+ <div class="card-header d-flex align-items-center"><h3 class="card-title"><i class="fas fa-route text-success mr-2"></i>Funil de ativação — clientes cadastrados nos últimos 30 dias</h3></div>
+ <div class="card-body">
+  <p class="text-muted small mb-3">A mesma coorte de clientes é acompanhada até a etapa mais avançada alcançada. Os percentuais usam os cadastros dos últimos 30 dias como base.</p>
+  <div class="funil-admin funil-ativacao">
+  <?php foreach([
+   'cadastros'=>'Cadastro','metaConectada'=>'WhatsApp conectado','pagamentoMeta'=>'Pagamento Meta OK','templateCriado'=>'Template criado',
+   'templateAprovado'=>'Template aprovado','primeiroEnvio'=>'1º envio entregue','contratacao'=>'Iniciou contratação','pagamento'=>'1º pagamento'
+  ] as $chave=>$rotulo){ $v=(int)($funilAtivacao30[$chave]??0); ?>
+   <div class="funil-etapa"><strong><?= number_format($v,0,',','.'); ?></strong><span><?= $rotulo; ?></span><small><?= round(($v/$totalFunilAtivacao30)*100); ?>% dos cadastros</small></div>
+  <?php } ?>
+  </div>
+ </div>
+</div>
+
+<div class="card admin-card mt-3">
+ <div class="card-header"><h3 class="card-title"><i class="fas fa-search text-primary mr-2"></i>Diagnóstico da ativação — últimos 30 dias</h3></div>
+ <div class="card-body p-0">
+  <div class="ativacao-scroll">
+  <table class="table table-hover table-admin table-ativacao">
+   <thead><tr><th>Cliente</th><th>Cadastro</th><th title="WhatsApp conectado">WhatsApp</th><th title="Pagamento da Meta confirmado pelo cliente">Pgto. Meta</th><th>Template</th><th>Aprovado</th><th>1º envio</th><th>Contratação</th><th>Pagamento</th></tr></thead>
+   <tbody>
+   <?php if(empty($clientesAtivacao30)){ ?>
+    <tr><td colspan="9" class="text-center text-muted py-4">Nenhum cliente cadastrado nos últimos 30 dias.</td></tr>
+   <?php }else{ foreach($clientesAtivacao30 as $cli){ ?>
+    <tr>
+     <td><strong><?= htmlspecialchars($cli['CLI_NomeFantasia'] ?: $cli['CLI_Nome']); ?></strong><br><small class="text-muted">#<?= (int)$cli['CLI_ID']; ?></small></td>
+     <td><?= date('d/m/Y',strtotime($cli['CLI_DataCadastro'])); ?></td>
+     <?php foreach(['meta_conectada','pagamento_meta','template_criado','template_aprovado','primeiro_envio','contratacao','pagamento'] as $etapa){ $ok=!empty($cli[$etapa]); ?>
+      <td><i class="fas <?= $ok?'fa-check-circle etapa-ok':'fa-minus-circle etapa-nao'; ?>" title="<?= $ok?'Etapa alcançada':'Sem evidência desta etapa'; ?>"></i></td>
+     <?php } ?>
+    </tr>
+   <?php }} ?>
+   </tbody>
+  </table>
+  </div>
+ </div>
 </div>
 
 <div class="row mt-3">

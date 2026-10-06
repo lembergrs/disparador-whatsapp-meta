@@ -19,6 +19,8 @@ class DashboardAdmin
         return [
             'resumo' => $this->resumo(),
             'funil' => $this->funil(),
+            'funilAtivacao30' => $this->funilAtivacao30Dias(),
+            'clientesAtivacao30' => $this->clientesAtivacao30Dias(),
             'situacao' => $this->situacao(),
             'cadastros' => $this->cadastros30Dias(),
             'pagamentos' => $this->primeirosPagamentos30Dias(),
@@ -66,6 +68,64 @@ class DashboardAdmin
             'pagamento'=>(int)$this->valor("SELECT COUNT(DISTINCT CLI_ID) FROM cobrancas WHERE COB_Status='pago' AND COB_Tipo='mensalidade' AND COB_DataPagamento IS NOT NULL"),
             'assinaturaAtiva'=>(int)$this->valor("SELECT COUNT(DISTINCT CLI_ID) FROM assinaturas WHERE ASS_Status='ativa'")
         ];
+    }
+
+    private function funilAtivacao30Dias()
+    {
+        $clientes = $this->clientesAtivacao30Dias();
+        $funil = [
+            'cadastros'=>count($clientes),
+            'metaConectada'=>0,
+            'pagamentoMeta'=>0,
+            'templateCriado'=>0,
+            'templateAprovado'=>0,
+            'primeiroEnvio'=>0,
+            'contratacao'=>0,
+            'pagamento'=>0
+        ];
+
+        foreach($clientes as $cliente){
+            foreach([
+                'meta_conectada'=>'metaConectada',
+                'pagamento_meta'=>'pagamentoMeta',
+                'template_criado'=>'templateCriado',
+                'template_aprovado'=>'templateAprovado',
+                'primeiro_envio'=>'primeiroEnvio',
+                'contratacao'=>'contratacao',
+                'pagamento'=>'pagamento'
+            ] as $campo=>$etapa){
+                if(!empty($cliente[$campo])){
+                    $funil[$etapa]++;
+                }
+            }
+        }
+
+        return $funil;
+    }
+
+    private function clientesAtivacao30Dias()
+    {
+        $sql = "SELECT c.CLI_ID,c.CLI_Nome,c.CLI_NomeFantasia,c.CLI_DataCadastro,
+            EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_Status='conectado') meta_conectada,
+            EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_PagamentoMetaStatus='confirmado_cliente') pagamento_meta,
+            EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND COALESCE(t.TMP_MetaId,'')<>'') template_criado,
+            EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND t.TMP_Status='APPROVED' AND COALESCE(t.TMP_MetaId,'')<>'') template_aprovado,
+            " . $this->sqlEnvioEntregue('c.CLI_ID', true) . " primeiro_envio,
+            EXISTS(SELECT 1 FROM assinaturas a WHERE a.CLI_ID=c.CLI_ID) contratacao,
+            EXISTS(SELECT 1 FROM cobrancas co WHERE co.CLI_ID=c.CLI_ID AND co.COB_Status='pago' AND co.COB_Tipo='mensalidade' AND co.COB_DataPagamento IS NOT NULL) pagamento
+            FROM clientes c
+            WHERE c.CLI_DataCadastro >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            ORDER BY c.CLI_DataCadastro DESC, c.CLI_ID DESC";
+        return $this->db->query($sql)->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function sqlEnvioEntregue($clienteExpr, $comoExpressao = false)
+    {
+        $exists = "(EXISTS(SELECT 1 FROM conversa_mensagens cm INNER JOIN conversas cv ON cv.CVS_ID=cm.CVS_ID WHERE cv.CLI_ID={$clienteExpr} AND cm.MSG_Direcao='enviada' AND (cm.MSG_Origem IS NULL OR cm.MSG_Origem='api') AND COALESCE(cm.MSG_MetaMessageId,'')<>'' AND cm.MSG_Status IN ('delivered','entregue','read','lido'))
+            OR EXISTS(SELECT 1 FROM disparos d WHERE d.CLI_ID={$clienteExpr} AND COALESCE(d.DSP_MessageId,'')<>'' AND d.DSP_Status IN ('delivered','entregue','read','lido'))
+            OR EXISTS(SELECT 1 FROM disparo_manual_itens i INNER JOIN disparo_manual_lotes l ON l.DML_ID=i.DML_ID WHERE l.CLI_ID={$clienteExpr} AND i.CLI_ID={$clienteExpr} AND COALESCE(i.DMI_MessageId,'')<>'' AND i.DMI_Status IN ('delivered','entregue','read','lido')))";
+
+        return $comoExpressao ? "CASE WHEN {$exists} THEN 1 ELSE 0 END" : $exists;
     }
 
     private function situacao()
