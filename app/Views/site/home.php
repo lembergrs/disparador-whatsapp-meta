@@ -258,9 +258,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 <style>
 /* Landing hero: apresentação do produto. Escopo isolado para não afetar o painel. */
-.site-showcase-real-shot{display:none;width:100%;height:auto;object-fit:contain}
-.site-showcase-browser.has-real-shot .site-showcase-real-shot{display:block}
-.site-showcase-browser.has-real-shot .site-showcase-browserbar,.site-showcase-browser.has-real-shot .site-showcase-app,.site-showcase-browser.has-real-shot .site-showcase-mini{display:none}
+.site-showcase-real-shot{display:block;width:100%;height:auto;object-fit:contain}
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-browserbar,
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-app,
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-mini{display:none}
 .site-hero-showcase{position:relative;overflow:hidden;padding:6.5rem 0 4rem;background:radial-gradient(ellipse at 12% 68%,rgba(13,181,86,.16),transparent 40%),radial-gradient(ellipse at 88% 70%,rgba(0,113,216,.17),transparent 42%),linear-gradient(180deg,#fff 0%,#f6fffb 100%);color:#102238}
 .site-hero-showcase .site-showcase-inner{max-width:1160px;margin:auto;text-align:center}
 .site-showcase-eyebrow{display:inline-flex;align-items:center;gap:.5rem;border-radius:50px;background:#e0f8ec;padding:.55rem 1rem;color:#12362c;font-weight:700;font-size:.86rem}
