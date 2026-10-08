@@ -165,7 +165,30 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             font-size: 1.875rem;
         }
     }
-    </style>
+    
+/* Hero com capturas reais completas: composição em profundidade sem distorcer o conteúdo. */
+.site-showcase-stage-full{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,1fr);gap:0;align-items:center;max-width:1160px;margin:3rem auto 2.2rem;isolation:isolate}
+.site-showcase-stage-full .site-showcase-browser-full{overflow:hidden;background:#fff;border:1px solid #d9e5ed;border-radius:13px;box-shadow:0 20px 45px rgba(16,54,80,.17)}
+.site-showcase-stage-full .site-showcase-browser-full img{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain}
+.site-showcase-stage-full .site-showcase-main{position:relative;z-index:3;transform:scale(1.12)}
+.site-showcase-stage-full .site-showcase-main .site-showcase-browser-full{box-shadow:0 26px 55px rgba(16,54,80,.23)}
+.site-showcase-stage-full .site-showcase-side{position:relative;z-index:1;min-width:0}
+.site-showcase-stage-full .site-showcase-side-left{transform:perspective(950px) rotateY(9deg) rotate(-3deg) translateX(12px)}
+.site-showcase-stage-full .site-showcase-side-right{transform:perspective(950px) rotateY(-9deg) rotate(3deg) translateX(-12px)}
+.site-showcase-stage-full .site-showcase-side-label{margin:0 0 1rem;font-size:.92rem;font-weight:750}
+.site-showcase-stage-full .site-showcase-browserbar{height:24px}
+.site-showcase-stage-full .site-showcase-dot{width:7px;height:7px}
+@media(max-width:991.98px){.site-showcase-stage-full{grid-template-columns:minmax(0,1fr);max-width:690px;gap:1.6rem;margin-top:2.2rem}.site-showcase-stage-full .site-showcase-main{grid-row:1;transform:none}.site-showcase-stage-full .site-showcase-side{transform:none;max-width:100%;display:block}.site-showcase-stage-full .site-showcase-side-label{text-align:left}.site-showcase-stage-full .site-showcase-side-left{grid-row:2}.site-showcase-stage-full .site-showcase-side-right{grid-row:3}}
+@media(max-width:575.98px){.site-showcase-stage-full{gap:1.2rem}.site-showcase-stage-full .site-showcase-browser-full{border-radius:9px}.site-showcase-stage-full .site-showcase-browserbar{height:20px}}
+
+/* Seções pós-hero: hierarquia visual e leitura mais clara sem alterar componentes do painel. */
+#whatsapp-business .site-section-title,#recursos .site-section-title,#comparacao .site-section-title,#como-funciona .site-section-title,#para-quem .site-section-title{letter-spacing:-.025em;line-height:1.22}
+#recursos .site-card-feature,#para-quem .site-card-feature{border:1px solid #e5edf0;border-radius:16px;box-shadow:0 12px 30px rgba(18,42,60,.055);transition:transform .2s ease,box-shadow .2s ease}
+@media(hover:hover){#recursos .site-card-feature:hover,#para-quem .site-card-feature:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(18,42,60,.09)}}
+#comparacao .card{border-radius:16px;box-shadow:0 8px 24px rgba(18,42,60,.05)}
+#como-funciona .site-step{box-shadow:0 7px 20px rgba(0,145,125,.13)}
+@media(prefers-reduced-motion:reduce){#recursos .site-card-feature,#para-quem .site-card-feature{transition:none}}
+</style>
 </head>
 
 <body>
@@ -256,192 +279,84 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </nav>
 
-<section class="site-hero-v2">
-
-    <div class="container">
-
-        <div class="row align-items-center">
-
-            <div class="col-lg-6">
-
-                <span class="badge badge-success mb-3">
-                    API Oficial da Meta • Mais segurança e estabilidade
-                </span>
-
-                <h1 class="site-hero-title">
-                    Transforme seu WhatsApp em uma plataforma de
-                    <span>vendas e atendimento</span>
-                </h1>
-
-                <p class="site-hero-text mt-4">
-                    Crie campanhas, organize contatos, atenda clientes, use templates oficiais e gerencie múltiplos números em um único sistema conectado à API Oficial da Meta.
-                </p>
-
-                <div class="mt-4">
-
-                    <a
-                    href="<?= BASE_URL; ?>/index.php?url=site/cadastro"
-                    class="btn btn-success btn-lg site-btn-main shadow-sm"
-                    data-analytics-event="select_trial"
-                    data-analytics-location="hero"
-                    data-analytics-destination="registration"
-                    >
-                        Começar teste grátis
-                    </a>
-
-                    <a
-                    href="#como-funciona"
-                    class="btn btn-outline-secondary btn-lg site-btn-outline ml-lg-2 mt-2 mt-lg-0"
-                    >
-                        Ver como funciona
-                    </a>
-
-                </div>
-
-                <div class="mt-3 small text-muted">
-
-                    Teste grátis por até 7 dias ou 200 mensagens.
-
-                </div>
-
-                <div class="mt-3 text-muted">
-
-                    <span class="mr-3">
-                        <i class="fas fa-check text-success"></i>
-                        Integração oficial
-                    </span>
-
-                    <span class="mr-3">
-                        <i class="fas fa-check text-success"></i>
-                        Templates oficiais
-                    </span>
-
-                    <span>
-                        <i class="fas fa-check text-success"></i>
-                        Operação em nuvem
-                    </span>
-
-                </div>
-
-                <p class="mt-3 mb-0 small">
-                    <a href="<?= BASE_URL; ?>/whatsapp-business" class="text-success font-weight-bold">
-                        Já possui WhatsApp Business? Conecte seu número ao Disparador e continue utilizando o aplicativo no celular.
-                    </a>
-                </p>
-
-            </div>
-
-            <div class="col-lg-6 mt-5 mt-lg-0">
-
-                <div class="site-dashboard-mockup">
-
-                    <div class="site-mockup-top">
-                        Demonstração da Plataforma
-                    </div>
-
-                    <div class="site-mockup-body">
-
-                        <div class="mb-3">
-
-                            <small class="text-muted">
-                                Recursos principais
-                            </small>
-
-                            <h5 class="font-weight-bold mb-0">
-                                Tudo para campanhas e atendimento em um só lugar
-                            </h5>
-
-                        </div>
-
-                        <div class="row">
-
-                            <div class="col-md-6">
-
-                                <div class="site-mini-card">
-                                    <i class="fas fa-bullhorn text-success mr-2"></i>
-                                    <strong>Campanhas WhatsApp</strong>
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-6">
-
-                                <div class="site-mini-card">
-                                    <i class="fas fa-comments text-success mr-2"></i>
-                                    <strong>Central de Conversas</strong>
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-6">
-
-                                <div class="site-mini-card">
-                                    <i class="fas fa-file-alt text-success mr-2"></i>
-                                    <strong>Templates Oficiais</strong>
-                                </div>
-
-                            </div>
-
-                            <div class="col-md-6">
-
-                                <div class="site-mini-card">
-                                    <i class="fas fa-list text-success mr-2"></i>
-                                    <strong>Listas de Contatos</strong>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                        <div class="site-mini-card">
-
-                            <strong>
-                                Operação profissional
-                            </strong>
-
-                            <div class="mt-3">
-
-                                <p class="mb-2">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    Multiatendimento para organizar o trabalho da equipe
-                                </p>
-
-                                <p class="mb-0">
-                                    <i class="fas fa-check-circle text-success"></i>
-                                    API Oficial da Meta para campanhas e atendimento
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="site-mini-card mb-0">
-
-                            <div class="d-flex align-items-center">
-
-                                <i class="fab fa-whatsapp fa-2x text-success mr-3"></i>
-
-                                <div>
-                                    <strong>Disparador.net WhatsApp Business</strong><br>
-                                    <small class="text-muted">
-                                        Plataforma preparada para campanhas, atendimento e múltiplos números.
-                                    </small>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
+<style>
+/* Landing hero: apresentação do produto. Escopo isolado para não afetar o painel. */
+.site-showcase-real-shot{display:block;width:100%;height:auto;object-fit:contain}
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-browserbar,
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-app,
+.site-showcase-browser:has(> .site-showcase-real-shot) > .site-showcase-mini{display:none}
+.site-hero-showcase{position:relative;overflow:hidden;padding:6.5rem 0 4rem;background:radial-gradient(ellipse at 12% 68%,rgba(13,181,86,.16),transparent 40%),radial-gradient(ellipse at 88% 70%,rgba(0,113,216,.17),transparent 42%),linear-gradient(180deg,#fff 0%,#f6fffb 100%);color:#102238}
+.site-hero-showcase .site-showcase-inner{max-width:1160px;margin:auto;text-align:center}
+.site-showcase-eyebrow{display:inline-flex;align-items:center;gap:.5rem;border-radius:50px;background:#e0f8ec;padding:.55rem 1rem;color:#12362c;font-weight:700;font-size:.86rem}
+.site-showcase-heading{font-weight:800;letter-spacing:-.035em;font-size:clamp(2.1rem,4.4vw,3.75rem);line-height:1.23;margin:1.35rem auto 1rem;max-width:1050px}
+.site-showcase-heading span{display:block;color:#079e49;background:linear-gradient(90deg,#08a640,#0077d9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding-bottom:.16em;margin-bottom:-.16em}
+.site-showcase-description{max-width:780px;margin:0 auto 1.4rem;font-size:1.14rem;line-height:1.65;color:#4e647d}
+.site-showcase-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.85rem}
+.site-showcase-actions .btn{border-radius:10px;padding:.85rem 1.55rem;font-weight:700}
+.site-showcase-trust{display:flex;justify-content:center;gap:1rem 2rem;flex-wrap:wrap;margin:1.3rem auto 2.3rem;font-size:.9rem;color:#53657b}
+.site-showcase-trust i{color:#09a34c;margin-right:.35rem}
+.site-showcase-stage{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.25fr) minmax(0,1fr);align-items:center;gap:1rem;margin:0 auto 2rem}
+.site-showcase-browser{min-width:0;text-align:left;border:1px solid #d9e5ed;border-radius:16px;background:#fff;box-shadow:0 22px 55px rgba(14,49,70,.17);overflow:hidden}
+.site-showcase-browser.is-side{transform:perspective(900px) rotateY(7deg);box-shadow:0 12px 35px rgba(14,49,70,.12)}
+.site-showcase-browser.is-right{transform:perspective(900px) rotateY(-7deg)}
+.site-showcase-browserbar{height:29px;background:#f5f8fa;border-bottom:1px solid #e7edf2;display:flex;align-items:center;gap:5px;padding:0 12px}
+.site-showcase-dot{width:8px;height:8px;border-radius:50%;background:#ff6a68}.site-showcase-dot:nth-child(2){background:#f6c34b}.site-showcase-dot:nth-child(3){background:#39c774}
+.site-showcase-app{display:grid;grid-template-columns:105px minmax(0,1fr);min-height:280px;font-size:.7rem}
+.site-showcase-sidebar{background:#303840;color:#fff;padding:12px 8px}.site-showcase-sidebar strong{display:block;color:#fff;font-size:.72rem;margin-bottom:13px}.site-showcase-sidebar span{display:block;padding:7px 5px;color:#e5edf5}.site-showcase-sidebar span.active{background:#0876dc;border-radius:4px;color:#fff}
+.site-showcase-content{padding:13px;min-width:0;background:#f5f7fa}.site-showcase-content h3{font-size:1.03rem;font-weight:750;margin:0 0 12px}
+.site-showcase-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.site-showcase-stat{border-radius:6px;color:white;padding:11px 7px;min-width:0}.site-showcase-stat b{display:block;font-size:1.2rem}.site-showcase-stat small{font-size:.61rem}.site-showcase-stat:nth-child(1){background:#1b9eb2}.site-showcase-stat:nth-child(2){background:#df3546}.site-showcase-stat:nth-child(3){background:#23a445}.site-showcase-stat:nth-child(4){background:#f2b700;color:#15283b}
+.site-showcase-panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}.site-showcase-panel{border:1px solid #e3e7eb;background:white;border-radius:7px;padding:11px 8px;min-height:90px}.site-showcase-panel strong{display:block;font-size:.72rem;margin-bottom:9px}.site-showcase-panel span{display:block;color:#64748b;margin-top:6px}
+.site-showcase-mini{padding:11px;background:#f7f9fb;min-height:165px}.site-showcase-mini h3{font-size:.9rem;font-weight:700}.site-showcase-line{height:15px;background:white;border:1px solid #e2e8ef;margin-top:6px;border-radius:3px;padding:2px 5px;color:#54647b;font-size:.57rem}
+.site-showcase-side-label{font-weight:750;font-size:.86rem;color:#123c4d;margin-bottom:.8rem}
+.site-showcase-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;background:rgba(255,255,255,.92);border:1px solid #eaf0f1;border-radius:17px;box-shadow:0 8px 35px rgba(20,62,72,.07);padding:1.3rem;text-align:left}
+.site-showcase-benefit{display:flex;gap:.85rem;align-items:flex-start}.site-showcase-benefit i{color:#0aa54b;font-size:1.5rem}.site-showcase-benefit strong{display:block;font-size:.94rem}.site-showcase-benefit p{margin:.25rem 0 0;font-size:.82rem;color:#617287}
+@media(max-width:991.98px){.site-hero-showcase{padding-top:5rem}.site-showcase-stage{grid-template-columns:minmax(0,1fr);max-width:680px}.site-showcase-browser.is-side{display:none}.site-showcase-bottom{grid-template-columns:1fr}.site-showcase-heading{max-width:700px}}
+@media(max-width:575.98px){.site-hero-showcase{padding:4rem 0 2.5rem}.site-showcase-heading{font-size:2rem}.site-showcase-description{font-size:1rem}.site-showcase-actions .btn{width:100%;margin:0!important}.site-showcase-trust{gap:.6rem 1rem;font-size:.8rem}.site-showcase-app{grid-template-columns:72px minmax(0,1fr);min-height:235px;font-size:.55rem}.site-showcase-sidebar{padding:8px 4px}.site-showcase-sidebar strong{font-size:.57rem}.site-showcase-sidebar span{padding:6px 2px}.site-showcase-content{padding:8px}.site-showcase-content h3{font-size:.85rem}.site-showcase-stat{padding:8px 3px}.site-showcase-stat b{font-size:.9rem}.site-showcase-stat small{font-size:.47rem}.site-showcase-panels{gap:4px}.site-showcase-panel{padding:6px 4px}.site-showcase-panel strong{font-size:.55rem}.site-showcase-panel span{font-size:.5rem}}
+@media(prefers-reduced-motion:reduce){.site-hero-showcase *{scroll-behavior:auto!important}}
+</style>
+<section class="site-hero-showcase" aria-labelledby="site-showcase-title">
+  <div class="container site-showcase-inner">
+    <span class="site-showcase-eyebrow"><i class="fab fa-whatsapp" aria-hidden="true"></i> API Oficial do WhatsApp Business</span>
+    <h1 class="site-showcase-heading" id="site-showcase-title">Seu WhatsApp já conecta você aos clientes.<span>O Disparador leva sua operação mais longe.</span></h1>
+    <p class="site-showcase-description">Crie campanhas oficiais, organize contatos e centralize o atendimento em uma plataforma desenvolvida para empresas que querem crescer.</p>
+    <div class="site-showcase-actions">
+      <a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-success btn-lg site-btn-main" data-analytics-event="select_trial" data-analytics-location="hero" data-analytics-destination="registration"><i class="fas fa-rocket mr-2" aria-hidden="true"></i>Começar teste grátis</a>
+      <a href="#recursos" class="btn btn-outline-primary btn-lg"><i class="fas fa-play mr-2" aria-hidden="true"></i>Conhecer a plataforma</a>
     </div>
-
+    <div class="site-showcase-trust">
+      <span><i class="fas fa-check-circle" aria-hidden="true"></i>Até 7 dias ou 200 mensagens</span>
+      <span><i class="fas fa-check-circle" aria-hidden="true"></i>Sem mensalidade durante o teste</span>
+      <span><i class="fas fa-cloud" aria-hidden="true"></i>Operação em nuvem</span>
+    </div>
+    <div class="site-showcase-stage site-showcase-stage-full" aria-label="Capturas reais das telas de Campanhas, Dashboard e Listas de Contatos do Disparador.net, com dados ocultados">
+      <div class="site-showcase-side site-showcase-side-left">
+        <div class="site-showcase-side-label"><i class="fas fa-bullhorn text-success mr-2" aria-hidden="true"></i>Campanhas organizadas</div>
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Tela de Campanhas do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/campanhas-completo.webp" alt="Tela completa de Campanhas, com menu lateral e tabela de campanhas" width="1272" height="752" loading="eager" decoding="async">
+        </div>
+      </div>
+      <div class="site-showcase-main">
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Dashboard do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/dashboard-completo.webp" alt="Dashboard completo do Disparador.net, incluindo menu lateral, indicadores e ações rápidas" width="1269" height="756" loading="eager" fetchpriority="high" decoding="async">
+        </div>
+      </div>
+      <div class="site-showcase-side site-showcase-side-right">
+        <div class="site-showcase-side-label"><i class="fas fa-address-book text-success mr-2" aria-hidden="true"></i>Contatos em listas</div>
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Tela de Listas de Contatos do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/listas-completo.webp" alt="Tela completa de Listas de Contatos, com menu lateral, listagem e ações de gerenciamento" width="1450" height="663" loading="eager" decoding="async">
+        </div>
+      </div>
+    </div>
+    <div class="site-showcase-bottom">
+      <div class="site-showcase-benefit"><i class="fab fa-whatsapp" aria-hidden="true"></i><div><strong>Continue usando o WhatsApp Business</strong><p>Quando elegível, conecte o mesmo número e continue usando o aplicativo no celular.</p></div></div>
+      <div class="site-showcase-benefit"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Mensagens pela API Oficial</strong><p>Envios com templates aprovados e conforme as políticas da Meta.</p></div></div>
+      <div class="site-showcase-benefit"><i class="fas fa-users" aria-hidden="true"></i><div><strong>Atendimento em equipe</strong><p>Organize suas conversas em uma central de atendimento.</p></div></div>
+    </div>
+    <p class="small text-muted mt-3 mb-0">Para realizar envios, é necessário configurar uma forma de pagamento na Meta. As tarifas da Meta são cobradas separadamente da mensalidade do Disparador.net.</p>
+  </div>
 </section>
 
 <section class="py-5 bg-white border-top border-bottom" id="whatsapp-business">
@@ -449,9 +364,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="row align-items-center">
             <div class="col-lg-7 mb-4 mb-lg-0">
                 <span class="badge badge-success mb-3">WhatsApp Business + Disparador.net</span>
-                <h2 class="site-section-title">Conecte seu WhatsApp Business ao Disparador.net</h2>
+                <h2 class="site-section-title">Continue usando seu WhatsApp Business. Ganhe uma operação mais organizada.</h2>
                 <p class="lead text-muted">
-                    Use o mesmo número que sua empresa já utiliza para conversar com clientes e tenha também campanhas, atendimento em equipe, contatos e templates no Disparador.net.
+                    Para números elegíveis, mantenha o WhatsApp Business no celular e utilize o Disparador.net para organizar campanhas, listas de contatos e atendimento em equipe.
                 </p>
                 <p class="text-muted">
                     Com a integração oficial da Meta, números elegíveis podem ser conectados ao Disparador e continuar funcionando no aplicativo WhatsApp Business.
@@ -465,12 +380,12 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <div class="card-body p-4">
                         <p><i class="fas fa-mobile-alt text-success mr-2"></i> Continue utilizando o WhatsApp Business no celular.</p>
                         <p><i class="fas fa-random text-success mr-2"></i> Use o mesmo número no Disparador.net.</p>
-                        <p><i class="fas fa-address-book text-success mr-2"></i> <strong>Seus contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net.</strong></p>
+                        <p><i class="fas fa-address-book text-success mr-2"></i> <strong>Organize seus contatos em listas para campanhas segmentadas.</strong></p>
                         <p><i class="fas fa-users text-success mr-2"></i> Centralize o atendimento da sua equipe.</p>
                         <p class="mb-0"><i class="fas fa-bullhorn text-success mr-2"></i> Envie campanhas pela plataforma oficial da Meta.</p>
                     </div>
                 </div>
-                <p class="text-muted small mt-2 mb-0">A sincronização depende dos contatos e eventos disponibilizados pela Meta para o número conectado.</p>
+                <p class="text-muted small mt-2 mb-0">A disponibilidade da coexistência depende da elegibilidade do número e das opções oferecidas pela Meta. A importação de contatos também pode ser feita por arquivo.</p>
             </div>
         </div>
     </div>
@@ -626,11 +541,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="text-center mb-5">
 
             <h2 class="site-section-title">
-                Recursos para vender, atender e organizar melhor
+                Mais organização para conversar com seus clientes e realizar campanhas
             </h2>
 
             <p class="text-muted">
-                Uma plataforma simples para empresas que querem usar o WhatsApp de forma profissional.
+                Do primeiro contato ao acompanhamento das campanhas, trabalhe com listas, templates oficiais e atendimento em equipe.
             </p>
 
         </div>
@@ -706,7 +621,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
-<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Do WhatsApp da empresa para uma operação profissional</h2><p class="text-muted">O Disparador.net complementa a rotina do WhatsApp Business com organização para sua equipe.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
+<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Seu WhatsApp Business continua. Sua operação ganha novas ferramentas.</h2><p class="text-muted">Compare a rotina pelo aplicativo com as ferramentas adicionais disponíveis no Disparador.net.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
 
 <section id="integracao-oficial" class="py-5 bg-white border-top border-bottom"><div class="container"><div class="row align-items-center"><div class="col-lg-7"><span class="badge badge-success mb-3">Confiança para sua operação</span><h2 class="site-section-title">Integrado à plataforma oficial da Meta</h2><p class="lead text-muted">Campanhas, atendimento e templates funcionam pela infraestrutura oficial do WhatsApp Business.</p><p class="text-muted">A conexão passa pelos processos apresentados pela Meta e respeita as políticas aplicáveis à conta, ao número e às mensagens.</p></div><div class="col-lg-5"><div class="card site-card-feature"><div class="card-body p-4"><p><i class="fas fa-shield-alt text-success mr-2"></i> Integração oficial</p><p><i class="fas fa-cloud text-success mr-2"></i> Operação em nuvem</p><p class="mb-0"><i class="fas fa-file-alt text-success mr-2"></i> Templates aprovados pela Meta</p></div></div></div></div></div></section>
 
@@ -721,7 +636,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             </h2>
 
             <p class="text-muted">
-                Um fluxo simples para começar a usar campanhas e atendimento em uma plataforma oficial.
+                Cadastre-se, conecte um número elegível, organize seus contatos e comece a usar os recursos da plataforma.
             </p>
 
         </div>
@@ -730,7 +645,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">1</div>
-                <h5 class="font-weight-bold">Solicite seu acesso</h5>
+                <h5 class="font-weight-bold">Crie sua conta</h5>
                 <p class="text-muted">Cadastre sua empresa e acesse o painel do Disparador.net.</p>
             </div>
 
@@ -748,8 +663,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">4</div>
-                <h5 class="font-weight-bold">Venda e atenda mais</h5>
-                <p class="text-muted">Envie campanhas e acompanhe as conversas em uma única central.</p>
+                <h5 class="font-weight-bold">Crie campanhas e atenda</h5>
+                <p class="text-muted">Utilize templates aprovados para campanhas e acompanhe as conversas pela central de atendimento.</p>
             </div>
 
         </div>
@@ -758,7 +673,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
-<section id="para-quem" class="py-5 bg-white"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Feito para empresas que usam o WhatsApp todos os dias</h2><p class="text-muted">Organize a comunicação que já faz parte da rotina da sua empresa.</p></div><div class="row">
+<section id="para-quem" class="py-5 bg-white"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Sua empresa já atende pelo WhatsApp? Organize a próxima etapa.</h2><p class="text-muted">Uma plataforma para equipes que precisam organizar contatos, campanhas e atendimento no dia a dia.</p></div><div class="row">
 <?php foreach([['Comércio e varejo','Divulgue novidades e organize o atendimento aos clientes.'],['Prestadores de serviços','Mantenha contatos e conversas acessíveis para sua equipe.'],['Distribuidores e representantes','Segmente listas e envie comunicações oficiais.'],['Clínicas e escritórios','Centralize o atendimento administrativo da empresa.'],['Pequenas e médias empresas','Profissionalize campanhas e conversas sem complicar a operação.']] as $segmento){ ?><div class="col-md-4 mb-4"><div class="card h-100 site-card-feature"><div class="card-body"><h3 class="h5 font-weight-bold"><?= $segmento[0]; ?></h3><p class="text-muted mb-0"><?= $segmento[1]; ?></p></div></div></div><?php } ?>
 </div></div></section>
 
