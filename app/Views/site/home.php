@@ -280,7 +280,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 .site-hero-showcase{position:relative;overflow:hidden;padding:6.5rem 0 4rem;background:radial-gradient(ellipse at 12% 68%,rgba(13,181,86,.16),transparent 40%),radial-gradient(ellipse at 88% 70%,rgba(0,113,216,.17),transparent 42%),linear-gradient(180deg,#fff 0%,#f6fffb 100%);color:#102238}
 .site-hero-showcase .site-showcase-inner{max-width:1160px;margin:auto;text-align:center}
 .site-showcase-eyebrow{display:inline-flex;align-items:center;gap:.5rem;border-radius:50px;background:#e0f8ec;padding:.55rem 1rem;color:#12362c;font-weight:700;font-size:.86rem}
-.site-showcase-heading{font-weight:800;letter-spacing:-.035em;font-size:clamp(2.1rem,4.4vw,3.75rem);line-height:1.13;margin:1.35rem auto 1rem;max-width:1050px}
+.site-showcase-heading{font-weight:800;letter-spacing:-.035em;font-size:clamp(2.1rem,4.4vw,3.75rem);line-height:1.23;margin:1.35rem auto 1rem;max-width:1050px}
 .site-showcase-heading span{display:block;color:#079e49;background:linear-gradient(90deg,#08a640,#0077d9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .site-showcase-description{max-width:780px;margin:0 auto 1.4rem;font-size:1.14rem;line-height:1.65;color:#4e647d}
 .site-showcase-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.85rem}
@@ -347,7 +347,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
       <div class="site-showcase-benefit"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Mensagens pela API Oficial</strong><p>Envios com templates aprovados e conforme as políticas da Meta.</p></div></div>
       <div class="site-showcase-benefit"><i class="fas fa-users" aria-hidden="true"></i><div><strong>Atendimento em equipe</strong><p>Organize suas conversas em uma central de atendimento.</p></div></div>
     </div>
-    <p class="small text-muted mt-3 mb-0">Telas reais do Disparador.net com informações sensíveis ocultadas. Para realizar envios, é necessário configurar uma forma de pagamento na Meta; suas tarifas são cobradas separadamente.</p>
+    <p class="small text-muted mt-3 mb-0">Para realizar envios, é necessário configurar uma forma de pagamento na Meta. As tarifas da Meta são cobradas separadamente da mensalidade do Disparador.net.</p>
   </div>
 </section>
 
