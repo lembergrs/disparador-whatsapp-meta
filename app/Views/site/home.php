@@ -165,7 +165,22 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             font-size: 1.875rem;
         }
     }
-    </style>
+    
+/* Hero com capturas reais completas: composição em profundidade sem distorcer o conteúdo. */
+.site-showcase-stage-full{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.8fr) minmax(0,1fr);gap:0;align-items:center;max-width:1160px;margin:3rem auto 2.2rem;isolation:isolate}
+.site-showcase-stage-full .site-showcase-browser-full{overflow:hidden;background:#fff;border:1px solid #d9e5ed;border-radius:13px;box-shadow:0 20px 45px rgba(16,54,80,.17)}
+.site-showcase-stage-full .site-showcase-browser-full img{display:block;width:100%;height:auto;aspect-ratio:auto;object-fit:contain}
+.site-showcase-stage-full .site-showcase-main{position:relative;z-index:3;transform:scale(1.12)}
+.site-showcase-stage-full .site-showcase-main .site-showcase-browser-full{box-shadow:0 26px 55px rgba(16,54,80,.23)}
+.site-showcase-stage-full .site-showcase-side{position:relative;z-index:1;min-width:0}
+.site-showcase-stage-full .site-showcase-side-left{transform:perspective(950px) rotateY(9deg) rotate(-3deg) translateX(12px)}
+.site-showcase-stage-full .site-showcase-side-right{transform:perspective(950px) rotateY(-9deg) rotate(3deg) translateX(-12px)}
+.site-showcase-stage-full .site-showcase-side-label{margin:0 0 1rem;font-size:.92rem;font-weight:750}
+.site-showcase-stage-full .site-showcase-browserbar{height:24px}
+.site-showcase-stage-full .site-showcase-dot{width:7px;height:7px}
+@media(max-width:991.98px){.site-showcase-stage-full{grid-template-columns:minmax(0,1fr);max-width:690px;gap:1.6rem;margin-top:2.2rem}.site-showcase-stage-full .site-showcase-main{grid-row:1;transform:none}.site-showcase-stage-full .site-showcase-side{transform:none;max-width:100%;display:block}.site-showcase-stage-full .site-showcase-side-label{text-align:left}.site-showcase-stage-full .site-showcase-side-left{grid-row:2}.site-showcase-stage-full .site-showcase-side-right{grid-row:3}}
+@media(max-width:575.98px){.site-showcase-stage-full{gap:1.2rem}.site-showcase-stage-full .site-showcase-browser-full{border-radius:9px}.site-showcase-stage-full .site-showcase-browserbar{height:20px}}
+</style>
 </head>
 
 <body>
@@ -305,31 +320,25 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
       <span><i class="fas fa-check-circle" aria-hidden="true"></i>Sem mensalidade durante o teste</span>
       <span><i class="fas fa-cloud" aria-hidden="true"></i>Operação em nuvem</span>
     </div>
-    <div class="site-showcase-stage" aria-label="Ilustração da interface do Disparador.net; representação esquemática sem dados de clientes">
-      <div>
+    <div class="site-showcase-stage site-showcase-stage-full" aria-label="Capturas reais das telas de Campanhas, Dashboard e Listas de Contatos do Disparador.net, com dados ocultados">
+      <div class="site-showcase-side site-showcase-side-left">
         <div class="site-showcase-side-label"><i class="fas fa-bullhorn text-success mr-2" aria-hidden="true"></i>Campanhas organizadas</div>
-        <div class="site-showcase-browser is-side" aria-hidden="true">
-          <img class="site-showcase-real-shot" src="<?= ASSET_URL; ?>/img/landing/campanhas-real.webp" alt="" loading="lazy" onload="this.parentElement.classList.add('has-real-shot')" onerror="this.remove()">
-          <div class="site-showcase-browserbar"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
-          <div class="site-showcase-mini"><h3>Campanhas</h3><div class="site-showcase-line">Nome &nbsp; | &nbsp; Status &nbsp; | &nbsp; Enviados</div><div class="site-showcase-line">Campanha de exemplo</div><div class="site-showcase-line">Acompanhamento dos envios</div><div class="site-showcase-line">Detalhes e prévia</div></div>
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Tela de Campanhas do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/campanhas-completo.webp" alt="Tela completa de Campanhas, com menu lateral e tabela de campanhas" width="1272" height="752" loading="eager" decoding="async">
         </div>
       </div>
-      <div class="site-showcase-browser">
-        <img class="site-showcase-real-shot" src="<?= ASSET_URL; ?>/img/landing/dashboard-real.webp" alt="Captura real do Dashboard do Disparador.net com indicadores de conversas, contatos, campanhas e ações rápidas" loading="eager" fetchpriority="high" onload="this.parentElement.classList.add('has-real-shot')" onerror="this.remove()">
-        <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
-        <div class="site-showcase-app">
-          <div class="site-showcase-sidebar"><strong>Disparador.net</strong><span class="active">Dashboard</span><span>Números WhatsApp</span><span>Listas de Contatos</span><span>Templates</span><span>Campanhas</span><span>Conversas</span></div>
-          <div class="site-showcase-content"><h3>Dashboard</h3>
-            <div class="site-showcase-stats"><div class="site-showcase-stat"><b><i class="fas fa-comments"></i></b><small>Conversas</small></div><div class="site-showcase-stat"><b><i class="fas fa-envelope"></i></b><small>Não lidas</small></div><div class="site-showcase-stat"><b><i class="fas fa-address-book"></i></b><small>Contatos</small></div><div class="site-showcase-stat"><b><i class="fas fa-bullhorn"></i></b><small>Campanhas</small></div></div>
-            <div class="site-showcase-panels"><div class="site-showcase-panel"><strong>Seu plano</strong><span>Franquia de mensagens</span><span>Uso da plataforma</span></div><div class="site-showcase-panel"><strong>Conta Meta</strong><span>Conexão oficial</span><span>Dados da conta</span></div><div class="site-showcase-panel"><strong>Ações rápidas</strong><span>Nova campanha</span><span>Gerenciar contatos</span></div></div>
-          </div>
+      <div class="site-showcase-main">
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Dashboard do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/dashboard-completo.webp" alt="Dashboard completo do Disparador.net, incluindo menu lateral, indicadores e ações rápidas" width="1269" height="756" loading="eager" fetchpriority="high" decoding="async">
         </div>
       </div>
-      <div>
+      <div class="site-showcase-side site-showcase-side-right">
         <div class="site-showcase-side-label"><i class="fas fa-address-book text-success mr-2" aria-hidden="true"></i>Contatos em listas</div>
-        <div class="site-showcase-browser is-side is-right" aria-hidden="true">
-          <div class="site-showcase-browserbar"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
-          <div class="site-showcase-mini"><h3>Listas de Contatos</h3><div class="site-showcase-line">Importar contatos</div><div class="site-showcase-line">Organizar listas</div><div class="site-showcase-line">Selecionar público</div><div class="site-showcase-line">Gerenciar contatos</div></div>
+        <div class="site-showcase-browser site-showcase-browser-full" aria-label="Tela de Listas de Contatos do Disparador.net">
+          <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
+          <img src="<?= ASSET_URL; ?>/img/landing/listas-completo.webp" alt="Tela completa de Listas de Contatos, com menu lateral, listagem e ações de gerenciamento" width="1450" height="663" loading="eager" decoding="async">
         </div>
       </div>
     </div>
@@ -338,7 +347,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
       <div class="site-showcase-benefit"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Mensagens pela API Oficial</strong><p>Envios com templates aprovados e conforme as políticas da Meta.</p></div></div>
       <div class="site-showcase-benefit"><i class="fas fa-users" aria-hidden="true"></i><div><strong>Atendimento em equipe</strong><p>Organize suas conversas em uma central de atendimento.</p></div></div>
     </div>
-    <p class="small text-muted mt-3 mb-0">Capturas reais com informações sensíveis ocultadas. Para realizar envios, é necessário configurar uma forma de pagamento na Meta; suas tarifas são cobradas separadamente.</p>
+    <p class="small text-muted mt-3 mb-0">Telas reais do Disparador.net com informações sensíveis ocultadas. Para realizar envios, é necessário configurar uma forma de pagamento na Meta; suas tarifas são cobradas separadamente.</p>
   </div>
 </section>
 
