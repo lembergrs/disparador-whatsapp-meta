@@ -258,6 +258,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 <style>
 /* Landing hero: apresentação do produto. Escopo isolado para não afetar o painel. */
+.site-showcase-real-shot{display:none;width:100%;height:auto;object-fit:contain}
+.site-showcase-browser.has-real-shot .site-showcase-real-shot{display:block}
+.site-showcase-browser.has-real-shot .site-showcase-browserbar,.site-showcase-browser.has-real-shot .site-showcase-app,.site-showcase-browser.has-real-shot .site-showcase-mini{display:none}
 .site-hero-showcase{position:relative;overflow:hidden;padding:6.5rem 0 4rem;background:radial-gradient(ellipse at 12% 68%,rgba(13,181,86,.16),transparent 40%),radial-gradient(ellipse at 88% 70%,rgba(0,113,216,.17),transparent 42%),linear-gradient(180deg,#fff 0%,#f6fffb 100%);color:#102238}
 .site-hero-showcase .site-showcase-inner{max-width:1160px;margin:auto;text-align:center}
 .site-showcase-eyebrow{display:inline-flex;align-items:center;gap:.5rem;border-radius:50px;background:#e0f8ec;padding:.55rem 1rem;color:#12362c;font-weight:700;font-size:.86rem}
@@ -305,11 +308,13 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
       <div>
         <div class="site-showcase-side-label"><i class="fas fa-bullhorn text-success mr-2" aria-hidden="true"></i>Campanhas organizadas</div>
         <div class="site-showcase-browser is-side" aria-hidden="true">
+          <img class="site-showcase-real-shot" src="<?= ASSET_URL; ?>/img/landing/campanhas-real.webp" alt="" loading="lazy" onload="this.parentElement.classList.add('has-real-shot')" onerror="this.remove()">
           <div class="site-showcase-browserbar"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
           <div class="site-showcase-mini"><h3>Campanhas</h3><div class="site-showcase-line">Nome &nbsp; | &nbsp; Status &nbsp; | &nbsp; Enviados</div><div class="site-showcase-line">Campanha de exemplo</div><div class="site-showcase-line">Acompanhamento dos envios</div><div class="site-showcase-line">Detalhes e prévia</div></div>
         </div>
       </div>
       <div class="site-showcase-browser">
+        <img class="site-showcase-real-shot" src="<?= ASSET_URL; ?>/img/landing/dashboard-real.webp" alt="Captura real do Dashboard do Disparador.net com indicadores de conversas, contatos, campanhas e ações rápidas" loading="eager" fetchpriority="high" onload="this.parentElement.classList.add('has-real-shot')" onerror="this.remove()">
         <div class="site-showcase-browserbar" aria-hidden="true"><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i><i class="site-showcase-dot"></i></div>
         <div class="site-showcase-app">
           <div class="site-showcase-sidebar"><strong>Disparador.net</strong><span class="active">Dashboard</span><span>Números WhatsApp</span><span>Listas de Contatos</span><span>Templates</span><span>Campanhas</span><span>Conversas</span></div>
@@ -332,7 +337,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
       <div class="site-showcase-benefit"><i class="fas fa-shield-alt" aria-hidden="true"></i><div><strong>Mensagens pela API Oficial</strong><p>Envios com templates aprovados e conforme as políticas da Meta.</p></div></div>
       <div class="site-showcase-benefit"><i class="fas fa-users" aria-hidden="true"></i><div><strong>Atendimento em equipe</strong><p>Organize suas conversas em uma central de atendimento.</p></div></div>
     </div>
-    <p class="small text-muted mt-3 mb-0">A apresentação das telas é ilustrativa. Para realizar envios, é necessário configurar uma forma de pagamento na Meta; suas tarifas são cobradas separadamente.</p>
+    <p class="small text-muted mt-3 mb-0">Capturas reais com informações sensíveis ocultadas. Para realizar envios, é necessário configurar uma forma de pagamento na Meta; suas tarifas são cobradas separadamente.</p>
   </div>
 </section>
 
