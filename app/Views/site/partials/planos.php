@@ -11,8 +11,27 @@ $formatarQuantidade = function($quantidade,$singular,$plural){ $quantidade=(int)
 <div class="site-planos-carousel mt-4" id="sitePlanosCarousel">
 <?php foreach($planos as $plano){ $corPlano=in_array($plano['PLA_Cor']??'',$coresPermitidas,true)?$plano['PLA_Cor']:'primary'; $valorMensal=\Models\Plano::valorPorCiclo($plano,'mensal'); $ofertaMensal=$ofertasPublicasPlanos[(int)$plano['PLA_ID']]['mensal']??[]; $valorPrimeiroPagamento=((int)($ofertaMensal['primeira_cobranca_centavos']??0))/100; $valorDesconto=((int)($ofertaMensal['desconto_centavos']??0))/100; $recomendado=stripos((string)$plano['PLA_Nome'],'profissional')!==false; ?>
 <div class="site-plano-carousel-item"><div class="card border-<?= $corPlano; ?> h-100"><div class="card-body p-4 text-center">
-<?php if($recomendado){ ?><span class="badge badge-success d-block mb-2">Recomendado</span><?php } ?><span class="badge badge-<?= $corPlano; ?> mb-3"><?= htmlspecialchars($plano['PLA_Nome']); ?></span>
-<p class="text-success font-weight-bold mb-1"><span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento,2,',','.'); ?></span><span> no primeiro mês</span></p><p class="text-muted mb-1">Desconto de R$ <?= number_format($valorDesconto,2,',','.'); ?> na primeira mensalidade</p><p class="mb-3">A partir do segundo mês: <strong>R$ <?= number_format($valorMensal,2,',','.'); ?>/mês</strong></p>
+<?php
+$nomePlano = mb_strtolower((string)($plano['PLA_Nome']??''),'UTF-8');
+$perfilPlano = 'Para sua empresa';
+if(strpos($nomePlano,'básico')!==false || strpos($nomePlano,'basico')!==false){ $perfilPlano = 'Para começar'; }
+elseif(strpos($nomePlano,'profissional')!==false){ $perfilPlano = 'Para crescer'; }
+elseif(strpos($nomePlano,'empresarial')!==false){ $perfilPlano = 'Para operações maiores'; }
+$temDescontoPrimeiraMensalidade = $valorMensal > 0 && $valorPrimeiroPagamento > 0 && $valorPrimeiroPagamento < $valorMensal;
+$percentualDesconto = $temDescontoPrimeiraMensalidade ? round((1 - $valorPrimeiroPagamento / $valorMensal) * 100) : 0;
+?>
+<?php if($recomendado){ ?><span class="badge badge-success d-block mb-2">Recomendado</span><?php } ?>
+<h3 class="h5 font-weight-bold mb-1"><?= htmlspecialchars($plano['PLA_Nome'],ENT_QUOTES,'UTF-8'); ?></h3>
+<p class="text-muted small mb-3"><?= htmlspecialchars($perfilPlano,ENT_QUOTES,'UTF-8'); ?></p>
+<?php if($temDescontoPrimeiraMensalidade){ ?>
+<div class="mb-1"><del class="text-muted">R$ <?= number_format($valorMensal,2,',','.'); ?></del> <span class="badge badge-success ml-1"><?= $percentualDesconto; ?>% OFF</span></div>
+<p class="text-success font-weight-bold mb-1"><span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorPrimeiroPagamento,2,',','.'); ?></span></p>
+<p class="text-muted small mb-1">na primeira mensalidade</p>
+<p class="mb-3">A partir do segundo mês: <strong>R$ <?= number_format($valorMensal,2,',','.'); ?>/mês</strong></p>
+<?php }else{ ?>
+<p class="text-success font-weight-bold mb-1"><span class="site-valor-primeiro-pagamento">R$ <?= number_format($valorMensal,2,',','.'); ?>/mês</span></p>
+<p class="text-muted small mb-3">Mensalidade do Disparador.net</p>
+<?php } ?>
 <p class="text-muted"><?= $formatarQuantidade($plano['PLA_LimiteNumeros']??0,'número WhatsApp','números WhatsApp'); ?></p><hr><p><i class="fas fa-users text-success"></i> <?= $formatarQuantidade($plano['PLA_LimiteUsuarios']??0,'usuário','usuários'); ?></p><p><i class="fas fa-paper-plane text-primary"></i> <?= $formatarQuantidade($plano['PLA_LimiteMensagens']??0,'mensagem/mês','mensagens/mês'); ?></p><p><i class="fas fa-check text-success"></i> Campanhas, listas, templates e atendimento</p>
 <a href="<?= BASE_URL; ?>/index.php?url=site/cadastro" class="btn btn-outline-success btn-block" data-analytics-event="select_trial" data-analytics-location="pricing" data-analytics-destination="registration" data-analytics-plan="<?= htmlspecialchars($plano['PLA_Nome'],ENT_QUOTES,'UTF-8'); ?>">Começar teste grátis</a>
 </div></div></div><?php } ?></div>
