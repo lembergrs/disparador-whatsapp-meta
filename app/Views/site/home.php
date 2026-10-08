@@ -180,6 +180,14 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 .site-showcase-stage-full .site-showcase-dot{width:7px;height:7px}
 @media(max-width:991.98px){.site-showcase-stage-full{grid-template-columns:minmax(0,1fr);max-width:690px;gap:1.6rem;margin-top:2.2rem}.site-showcase-stage-full .site-showcase-main{grid-row:1;transform:none}.site-showcase-stage-full .site-showcase-side{transform:none;max-width:100%;display:block}.site-showcase-stage-full .site-showcase-side-label{text-align:left}.site-showcase-stage-full .site-showcase-side-left{grid-row:2}.site-showcase-stage-full .site-showcase-side-right{grid-row:3}}
 @media(max-width:575.98px){.site-showcase-stage-full{gap:1.2rem}.site-showcase-stage-full .site-showcase-browser-full{border-radius:9px}.site-showcase-stage-full .site-showcase-browserbar{height:20px}}
+
+/* Seções pós-hero: hierarquia visual e leitura mais clara sem alterar componentes do painel. */
+#whatsapp-business .site-section-title,#recursos .site-section-title,#comparacao .site-section-title,#como-funciona .site-section-title,#para-quem .site-section-title{letter-spacing:-.025em;line-height:1.22}
+#recursos .site-card-feature,#para-quem .site-card-feature{border:1px solid #e5edf0;border-radius:16px;box-shadow:0 12px 30px rgba(18,42,60,.055);transition:transform .2s ease,box-shadow .2s ease}
+@media(hover:hover){#recursos .site-card-feature:hover,#para-quem .site-card-feature:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(18,42,60,.09)}}
+#comparacao .card{border-radius:16px;box-shadow:0 8px 24px rgba(18,42,60,.05)}
+#como-funciona .site-step{box-shadow:0 7px 20px rgba(0,145,125,.13)}
+@media(prefers-reduced-motion:reduce){#recursos .site-card-feature,#para-quem .site-card-feature{transition:none}}
 </style>
 </head>
 
@@ -356,9 +364,9 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="row align-items-center">
             <div class="col-lg-7 mb-4 mb-lg-0">
                 <span class="badge badge-success mb-3">WhatsApp Business + Disparador.net</span>
-                <h2 class="site-section-title">Conecte seu WhatsApp Business ao Disparador.net</h2>
+                <h2 class="site-section-title">Continue usando seu WhatsApp Business. Ganhe uma operação mais organizada.</h2>
                 <p class="lead text-muted">
-                    Use o mesmo número que sua empresa já utiliza para conversar com clientes e tenha também campanhas, atendimento em equipe, contatos e templates no Disparador.net.
+                    Para números elegíveis, mantenha o WhatsApp Business no celular e utilize o Disparador.net para organizar campanhas, listas de contatos e atendimento em equipe.
                 </p>
                 <p class="text-muted">
                     Com a integração oficial da Meta, números elegíveis podem ser conectados ao Disparador e continuar funcionando no aplicativo WhatsApp Business.
@@ -372,12 +380,12 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                     <div class="card-body p-4">
                         <p><i class="fas fa-mobile-alt text-success mr-2"></i> Continue utilizando o WhatsApp Business no celular.</p>
                         <p><i class="fas fa-random text-success mr-2"></i> Use o mesmo número no Disparador.net.</p>
-                        <p><i class="fas fa-address-book text-success mr-2"></i> <strong>Seus contatos do WhatsApp Business podem ser sincronizados automaticamente com o Disparador.net.</strong></p>
+                        <p><i class="fas fa-address-book text-success mr-2"></i> <strong>Organize seus contatos em listas para campanhas segmentadas.</strong></p>
                         <p><i class="fas fa-users text-success mr-2"></i> Centralize o atendimento da sua equipe.</p>
                         <p class="mb-0"><i class="fas fa-bullhorn text-success mr-2"></i> Envie campanhas pela plataforma oficial da Meta.</p>
                     </div>
                 </div>
-                <p class="text-muted small mt-2 mb-0">A sincronização depende dos contatos e eventos disponibilizados pela Meta para o número conectado.</p>
+                <p class="text-muted small mt-2 mb-0">A disponibilidade da coexistência depende da elegibilidade do número e das opções oferecidas pela Meta. A importação de contatos também pode ser feita por arquivo.</p>
             </div>
         </div>
     </div>
@@ -533,11 +541,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         <div class="text-center mb-5">
 
             <h2 class="site-section-title">
-                Recursos para vender, atender e organizar melhor
+                Mais organização para conversar com seus clientes e realizar campanhas
             </h2>
 
             <p class="text-muted">
-                Uma plataforma simples para empresas que querem usar o WhatsApp de forma profissional.
+                Do primeiro contato ao acompanhamento das campanhas, trabalhe com listas, templates oficiais e atendimento em equipe.
             </p>
 
         </div>
@@ -613,7 +621,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
-<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Do WhatsApp da empresa para uma operação profissional</h2><p class="text-muted">O Disparador.net complementa a rotina do WhatsApp Business com organização para sua equipe.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
+<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Seu WhatsApp Business continua. Sua operação ganha novas ferramentas.</h2><p class="text-muted">Compare a rotina pelo aplicativo com as ferramentas adicionais disponíveis no Disparador.net.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
 
 <section id="integracao-oficial" class="py-5 bg-white border-top border-bottom"><div class="container"><div class="row align-items-center"><div class="col-lg-7"><span class="badge badge-success mb-3">Confiança para sua operação</span><h2 class="site-section-title">Integrado à plataforma oficial da Meta</h2><p class="lead text-muted">Campanhas, atendimento e templates funcionam pela infraestrutura oficial do WhatsApp Business.</p><p class="text-muted">A conexão passa pelos processos apresentados pela Meta e respeita as políticas aplicáveis à conta, ao número e às mensagens.</p></div><div class="col-lg-5"><div class="card site-card-feature"><div class="card-body p-4"><p><i class="fas fa-shield-alt text-success mr-2"></i> Integração oficial</p><p><i class="fas fa-cloud text-success mr-2"></i> Operação em nuvem</p><p class="mb-0"><i class="fas fa-file-alt text-success mr-2"></i> Templates aprovados pela Meta</p></div></div></div></div></div></section>
 
@@ -628,7 +636,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             </h2>
 
             <p class="text-muted">
-                Um fluxo simples para começar a usar campanhas e atendimento em uma plataforma oficial.
+                Cadastre-se, conecte um número elegível, organize seus contatos e comece a usar os recursos da plataforma.
             </p>
 
         </div>
@@ -637,7 +645,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">1</div>
-                <h5 class="font-weight-bold">Solicite seu acesso</h5>
+                <h5 class="font-weight-bold">Crie sua conta</h5>
                 <p class="text-muted">Cadastre sua empresa e acesse o painel do Disparador.net.</p>
             </div>
 
@@ -655,8 +663,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
             <div class="col-md-3 mb-4">
                 <div class="site-step">4</div>
-                <h5 class="font-weight-bold">Venda e atenda mais</h5>
-                <p class="text-muted">Envie campanhas e acompanhe as conversas em uma única central.</p>
+                <h5 class="font-weight-bold">Crie campanhas e atenda</h5>
+                <p class="text-muted">Utilize templates aprovados para campanhas e acompanhe as conversas pela central de atendimento.</p>
             </div>
 
         </div>
@@ -665,7 +673,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
-<section id="para-quem" class="py-5 bg-white"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Feito para empresas que usam o WhatsApp todos os dias</h2><p class="text-muted">Organize a comunicação que já faz parte da rotina da sua empresa.</p></div><div class="row">
+<section id="para-quem" class="py-5 bg-white"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Sua empresa já atende pelo WhatsApp? Organize a próxima etapa.</h2><p class="text-muted">Uma plataforma para equipes que precisam organizar contatos, campanhas e atendimento no dia a dia.</p></div><div class="row">
 <?php foreach([['Comércio e varejo','Divulgue novidades e organize o atendimento aos clientes.'],['Prestadores de serviços','Mantenha contatos e conversas acessíveis para sua equipe.'],['Distribuidores e representantes','Segmente listas e envie comunicações oficiais.'],['Clínicas e escritórios','Centralize o atendimento administrativo da empresa.'],['Pequenas e médias empresas','Profissionalize campanhas e conversas sem complicar a operação.']] as $segmento){ ?><div class="col-md-4 mb-4"><div class="card h-100 site-card-feature"><div class="card-body"><h3 class="h5 font-weight-bold"><?= $segmento[0]; ?></h3><p class="text-muted mb-0"><?= $segmento[1]; ?></p></div></div></div><?php } ?>
 </div></div></section>
 
