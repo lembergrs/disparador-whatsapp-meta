@@ -281,7 +281,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 .site-hero-showcase .site-showcase-inner{max-width:1160px;margin:auto;text-align:center}
 .site-showcase-eyebrow{display:inline-flex;align-items:center;gap:.5rem;border-radius:50px;background:#e0f8ec;padding:.55rem 1rem;color:#12362c;font-weight:700;font-size:.86rem}
 .site-showcase-heading{font-weight:800;letter-spacing:-.035em;font-size:clamp(2.1rem,4.4vw,3.75rem);line-height:1.23;margin:1.35rem auto 1rem;max-width:1050px}
-.site-showcase-heading span{display:block;color:#079e49;background:linear-gradient(90deg,#08a640,#0077d9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.site-showcase-heading span{display:block;color:#079e49;background:linear-gradient(90deg,#08a640,#0077d9);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding-bottom:.16em;margin-bottom:-.16em}
 .site-showcase-description{max-width:780px;margin:0 auto 1.4rem;font-size:1.14rem;line-height:1.65;color:#4e647d}
 .site-showcase-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:.85rem}
 .site-showcase-actions .btn{border-radius:10px;padding:.85rem 1.55rem;font-weight:700}
