@@ -188,6 +188,19 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 #comparacao .card{border-radius:16px;box-shadow:0 8px 24px rgba(18,42,60,.05)}
 #como-funciona .site-step{box-shadow:0 7px 20px rgba(0,145,125,.13)}
 @media(prefers-reduced-motion:reduce){#recursos .site-card-feature,#para-quem .site-card-feature{transition:none}}
+
+/* FAQ expansível com elementos nativos acessíveis, sem dependência de JavaScript. */
+#faq .site-faq-accordion{display:grid;gap:12px}
+#faq .site-faq-details{margin:0;border:1px solid #e1e9ed;border-radius:14px;background:#fff;box-shadow:0 6px 18px rgba(19,44,62,.045);overflow:hidden}
+#faq .site-faq-question{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:19px 22px;font-weight:700;color:#193b50;cursor:pointer;list-style:none}
+#faq .site-faq-question::-webkit-details-marker{display:none}
+#faq .site-faq-question::marker{content:""}
+#faq .site-faq-question:focus-visible{outline:3px solid #15866d;outline-offset:-3px}
+#faq .site-faq-chevron{font-size:13px;color:#15866d;flex-shrink:0;transition:transform .2s ease}
+#faq .site-faq-details[open] .site-faq-chevron{transform:rotate(180deg)}
+#faq .site-faq-answer{padding:0 22px 20px;line-height:1.7}
+@media(max-width:575.98px){#faq .site-faq-question{padding:17px 16px}#faq .site-faq-answer{padding:0 16px 17px}}
+@media(prefers-reduced-motion:reduce){#faq .site-faq-chevron{transition:none}}
 </style>
 </head>
 
@@ -1051,14 +1064,19 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
             <div class="col-md-8">
 
 
-                <?php foreach($perguntasFrequentes as $pergunta => $resposta){ ?>
-                    <div class="site-faq-item">
-                        <h3 class="h5"><?= htmlspecialchars($pergunta); ?></h3>
-                        <p class="text-muted">
-                            <?= htmlspecialchars($resposta); ?>
-                        </p>
-                    </div>
-                <?php } ?>
+                <div class="site-faq-accordion" aria-label="Perguntas frequentes">
+                    <?php foreach($perguntasFrequentes as $pergunta => $resposta){ ?>
+                        <details class="site-faq-item site-faq-details">
+                            <summary class="site-faq-question">
+                                <span><?= htmlspecialchars($pergunta, ENT_QUOTES, 'UTF-8'); ?></span>
+                                <i class="fas fa-chevron-down site-faq-chevron" aria-hidden="true"></i>
+                            </summary>
+                            <div class="site-faq-answer text-muted">
+                                <?= nl2br(htmlspecialchars($resposta, ENT_QUOTES, 'UTF-8')); ?>
+                            </div>
+                        </details>
+                    <?php } ?>
+                </div>
 
             </div>
 
