@@ -473,3 +473,14 @@ Campos que excedem os limites de conteúdo retornam `422 validation_error`. No `
 ## Observação sobre garantias de entrega
 
 A idempotência do `POST /messages` protege retries normais: depois de uma requisição concluída, a mesma chave com o mesmo corpo reproduz a resposta armazenada sem um novo envio. O integrador, porém, não deve modelar o sistema como uma garantia absoluta de exactly-once diante de falhas excepcionais de infraestrutura. Em timeout ou erro transitório, reutilize sempre a mesma `Idempotency-Key` e o mesmo corpo e mantenha correlação própria pelo `message_id`/`local_message_id` e pelos eventos webhook.
+
+
+## Localização (em desenvolvimento)
+
+Envio de localização livre usa `POST /index.php?url=api/v1/messages`, Bearer Token e `Idempotency-Key`, com janela de atendimento de 24 horas aberta:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"location","location":{"latitude":-25.4284,"longitude":-49.2733,"name":"Ponto de teste","address":"Curitiba, PR"}}
+```
+
+`location.latitude` (-90 a 90) e `location.longitude` (-180 a 180) são obrigatórios e numéricos. `name` (até 256 caracteres) e `address` (até 512 caracteres) são opcionais. Não há upload de mídia para localização. Webhooks `message.received` e echoes `message.sent` poderão conter `data.location` com as coordenadas, após integração da normalização do webhook Meta. **O recebimento estruturado ainda precisa ser validado antes da liberação.**
