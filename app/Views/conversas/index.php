@@ -693,16 +693,25 @@ document.addEventListener('DOMContentLoaded', function(){
         return area.scrollHeight - area.scrollTop - area.clientHeight <= 100;
     }
 
-    function acompanharCarregamentoMidia(area)
+    let observadorTamanhoMensagens = null;
+    let areaObservadaMensagens = null;
+    let acompanharFimMensagens = false;
+
+    function observarMudancasDeAltura(area)
     {
-        if(!area) return;
-        $(area).find('img, video').each(function(){
-            if(this.tagName === 'IMG' && this.complete) return;
-            $(this).one('load loadedmetadata error', function(){
-                if(document.getElementById('areaMensagens') === area && mensagensPertoDoFinal(area)){
-                    rolarMensagensParaFinal();
-                }
-            });
+        if(observadorTamanhoMensagens){
+            observadorTamanhoMensagens.disconnect();
+            observadorTamanhoMensagens = null;
+        }
+        areaObservadaMensagens = area;
+        if(!area || typeof ResizeObserver === 'undefined') return;
+        observadorTamanhoMensagens = new ResizeObserver(function(){
+            if(areaObservadaMensagens === area && acompanharFimMensagens){
+                rolarMensagensParaFinal();
+            }
+        });
+        Array.prototype.forEach.call(area.children, function(elemento){
+            observadorTamanhoMensagens.observe(elemento);
         });
     }
 
@@ -710,14 +719,19 @@ document.addEventListener('DOMContentLoaded', function(){
     {
         const area = document.getElementById('areaMensagens');
         if(!area) return;
+        acompanharFimMensagens = true;
         rolarMensagensParaFinal();
+        observarMudancasDeAltura(area);
         requestAnimationFrame(function(){
-            if(document.getElementById('areaMensagens') === area){
+            if(document.getElementById('areaMensagens') === area && acompanharFimMensagens){
                 rolarMensagensParaFinal();
-                acompanharCarregamentoMidia(area);
             }
         });
     }
+
+    $(document).on('scroll', '#areaMensagens', function(){
+        acompanharFimMensagens = mensagensPertoDoFinal(this);
+    });
 
     let atualizandoListaConversas = false;
     let atualizandoMensagens = false;
@@ -777,13 +791,15 @@ document.addEventListener('DOMContentLoaded', function(){
         }).done(function(html){
             const area = document.getElementById('areaMensagens');
             if(!area) return;
-            const acompanharFinal = mensagensPertoDoFinal(area);
+            const acompanharFinal = acompanharFimMensagens || mensagensPertoDoFinal(area);
             const posicaoAnterior = area.scrollTop;
             $('#areaMensagens').html(html);
             if(acompanharFinal){
                 posicionarMensagensNoFinal();
             }else{
+                acompanharFimMensagens = false;
                 area.scrollTop = posicaoAnterior;
+                observarMudancasDeAltura(area);
             }
 
             if(marcarLida == 'S'){
