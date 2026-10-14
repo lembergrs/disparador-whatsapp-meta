@@ -217,7 +217,7 @@ Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do
 
 ## Estado atual da integração
 
-A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Localização não faz parte do contrato atual.
+A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Localização está em implementação no PR #294; ainda não está disponível em produção até o merge e deploy.
 
 ## Onboarding de clientes do Partner
 
@@ -483,4 +483,4 @@ Envio de localização livre usa `POST /index.php?url=api/v1/messages`, Bearer T
 {"client_id":10,"channel_id":9,"to":"5541999999999","type":"location","location":{"latitude":-25.4284,"longitude":-49.2733,"name":"Ponto de teste","address":"Curitiba, PR"}}
 ```
 
-`location.latitude` (-90 a 90) e `location.longitude` (-180 a 180) são obrigatórios e numéricos. `name` (até 256 caracteres) e `address` (até 512 caracteres) são opcionais. Não há upload de mídia para localização. Webhooks `message.received` e echoes `message.sent` poderão conter `data.location` com as coordenadas, após integração da normalização do webhook Meta. **O recebimento estruturado ainda precisa ser validado antes da liberação.**
+`location.latitude` (-90 a 90) e `location.longitude` (-180 a 180) são obrigatórios e numéricos. `name` (até 256 caracteres) e `address` (até 512 caracteres) são opcionais. Não há upload de mídia para localização. Webhooks `message.received` e echoes `message.sent` incluem `data.location` com `latitude`, `longitude`, `name` e `address` quando a Meta fornece coordenadas válidas. A localização também é registrada no histórico como `[LOCATION]` seguido dos dados JSON. Mensagens de localização não têm `media_id` nem `download_url`. O suporte permanece pendente de teste real e de merge/deploy.
