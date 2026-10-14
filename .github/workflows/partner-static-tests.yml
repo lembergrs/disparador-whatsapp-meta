@@ -29,6 +29,7 @@ on:
       - 'app/Models/MetaConta.php'
       - 'app/Services/ParceiroCadastroService.php'
       - 'app/Views/parceiros/**'
+      - 'app/Views/conversas/**'
       - 'database/migrations/*partner*'
       - 'docs/partner-api*.md'
       - 'app/Views/site/partner_api.php'
@@ -58,6 +59,8 @@ jobs:
           php -l app/Services/PartnerApiRateLimitService.php
           php -l app/Services/PartnerMessageService.php
           php -l app/Views/parceiros/auditoria.php
+          php -l app/Views/conversas/index.php
+          php -l app/Views/conversas/partials/mensagens.php
           php -l app/Services/PartnerApiAuditService.php
           php -l app/Models/ParceiroApiAuditoria.php
           php -l app/Controllers/ApiV1Controller.php
