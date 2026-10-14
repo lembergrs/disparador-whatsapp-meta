@@ -19,6 +19,29 @@ $renderConteudo = function($msg){
         echo '<div class="mb-1"><a class="btn btn-sm btn-light border" href="' . $escape($urlMidia) . '" target="_blank" rel="noopener"><i class="fas fa-file-alt mr-1"></i>' . $escape($nome) . '</a></div>';
     }
 
+    if($tipo === 'location' && strpos($texto, '[LOCATION] ') === 0){
+        $local = json_decode(substr($texto, strlen('[LOCATION] ')), true);
+        if(is_array($local) && isset($local['latitude'], $local['longitude']) &&
+            is_numeric($local['latitude']) && is_numeric($local['longitude'])){
+            $lat = (float) $local['latitude'];
+            $lng = (float) $local['longitude'];
+            if(is_finite($lat) && is_finite($lng) && $lat >= -90 && $lat <= 90 && $lng >= -180 && $lng <= 180){
+                $nome = trim((string) ($local['name'] ?? ''));
+                $endereco = trim((string) ($local['address'] ?? ''));
+                $coordenadas = $lat . ', ' . $lng;
+                $mapsUrl = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($lat . ',' . $lng);
+                echo '<div class="mensagem-localizacao" style="min-width:200px;max-width:320px;">';
+                echo '<div class="mb-1 font-weight-bold"><i class="fas fa-map-marker-alt mr-1" aria-hidden="true"></i>Localização compartilhada</div>';
+                if($nome !== '') echo '<div class="font-weight-bold">' . $escape($nome) . '</div>';
+                if($endereco !== '') echo '<div class="small">' . nl2br($escape($endereco)) . '</div>';
+                echo '<div class="small text-muted mb-2">' . $escape($coordenadas) . '</div>';
+                echo '<a href="' . $escape($mapsUrl) . '" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-light border"><i class="fas fa-external-link-alt mr-1" aria-hidden="true"></i>Abrir no Google Maps</a>';
+                echo '</div>';
+                return;
+            }
+        }
+    }
+
     $placeholders = ['[AUDIO]','[IMAGE]','[VIDEO]','[DOCUMENT]','[STICKER]'];
     if($texto !== '' && !($temMidia && in_array(strtoupper($texto), $placeholders, true))){
         echo nl2br($escape($texto));
