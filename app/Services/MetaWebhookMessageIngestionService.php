@@ -278,6 +278,7 @@ class MetaWebhookMessageIngestionService
         $timestamp = filter_var($message['timestamp'] ?? null, FILTER_VALIDATE_INT);
         $midia = $this->dadosMidia($message, $tipo);
         $reacao = $this->dadosReacao($message, $tipo);
+        $location = $this->dadosLocalizacao($message, $tipo);
 
         if($timestampObrigatorio && (!$timestamp || $timestamp <= 0)) return null;
 
@@ -293,6 +294,7 @@ class MetaWebhookMessageIngestionService
             'media_sha256'=>$midia['sha256'],
             'reacao_message_id'=>$reacao['message_id'],
             'reacao_emoji'=>$reacao['emoji'],
+            'location'=>$location,
             'data_mensagem'=>$timestamp && $timestamp > 0
                 ? date('Y-m-d H:i:s', $timestamp)
                 : date('Y-m-d H:i:s')
@@ -334,7 +336,25 @@ class MetaWebhookMessageIngestionService
         foreach(['image','video','document'] as $media){
             if($tipo === $media && !empty($message[$media]['caption'])) return (string) $message[$media]['caption'];
         }
+        if($tipo === 'location'){
+            $location = $this->dadosLocalizacao($message, $tipo);
+            if($location) return '[LOCATION] '.json_encode($location, JSON_UNESCAPED_UNICODE);
+        }
         return '[' . strtoupper($tipo) . ']';
+    }
+
+    private function dadosLocalizacao(array $message, $tipo)
+    {
+        if($tipo !== 'location' || !isset($message['location']) || !is_array($message['location'])) return null;
+        $location = $message['location'];
+        if(!isset($location['latitude'],$location['longitude']) ||
+            !is_numeric($location['latitude']) || !is_numeric($location['longitude'])) return null;
+        $lat = (float)$location['latitude'];
+        $lng = (float)$location['longitude'];
+        if(!is_finite($lat) || !is_finite($lng) || $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) return null;
+        return ['latitude'=>$lat,'longitude'=>$lng,
+            'name'=>(string)($location['name']??''),
+            'address'=>(string)($location['address']??'')];
     }
 
     private function dadosMidia(array $message, $tipo)
