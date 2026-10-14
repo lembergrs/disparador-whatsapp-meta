@@ -20,6 +20,9 @@ class PartnerWebhookEventService
             'text'=>$dados['texto'],
             'timestamp'=>$this->iso($dados['data_mensagem']??null)
         ];
+        if(($dados['tipo']??'')==='location' && isset($dados['location']) && is_array($dados['location'])){
+            $data['location']=$dados['location'];
+        }
         if(!empty($dados['media_id'])) $data['media']=['mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null,'download_url'=>$this->mediaUrl((int)($persistencia['id']??0))];
         if($dados['tipo']==='reaction') $data['reaction']=['message_id'=>$dados['reacao_message_id']??null,'emoji'=>$dados['reacao_emoji']??null];
         return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'in:'.$dados['message_id']);
@@ -39,6 +42,9 @@ class PartnerWebhookEventService
             'source'=>'business_app',
             'human'=>true
         ];
+        if(($dados['tipo']??'')==='location' && isset($dados['location']) && is_array($dados['location'])){
+            $data['location']=$dados['location'];
+        }
         if(!empty($dados['media_id'])) $data['media']=['mime_type'=>$dados['media_mime_type']??null,'filename'=>$dados['media_nome']??null,'download_url'=>$this->mediaUrl((int)($persistencia['id']??0))];
         if($dados['tipo']==='reaction') $data['reaction']=['message_id'=>$dados['reacao_message_id']??null,'emoji'=>$dados['reacao_emoji']??null];
         return $this->enfileirarCanal((int)$metaConta['CLI_ID'],(int)$metaConta['MTA_ID'],$tipo,$data,'echo:'.$dados['message_id']);

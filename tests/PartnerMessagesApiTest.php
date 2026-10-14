@@ -23,7 +23,7 @@ pamAssert(strpos($idemMigration,"ENUM('processando','concluido')")!==false,'migr
 pamAssert(strpos($s,'buscarCanalAutorizado')!==false,'serviço deve validar canal autorizado');
 pamAssert(strpos($m,"pc.PAC_Status = 'ativo'")!==false,'canal deve estar ativo');
 pamAssert(strpos($m,'PAC_FaturavelDesde IS NOT NULL')!==false,'canal deve estar faturável');
-pamAssert(strpos($s,"['text','template','image','document','audio','video']")!==false,'API deve limitar os tipos suportados');
+pamAssert(strpos($s,"['text','template','image','document','audio','video','location']")!==false,'API deve limitar os tipos suportados');
 pamAssert(strpos($s,'ultimaMensagemRecebida')!==false && strpos($s,'86400')!==false,'texto deve respeitar janela de 24 horas');
 pamAssert(strpos($s,'buscarAprovadoParaEnvioPorCliente')!==false,'template deve pertencer ao cliente e estar aprovado');
 pamAssert(strpos($s,"(int)\$template['MTA_ID']!==\$metaId")!==false,'template deve pertencer ao canal');
@@ -35,4 +35,6 @@ $resumoPos=strpos($cv,'$resumo = $this->resumoMensagem($dados);',$insertPos);
 pamAssert($idPos!==false && $resumoPos!==false && $idPos<$resumoPos,'ID local deve ser capturado imediatamente apos o INSERT');
 pamAssert(strpos($s,"'status'=>'accepted'")!==false,'resposta deve retornar status estável');
 pamAssert(strpos($d,'POST /index.php?url=api/v1/messages')!==false,'documentação deve conter endpoint');
+pamAssert(strpos($s,'enviarLocalizacao')!==false,'Partner deve chamar envio de localização');
+pamAssert(strpos($s,'is_finite($lat)')!==false,'coordenadas devem ser finitas');
 echo "Partner messages static tests passed\n";

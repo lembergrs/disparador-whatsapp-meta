@@ -217,7 +217,7 @@ Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do
 
 ## Estado atual da integração
 
-A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Localização não faz parte do contrato atual.
+A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Localização está em implementação no PR #294; ainda não está disponível em produção até o merge e deploy.
 
 ## Onboarding de clientes do Partner
 
@@ -473,3 +473,14 @@ Campos que excedem os limites de conteúdo retornam `422 validation_error`. No `
 ## Observação sobre garantias de entrega
 
 A idempotência do `POST /messages` protege retries normais: depois de uma requisição concluída, a mesma chave com o mesmo corpo reproduz a resposta armazenada sem um novo envio. O integrador, porém, não deve modelar o sistema como uma garantia absoluta de exactly-once diante de falhas excepcionais de infraestrutura. Em timeout ou erro transitório, reutilize sempre a mesma `Idempotency-Key` e o mesmo corpo e mantenha correlação própria pelo `message_id`/`local_message_id` e pelos eventos webhook.
+
+
+## Localização (em desenvolvimento)
+
+Envio de localização livre usa `POST /index.php?url=api/v1/messages`, Bearer Token e `Idempotency-Key`, com janela de atendimento de 24 horas aberta:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"location","location":{"latitude":-25.4284,"longitude":-49.2733,"name":"Ponto de teste","address":"Curitiba, PR"}}
+```
+
+`location.latitude` (-90 a 90) e `location.longitude` (-180 a 180) são obrigatórios e numéricos. `name` (até 256 caracteres) e `address` (até 512 caracteres) são opcionais. Não há upload de mídia para localização. Webhooks `message.received` e echoes `message.sent` incluem `data.location` com `latitude`, `longitude`, `name` e `address` quando a Meta fornece coordenadas válidas. A localização também é registrada no histórico como `[LOCATION]` seguido dos dados JSON. Mensagens de localização não têm `media_id` nem `download_url`. O suporte permanece pendente de teste real e de merge/deploy.

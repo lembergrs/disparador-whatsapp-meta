@@ -9,7 +9,7 @@ pomAssert(strpos($c,"['GET','POST']")!==false,'media deve aceitar upload POST');
 pomAssert(strpos($c,'uploadMensagemMedia')!==false,'upload deve reutilizar MetaMediaService');
 pomAssert(strpos($c,"'image'=>'IMAGE','document'=>'DOCUMENT','audio'=>'AUDIO','video'=>'VIDEO'")!==false,'upload deve limitar tipos');
 pomAssert(strpos($c,'buscarCanalAutorizado')!==false,'upload deve validar canal Partner');
-pomAssert(strpos($s,"['text','template','image','document','audio','video']")!==false,'messages deve aceitar mídia');
+pomAssert(strpos($s,"['text','template','image','document','audio','video','location']")!==false,'messages deve aceitar mídia');
 pomAssert(strpos($s,"in_array(\$type,['image','document','audio','video'],true)")!==false,'service deve tratar mídia');
 pomAssert(strpos($s,'$meta->enviarMidia')!==false,'service deve enviar mídia pela Meta');
 pomAssert(strpos($meta,"['image', 'video', 'document', 'audio']")!==false,'MetaService deve permitir envio de audio');
