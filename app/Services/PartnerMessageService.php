@@ -28,8 +28,8 @@ class PartnerMessageService
         if($clienteId<=0 || $metaId<=0 || strlen($to)<10 || strlen($to)>15){
             throw new PartnerApiException('validation_error','Informe client_id, channel_id e to válidos.',422);
         }
-        if(!in_array($type,['text','template','image','document','audio','video'],true)){
-            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text, template, image, document, audio ou video.',422);
+        if(!in_array($type,['text','template','image','document','audio','video','location'],true)){
+            throw new PartnerApiException('unsupported_message_type','Nesta versão, type deve ser text, template, image, document, audio, video ou location.',422);
         }
 
         $canal=$this->parceiros->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
@@ -52,6 +52,30 @@ class PartnerMessageService
             }
             $retorno=$meta->enviarTexto($to,$body);
             return $this->finalizar($retorno,$conversaId,'text',$body);
+        }
+
+        if($type==='location'){
+            if(!$this->janelaAberta($conversaId)){
+                throw new PartnerApiException('customer_care_window_closed','A janela de atendimento de 24 horas está fechada. Envie um template aprovado.',409);
+            }
+            $location=$dados['location']??null;
+            if(!is_array($location) || !isset($location['latitude'],$location['longitude']) ||
+                !is_numeric($location['latitude']) || !is_numeric($location['longitude'])){
+                throw new PartnerApiException('validation_error','Informe location.latitude e location.longitude numéricos.',422);
+            }
+            $lat=(float)$location['latitude'];
+            $lng=(float)$location['longitude'];
+            if(!is_finite($lat) || !is_finite($lng) || $lat < -90 || $lat > 90 || $lng < -180 || $lng > 180){
+                throw new PartnerApiException('validation_error','Coordenadas de localização fora dos limites válidos.',422);
+            }
+            $name=trim((string)($location['name']??''));
+            $address=trim((string)($location['address']??''));
+            if($this->tamanhoUtf8($name)>256 || $this->tamanhoUtf8($address)>512){
+                throw new PartnerApiException('validation_error','location.name ou location.address excede o limite.',422);
+            }
+            $retorno=$meta->enviarLocalizacao($to,$lat,$lng,$name,$address);
+            $texto='[LOCATION] '.json_encode(['latitude'=>$lat,'longitude'=>$lng,'name'=>$name,'address'=>$address],JSON_UNESCAPED_UNICODE);
+            return $this->finalizar($retorno,$conversaId,'location',$texto);
         }
 
         if(in_array($type,['image','document','audio','video'],true)){
