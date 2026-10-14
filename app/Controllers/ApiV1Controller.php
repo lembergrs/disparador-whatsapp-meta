@@ -253,6 +253,12 @@ class ApiV1Controller extends Controller
             $nome=trim((string)($mensagem['MSG_MediaNome']??''));
             if($nome==='') $nome='media-'.(int)$mensagem['MSG_ID'];
             $nome=preg_replace('/[^A-Za-z0-9._-]+/','_',basename($nome));
+            // Arquivos recebidos sem nome devem manter uma extensão reconhecível.
+            if(pathinfo($nome,PATHINFO_EXTENSION)===''){
+                $extensoes=['video/mp4'=>'mp4','video/3gpp'=>'3gp','image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','audio/mpeg'=>'mp3','audio/ogg'=>'ogg','audio/mp4'=>'m4a','audio/aac'=>'aac','audio/amr'=>'amr','application/pdf'=>'pdf'];
+                $mimeBase=strtolower(trim(explode(';',$mime,2)[0]));
+                if(isset($extensoes[$mimeBase])) $nome.='.'. $extensoes[$mimeBase];
+            }
 
             header('Content-Type: '.$mime);
             header('Content-Length: '.filesize($media['arquivo']));
