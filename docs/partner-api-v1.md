@@ -217,7 +217,7 @@ Os dados fiscais obrigatórios permanecem nos campos `CLI_NFSe_*` do cadastro do
 
 ## Estado atual da integração
 
-A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Vídeo e localização não fazem parte do contrato atual.
+A v1 já possui autenticação Bearer, isolamento por Partner/cliente/canal, consulta de status e templates, envio de texto/template/imagem/PDF/áudio, mídia recebida autenticada, idempotência de envio, rate limiting, webhooks assíncronos assinados com HMAC-SHA256, retries e histórico operacional. Localização não faz parte do contrato atual.
 
 ## Onboarding de clientes do Partner
 
@@ -363,7 +363,7 @@ Echoes duplicados não geram novos eventos Partner.
 
 ## Mídia recebida
 
-Para mensagens recebidas dos tipos `audio`, `image` e `document`, o webhook inclui `data.media.download_url`, além de `mime_type` e `filename` quando disponíveis. A URL aponta para o Disparador e não expõe URL temporária nem token da Meta.
+Para mensagens recebidas dos tipos `audio`, `image`, `document` e `video`, o webhook inclui `data.media.download_url`, além de `mime_type` e `filename` quando disponíveis. A URL aponta para o Disparador e não expõe URL temporária nem token da Meta.
 
 O Partner deve fazer `GET` nessa URL enviando a mesma autenticação `Authorization: Bearer <API_KEY>`. O endpoint valida se a mensagem pertence a um cliente/canal autorizado ao Partner antes de entregar o arquivo.
 
@@ -389,10 +389,10 @@ O download retorna `404 media_not_found` quando a mídia não existe ou não per
 
 ## Envio de mídia
 
-A mídia de saída suporta **imagem**, **documento PDF** e **áudio** em duas etapas.
+A mídia de saída suporta **imagem**, **documento PDF** e **áudio** e **vídeo** em duas etapas.
 
-1. Faça `POST /index.php?url=api/v1/media` como `multipart/form-data`, com `client_id`, `channel_id`, `type` (`image`, `document` ou `audio`) e `file`. A autenticação é `Authorization: Bearer <API_KEY>`. O retorno `201` contém um `media_id` temporário para o envio.
-2. Faça o `POST /index.php?url=api/v1/messages` normal, com `Idempotency-Key`, usando `type: image`, `type: document` ou `type: audio` e o `media_id` retornado. O envio de mídia livre exige janela de atendimento de 24 horas aberta.
+1. Faça `POST /index.php?url=api/v1/media` como `multipart/form-data`, com `client_id`, `channel_id`, `type` (`image`, `document`, `audio` ou `video`) e `file`. A autenticação é `Authorization: Bearer <API_KEY>`. O retorno `201` contém um `media_id` temporário para o envio.
+2. Faça o `POST /index.php?url=api/v1/messages` normal, com `Idempotency-Key`, usando `type: image`, `type: document`, `type: audio` ou `type: video` e o `media_id` retornado. O envio de mídia livre exige janela de atendimento de 24 horas aberta.
 
 Exemplo imagem:
 
@@ -406,7 +406,13 @@ Exemplo documento:
 {"client_id":10,"channel_id":9,"to":"5541999999999","type":"document","document":{"media_id":"123","caption":"Arquivo","filename":"arquivo.pdf"}}
 ```
 
-Limites atuais do upload: imagem JPG/JPEG/PNG/WEBP até 5 MB, documento PDF até 10 MB e áudio AAC/AMR/MP3/M4A/OGG até 16 MB. O envio de áudio livre também exige janela de atendimento de 24 horas aberta.
+Limites atuais do upload: imagem JPG/JPEG/PNG/WEBP até 5 MB, documento PDF até 10 MB e áudio AAC/AMR/MP3/M4A/OGG até 16 MB e vídeo MP4/3GPP até 16 MB. O envio de áudio livre também exige janela de atendimento de 24 horas aberta.
+
+Exemplo vídeo:
+
+```json
+{"client_id":10,"channel_id":9,"to":"5541999999999","type":"video","video":{"media_id":"123","caption":"Vídeo"}}
+```
 
 Exemplo áudio:
 
@@ -459,7 +465,7 @@ Além do rate limiting, a API rejeita requests excessivos antes do processamento
 - captions de imagem/documento: máximo de 1024 caracteres;
 - `document.filename`: máximo de 255 caracteres;
 - `template.variables`: máximo de 100 entradas; cada valor deve ser uma string de no máximo 1024 caracteres;
-- uploads continuam sujeitos aos limites efetivos por arquivo validados pelo serviço de mídia (imagem 5 MB, PDF 10 MB, áudio 16 MB). O limite global do request multipart deve ser configurado na camada HTTP/PHP, antes do parsing do upload.
+- uploads continuam sujeitos aos limites efetivos por arquivo validados pelo serviço de mídia (imagem 5 MB, PDF 10 MB, áudio 16 MB, vídeo 16 MB). O limite global do request multipart deve ser configurado na camada HTTP/PHP, antes do parsing do upload.
 
 Campos que excedem os limites de conteúdo retornam `422 validation_error`. No `POST /messages`, corpo JSON acima de 64 KB retorna `413 payload_too_large`. Uploads multipart seguem os limites por arquivo e também dependem do limite global configurado na camada HTTP/PHP. Esses limites são independentes das políticas e limites adicionais aplicados pela Meta.
 
