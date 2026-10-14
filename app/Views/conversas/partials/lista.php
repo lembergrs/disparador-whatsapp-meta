@@ -45,6 +45,11 @@ $nome =
 $numeroFormatado =
     formatarNumeroBR($conversa['CVS_Numero']);
 
+$ultimaMensagem = (string) ($conversa['CVS_UltimaMensagem'] ?? '');
+$ultimaMensagemExibicao = preg_match('/^\s*\[LOCATION\]\s*\{/i', $ultimaMensagem)
+    ? '📍 Localização compartilhada'
+    : $ultimaMensagem;
+
 $conversaSelecionadaId =
     $conversaSelecionada['CVS_ID']
     ?? ($_GET['id'] ?? null);
@@ -68,7 +73,7 @@ if(!$ativa && $conversa['CVS_NaoLida'] == 'S'){
 href="<?= BASE_URL; ?>/index.php?url=conversa&id=<?= (int) $conversa['CVS_ID']; ?>"
 class="list-group-item list-group-item-action item-conversa <?= $itemClass; ?>"
 data-id="<?= (int) $conversa['CVS_ID']; ?>"
-title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+title="<?= htmlspecialchars($ultimaMensagemExibicao, ENT_QUOTES, 'UTF-8'); ?>"
 >
 
 <div class="d-flex justify-content-between align-items-start conversa-lista-topo">
@@ -167,7 +172,7 @@ title="<?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, '
 <?php } ?>
 
 <small class="conversa-ultima-mensagem <?= $ativa ? 'text-white' : 'text-muted'; ?>">
-    <?= htmlspecialchars($conversa['CVS_UltimaMensagem'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+    <?= htmlspecialchars($ultimaMensagemExibicao, ENT_QUOTES, 'UTF-8'); ?>
 </small>
 
 </a>
