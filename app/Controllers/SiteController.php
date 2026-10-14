@@ -59,6 +59,14 @@ class SiteController extends Controller
         ], false);
     }
 
+    public function integracoesApi()
+    {
+        $this->view('site/integracoes_api', [
+            'titulo' => 'API para Integrações | Disparador.net',
+            'whatsappSite' => $this->dadosWhatsappSite()
+        ], false);
+    }
+
     public function cadastro()
     {
         $this->capturarCodigoIndicacaoDaUrl();

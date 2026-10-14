@@ -260,6 +260,10 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 </li>
 
                 <li class="nav-item">
+                    <a class="nav-link" href="<?= BASE_URL; ?>/index.php?url=site/integracoesApi">API para Integrações</a>
+                </li>
+
+                <li class="nav-item">
                     <a class="nav-link" href="<?= BASE_URL; ?>/blog">Blog</a>
                 </li>
 
@@ -1139,6 +1143,21 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
     </div>
 
+</section>
+
+<section class="py-5 bg-light" id="api-integracoes" aria-labelledby="titulo-api-integracoes">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mb-3 mb-lg-0">
+                <p class="text-success font-weight-bold mb-2">PARA DESENVOLVEDORES E EMPRESAS DE SOFTWARE</p>
+                <h2 id="titulo-api-integracoes" class="font-weight-bold">Integre o WhatsApp ao seu próprio sistema</h2>
+                <p class="text-muted mb-0">Conecte ERPs, CRMs e aplicações à API do Disparador.net. Envie mensagens, consulte templates aprovados e receba eventos por webhook, com acesso controlado por cliente e canal. Condições comerciais sob proposta personalizada.</p>
+            </div>
+            <div class="col-lg-4 text-lg-right">
+                <a class="btn btn-success btn-lg site-btn-main" href="<?= BASE_URL; ?>/index.php?url=site/integracoesApi">Conhecer a API para Integrações</a>
+            </div>
+        </div>
+    </div>
 </section>
 
 <footer class="py-4 bg-dark text-white">
