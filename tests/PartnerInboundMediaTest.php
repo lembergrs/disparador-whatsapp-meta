@@ -14,4 +14,7 @@ pimAssert(strpos($m,'function buscarMensagemPartner')!==false && strpos($m,'c.CL
 pimAssert(strpos($e,"'download_url'=>\$this->mediaUrl")!==false,'webhook deve publicar URL de download');
 pimAssert(strpos($e,"'id'=>\$dados['media_id']")===false,'webhook não deve expor media id da Meta');
 pimAssert(strpos($d,'Authorization: Bearer <API_KEY>')!==false,'documentação deve explicar autenticação da mídia');
+pimAssert(strpos($c,"'video/mp4'=>'mp4'")!==false,'download deve acrescentar extensão mp4 pelo MIME');
+pimAssert(strpos($c,"'image/jpeg'=>'jpg'")!==false && strpos($c,"'application/pdf'=>'pdf'")!==false,'download deve suportar extensões de outras mídias');
+pimAssert(strpos($c,"pathinfo(\$nome,PATHINFO_EXTENSION)===''")!==false,'download não deve duplicar extensão existente');
 echo "Partner inbound media static tests passed\n";
