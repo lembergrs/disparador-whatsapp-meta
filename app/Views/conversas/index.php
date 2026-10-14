@@ -682,13 +682,41 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function rolarMensagensParaFinal()
     {
-        let area =
-            document.getElementById('areaMensagens');
-
+        const area = document.getElementById('areaMensagens');
         if(area){
-            area.scrollTop =
-                area.scrollHeight;
+            area.scrollTop = area.scrollHeight;
         }
+    }
+
+    function mensagensPertoDoFinal(area)
+    {
+        return area.scrollHeight - area.scrollTop - area.clientHeight <= 100;
+    }
+
+    function acompanharCarregamentoMidia(area)
+    {
+        if(!area) return;
+        $(area).find('img, video').each(function(){
+            if(this.tagName === 'IMG' && this.complete) return;
+            $(this).one('load loadedmetadata error', function(){
+                if(document.getElementById('areaMensagens') === area && mensagensPertoDoFinal(area)){
+                    rolarMensagensParaFinal();
+                }
+            });
+        });
+    }
+
+    function posicionarMensagensNoFinal()
+    {
+        const area = document.getElementById('areaMensagens');
+        if(!area) return;
+        rolarMensagensParaFinal();
+        requestAnimationFrame(function(){
+            if(document.getElementById('areaMensagens') === area){
+                rolarMensagensParaFinal();
+                acompanharCarregamentoMidia(area);
+            }
+        });
     }
 
     let atualizandoListaConversas = false;
@@ -747,13 +775,15 @@ document.addEventListener('DOMContentLoaded', function(){
                 + conversaAberta,
             method: 'GET'
         }).done(function(html){
+            const area = document.getElementById('areaMensagens');
+            if(!area) return;
+            const acompanharFinal = mensagensPertoDoFinal(area);
+            const posicaoAnterior = area.scrollTop;
             $('#areaMensagens').html(html);
-
-            const ultimaMensagem = $('#areaMensagens [data-ultima-mensagem="1"]').get(0);
-            if(ultimaMensagem){
-                ultimaMensagem.scrollIntoView({block: 'end', behavior: 'auto'});
+            if(acompanharFinal){
+                posicionarMensagensNoFinal();
             }else{
-                rolarMensagensParaFinal();
+                area.scrollTop = posicaoAnterior;
             }
 
             if(marcarLida == 'S'){
@@ -826,7 +856,7 @@ document.addEventListener('DOMContentLoaded', function(){
             method: 'GET'
         }).done(function(html){
             $('#painelConversa').html(html);
-            rolarMensagensParaFinal();
+            posicionarMensagensNoFinal();
 
             $('#listaConversas .item-conversa').removeClass('active');
             $('#listaConversas .item-conversa[data-id="' + conversaAberta + '"]').addClass('active');
@@ -838,7 +868,7 @@ document.addEventListener('DOMContentLoaded', function(){
         });
     }
 
-    rolarMensagensParaFinal();
+    posicionarMensagensNoFinal();
 
     if(conversaAberta != ''){
         marcarConversaComoLida(conversaAberta);
