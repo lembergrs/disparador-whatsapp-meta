@@ -91,6 +91,10 @@ class MetaMediaService
             throw new Exception('MIME type inválido para ' . $tipo . '.');
         }
 
+        if($tipo === 'VIDEO'){
+            MetaVideoCodecValidator::validar($arquivo['tmp_name']);
+        }
+
         return [
             'tipo' => $tipo,
             'nome_original' => $nomeOriginal,

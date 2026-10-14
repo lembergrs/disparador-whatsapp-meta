@@ -9,6 +9,9 @@ on:
       - 'app/Services/PartnerWebhook*.php'
       - 'app/Services/PartnerApiRateLimitService.php'
       - 'app/Services/PartnerMessageService.php'
+      - 'app/Services/MetaVideoCodecValidator.php'
+      - 'app/Services/MetaMediaService.php'
+      - 'app/Services/TemplateMediaPreviewService.php'
       - 'app/Views/parceiros/auditoria.php'
       - 'app/Services/PartnerApiAuditService.php'
       - 'app/Models/ParceiroApiAuditoria.php'
@@ -50,6 +53,9 @@ jobs:
           php-version: '8.3'
       - name: PHP syntax
         run: |
+          php -l app/Services/MetaVideoCodecValidator.php
+          php -l app/Services/MetaMediaService.php
+          php -l app/Services/TemplateMediaPreviewService.php
           php -l app/Models/ParceiroApi.php
           php -l app/Models/ParceiroFinanceiro.php
           php -l app/Services/ParceiroFinanceiroService.php

@@ -103,6 +103,10 @@ class TemplateMediaPreviewService
             throw new Exception('MIME type inválido para preview.');
         }
 
+        if($tipo === 'VIDEO'){
+            MetaVideoCodecValidator::validar($arquivo['tmp_name']);
+        }
+
         return [
             'tipo' => $tipo,
             'nome_original' => $nomeOriginal,
