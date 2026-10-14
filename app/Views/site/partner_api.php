@@ -85,7 +85,7 @@
 <p>Uma requisição aceita retorna HTTP 202 com <code>message_id</code>, <code>local_message_id</code>, <code>status: accepted</code> e <code>type</code>.</p></section>
 
 <section id="midia" class="section-anchor mb-5"><h2>5. Enviar mídia</h2>
-<p>Imagem, PDF e áudio usam duas etapas. Primeiro faça upload:</p>
+<p>Imagem, PDF, áudio e vídeo usam duas etapas. Primeiro faça upload:</p>
 <pre><code>curl -sS -X POST "https://disparador.net/index.php?url=api/v1/media" \
   -H "Authorization: Bearer $DISPARADOR_API_KEY" \
   -F "client_id=123" -F "channel_id=456" -F "type=image" -F "file=@foto.jpg"</code></pre>
@@ -98,6 +98,7 @@
 <tr><td>Imagem</td><td>JPG, JPEG, PNG, WEBP</td><td>5 MB</td></tr>
 <tr><td>Documento</td><td>PDF</td><td>10 MB</td></tr>
 <tr><td>Áudio</td><td>AAC, AMR, MP3, M4A, OGG</td><td>16 MB</td></tr>
+<tr><td>Vídeo</td><td>MP4, 3GPP (codec H.264/AAC para MP4)</td><td>16 MB</td></tr>
 </tbody></table></div><p>Mídia livre também exige janela de atendimento de 24 horas.</p></section>
 
 <section id="webhooks" class="section-anchor mb-5"><h2>6. Receber eventos por webhook</h2>
@@ -139,7 +140,7 @@ X-Disparador-Signature: sha256=&lt;hex&gt;</code></pre>
 <li>Duplicidade de <code>event_id</code> é ignorada.</li><li>Retry de <code>POST /messages</code> reutiliza a mesma Idempotency-Key.</li>
 <li>HTTP 429 respeita <code>Retry-After</code>.</li><li><code>source=business_app</code> e <code>human=true</code> são tratados quando Coexistence estiver ativo.</li>
 </ol>
-<div class="alert alert-secondary mt-4 mb-0"><strong>Fora do contrato atual:</strong> vídeo e localização ainda não fazem parte da Partner API v1.</div></section>
+<div class="alert alert-secondary mt-4 mb-0"><strong>Homologação:</strong> vídeo e localização possuem implementação na API, mas devem ser validados em teste ponta a ponta antes de serem considerados homologados para uso comercial.</div></section>
 
 </div></div>
 <p class="small text-muted text-center mt-4">Partner API v1 · Disparador.net · RL2 Net · Documentação sujeita a evolução compatível com a versão da API.</p>
