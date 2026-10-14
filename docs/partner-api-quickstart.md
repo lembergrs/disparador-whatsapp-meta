@@ -82,7 +82,7 @@ Uma requisição aceita retorna HTTP 202:
 
 ## 5. Enviar mídia
 
-Imagem, PDF e áudio usam duas etapas. Primeiro envie o arquivo:
+Imagem, PDF, áudio e vídeo usam duas etapas. Primeiro envie o arquivo:
 
 ```bash
 curl -sS -X POST "https://disparador.net/index.php?url=api/v1/media" \
@@ -107,7 +107,7 @@ O HTTP 201 retorna, por exemplo:
 }
 ```
 
-Depois use esse identificador no `POST /messages`:
+Depois use esse identificador no `POST /messages` (para vídeo, `type: video`, com `video.media_id` e `video.caption` opcional):
 
 ```json
 {
@@ -122,7 +122,7 @@ Depois use esse identificador no `POST /messages`:
 }
 ```
 
-Tipos atuais: imagem JPG/JPEG/PNG/WEBP até 5 MB; PDF até 10 MB; áudio AAC/AMR/MP3/M4A/OGG até 16 MB. Mídia livre também exige janela de 24 horas.
+Tipos atuais: imagem JPG/JPEG/PNG/WEBP até 5 MB; PDF até 10 MB; áudio AAC/AMR/MP3/M4A/OGG até 16 MB; vídeo MP4/3GPP até 16 MB. Mídia livre também exige janela de 24 horas.
 
 ## 6. Receber eventos
 
@@ -164,7 +164,7 @@ O integrador pode usar esses campos para pausar automações e sincronizar inter
 
 ## 7. Mídia recebida
 
-Eventos `message.received` de áudio, imagem ou documento podem incluir `data.media.download_url`. Essa URL pertence ao Disparador.net e deve ser acessada com a mesma API key:
+Eventos `message.received` de áudio, imagem, documento ou vídeo podem incluir `data.media.download_url`. Essa URL pertence ao Disparador.net e deve ser acessada com a mesma API key:
 
 ```bash
 curl -sS "$DOWNLOAD_URL" \
@@ -210,7 +210,7 @@ A integração está pronta para o teste ponta a ponta quando:
 2. `GET /templates` retorna os templates aprovados;
 3. template é enviado e os eventos de status chegam ao webhook;
 4. após uma mensagem recebida abrir a janela, texto livre é enviado;
-5. áudio, imagem e PDF são testados nos dois sentidos necessários ao projeto;
+5. áudio, imagem, PDF e vídeo são testados nos dois sentidos necessários ao projeto;
 6. assinatura HMAC é validada sobre o corpo bruto;
 7. duplicidade de `event_id` é ignorada;
 8. retry de `POST /messages` reutiliza a mesma `Idempotency-Key`;
@@ -219,4 +219,4 @@ A integração está pronta para o teste ponta a ponta quando:
 
 ## Fora do contrato atual
 
-Vídeo e localização ainda não fazem parte da Partner API v1. Credenciais da Meta nunca são fornecidas ao integrador.
+Localização ainda não faz parte da Partner API v1. Credenciais da Meta nunca são fornecidas ao integrador.
