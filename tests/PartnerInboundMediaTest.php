@@ -8,7 +8,7 @@ $d=file_get_contents($r.'/docs/partner-api-v1.md');
 pimAssert(strpos($c,'public function media()')!==false,'controller deve expor media');
 pimAssert(strpos($c,'$this->authService->autenticar()')!==false,'download deve autenticar Partner');
 pimAssert(strpos($c,'listarCanaisAutorizados')!==false && strpos($c,'buscarMensagemPartner')!==false,'download deve validar escopo Partner');
-pimAssert(strpos($c,"['audio','image','document']")!==false,'download deve limitar tipos da primeira fase');
+pimAssert(strpos($c,"['audio','image','document','video']")!==false,'download deve permitir tipos de mídia incluindo vídeo');
 pimAssert(strpos($c,'MetaMediaService')!==false && strpos($c,'obterMidiaMensagem')!==false,'download deve reutilizar serviço seguro de mídia');
 pimAssert(strpos($m,'function buscarMensagemPartner')!==false && strpos($m,'c.CLI_ID=? AND c.MTA_ID=?')!==false,'mensagem deve ser localizada por cliente e canal');
 pimAssert(strpos($e,"'download_url'=>\$this->mediaUrl")!==false,'webhook deve publicar URL de download');
