@@ -202,9 +202,9 @@ class ApiV1Controller extends Controller
             $clienteId=(int)($_POST['client_id']??0);
             $metaId=(int)($_POST['channel_id']??0);
             $tipo=strtolower(trim((string)($_POST['type']??'')));
-            $map=['image'=>'IMAGE','document'=>'DOCUMENT','audio'=>'AUDIO'];
+            $map=['image'=>'IMAGE','document'=>'DOCUMENT','audio'=>'AUDIO','video'=>'VIDEO'];
             if($clienteId<=0 || $metaId<=0 || !isset($map[$tipo]) || empty($_FILES['file'])){
-                $this->json(['error'=>['code'=>'validation_error','message'=>'Informe client_id, channel_id, type (image, document ou audio) e file.']],422);
+                $this->json(['error'=>['code'=>'validation_error','message'=>'Informe client_id, channel_id, type (image, document, audio ou video) e file.']],422);
             }
             $canal=$this->parceiroModel->buscarCanalAutorizado((int)$parceiro['PAR_ID'],$clienteId,$metaId);
             if(!$canal || ($canal['PAC_Status']??'')!=='ativo'){
@@ -238,7 +238,7 @@ class ApiV1Controller extends Controller
             if($mensagem) break;
         }
 
-        $tiposPermitidos=['audio','image','document'];
+        $tiposPermitidos=['audio','image','document','video'];
         if(!$mensagem || empty($mensagem['MSG_MediaId']) || !in_array(strtolower((string)($mensagem['MSG_Tipo']??'')),$tiposPermitidos,true)){
             $this->json(['error'=>['code'=>'media_not_found','message'=>'Mídia não encontrada.']],404);
         }
