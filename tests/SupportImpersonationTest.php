@@ -70,6 +70,13 @@ $master = file_get_contents(__DIR__ . '/../app/Views/layouts/master.php');
 $migration = file_get_contents(__DIR__ . '/../database/migrations/20260727_create_suporte_acessos.sql');
 
 $assert(substr_count($suporte, 'Csrf::exigirPost()') >= 2, 'início e retorno devem exigir CSRF');
+$encerrarStart = strpos($suporte, 'public function encerrar()');
+$encerrarBody = substr($suporte, $encerrarStart);
+$posSessao = strpos($encerrarBody, 'if(!Auth::usuario())');
+$posLogin = strpos($encerrarBody, '$this->redirect(\'login\');');
+$posCsrf = strpos($encerrarBody, 'Csrf::exigirPost()');
+$assert($encerrarStart !== false && $posSessao !== false && $posLogin !== false && $posCsrf !== false && $posSessao < $posLogin && $posLogin < $posCsrf, 'retorno do suporte deve enviar sessao expirada ao login antes de validar CSRF');
+
 $assert(strpos($suporte, 'Auth::admin()') !== false, 'somente administrador pode iniciar');
 $assert(strpos($auditoria, "USU_Nivel IN ('cliente_admin', 'cliente')") !== false, 'somente usuário principal pode representar cliente');
 $assert(strpos($auditoria, "c.CLI_Ativo = 'S'") !== false && strpos($auditoria, "c.CLI_StatusCadastro = 'ativo'") !== false, 'cliente inativo deve ser recusado');

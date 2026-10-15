@@ -68,6 +68,12 @@ class SuporteController extends Controller
 
     public function encerrar()
     {
+        // A sessão pode expirar enquanto a página do modo suporte permanece aberta.
+        // Nesse caso, não há token CSRF válido: redirecione ao login antes da validação.
+        if(!Auth::usuario()){
+            $this->redirect('login');
+        }
+
         Csrf::exigirPost();
 
         if(!Auth::isImpersonating()){

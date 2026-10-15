@@ -40,6 +40,8 @@ on:
       - 'app/Models/DashboardAdmin.php'
       - 'app/Views/dashboard/index.php'
       - 'tests/Partner*.php'
+      - 'app/Controllers/SuporteController.php'
+      - 'tests/SupportImpersonationTest.php'
       - '.github/workflows/partner-static-tests.yml'
   workflow_dispatch:
 
@@ -89,6 +91,8 @@ jobs:
           php -l app/Views/parceiros/cadastro_publico.php
           php -l app/Controllers/ParceiroAdminController.php
           php -l app/Views/parceiros/detalhe.php
+          php -l app/Controllers/SuporteController.php
+          php -l tests/SupportImpersonationTest.php
           php -l app/Core/Auth.php
           php -l app/Controllers/ConfiguracaoController.php
           php -l app/Models/MetaConta.php
@@ -98,3 +102,5 @@ jobs:
             echo "Running $test"
             php "$test"
           done
+      - name: Support impersonation regression test
+        run: php tests/SupportImpersonationTest.php
