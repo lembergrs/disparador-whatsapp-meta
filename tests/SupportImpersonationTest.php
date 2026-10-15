@@ -73,7 +73,7 @@ $assert(substr_count($suporte, 'Csrf::exigirPost()') >= 2, 'início e retorno de
 $encerrarStart = strpos($suporte, 'public function encerrar()');
 $encerrarBody = substr($suporte, $encerrarStart);
 $posSessao = strpos($encerrarBody, 'if(!Auth::usuario())');
-$posLogin = strpos($encerrarBody, "$this->redirect('login');");
+$posLogin = strpos($encerrarBody, '$this->redirect(\'login\');');
 $posCsrf = strpos($encerrarBody, 'Csrf::exigirPost()');
 $assert($encerrarStart !== false && $posSessao !== false && $posLogin !== false && $posCsrf !== false && $posSessao < $posLogin && $posLogin < $posCsrf, 'retorno do suporte deve enviar sessao expirada ao login antes de validar CSRF');
 
