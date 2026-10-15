@@ -636,7 +636,7 @@ Conversas
 <div class="client-sidebar-help" aria-label="Ajuda">
     <strong><i class="fab fa-whatsapp text-success mr-1"></i> Precisa de ajuda?</strong>
     <p>Consulte o guia de primeiros passos ou fale com nossa equipe pelo WhatsApp.</p>
-    <a href="<?= BASE_URL; ?>/public/docs/Tutorial_Primeiros_Passos_Disparador.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-outline-light btn-sm btn-block"><i class="fas fa-book-open mr-1"></i> Consultar manual</a>
+    <a href="<?= ASSET_URL; ?>/docs/Tutorial_Primeiros_Passos_Disparador.pdf" target="_blank" rel="noopener noreferrer" class="btn btn-outline-light btn-sm btn-block"><i class="fas fa-book-open mr-1"></i> Consultar manual</a>
     <button type="button" class="btn btn-outline-light btn-sm btn-block" data-toggle="modal" data-target="#modalAjudaGlobal"><i class="fab fa-whatsapp mr-1"></i> Solicitar ajuda</button>
 </div>
 <div class="client-sidebar-help-mini">
