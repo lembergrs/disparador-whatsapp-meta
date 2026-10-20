@@ -120,7 +120,7 @@ Selecione a Conta Meta
 
 <?php foreach($contas as $conta){ ?>
 
-<option value="<?= $conta['MTA_ID']; ?>">
+<option value="<?= $conta['MTA_ID']; ?>" <?= count($contas) === 1 ? 'selected' : ''; ?>>
 
 <?= $conta['MTA_Nome']; ?>
 
