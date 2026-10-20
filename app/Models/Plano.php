@@ -35,9 +35,12 @@ class Plano
 
     public function listarPublicosAtivos()
     {
-        $filtroPublico = $this->colunaPublicoExiste()
-            ? "AND PLA_Publico = 'S'"
-            : '';
+        // Sem a coluna de visibilidade, não é seguro publicar todos os planos.
+        if(!$this->colunaPublicoExiste()){
+            error_log('Planos publicos indisponiveis: migration PLA_Publico pendente.');
+            return [];
+        }
+        $filtroPublico = "AND PLA_Publico = 'S'";
 
         $sql = $this->db->query("
             SELECT *
