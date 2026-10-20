@@ -40,6 +40,8 @@ on:
       - 'app/Models/DashboardAdmin.php'
       - 'app/Views/dashboard/index.php'
       - 'tests/Partner*.php'
+      - 'app/Views/templates/index.php'
+      - 'tests/TemplateCreationLoadingTest.php'
       - 'app/Controllers/SuporteController.php'
       - 'tests/SupportImpersonationTest.php'
       - '.github/workflows/partner-static-tests.yml'
@@ -93,6 +95,8 @@ jobs:
           php -l app/Views/parceiros/detalhe.php
           php -l app/Controllers/SuporteController.php
           php -l tests/SupportImpersonationTest.php
+          php -l app/Views/templates/index.php
+          php -l tests/TemplateCreationLoadingTest.php
           php -l app/Core/Auth.php
           php -l app/Controllers/ConfiguracaoController.php
           php -l app/Models/MetaConta.php
@@ -104,3 +108,5 @@ jobs:
           done
       - name: Support impersonation regression test
         run: php tests/SupportImpersonationTest.php
+      - name: Template creation loading checks
+        run: php tests/TemplateCreationLoadingTest.php
