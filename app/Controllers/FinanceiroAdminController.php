@@ -123,7 +123,8 @@ class FinanceiroAdminController extends Controller
             'usuarios' => $_POST['usuarios'],
             'mensagens' => $_POST['mensagens'],
             'excedente' => $_POST['excedente'],
-            'cor' => $_POST['cor']
+            'cor' => $_POST['cor'],
+            'publico' => !empty($_POST['publico']) ? 'S' : 'N'
         ]);
 
         Session::flash(
