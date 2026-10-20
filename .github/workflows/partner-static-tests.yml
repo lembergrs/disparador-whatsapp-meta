@@ -42,6 +42,8 @@ on:
       - 'tests/Partner*.php'
       - 'app/Views/templates/index.php'
       - 'tests/TemplateCreationLoadingTest.php'
+      - 'tests/TemplateSingleAccountSyncTest.php'
+      - 'app/Controllers/TemplateController.php'
       - 'app/Controllers/SuporteController.php'
       - 'tests/SupportImpersonationTest.php'
       - '.github/workflows/partner-static-tests.yml'
@@ -97,6 +99,8 @@ jobs:
           php -l tests/SupportImpersonationTest.php
           php -l app/Views/templates/index.php
           php -l tests/TemplateCreationLoadingTest.php
+          php -l tests/TemplateSingleAccountSyncTest.php
+          php -l app/Controllers/TemplateController.php
           php -l app/Core/Auth.php
           php -l app/Controllers/ConfiguracaoController.php
           php -l app/Models/MetaConta.php
@@ -110,3 +114,5 @@ jobs:
         run: php tests/SupportImpersonationTest.php
       - name: Template creation loading checks
         run: php tests/TemplateCreationLoadingTest.php
+      - name: Template single account sync checks
+        run: php tests/TemplateSingleAccountSyncTest.php
