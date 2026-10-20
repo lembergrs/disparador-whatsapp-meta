@@ -748,14 +748,18 @@ Rodapé da mensagem.
 
 <div class="modal-footer">
 
-<button
-type="submit"
-class="btn btn-success"
->
-
-Criar Template
-
-</button>
+<div class="w-100">
+    <div id="statusCriacaoTemplate" class="text-muted small mb-2" role="status" aria-live="polite" style="display:none;">
+        Aguarde, estamos enviando o template para a Meta. Não feche esta página.
+    </div>
+    <button type="submit" id="btnCriarTemplate" class="btn btn-success">
+        <span class="textoCriarTemplate">Criar Template</span>
+        <span class="textoCriandoTemplate" style="display:none;">
+            <i class="fas fa-spinner fa-spin mr-1" aria-hidden="true"></i>
+            Criando template...
+        </span>
+    </button>
+</div>
 
 </div>
 
@@ -973,7 +977,28 @@ $(document).on('click', '#btnAdicionarBotao', function(e){
 });
 
 
+function atualizarEstadoCriacaoTemplate(processando)
+{
+    const botao = $('#btnCriarTemplate');
+    botao.prop('disabled', processando);
+    botao.find('.textoCriarTemplate').toggle(!processando);
+    botao.find('.textoCriandoTemplate').toggle(processando);
+    $('#statusCriacaoTemplate').toggle(processando);
+}
+
+$(window).on('pageshow', function(){
+    // Ao voltar pelo histórico, o navegador pode restaurar o botão desabilitado.
+    $('#formNovoTemplate').removeData('enviando');
+    atualizarEstadoCriacaoTemplate(false);
+});
+
 $(document).on('submit', '#formNovoTemplate', function(e){
+    const formulario = $(this);
+    if(formulario.data('enviando')){
+        e.preventDefault();
+        return false;
+    }
+
 
     let headerTipo = $('#header_tipo').val();
 
@@ -1075,6 +1100,11 @@ $(document).on('submit', '#formNovoTemplate', function(e){
         e.preventDefault();
         return false;
     }
+
+    // Somente bloqueia após todas as validações; mantém os campos habilitados
+    // para que o navegador envie normalmente o POST e os arquivos anexados.
+    formulario.data('enviando', true);
+    atualizarEstadoCriacaoTemplate(true);
 });
 
 $(document).on(
