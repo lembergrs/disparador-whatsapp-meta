@@ -40,12 +40,25 @@ class TemplateController extends Controller
     {
         $usuario = Auth::usuario();
 
-        $templates =
-            $this->templateModel
-            ->listarPorUsuario($usuario);
-
         $contas =
             $this->metaModel
+            ->listarPorUsuario($usuario);
+
+        // Uma única conta: sincroniza uma vez neste carregamento, sem redirect.
+        // Não impede o acesso à lista local se a Meta estiver indisponível.
+        if(count($contas) === 1){
+            $metaId = (int) ($contas[0]['MTA_ID'] ?? 0);
+            if($metaId > 0){
+                try{
+                    $this->sincronizarConta($metaId, $usuario);
+                }catch(\Throwable $e){
+                    error_log('Falha na sincronização automática de templates: ' . $e->getMessage());
+                }
+            }
+        }
+
+        $templates =
+            $this->templateModel
             ->listarPorUsuario($usuario);
 
         $this->view(
@@ -202,63 +215,40 @@ class TemplateController extends Controller
 
 
 
-        $meta =
-            new MetaService($metaId, $usuario['CLI_ID']);
-
-
-
-
-
-        $templates =
-            $meta->buscarTemplates();
-
-
-
-
-
-        if(!isset($templates['data'])){
-
-            Session::flash(
-                'error',
-                'Erro ao buscar templates.'
-            );
-
-            $this->redirect(
-                'template'
-            );
+        try{
+            $sincronizado = $this->sincronizarConta($metaId, $usuario);
+        }catch(\Throwable $e){
+            error_log('Falha na sincronização manual de templates: ' . $e->getMessage());
+            $sincronizado = false;
         }
-
-        $idsMeta = [];
-
-        foreach($templates['data'] as $template){
-
-            $idsMeta[] = $template['id'];
-
-            $this->templateModel
-                ->salvarOuAtualizar(
-                    $metaId,
-                    $template
-                );
-        }
-
-        $this->templateModel
-            ->inativarAusentes(
-                $metaId,
-                $idsMeta
-            );
 
         Session::flash(
-            'success',
-            'Templates sincronizados.'
+            $sincronizado ? 'success' : 'error',
+            $sincronizado ? 'Templates sincronizados.' : 'Erro ao buscar templates.'
         );
-
-
-
-
 
         $this->redirect(
             'template'
         );
+    }
+
+    private function sincronizarConta($metaId, $usuario)
+    {
+        $meta = new MetaService($metaId, $usuario['CLI_ID']);
+        $retorno = $meta->buscarTemplates();
+
+        if(!isset($retorno['data']) || !is_array($retorno['data'])){
+            return false;
+        }
+
+        $idsMeta = [];
+        foreach($retorno['data'] as $template){
+            $idsMeta[] = $template['id'];
+            $this->templateModel->salvarOuAtualizar($metaId, $template);
+        }
+
+        $this->templateModel->inativarAusentes($metaId, $idsMeta);
+        return true;
     }
 
     public function inativar()
