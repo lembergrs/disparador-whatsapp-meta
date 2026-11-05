@@ -6,8 +6,8 @@ class WhatsAppInstitucionalService
 {
     public const TEMPLATES = [
         EventoNotificacao::BOAS_VINDAS => ['nome'=>'boas_vindas_cadastro', 'parametros'=>['nome']],
-        EventoNotificacao::CADASTRO_PENDENTE_CONEXAO => ['nome'=>'cadastro_pendente_conexao', 'parametros'=>[]],
-        EventoNotificacao::META_CONECTADA => ['nome'=>'conexao_meta_concluida', 'parametros'=>[]],
+        EventoNotificacao::CADASTRO_PENDENTE_CONEXAO => ['nome'=>'cadastro_pendente_conexao', 'parametros'=>['nome']],
+        EventoNotificacao::META_CONECTADA => ['nome'=>'conexao_meta_concluida', 'parametros'=>['nome']],
     ];
 
     private $config;
@@ -120,8 +120,18 @@ class WhatsAppInstitucionalService
         $http = (int)($resposta['http_code'] ?? 0); $dados = json_decode((string)($resposta['body'] ?? ''), true);
         if($http >= 200 && $http < 300 && is_array($dados)) return ['sucesso'=>true, 'status'=>'enviada', 'message_id'=>$dados['messages'][0]['id'] ?? null];
         if(!is_array($dados)) return $this->falha('resposta_invalida', 'Resposta inválida da Meta.', $http === 0 || $http >= 500);
-        $codigo = (string)($dados['error']['code'] ?? ('http_' . $http));
-        return $this->falha('meta_' . $codigo, 'A Meta recusou a notificação institucional.', in_array($http, [429,500,502,503,504], true));
+        $erro = is_array($dados['error'] ?? null) ? $dados['error'] : [];
+        $codigo = preg_replace('/[^0-9A-Za-z_.-]/', '', (string)($erro['code'] ?? ('http_' . $http)));
+        $subcodigo = preg_replace('/[^0-9]/', '', (string)($erro['error_subcode'] ?? ''));
+        $codigoCompleto = 'meta_' . $codigo . ($subcodigo !== '' ? '_' . $subcodigo : '');
+        // Não armazenar URLs, tokens, payloads ou detalhes potencialmente sensíveis da API.
+        $descricao = trim((string)($erro['error_user_msg'] ?? $erro['message'] ?? ''));
+        $descricao = preg_replace('~https?://\\S+~i', '[link removido]', $descricao);
+        $descricao = preg_replace('/(access[_ -]?token|authorization|bearer|secret|password|senha)\\s*[:=]?\\s*[^\\s,;]+/i', '$1 [removido]', $descricao);
+        $descricao = preg_replace('/[\\r\\n\\t]+/', ' ', $descricao);
+        $descricao = mb_substr($descricao, 0, 175, 'UTF-8');
+        $mensagem = 'A Meta recusou a notificação institucional.' . ($descricao !== '' ? ' ' . $descricao : '');
+        return $this->falha($codigoCompleto, $mensagem, in_array($http, [429,500,502,503,504], true));
     }
 
     private function falha($codigo, $mensagem, $temporaria)
