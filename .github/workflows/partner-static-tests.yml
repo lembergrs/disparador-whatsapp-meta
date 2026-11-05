@@ -43,6 +43,10 @@ on:
       - 'app/Views/templates/index.php'
       - 'tests/TemplateCreationLoadingTest.php'
       - 'tests/TemplateSingleAccountSyncTest.php'
+      - 'tests/TemplateHeaderMediaTest.php'
+      - 'app/Services/MetaService.php'
+      - 'app/Models/TemplateMeta.php'
+      - 'app/Controllers/ParceiroTemplatesController.php'
       - 'app/Controllers/TemplateController.php'
       - 'app/Models/Plano.php'
       - 'app/Controllers/FinanceiroAdminController.php'
@@ -103,6 +107,10 @@ jobs:
           php -l app/Views/templates/index.php
           php -l tests/TemplateCreationLoadingTest.php
           php -l tests/TemplateSingleAccountSyncTest.php
+          php -l tests/TemplateHeaderMediaTest.php
+          php -l app/Services/MetaService.php
+          php -l app/Models/TemplateMeta.php
+          php -l app/Controllers/ParceiroTemplatesController.php
           php -l app/Controllers/TemplateController.php
           php -l app/Models/Plano.php
           php -l app/Controllers/FinanceiroAdminController.php
@@ -122,5 +130,7 @@ jobs:
         run: php tests/TemplateCreationLoadingTest.php
       - name: Template single account sync checks
         run: php tests/TemplateSingleAccountSyncTest.php
+      - name: Template header media checks
+        run: php tests/TemplateHeaderMediaTest.php
       - name: Plano public visibility checks
         run: php tests/PlanoVisibilidadePublicaTest.php
