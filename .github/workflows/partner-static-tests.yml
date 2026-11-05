@@ -16,6 +16,8 @@ on:
       - 'app/Services/PartnerApiAuditService.php'
       - 'app/Models/ParceiroApiAuditoria.php'
       - 'app/Services/MetaErrorMessageService.php'
+      - 'app/Services/WhatsAppInstitucionalService.php'
+      - 'tests/WhatsAppInstitucionalServiceTest.php'
       - 'app/Controllers/DisparoController.php'
       - 'app/Controllers/CampanhaController.php'
       - 'public/assets/js/app.js'
@@ -88,6 +90,8 @@ jobs:
           php -l app/Models/DashboardAdmin.php
           php -l app/Views/dashboard/index.php
           php -l app/Services/MetaErrorMessageService.php
+          php -l app/Services/WhatsAppInstitucionalService.php
+          php -l tests/WhatsAppInstitucionalServiceTest.php
           php -l app/Controllers/DisparoController.php
           php -l app/Controllers/CampanhaController.php
           php -l app/Services/MetaWebhookMessageIngestionService.php
@@ -124,6 +128,8 @@ jobs:
             echo "Running $test"
             php "$test"
           done
+      - name: Institutional WhatsApp regression tests
+        run: php tests/WhatsAppInstitucionalServiceTest.php
       - name: Support impersonation regression test
         run: php tests/SupportImpersonationTest.php
       - name: Template creation loading checks
