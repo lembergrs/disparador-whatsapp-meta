@@ -10,7 +10,7 @@ function headerAssert($condition, $message)
     }
 }
 
-$reflection = new ReflectionClass(\\Services\\MetaService::class);
+$reflection = new ReflectionClass(\Services\MetaService::class);
 $service = $reflection->newInstanceWithoutConstructor();
 $method = $reflection->getMethod('montarHeaderMidiaEnvio');
 $method->setAccessible(true);
@@ -28,7 +28,7 @@ foreach([
     $failed = false;
     try{
         $method->invoke($service, $template, $case[0]);
-    }catch(\\Exception $e){
+    }catch(\Exception $e){
         $failed = true;
     }
     headerAssert($failed, $case[1] . ' must be rejected');
