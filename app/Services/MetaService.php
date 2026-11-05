@@ -1484,8 +1484,8 @@ class MetaService
         $mediaLink = (string) ($midiaHeader['link'] ?? ($midiaHeader['url'] ?? $urlTemplate));
         //$mediaLink = str_replace('/public/uploads/templates/', '/uploads/templates/', $mediaLink);
 
-        if($mediaId === '' && $mediaLink === ''){
-            return null;
+        if($mediaId === '' && trim($mediaLink) === ''){
+            throw new Exception('O template exige uma mídia no cabeçalho, mas não há arquivo disponível. Reenvie a mídia antes de iniciar o disparo.');
         }
 
         $mediaLink = trim((string) $mediaLink);
