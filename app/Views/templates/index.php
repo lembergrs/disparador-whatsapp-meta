@@ -57,8 +57,17 @@ if(!function_exists('templateHeaderMidiaUrlExemplo')){
         }
 
         foreach($componentes as $componente){
-            if(($componente['type'] ?? '') == 'HEADER' && !empty($componente['media_url'])){
+            if(($componente['type'] ?? '') !== 'HEADER'){
+                continue;
+            }
+            if(!empty($componente['media_url'])){
                 return $componente['media_url'];
+            }
+            // A Meta pode devolver uma URL de exemplo temporária em header_handle.
+            // Usar apenas para pré-visualização; não persistir como URL de envio.
+            $exemplo = $componente['example']['header_handle'][0] ?? '';
+            if(is_string($exemplo) && preg_match('~^https://scontent\\.whatsapp\\.net/~i', $exemplo)){
+                return $exemplo;
             }
         }
 
