@@ -104,7 +104,10 @@ class TemplateController extends Controller
         $headerTipo = strtoupper((string) ($_POST['header_tipo'] ?? ''));
 
         try{
-            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !empty($_FILES['header_media'])){
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                if(empty($_FILES['header_media']) || ($_FILES['header_media']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK){
+                    throw new Exception('Selecione uma mídia válida para o cabeçalho do template.');
+                }
                 $previewService = new TemplateMediaPreviewService();
                 $previewLocal = $previewService->salvarCopiaPreview(
                     $_FILES['header_media'],
@@ -127,6 +130,9 @@ class TemplateController extends Controller
 
 
         if(isset($response['id'])){
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !$previewLocal){
+                error_log('Template de mídia criado sem cópia local: ' . ($response['id'] ?? ''));
+            }
 
             if(!empty($response['template_local'])){
                 $templateLocal = $response['template_local'];
@@ -139,10 +145,15 @@ class TemplateController extends Controller
                     $templateLocal['header_media_tipo'] = $previewLocal['tipo'];
                 }
 
-                $this->templateModel->salvarOuAtualizar(
+                $salvo = $this->templateModel->salvarOuAtualizar(
                     $metaId,
                     $templateLocal
                 );
+                if(!$salvo){
+                    error_log('Falha ao persistir template Meta: ' . $response['id']);
+                    Session::flash('error', 'Template criado na Meta, mas não foi salvo localmente. Contate o suporte antes de enviar mensagens.');
+                    $this->redirect('template');
+                }
             }
 
             Session::flash(

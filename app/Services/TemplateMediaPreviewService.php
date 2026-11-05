@@ -29,8 +29,11 @@ class TemplateMediaPreviewService
         $info = $this->validarArquivo($arquivo, $tipo);
         $dir = dirname(__DIR__, 2) . '/public/uploads/templates';
 
-        if(!is_dir($dir)){
-            mkdir($dir, 0770, true);
+        if(!is_dir($dir) && !mkdir($dir, 0770, true) && !is_dir($dir)){
+            throw new Exception('Não foi possível criar a pasta de mídia dos templates.');
+        }
+        if(!is_writable($dir)){
+            throw new Exception('A pasta de mídia dos templates não permite gravação.');
         }
 
         $this->garantirHtaccess($dir);
@@ -42,7 +45,11 @@ class TemplateMediaPreviewService
             throw new Exception('Não foi possível salvar a mídia de preview do template.');
         }
 
-        chmod($destino, 0644);
+        @chmod($destino, 0644);
+        if(!is_file($destino) || filesize($destino) !== $info['tamanho']){
+            @unlink($destino);
+            throw new Exception('A cópia da mídia do template não foi gravada integralmente.');
+        }
 
         return [
             'url' => BASE_URL . '/uploads/templates/' . $nomeFisico,

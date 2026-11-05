@@ -1484,11 +1484,16 @@ class MetaService
         $mediaLink = (string) ($midiaHeader['link'] ?? ($midiaHeader['url'] ?? $urlTemplate));
         //$mediaLink = str_replace('/public/uploads/templates/', '/uploads/templates/', $mediaLink);
 
-        if($mediaId === '' && $mediaLink === ''){
-            return null;
+        if($mediaId === '' && trim($mediaLink) === ''){
+            throw new Exception('O template exige uma mídia no cabeçalho, mas não há arquivo disponível. Reenvie a mídia antes de iniciar o disparo.');
         }
 
         $mediaLink = trim((string) $mediaLink);
+
+        // URLs temporárias de exemplo retornadas pela Meta não são mídia de envio.
+        if($mediaId === '' && preg_match('~^https://scontent\\.whatsapp\\.net/~i', $mediaLink)){
+            throw new Exception('A imagem de exemplo da Meta é temporária. Reenvie a mídia do cabeçalho antes de disparar.');
+        }
 
         if($mediaLink !== '' && !preg_match('/^https?:\/\//i', $mediaLink)){
             $mediaLink = rtrim(BASE_URL, '/') . '/' . ltrim($mediaLink, '/');

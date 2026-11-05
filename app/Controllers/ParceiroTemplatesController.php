@@ -65,15 +65,22 @@ class ParceiroTemplatesController extends Controller
         $preview=null;
         try{
             $header=strtoupper((string)($_POST['header_tipo']??''));
-            if(in_array($header,['IMAGE','VIDEO','DOCUMENT'],true) && !empty($_FILES['header_media'])){
+            if(in_array($header,['IMAGE','VIDEO','DOCUMENT'],true)){
+                if(empty($_FILES['header_media']) || ($_FILES['header_media']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK){
+                    throw new \RuntimeException('Selecione uma mídia válida para o cabeçalho do template.');
+                }
                 $preview=(new TemplateMediaPreviewService())->salvarCopiaPreview($_FILES['header_media'],$header);
             }
             $response=(new MetaService($metaId,(int)$cliente['CLI_ID']))->criarTemplate($_POST);
             if(isset($response['id']) && !empty($response['template_local'])){
                 $t=$response['template_local']; $t['id']=$response['id']; $t['status']=$response['status']??($t['status']??'PENDING');
                 if($preview){$t['header_media_url_exemplo']=$preview['url'];$t['header_media_nome']=$preview['nome_original'];$t['header_media_tipo']=$preview['tipo'];}
-                $this->templates->salvarOuAtualizar($metaId,$t);
-                Session::flash('success','Template do cliente enviado para aprovação.');
+                if(!$this->templates->salvarOuAtualizar($metaId,$t)){
+                    error_log('Falha ao persistir template Partner na conta Meta: ' . $metaId);
+                    Session::flash('error','Template criado na Meta, mas não foi salvo localmente. Contate o suporte.');
+                }else{
+                    Session::flash('success','Template do cliente enviado para aprovação.');
+                }
             }else{
                 if($preview){(new TemplateMediaPreviewService())->removerCopia($preview);}
                 Session::flash('error','A Meta não aceitou a criação do template.');

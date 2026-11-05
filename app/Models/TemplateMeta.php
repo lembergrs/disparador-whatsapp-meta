@@ -109,6 +109,10 @@ class TemplateMeta
                 continue;
             }
 
+            if(empty($dados['url_exemplo']) && !empty($componente['media_url'])){
+                $dados['url_exemplo'] = $componente['media_url'];
+            }
+
             $tipo = strtoupper((string) ($componente['format'] ?? ''));
             $dados['tipo'] = $template['header_media_tipo'] ?? ($tipo ?: null);
 
