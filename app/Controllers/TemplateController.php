@@ -145,10 +145,15 @@ class TemplateController extends Controller
                     $templateLocal['header_media_tipo'] = $previewLocal['tipo'];
                 }
 
-                $this->templateModel->salvarOuAtualizar(
+                $salvo = $this->templateModel->salvarOuAtualizar(
                     $metaId,
                     $templateLocal
                 );
+                if(!$salvo){
+                    error_log('Falha ao persistir template Meta: ' . $response['id']);
+                    Session::flash('error', 'Template criado na Meta, mas não foi salvo localmente. Contate o suporte antes de enviar mensagens.');
+                    $this->redirect('template');
+                }
             }
 
             Session::flash(
