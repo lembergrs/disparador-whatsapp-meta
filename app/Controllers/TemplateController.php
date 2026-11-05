@@ -104,7 +104,10 @@ class TemplateController extends Controller
         $headerTipo = strtoupper((string) ($_POST['header_tipo'] ?? ''));
 
         try{
-            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !empty($_FILES['header_media'])){
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+                if(empty($_FILES['header_media']) || ($_FILES['header_media']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK){
+                    throw new Exception('Selecione uma mídia válida para o cabeçalho do template.');
+                }
                 $previewService = new TemplateMediaPreviewService();
                 $previewLocal = $previewService->salvarCopiaPreview(
                     $_FILES['header_media'],
@@ -127,6 +130,9 @@ class TemplateController extends Controller
 
 
         if(isset($response['id'])){
+            if(in_array($headerTipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true) && !$previewLocal){
+                error_log('Template de mídia criado sem cópia local: ' . ($response['id'] ?? ''));
+            }
 
             if(!empty($response['template_local'])){
                 $templateLocal = $response['template_local'];
