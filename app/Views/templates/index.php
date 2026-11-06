@@ -75,6 +75,53 @@ if(!function_exists('templateHeaderMidiaUrlExemplo')){
     }
 }
 
+if(!function_exists('templateHeaderMidiaDisponibilidade')){
+    function templateHeaderMidiaDisponibilidade($template)
+    {
+        $tipo = strtoupper((string) templateHeaderTipo($template));
+        if(!in_array($tipo, ['IMAGE', 'VIDEO', 'DOCUMENT'], true)){
+            return null;
+        }
+
+        $url = trim((string) ($template['TMP_HeaderMidiaUrlExemplo'] ?? ''));
+        if($url === ''){
+            $componentes = json_decode($template['TMP_Componentes'] ?? '[]', true);
+            if(is_array($componentes)){
+                foreach($componentes as $componente){
+                    if(strtoupper((string) ($componente['type'] ?? '')) === 'HEADER'){
+                        $url = trim((string) ($componente['media_url'] ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        if($url === '' || preg_match('~^https?://scontent\\.whatsapp\\.net(?:/|$)~i', $url)){
+            return 'A mídia do cabeçalho não está disponível para envio no Disparador. A imagem exibida no exemplo da Meta não substitui o arquivo de envio.';
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if(!is_string($path) || $path === ''){
+            return 'A referência da mídia do cabeçalho é inválida.';
+        }
+
+        $marcador = '/uploads/templates/';
+        $pos = strpos($path, $marcador);
+        if($pos !== false){
+            $relativo = substr($path, $pos + strlen($marcador));
+            if($relativo === '' || strpos($relativo, '/') !== false || strpos($relativo, '..') !== false){
+                return 'A referência local da mídia do cabeçalho é inválida.';
+            }
+            $arquivo = dirname(__DIR__, 3) . '/public/uploads/templates/' . rawurldecode($relativo);
+            if(!is_file($arquivo) || !is_readable($arquivo) || filesize($arquivo) <= 0){
+                return 'O arquivo de mídia vinculado ao template não foi encontrado ou não está acessível no Disparador.';
+            }
+        }
+
+        return null;
+    }
+}
+
 if(!function_exists('templateHeaderDocumentoNome')){
     function templateHeaderDocumentoNome($template)
     {
@@ -205,7 +252,14 @@ class="table table-bordered table-striped table-hover datatable"
 </td>
 
 <td>
-<?= $template['TMP_Nome']; ?>
+<?= htmlspecialchars($template['TMP_Nome'], ENT_QUOTES, 'UTF-8'); ?>
+<?php $alertaMidia = templateHeaderMidiaDisponibilidade($template); ?>
+<?php if($alertaMidia !== null){ ?>
+    <span class="badge badge-warning ml-1" title="<?= htmlspecialchars($alertaMidia, ENT_QUOTES, 'UTF-8'); ?>" aria-label="<?= htmlspecialchars($alertaMidia, ENT_QUOTES, 'UTF-8'); ?>">
+        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i> Mídia indisponível
+    </span>
+    <small class="d-block text-warning"><?= htmlspecialchars($alertaMidia, ENT_QUOTES, 'UTF-8'); ?></small>
+<?php } ?>
 </td>
 
 <td>
