@@ -117,6 +117,19 @@ class SiteController extends Controller
         }
         $email = trim($_POST['email'] ?? '');
         $telefone = preg_replace('/\D/', '', $_POST['telefone'] ?? '');
+        // Cadastro público: apenas telefone brasileiro plausível (com DDI 55 opcional).
+        $telefoneNacional = str_starts_with($telefone, '55') && strlen($telefone) >= 12
+            ? substr($telefone, 2) : $telefone;
+        $ddd = substr($telefoneNacional, 0, 2);
+        $numeroLocal = substr($telefoneNacional, 2);
+        $telefoneValido = in_array(strlen($telefoneNacional), [10, 11], true)
+            && preg_match('/^[1-9][0-9]$/', $ddd)
+            && !preg_match('/^(.)\\1+$/', $telefoneNacional)
+            && (
+                (strlen($numeroLocal) === 9 && $numeroLocal[0] === '9')
+                || (strlen($numeroLocal) === 8 && preg_match('/^[2-5]/', $numeroLocal))
+            );
+
         $senha = $_POST['senha'] ?? '';
         $confirmarSenha = $_POST['confirmar_senha'] ?? '';
         $origemCadastro = $_POST['origem_cadastro'] ?? '';
@@ -163,6 +176,10 @@ class SiteController extends Controller
             );
         }
 
+        if (!$telefoneValido) {
+            $this->voltarCadastroComDados($dadosCadastro, 'Informe um telefone brasileiro válido com DDD.');
+        }
+
         if (!DocumentoFiscalValidator::valido($cpfCnpj)) {
             $this->voltarCadastroComDados(
                 $dadosCadastro,
@@ -199,40 +216,48 @@ class SiteController extends Controller
         }
 
 
-        if (defined('RECAPTCHA_SECRET_KEY') && RECAPTCHA_SECRET_KEY != '') {
-            $captcha = $_POST['g-recaptcha-response'] ?? '';
+        // Nunca permitir gravação sem reCAPTCHA configurado e validado no servidor.
+        if (!defined('RECAPTCHA_SECRET_KEY') || trim((string) RECAPTCHA_SECRET_KEY) === ''
+            || !defined('RECAPTCHA_SITE_KEY') || trim((string) RECAPTCHA_SITE_KEY) === '') {
+            error_log('Cadastro público bloqueado: reCAPTCHA não configurado.');
+            $this->voltarCadastroComDados($dadosCadastro, 'Cadastro temporariamente indisponível. Tente novamente mais tarde.');
+        }
 
-            if ($captcha == '') {
-                $this->voltarCadastroComDados(
-                    $dadosCadastro,
-                    'Confirme que você não é um robô.'
-                );
-            }
+        $captcha = trim((string) ($_POST['g-recaptcha-response'] ?? ''));
+        if ($captcha === '') {
+            $this->voltarCadastroComDados($dadosCadastro, 'Confirme que você não é um robô.');
+        }
 
-            $ch = curl_init();
+        $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
+        if ($ch === false) {
+            $this->voltarCadastroComDados($dadosCadastro, 'Não foi possível validar o reCAPTCHA. Tente novamente.');
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query([
+                'secret' => RECAPTCHA_SECRET_KEY,
+                'response' => $captcha,
+                'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+            ]),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 10
+        ]);
+        $respostaCaptcha = curl_exec($ch);
+        $statusCaptcha = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $resultadoCaptcha = is_string($respostaCaptcha) ? json_decode($respostaCaptcha, true) : null;
+        if ($statusCaptcha !== 200 || !is_array($resultadoCaptcha) || ($resultadoCaptcha['success'] ?? false) !== true
+            || (!empty($resultadoCaptcha['hostname']) && !hash_equals(
+                strtolower((string) (parse_url(BASE_URL, PHP_URL_HOST) ?: '')),
+                strtolower((string) $resultadoCaptcha['hostname'])
+            ))) {
+            $this->voltarCadastroComDados($dadosCadastro, 'Falha na validação do reCAPTCHA. Tente novamente.');
+        }
 
-            curl_setopt_array($ch, [
-                CURLOPT_URL => 'https://www.google.com/recaptcha/api/siteverify',
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => http_build_query([
-                    'secret' => RECAPTCHA_SECRET_KEY,
-                    'response' => $captcha,
-                    'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
-                ]),
-                CURLOPT_RETURNTRANSFER => true
-            ]);
-
-            $retorno = curl_exec($ch);
-            curl_close($ch);
-
-            $retorno = json_decode($retorno, true);
-
-            if (empty($retorno['success'])) {
-                $this->voltarCadastroComDados(
-                    $dadosCadastro,
-                    'Falha na validação do reCAPTCHA. Tente novamente.'
-                );
-            }
+        // Contabilizar tentativas por IP mesmo quando o e-mail já existe ou o INSERT falha.
+        if (!$this->permitirTentativaCadastroPorIp()) {
+            $this->voltarCadastroComDados($dadosCadastro, 'Muitas tentativas de cadastro nesta conexão. Tente novamente mais tarde.');
         }
 
         try {
@@ -404,6 +429,67 @@ class SiteController extends Controller
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL, 3, $logDir . '/email-transacional.log');
 
             return ['sucesso' => false, 'status' => 'erro_temporario', 'error_code' => 'falha_controlada_service'];
+        }
+    }
+
+    /**
+     * Limite por IP de origem confiável (REMOTE_ADDR, sem confiar em cabeçalhos enviados
+     * pelo visitante): até 5 tentativas por hora e 12 em 24 horas.
+     * Armazenamento compartilhado entre processos PHP da mesma VPS, com flock.
+     */
+    private function permitirTentativaCadastroPorIp(): bool
+    {
+        $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+            error_log('Cadastro público: IP de origem inválido.');
+            return false;
+        }
+
+        $diretorio = dirname(__DIR__, 2) . '/storage/cadastro_rate_limit';
+        if (!is_dir($diretorio) && !@mkdir($diretorio, 0770, true) && !is_dir($diretorio)) {
+            error_log('Cadastro público: não foi possível criar diretório de rate limit.');
+            return false;
+        }
+
+        $arquivo = $diretorio . '/' . hash('sha256', $ip) . '.json';
+        $fp = @fopen($arquivo, 'c+');
+        if ($fp === false) {
+            error_log('Cadastro público: não foi possível abrir rate limit.');
+            return false;
+        }
+
+        try {
+            if (!flock($fp, LOCK_EX)) {
+                return false;
+            }
+            rewind($fp);
+            $conteudo = stream_get_contents($fp);
+            $registros = json_decode($conteudo ?: '[]', true);
+            if (!is_array($registros)) {
+                $registros = [];
+            }
+            $agora = time();
+            $registros = array_values(array_filter($registros, static function ($timestamp) use ($agora) {
+                return is_int($timestamp) && $timestamp > $agora - 86400 && $timestamp <= $agora;
+            }));
+            $ultimaHora = count(array_filter($registros, static fn ($timestamp) => $timestamp > $agora - 3600));
+            if ($ultimaHora >= 5 || count($registros) >= 12) {
+                return false;
+            }
+            $registros[] = $agora;
+            rewind($fp);
+            if (!ftruncate($fp, 0)) {
+                return false;
+            }
+            $json = json_encode($registros);
+            if ($json === false || fwrite($fp, $json) !== strlen($json)) {
+                return false;
+            }
+            fflush($fp);
+            return true;
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
         }
     }
 
