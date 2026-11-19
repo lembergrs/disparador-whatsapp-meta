@@ -255,10 +255,8 @@ class SiteController extends Controller
             $this->voltarCadastroComDados($dadosCadastro, 'Falha na validação do reCAPTCHA. Tente novamente.');
         }
 
-        // Contabilizar tentativas por IP mesmo quando o e-mail já existe ou o INSERT falha.
-        if (!$this->permitirTentativaCadastroPorIp()) {
-            $this->voltarCadastroComDados($dadosCadastro, 'Muitas tentativas de cadastro nesta conexão. Tente novamente mais tarde.');
-        }
+        // Rate limit por IP temporariamente desativado no cadastro público.
+        // Mantidas as validações de telefone e reCAPTCHA; reavaliar proxy/IP antes de reativar.
 
         try {
             $db = Database::getInstance();
