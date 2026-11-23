@@ -533,6 +533,10 @@ function atualizarRegistrosSecundariosStatus($db, $messageId, $status, array $er
         ['disparo_manual_itens','DMI_Status','DMI_Retorno','DMI_MessageId','DMI_Erro','DMI_DataAtualizacao'],
     ] as $alvo){
         [$tabela,$campoStatus,$campoRetorno,$campoId,$campoErro,$campoAtualizacao] = $alvo;
+        // Na fila de campanha, 'enviado' é gravado na aceitação HTTP, antes da entrega.
+        $permitidosAlvo = $tabela === 'fila_envio' && $status === 'failed'
+            ? array_merge($permitidos, ['enviado']) : $permitidos;
+        $placeholders = implode(',', array_fill(0, count($permitidosAlvo), '?'));
         $setErro = $campoErro ? ", {$campoErro}=CASE WHEN ?='failed' THEN ? ELSE {$campoErro} END" : '';
         $setAtualizacao = $campoAtualizacao ? ", {$campoAtualizacao}=NOW()" : '';
         $sql = $db->prepare("UPDATE {$tabela} SET {$campoStatus}=?, {$campoRetorno}=?{$setErro}{$setAtualizacao} WHERE {$campoId}=? AND ({$campoStatus} IS NULL OR {$campoStatus} IN ({$placeholders}))");
@@ -541,6 +545,6 @@ function atualizarRegistrosSecundariosStatus($db, $messageId, $status, array $er
             $params[]=$status;
             $params[]=MetaErrorMessageService::amigavel($erro['codigo'] ?? null, $erro['mensagem'] ?? null);
         }
-        $params[]=$messageId; $params=array_merge($params,$permitidos); $sql->execute($params);
+        $params[]=$messageId; $params=array_merge($params,$permitidosAlvo); $sql->execute($params);
     }
 }
