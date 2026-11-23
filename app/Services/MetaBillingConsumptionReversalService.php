@@ -14,17 +14,67 @@ class MetaBillingConsumptionReversalService
         $this->db = $db ?: Database::getInstance();
     }
 
+    public function reconciliar($messageId)
+    {
+        $sql = $this->db->prepare('SELECT CFM_Codigo FROM consumo_falhas_meta WHERE CFM_MessageId = ?');
+        $sql->execute([$messageId]);
+        $codigo = $sql->fetchColumn();
+        if ($codigo !== false) return $this->processar($messageId, ['codigo'=>$codigo]);
+        return false;
+    }
+
     public function processar($messageId, array $erro)
     {
-        if(!$this->ehFalhaPagamentoMeta($erro)) return false;
+        if(!self::ehFalhaElegivel($erro)) return false;
 
         $messageId = trim((string)$messageId);
         if($messageId === '') return false;
 
+        $codigo = (string)($erro['codigo'] ?? '');
+        if ($codigo === '') $codigo = strpos(strtolower((string)($erro['mensagem'] ?? '')), 'healthy ecosystem engagement') !== false ? '131049' : '131042';
+        $this->db->prepare("INSERT IGNORE INTO consumo_falhas_meta (CFM_MessageId, CFM_Codigo, CFM_Data) VALUES (?, ?, NOW())")->execute([$messageId, $codigo]);
         $this->db->beginTransaction();
         try{
+            // A falha persistida pode ter chegado antes de existir a fila com WAMID.
+            foreach ([['disparo_manual_itens','DMI'], ['fila_envio','FIL']] as [$tabela,$prefixo]) {
+                $this->db->prepare("UPDATE {$tabela} SET {$prefixo}_Status='failed' WHERE {$prefixo}_MessageId=? AND {$prefixo}_Status IN ('aguardando_confirmacao','enviado','pending','processing')")->execute([$messageId]);
+            }
             $origem = $this->localizarOrigem($messageId);
-            if(!$origem){
+            if(!$origem || $origem['ano_mes'] !== date('Ym')){
+                $this->db->rollBack();
+                return false;
+            }
+
+            $comprovante = $this->db->prepare("SELECT CEV_DataConsumo FROM consumo_envios_meta WHERE CEV_MessageId = ? AND CLI_ID = ? AND CEV_AnoMes = ?");
+            $comprovante->execute([$messageId, $origem['CLI_ID'], $origem['ano_mes']]);
+            $dataConsumo = $comprovante->fetchColumn();
+            if (!$dataConsumo) {
+                $this->db->rollBack();
+                return false;
+            }
+            $consumo = $this->db->prepare("SELECT CMS_ID, CMS_Mensagens, CMS_MensagensAvaliacao, CMS_InicioPlanoPago FROM consumo_mensal WHERE CLI_ID = ? AND CMS_AnoMes = ? FOR UPDATE");
+            $consumo->execute([$origem['CLI_ID'], $origem['ano_mes']]);
+            $registro = $consumo->fetch(PDO::FETCH_ASSOC);
+            $avaliacao = $registro && !empty($registro['CMS_InicioPlanoPago']) && ($dataConsumo ?: $origem['data_envio']) < $registro['CMS_InicioPlanoPago'];
+            $campo = $avaliacao ? 'CMS_MensagensAvaliacao' : 'CMS_Mensagens';
+            if (!$registro || (int)$registro[$campo] <= 0) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            $excedente = $this->db->prepare("SELECT EXC_Status FROM excedentes_mensais WHERE CLI_ID = ? AND EXC_AnoMes = ? FOR UPDATE");
+            $excedente->execute([$origem['CLI_ID'], $origem['ano_mes']]);
+            foreach ($excedente->fetchAll(PDO::FETCH_COLUMN) as $status) {
+                if (!$avaliacao && $status !== 'pendente') {
+                    $this->db->rollBack();
+                    return false;
+                }
+            }
+
+            // Não alterar competência com cobrança de excedentes já constituída.
+            $cobranca = $this->db->prepare("SELECT COB_ID FROM cobrancas WHERE CLI_ID = ? AND COB_Status <> 'cancelado' AND (COB_Tipo = 'excedente' OR COB_Tipo = 'excedentes' OR COALESCE(COB_AdicionaisCentavos,0) > 0) AND COB_DataVencimento >= STR_TO_DATE(CONCAT(?, '01'), '%Y%m%d') LIMIT 1 FOR UPDATE");
+            $cobranca->execute([$origem['CLI_ID'], $origem['ano_mes']]);
+            if (!$avaliacao && $cobranca->fetchColumn() !== false) {
                 $this->db->rollBack();
                 return false;
             }
@@ -40,7 +90,7 @@ class MetaBillingConsumptionReversalService
                 $origem['ano_mes'],
                 $origem['origem'],
                 $origem['origem_id'],
-                (string)($erro['codigo'] ?? '')
+                $codigo
             ]);
 
             if($insert->rowCount() !== 1){
@@ -50,14 +100,14 @@ class MetaBillingConsumptionReversalService
 
             $update = $this->db->prepare("
                 UPDATE consumo_mensal
-                SET CMS_Mensagens = GREATEST(CMS_Mensagens - 1, 0),
+                SET {$campo} = GREATEST({$campo} - 1, 0),
                     CMS_AtualizadoEm = NOW()
                 WHERE CLI_ID = ?
                   AND CMS_AnoMes = ?
             ");
             $update->execute([$origem['CLI_ID'], $origem['ano_mes']]);
 
-            $this->recalcularExcedente($origem['CLI_ID'], $origem['ano_mes']);
+            if (!$avaliacao) $this->recalcularExcedente($origem['CLI_ID'], $origem['ano_mes']);
             $this->db->commit();
             return true;
         }catch(\Throwable $e){
@@ -71,10 +121,11 @@ class MetaBillingConsumptionReversalService
         $sql = $this->db->prepare("
             SELECT CLI_ID,
                    DATE_FORMAT(COALESCE(DMI_DataEnvio, DMI_DataCadastro), '%Y%m') AS ano_mes,
+                   DMI_DataEnvio AS data_envio,
                    'disparo_manual' AS origem,
                    DMI_ID AS origem_id
             FROM disparo_manual_itens
-            WHERE DMI_MessageId = ?
+            WHERE DMI_MessageId = ? AND DMI_DataEnvio IS NOT NULL AND DMI_Status = 'failed'
             LIMIT 1
         ");
         $sql->execute([$messageId]);
@@ -84,11 +135,12 @@ class MetaBillingConsumptionReversalService
         $sql = $this->db->prepare("
             SELECT c.CLI_ID,
                    DATE_FORMAT(COALESCE(f.FIL_DataEnvio, f.FIL_DataCadastro), '%Y%m') AS ano_mes,
+                   f.FIL_DataEnvio AS data_envio,
                    'campanha' AS origem,
                    f.FIL_ID AS origem_id
             FROM fila_envio f
             INNER JOIN campanhas c ON c.CAM_ID = f.CAM_ID
-            WHERE f.FIL_MessageId = ?
+            WHERE f.FIL_MessageId = ? AND f.FIL_DataEnvio IS NOT NULL AND f.FIL_Status = 'failed'
             LIMIT 1
         ");
         $sql->execute([$messageId]);
@@ -113,17 +165,18 @@ class MetaBillingConsumptionReversalService
             UPDATE excedentes_mensais
             SET EXC_Mensagens = ?,
                 EXC_ValorTotal = ? * EXC_ValorUnitario
-            WHERE CLI_ID = ? AND EXC_AnoMes = ?
+            WHERE CLI_ID = ? AND EXC_AnoMes = ? AND EXC_Status = 'pendente'
         ");
         $sql->execute([$excedentes, $excedentes, $cliId, $anoMes]);
     }
 
-    private function ehFalhaPagamentoMeta(array $erro)
+    public static function ehFalhaElegivel(array $erro)
     {
-        if((string)($erro['codigo'] ?? '') === '131042') return true;
+        if(in_array((string)($erro['codigo'] ?? ''), ['131042','131026','131047','131048','131049','131050','131056','132000','132001','132015','132016'], true)) return true;
 
         $mensagem = strtolower((string)($erro['mensagem'] ?? ''));
-        return strpos($mensagem, 'unsettled payment') !== false
+        return strpos($mensagem, 'healthy ecosystem engagement') !== false
+            || strpos($mensagem, 'unsettled payment') !== false
             || strpos($mensagem, 'errors related to your payment method') !== false;
     }
 }
