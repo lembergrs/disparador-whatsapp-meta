@@ -29,10 +29,17 @@ class MetaBillingConsumptionReversalService
                 return false;
             }
 
+            $comprovante = $this->db->prepare("SELECT CEV_DataConsumo FROM consumo_envios_meta WHERE CEV_MessageId = ? AND CLI_ID = ? AND CEV_AnoMes = ?");
+            $comprovante->execute([$messageId, $origem['CLI_ID'], $origem['ano_mes']]);
+            $dataConsumo = $comprovante->fetchColumn();
+            if (!$dataConsumo && (string)($erro['codigo'] ?? '') !== '131042') {
+                $this->db->rollBack();
+                return false;
+            }
             $consumo = $this->db->prepare("SELECT CMS_ID, CMS_Mensagens, CMS_MensagensAvaliacao, CMS_InicioPlanoPago FROM consumo_mensal WHERE CLI_ID = ? AND CMS_AnoMes = ? FOR UPDATE");
             $consumo->execute([$origem['CLI_ID'], $origem['ano_mes']]);
             $registro = $consumo->fetch(PDO::FETCH_ASSOC);
-            $avaliacao = $registro && !empty($registro['CMS_InicioPlanoPago']) && $origem['data_envio'] < $registro['CMS_InicioPlanoPago'];
+            $avaliacao = $registro && !empty($registro['CMS_InicioPlanoPago']) && ($dataConsumo ?: $origem['data_envio']) < $registro['CMS_InicioPlanoPago'];
             $campo = $avaliacao ? 'CMS_MensagensAvaliacao' : 'CMS_Mensagens';
             if (!$registro || (int)$registro[$campo] <= 0) {
                 $this->db->rollBack();
