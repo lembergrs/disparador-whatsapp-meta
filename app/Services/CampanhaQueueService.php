@@ -181,6 +181,11 @@ class CampanhaQueueService
                         $this->db->beginTransaction();
                         $this->registrarSucesso($campanha, $template, $item, $parametros, $retorno, $resultado['message_id']);
                         $this->db->commit();
+                        try {
+                            (new MetaBillingConsumptionReversalService($this->db))->reconciliar($resultado['message_id']);
+                        } catch (\Throwable $e) {
+                            error_log('Falha na reconciliacao de consumo Meta: '.get_class($e));
+                        }
                         $resumo['enviados']++;
                     }catch(Exception $e){
                         if($this->db->inTransaction()) $this->db->rollBack();
