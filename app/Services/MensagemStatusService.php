@@ -52,7 +52,7 @@ class MensagemStatusService
         $codigo = preg_replace('/[^A-Za-z0-9_.-]/', '', (string)$codigoErro);
         $dados['tooltip'] = $dados['rotulo'];
         if($normalizado === 'failed' && $codigo !== '') $dados['tooltip'] .= ' — Código Meta: ' . $codigo;
-        if($normalizado === 'failed' && $erro !== '') $dados['tooltip'] .= ' — ' . $erro;
+        if($normalizado === 'failed') $dados['tooltip'] .= ' — ' . MetaErrorMessageService::amigavel($codigo, $erro);
         if($normalizado === 'failed' && $dataFalha && strtotime($dataFalha)) $dados['tooltip'] .= ' — ' . date('d/m/Y H:i', strtotime($dataFalha));
         return $dados;
     }
