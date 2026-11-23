@@ -150,9 +150,12 @@ class DisparoManualQueueService
 
                 if($resultadoEnvio['sucesso']){
                     try{
+                        $this->db->beginTransaction();
                         $this->registrarSucesso($item, $variaveis, $retorno);
+                        $this->db->commit();
                         $resultado['aceitos']++;
                     }catch(Exception $e){
+                        if($this->db->inTransaction()) $this->db->rollBack();
                         $this->registrarPersistenciaPosEnvio($item, $resultadoEnvio['message_id'], $e->getMessage());
                         $resultado['erros']++;
                     }
@@ -555,7 +558,8 @@ class DisparoManualQueueService
             'retorno' => $retorno
         ]);
 
-        $this->consumo->registrarMensagem($item['CLI_ID']);
+        if (!$this->consumo->registrarMensagem($item['CLI_ID'])) throw new \RuntimeException('Consumo não registrado.');
+        $this->db->prepare("INSERT INTO consumo_envios_meta (CEV_MessageId, CLI_ID, CEV_AnoMes, CEV_DataConsumo) VALUES (?, ?, ?, NOW())")->execute([$messageId, $item['CLI_ID'], date('Ym')]);
         $this->controlePlano->registrarUso($item['CLI_ID']);
 
         $conversaId = $this->conversaModel->buscarOuCriar(
