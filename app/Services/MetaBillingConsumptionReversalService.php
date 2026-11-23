@@ -62,6 +62,14 @@ class MetaBillingConsumptionReversalService
                 return false;
             }
 
+            // Não alterar competência com cobrança de excedentes já constituída.
+            $cobranca = $this->db->prepare("SELECT COB_ID FROM cobrancas WHERE CLI_ID = ? AND COB_Status <> 'cancelado' AND (COB_Tipo = 'excedente' OR COB_Tipo = 'excedentes' OR COALESCE(COB_AdicionaisCentavos,0) > 0) AND COB_DataVencimento >= STR_TO_DATE(CONCAT(?, '01'), '%Y%m%d') LIMIT 1 FOR UPDATE");
+            $cobranca->execute([$origem['CLI_ID'], $origem['ano_mes']]);
+            if (!$avaliacao && $cobranca->fetchColumn() !== false) {
+                $this->db->rollBack();
+                return false;
+            }
+
             $insert = $this->db->prepare("
                 INSERT IGNORE INTO consumo_estornos_meta
                     (CEM_MessageId, CLI_ID, CEM_AnoMes, CEM_Origem, CEM_OrigemId, CEM_CodigoErro, CEM_DataCadastro)
