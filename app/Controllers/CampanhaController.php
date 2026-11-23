@@ -223,6 +223,7 @@ class CampanhaController extends Controller
 
         foreach($fila as &$itemFila){
             if(($itemFila['FIL_Status'] ?? '') === 'failed' || ($itemFila['FIL_Status'] ?? '') === 'erro'){
+                $itemFila['erro_detalhes'] = MetaErrorMessageService::detalhes($itemFila['FIL_Retorno'] ?? null, $itemFila['FIL_Erro'] ?? null);
                 $codigo=MetaErrorMessageService::codigoDoRetorno($itemFila['FIL_Retorno'] ?? null);
                 if($codigo !== ''){
                     $itemFila['FIL_Erro']=MetaErrorMessageService::amigavel($codigo, $itemFila['FIL_Erro'] ?? null);

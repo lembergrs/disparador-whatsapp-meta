@@ -315,13 +315,21 @@ document.addEventListener('DOMContentLoaded', function(){
                 + '<td>' + escapeHtml(item.data_cadastro || '-') + '</td>'
                 + '<td>' + escapeHtml(item.data_envio || '-') + '</td>'
                 + '<td>' + escapeHtml(item.data_atualizacao || '-') + '</td>'
-                + '<td>' + escapeHtml(item.erro || '-') + '</td>'
+                + '<td>' + (item.erro_detalhes ? escapeHtml(item.erro_detalhes.resumo) + ' <button type="button" class="btn btn-link btn-sm p-0 ml-1" aria-label="Detalhes do erro" aria-expanded="false" data-erro-detalhes><i class="fas fa-info-circle"></i></button><div hidden class="mt-2 text-break"><strong>Orientação:</strong> ' + escapeHtml(item.erro_detalhes.explicacao) + '<hr class="my-2"><small>Mensagem técnica registrada: ' + escapeHtml(item.erro_detalhes.original || 'Indisponível') + '</small></div>' : escapeHtml(item.erro || '-')) + '</td>'
                 + '</tr>';
         });
 
         html += '</tbody></table></div></div></div>';
         conteudo.innerHTML = html;
     }
+
+    conteudo.addEventListener('click', function(event){
+        const botao = event.target.closest('[data-erro-detalhes]');
+        if(!botao) return;
+        const detalhes = botao.nextElementSibling;
+        detalhes.hidden = !detalhes.hidden;
+        botao.setAttribute('aria-expanded', String(!detalhes.hidden));
+    });
 
     document.querySelectorAll('.btn-detalhes-lote').forEach(function(botao){
         botao.addEventListener('click', function(){
