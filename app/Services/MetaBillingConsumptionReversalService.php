@@ -14,6 +14,15 @@ class MetaBillingConsumptionReversalService
         $this->db = $db ?: Database::getInstance();
     }
 
+    public function reconciliar($messageId)
+    {
+        $sql = $this->db->prepare('SELECT CFM_Codigo FROM consumo_falhas_meta WHERE CFM_MessageId = ?');
+        $sql->execute([$messageId]);
+        $codigo = $sql->fetchColumn();
+        if ($codigo !== false) return $this->processar($messageId, ['codigo'=>$codigo]);
+        return false;
+    }
+
     public function processar($messageId, array $erro)
     {
         if(!self::ehFalhaElegivel($erro)) return false;
@@ -21,8 +30,15 @@ class MetaBillingConsumptionReversalService
         $messageId = trim((string)$messageId);
         if($messageId === '') return false;
 
+        $codigo = (string)($erro['codigo'] ?? '');
+        if ($codigo === '') $codigo = strpos(strtolower((string)($erro['mensagem'] ?? '')), 'healthy ecosystem engagement') !== false ? '131049' : '131042';
+        $this->db->prepare("INSERT IGNORE INTO consumo_falhas_meta (CFM_MessageId, CFM_Codigo, CFM_Data) VALUES (?, ?, NOW())")->execute([$messageId, $codigo]);
         $this->db->beginTransaction();
         try{
+            // A falha persistida pode ter chegado antes de existir a fila com WAMID.
+            foreach ([['disparo_manual_itens','DMI'], ['fila_envio','FIL']] as [$tabela,$prefixo]) {
+                $this->db->prepare("UPDATE {$tabela} SET {$prefixo}_Status='failed' WHERE {$prefixo}_MessageId=? AND {$prefixo}_Status IN ('aguardando_confirmacao','enviado','pending','processing')")->execute([$messageId]);
+            }
             $origem = $this->localizarOrigem($messageId);
             if(!$origem || $origem['ano_mes'] !== date('Ym')){
                 $this->db->rollBack();
@@ -57,7 +73,7 @@ class MetaBillingConsumptionReversalService
                 $origem['ano_mes'],
                 $origem['origem'],
                 $origem['origem_id'],
-                (string)($erro['codigo'] ?? '')
+                $codigo
             ]);
 
             if($insert->rowCount() !== 1){
