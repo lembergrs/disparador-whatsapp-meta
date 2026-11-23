@@ -32,7 +32,7 @@ class MetaBillingConsumptionReversalService
             $comprovante = $this->db->prepare("SELECT CEV_DataConsumo FROM consumo_envios_meta WHERE CEV_MessageId = ? AND CLI_ID = ? AND CEV_AnoMes = ?");
             $comprovante->execute([$messageId, $origem['CLI_ID'], $origem['ano_mes']]);
             $dataConsumo = $comprovante->fetchColumn();
-            if (!$dataConsumo && (string)($erro['codigo'] ?? '') !== '131042') {
+            if (!$dataConsumo) {
                 $this->db->rollBack();
                 return false;
             }
@@ -92,7 +92,7 @@ class MetaBillingConsumptionReversalService
                    'disparo_manual' AS origem,
                    DMI_ID AS origem_id
             FROM disparo_manual_itens
-            WHERE DMI_MessageId = ? AND DMI_DataEnvio IS NOT NULL AND DMI_Status IN ('failed','erro')
+            WHERE DMI_MessageId = ? AND DMI_DataEnvio IS NOT NULL AND DMI_Status = 'failed'
             LIMIT 1
         ");
         $sql->execute([$messageId]);
@@ -107,7 +107,7 @@ class MetaBillingConsumptionReversalService
                    f.FIL_ID AS origem_id
             FROM fila_envio f
             INNER JOIN campanhas c ON c.CAM_ID = f.CAM_ID
-            WHERE f.FIL_MessageId = ? AND f.FIL_DataEnvio IS NOT NULL AND f.FIL_Status IN ('failed','erro')
+            WHERE f.FIL_MessageId = ? AND f.FIL_DataEnvio IS NOT NULL AND f.FIL_Status = 'failed'
             LIMIT 1
         ");
         $sql->execute([$messageId]);
