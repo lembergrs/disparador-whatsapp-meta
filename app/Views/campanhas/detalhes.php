@@ -202,7 +202,19 @@ function dataBR($data)
                     <td><?= statusBadge($item['FIL_Status']); ?></td>
                     <td><?= $item['FIL_Tentativas']; ?></td>
                     <td><?= dataBR($item['FIL_DataEnvio']); ?></td>
-                    <td><?= $item['FIL_Erro'] ?: '-'; ?></td>
+                    <td>
+                        <?php if(!empty($item['erro_detalhes'])){ ?>
+                            <?= htmlspecialchars($item['erro_detalhes']['resumo'], ENT_QUOTES, 'UTF-8'); ?>
+                            <button type="button" class="btn btn-link btn-sm p-0 ml-1" aria-label="Detalhes do erro" aria-expanded="false" data-toggle="collapse" data-target="#erroFila<?= (int)$item['FIL_ID']; ?>"><i class="fas fa-info-circle"></i></button>
+                            <div class="collapse mt-2 text-break" id="erroFila<?= (int)$item['FIL_ID']; ?>">
+                                <strong>Orientação:</strong> <?= htmlspecialchars($item['erro_detalhes']['explicacao'], ENT_QUOTES, 'UTF-8'); ?>
+                                <hr class="my-2">
+                                <small>Mensagem técnica registrada: <?= htmlspecialchars($item['erro_detalhes']['original'] ?: 'Indisponível', ENT_QUOTES, 'UTF-8'); ?></small>
+                            </div>
+                        <?php }else{ ?>
+                            <?= htmlspecialchars($item['FIL_Erro'] ?: '-', ENT_QUOTES, 'UTF-8'); ?>
+                        <?php } ?>
+                    </td>
                     <td>
                         <?= $item['FIL_MessageId'] ?: '-'; ?>
                     </td>
