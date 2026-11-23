@@ -16,7 +16,7 @@ class MetaBillingConsumptionReversalService
 
     public function processar($messageId, array $erro)
     {
-        if(!$this->ehFalhaPagamentoMeta($erro)) return false;
+        if(!self::ehFalhaElegivel($erro)) return false;
 
         $messageId = trim((string)$messageId);
         if($messageId === '') return false;
@@ -24,7 +24,17 @@ class MetaBillingConsumptionReversalService
         $this->db->beginTransaction();
         try{
             $origem = $this->localizarOrigem($messageId);
-            if(!$origem){
+            if(!$origem || $origem['ano_mes'] !== date('Ym')){
+                $this->db->rollBack();
+                return false;
+            }
+
+            $consumo = $this->db->prepare("SELECT CMS_ID, CMS_Mensagens, CMS_MensagensAvaliacao, CMS_InicioPlanoPago FROM consumo_mensal WHERE CLI_ID = ? AND CMS_AnoMes = ? FOR UPDATE");
+            $consumo->execute([$origem['CLI_ID'], $origem['ano_mes']]);
+            $registro = $consumo->fetch(PDO::FETCH_ASSOC);
+            $avaliacao = $registro && !empty($registro['CMS_InicioPlanoPago']) && $origem['data_envio'] < $registro['CMS_InicioPlanoPago'];
+            $campo = $avaliacao ? 'CMS_MensagensAvaliacao' : 'CMS_Mensagens';
+            if (!$registro || (int)$registro[$campo] <= 0) {
                 $this->db->rollBack();
                 return false;
             }
@@ -50,14 +60,14 @@ class MetaBillingConsumptionReversalService
 
             $update = $this->db->prepare("
                 UPDATE consumo_mensal
-                SET CMS_Mensagens = GREATEST(CMS_Mensagens - 1, 0),
+                SET {$campo} = GREATEST({$campo} - 1, 0),
                     CMS_AtualizadoEm = NOW()
                 WHERE CLI_ID = ?
                   AND CMS_AnoMes = ?
             ");
             $update->execute([$origem['CLI_ID'], $origem['ano_mes']]);
 
-            $this->recalcularExcedente($origem['CLI_ID'], $origem['ano_mes']);
+            if (!$avaliacao) $this->recalcularExcedente($origem['CLI_ID'], $origem['ano_mes']);
             $this->db->commit();
             return true;
         }catch(\Throwable $e){
@@ -71,10 +81,11 @@ class MetaBillingConsumptionReversalService
         $sql = $this->db->prepare("
             SELECT CLI_ID,
                    DATE_FORMAT(COALESCE(DMI_DataEnvio, DMI_DataCadastro), '%Y%m') AS ano_mes,
+                   DMI_DataEnvio AS data_envio,
                    'disparo_manual' AS origem,
                    DMI_ID AS origem_id
             FROM disparo_manual_itens
-            WHERE DMI_MessageId = ?
+            WHERE DMI_MessageId = ? AND DMI_DataEnvio IS NOT NULL AND DMI_Status IN ('failed','erro')
             LIMIT 1
         ");
         $sql->execute([$messageId]);
@@ -84,11 +95,12 @@ class MetaBillingConsumptionReversalService
         $sql = $this->db->prepare("
             SELECT c.CLI_ID,
                    DATE_FORMAT(COALESCE(f.FIL_DataEnvio, f.FIL_DataCadastro), '%Y%m') AS ano_mes,
+                   f.FIL_DataEnvio AS data_envio,
                    'campanha' AS origem,
                    f.FIL_ID AS origem_id
             FROM fila_envio f
             INNER JOIN campanhas c ON c.CAM_ID = f.CAM_ID
-            WHERE f.FIL_MessageId = ?
+            WHERE f.FIL_MessageId = ? AND f.FIL_DataEnvio IS NOT NULL AND f.FIL_Status IN ('failed','erro')
             LIMIT 1
         ");
         $sql->execute([$messageId]);
@@ -118,12 +130,13 @@ class MetaBillingConsumptionReversalService
         $sql->execute([$excedentes, $excedentes, $cliId, $anoMes]);
     }
 
-    private function ehFalhaPagamentoMeta(array $erro)
+    public static function ehFalhaElegivel(array $erro)
     {
-        if((string)($erro['codigo'] ?? '') === '131042') return true;
+        if(in_array((string)($erro['codigo'] ?? ''), ['131042','131026','131047','131048','131049','131050','131056','132000','132001','132015','132016'], true)) return true;
 
         $mensagem = strtolower((string)($erro['mensagem'] ?? ''));
-        return strpos($mensagem, 'unsettled payment') !== false
+        return strpos($mensagem, 'healthy ecosystem engagement') !== false
+            || strpos($mensagem, 'unsettled payment') !== false
             || strpos($mensagem, 'errors related to your payment method') !== false;
     }
 }
