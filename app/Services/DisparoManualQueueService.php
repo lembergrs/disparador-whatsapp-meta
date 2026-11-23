@@ -900,7 +900,7 @@ class DisparoManualQueueService
         $codigo = $resultado['retry'] ? 'max_attempts' : ($resultado['erro_codigo'] ?? null);
         $mensagem = $resultado['retry']
             ? 'Tentativa máxima atingida. ' . ($resultado['erro_mensagem'] ?? '')
-            : ($resultado['erro_mensagem'] ?? 'Erro definitivo ao enviar mensagem.');
+            : MetaErrorMessageService::amigavel($resultado['erro_codigo'] ?? null, $resultado['erro_mensagem'] ?? 'Erro definitivo ao enviar mensagem.');
 
         $this->registrarErro($item['DMI_ID'], $mensagem, $retorno, WorkerRetryPolicyService::ERRO_DEFINITIVO, $codigo);
     }
