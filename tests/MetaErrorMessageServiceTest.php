@@ -17,4 +17,9 @@ $assert(MetaErrorMessageService::amigavel(999999, 'Erro desconhecido') === 'Erro
 $assert(strpos(MetaErrorMessageService::amigavel(999999, 'token=segredo'), 'segredo') === false, 'Sanitização');
 $assert(MetaErrorMessageService::codigoDoRetorno('{"error_code":131049}') === '131049', 'Código webhook');
 $assert(strpos(MensagemStatusService::apresentacao('failed', 131049, $original)['tooltip'], '24 horas') !== false, 'Tooltip');
+$detalhes = MetaErrorMessageService::detalhes(null, $original);
+$assert($detalhes['resumo'] === 'Restrição de marketing (131049)', 'Resumo histórico');
+$assert($detalhes['original'] === $original, 'Mensagem técnica preservada');
+$assert(strpos($detalhes['explicacao'], '24 horas') !== false, 'Orientação completa');
+$assert(MetaErrorMessageService::detalhes(['error'=>['code'=>999999,'message'=>'token=segredo']], 'Falha')['original'] === 'token=[removido]', 'Detalhes sanitizados');
 echo "MetaErrorMessageServiceTest OK\n";
