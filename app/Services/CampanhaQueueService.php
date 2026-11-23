@@ -178,9 +178,12 @@ class CampanhaQueueService
 
                 if($resultado['sucesso']){
                     try{
+                        $this->db->beginTransaction();
                         $this->registrarSucesso($campanha, $template, $item, $parametros, $retorno, $resultado['message_id']);
+                        $this->db->commit();
                         $resumo['enviados']++;
                     }catch(Exception $e){
+                        if($this->db->inTransaction()) $this->db->rollBack();
                         $this->registrarPersistenciaPosEnvio($item, $resultado['message_id'], $e->getMessage());
                         $resumo['erros_definitivos']++;
                     }
@@ -397,7 +400,8 @@ class CampanhaQueueService
             WHERE CAM_ID = ?
         ")->execute([$campanha['CAM_ID']]);
 
-        $this->consumo->registrarMensagem((int) $campanha['CLI_ID']);
+        if (!$this->consumo->registrarMensagem((int) $campanha['CLI_ID'])) throw new \RuntimeException('Consumo não registrado.');
+        $this->db->prepare("INSERT INTO consumo_envios_meta (CEV_MessageId, CLI_ID, CEV_AnoMes, CEV_DataConsumo) VALUES (?, ?, ?, NOW())")->execute([$messageId, (int) $campanha['CLI_ID'], date('Ym')]);
         $this->controlePlano->registrarUso((int) $campanha['CLI_ID']);
 
         $conversaId = $this->conversaModel->buscarOuCriar(
