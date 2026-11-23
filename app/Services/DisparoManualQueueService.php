@@ -153,6 +153,11 @@ class DisparoManualQueueService
                         $this->db->beginTransaction();
                         $this->registrarSucesso($item, $variaveis, $retorno);
                         $this->db->commit();
+                        try {
+                            (new MetaBillingConsumptionReversalService($this->db))->reconciliar($resultadoEnvio['message_id']);
+                        } catch (\Throwable $e) {
+                            error_log('Falha na reconciliacao de consumo Meta: '.get_class($e));
+                        }
                         $resultado['aceitos']++;
                     }catch(Exception $e){
                         if($this->db->inTransaction()) $this->db->rollBack();
