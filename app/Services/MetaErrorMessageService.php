@@ -32,6 +32,32 @@ class MetaErrorMessageService
         return $mensagem !== '' ? $mensagem : 'Não foi possível entregar a mensagem.';
     }
 
+    public static function detalhes($retorno, $mensagem): array
+    {
+        $codigo = self::codigoDoRetorno($retorno);
+        $original = MensagemStatusService::sanitizarErro($mensagem);
+        if ($codigo === '' && stripos($original, 'healthy ecosystem engagement') !== false) {
+            $codigo = '131049';
+        }
+        $rotulos = [
+            '131026'=>'Mensagem não entregue', '131042'=>'Problema de faturamento',
+            '131047'=>'Janela de atendimento expirada', '131048'=>'Restrição por qualidade',
+            '131049'=>'Restrição de marketing', '131050'=>'Marketing recusado',
+            '131056'=>'Limite de mensagens', '132000'=>'Parâmetros incorretos',
+            '132001'=>'Modelo indisponível', '132015'=>'Modelo pausado', '132016'=>'Modelo desativado',
+        ];
+        $dados = is_string($retorno) ? json_decode($retorno, true) : $retorno;
+        $textoMeta = is_array($dados) ? ($dados['error']['message'] ?? $dados['response']['error']['message'] ?? '') : '';
+        if (is_string($textoMeta) && $textoMeta !== '') {
+            $original = MensagemStatusService::sanitizarErro($textoMeta);
+        }
+        return [
+            'resumo' => ($rotulos[$codigo] ?? 'Falha no envio') . ($codigo !== '' ? ' (' . $codigo . ')' : ''),
+            'explicacao' => self::amigavel($codigo, $mensagem),
+            'original' => $original,
+        ];
+    }
+
     public static function codigoDoRetorno($retorno): string
     {
         if(is_string($retorno)){
