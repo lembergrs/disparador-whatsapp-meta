@@ -47,6 +47,7 @@ class Campanha
                 CLI_ID,
                 TMP_ID,
                 LST_ID,
+                CAM_SegmentacaoJson,
                 CAM_HeaderMidiaTipo,
                 CAM_HeaderMidiaId,
                 CAM_HeaderMidiaNome,
@@ -63,7 +64,7 @@ class Campanha
 
             ) VALUES (
 
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 'agendada',
                 ?,
                 0,0,0,
@@ -77,7 +78,8 @@ class Campanha
 
         $dados['cliente_id'],
         $dados['template_id'],
-        $dados['lista_id'],
+        $dados['lista_id'] ?? null,
+        $dados['segmentacao_json'] ?? null,
         $dados['midia_header']['tipo'] ?? null,
         $dados['midia_header']['media_id'] ?? null,
         $dados['midia_header']['nome_original'] ?? null,

@@ -106,6 +106,21 @@ class ListaContatoController extends Controller
         exit;
     }
 
+    public function etiquetasContatoAjax()
+    {
+        $usuario = Auth::usuario();
+        header('Content-Type: application/json; charset=utf-8');
+        if (!Auth::nivelCliente($usuario['nivel'] ?? null)) {
+            http_response_code(403);
+            echo json_encode(['sucesso'=>false]);
+            return;
+        }
+        $etiquetas = (new \Services\ContatoClassificacaoService())->etiquetasDoContato(
+            $usuario, (int) ($_GET['lista'] ?? 0), (int) ($_GET['contato'] ?? 0)
+        );
+        echo json_encode(['sucesso'=>true, 'etiquetas'=>$etiquetas]);
+    }
+
     public function visualizar()
     {
         $usuario =

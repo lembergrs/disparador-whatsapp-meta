@@ -1,0 +1,1 @@
+ALTER TABLE campanhas ADD COLUMN CAM_SegmentacaoJson LONGTEXT NULL;

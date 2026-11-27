@@ -93,6 +93,7 @@ class DisparoController extends Controller
                 'templates' => $templates,
 
                 'listasContatos' => $listasContatos,
+                'etiquetasDisparo' => $adminMode ? [] : (new Conversa())->listarEtiquetas($clienteId),
 
                 'adminMode' => $adminMode,
 
@@ -1407,19 +1408,56 @@ class DisparoController extends Controller
 
     private function normalizarTelefoneDisparoManual($telefone)
     {
-        $numero = preg_replace('/\D/', '', (string) $telefone);
-
-        if($numero === ''){
-            return '';
-        }
-
-        if(substr($numero, 0, 2) !== '55'){
-            $numero = '55' . $numero;
-        }
-
-        return preg_match('/^55\d{10,11}$/', $numero) ? $numero : '';
+        $digitos = preg_replace('/\D/', '', (string) $telefone);
+        if (!preg_match('/^(?:55)?[0-9]{10,11}$/D', $digitos)) return '';
+        if (strlen($digitos) <= 11) $digitos = '55' . $digitos;
+        $numero = \Services\TelefoneService::normalizar($digitos);
+        return preg_match('/^55[0-9]{10,11}$/D', $numero) ? $numero : '';
     }
 
+    private function resolverPublicoDisparo(array $usuario, int $metaId): array
+    {
+        $listaId = (int) ($_POST['lista_id'] ?? 0);
+        $etiquetas = json_decode($_POST['etiquetas_json'] ?? '[]', true);
+        if (!is_array($etiquetas) || $listaId < 0) {
+            throw new \Exception('Segmentação inválida.');
+        }
+        if (!$listaId && !$etiquetas) return ['selecionado'=>false, 'numeros'=>[]];
+        if (($usuario['nivel'] ?? '') === 'admin') {
+            throw new \Exception('Segmentação disponível apenas no acesso do cliente.');
+        }
+        $publico = (new \Services\SegmentacaoDestinatariosService())->resolver(
+            $usuario, $metaId, $listaId ?: null, $etiquetas, $_POST['operador_etiquetas'] ?? 'OR'
+        );
+        $numeros = [];
+        foreach ($publico as $item) {
+            $numero = $this->normalizarTelefoneDisparoManual($item['numero']);
+            if ($numero !== '') $numeros[$numero] = $numero;
+        }
+        return ['selecionado'=>true, 'numeros'=>array_values($numeros)];
+    }
+
+    public function contarDestinatariosAjax()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            if (!$this->validarCsrfAjaxSilencioso()) throw new \Exception('Token de segurança inválido.');
+            $usuario = Auth::usuario();
+            $metaId = (int) ($_POST['meta'] ?? 0);
+            $this->clienteOperacaoPorMeta($usuario, $metaId);
+            $publico = $this->resolverPublicoDisparo($usuario, $metaId);
+            $manuais = json_decode($_POST['destinos_json'] ?? '[]', true);
+            if (!is_array($manuais)) throw new \Exception('Destinos inválidos.');
+            $numeros = $publico['numeros'];
+            foreach ($manuais as $item) {
+                $numero = $this->normalizarTelefoneDisparoManual($item['numero'] ?? '');
+                if ($numero !== '') $numeros[] = $numero;
+            }
+            echo json_encode(['sucesso'=>true, 'publico'=>count($publico['numeros']), 'total'=>count(array_unique($numeros)), 'assinatura'=>\Services\SegmentacaoDestinatariosService::assinatura($numeros)]);
+        } catch (\Throwable $e) {
+            echo json_encode(['sucesso'=>false, 'erro'=>'Não foi possível calcular os destinatários. Confira a seleção.']);
+        }
+    }
 
     public function criarLoteAjax()
     {
@@ -1462,33 +1500,13 @@ class DisparoController extends Controller
             $itens = [];
             $numerosUnicos = [];
 
-            if($listaId > 0){
-                $listaModel = new ListaContato();
-                $lista = $listaModel->buscar($listaId, $clienteId);
-
-                if(!$lista || ($lista['LST_Ativo'] ?? 'S') !== 'S'){
-                    throw new \Exception('Lista de contatos não encontrada para este cliente.');
-                }
-
-                if(!empty($variaveisTemplate)){
-                    throw new \Exception('Este template possui variáveis. Nesta etapa, selecione uma lista apenas com templates sem variáveis ou informe os números manualmente com as variáveis necessárias.');
-                }
-
-                $contatosLista = (new ListaContatoItem())->listarContatos($listaId);
-
-                foreach($contatosLista as $contato){
-                    $numero = $this->normalizarTelefoneDisparoManual($contato['CON_Telefone'] ?? '');
-
-                    if($numero === '' || isset($numerosUnicos[$numero])){
-                        continue;
-                    }
-
-                    $numerosUnicos[$numero] = true;
-                    $itens[] = [
-                        'numero' => $numero,
-                        'variaveis' => []
-                    ];
-                }
+            $publico = $this->resolverPublicoDisparo($usuario, $metaId);
+            if ($publico['selecionado'] && !empty($variaveisTemplate)) {
+                throw new \Exception('Use públicos segmentados apenas com templates sem variáveis.');
+            }
+            foreach ($publico['numeros'] as $numero) {
+                $numerosUnicos[$numero] = true;
+                $itens[] = ['numero' => $numero, 'variaveis' => []];
             }
 
             foreach($destinos as $destino){
@@ -1526,6 +1544,10 @@ class DisparoController extends Controller
                 }
 
                 throw new \Exception('Informe pelo menos um destino válido.');
+            }
+
+            if (!isset($_POST['total_confirmado'], $_POST['assinatura_publico']) || (int) $_POST['total_confirmado'] !== count($itens) || !is_string($_POST['assinatura_publico']) || !hash_equals(\Services\SegmentacaoDestinatariosService::assinatura(array_column($itens, 'numero')), $_POST['assinatura_publico'])) {
+                throw new \Exception('O público mudou. Confira a quantidade e confirme novamente.');
             }
 
             $loteId = $model->criarLote(

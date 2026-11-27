@@ -227,6 +227,7 @@ id="modalCampanha"
 
 <form
 method="POST"
+id="formCampanhaSegmentada"
 action="<?= BASE_URL; ?>/index.php?url=campanha/criar"
 >
 <?= \Core\Csrf::input(); ?>
@@ -304,12 +305,12 @@ data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoN
 
 <select
 name="lista"
+id="listaCampanhaSegmentada"
 class="form-control"
-required
 >
 
 <option value="">
-Selecione uma lista
+Nenhuma lista
 </option>
 
 <?php foreach($listas as $lista){ ?>
@@ -326,6 +327,24 @@ Selecione uma lista
 
 </select>
 
+</div>
+
+<div class="form-group">
+<label>Etiquetas (opcional)</label>
+<select name="etiquetas[]" id="etiquetasCampanha" class="form-control" multiple size="3">
+<?php foreach (($etiquetas ?? []) as $tag) { ?>
+<option value="<?= (int) $tag['ETQ_ID']; ?>"><?= htmlspecialchars($tag['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?></option>
+<?php } ?>
+</select>
+<div id="operadorCampanhaArea" style="display:none" class="mt-2">
+<select name="operador_etiquetas" class="form-control form-control-sm" aria-label="Correspondência das etiquetas">
+<option value="OR">Qualquer etiqueta selecionada</option>
+<option value="AND">Todas as etiquetas selecionadas</option>
+</select>
+</div>
+<small id="contagemCampanha" class="text-muted">Selecione uma lista ou etiqueta.</small>
+<input type="hidden" name="total_confirmado" value="">
+<input type="hidden" name="assinatura_publico" value="">
 </div>
 
 <div
@@ -409,6 +428,48 @@ Criar Campanha
 </div>
 
 <script>
+
+document.addEventListener('DOMContentLoaded', function(){
+    const form = document.getElementById('formCampanhaSegmentada');
+    if (!form) return;
+    const tags = form.querySelector('#etiquetasCampanha');
+    const total = form.querySelector('[name="total_confirmado"]');
+    const status = form.querySelector('#contagemCampanha');
+    const botao = form.querySelector('[type="submit"]');
+    let versao = 0;
+    async function contar(){
+        const atual = ++versao;
+        total.value = '';
+        form.elements.assinatura_publico.value = '';
+        botao.disabled = true;
+        form.querySelector('#operadorCampanhaArea').style.display = tags.selectedOptions.length > 1 ? '' : 'none';
+        if (!form.template.value || (!form.lista.value && !tags.selectedOptions.length)) {
+            status.textContent = 'Selecione o template e uma lista ou etiqueta.';
+            return;
+        }
+        status.textContent = 'Calculando destinatários...';
+        try {
+            const dados = new FormData(form);
+            const resposta = await fetch(<?= json_encode(BASE_URL . '/index.php?url=campanha/contarDestinatariosAjax'); ?>, {method:'POST', body:dados});
+            const r = await resposta.json();
+            if (atual !== versao) return;
+            if (!r.sucesso) throw new Error(r.erro);
+            total.value = r.total;
+            form.elements.assinatura_publico.value = r.assinatura;
+            status.textContent = 'Destinatários únicos: ' + r.total;
+            botao.disabled = r.total <= 0;
+        } catch(e) {
+            if (atual === versao) status.textContent = 'Não foi possível calcular o público. Confira a seleção.';
+        }
+    }
+    form.addEventListener('change', function(e){
+        if (['template','lista','etiquetas[]','operador_etiquetas'].includes(e.target.name)) contar();
+    });
+    form.addEventListener('submit', function(e){
+        if (!total.value || Number(total.value) <= 0 || !confirm('Agendar campanha para ' + total.value + ' destinatário(s)?')) e.preventDefault();
+    });
+    contar();
+});
 
 window.CAMPOS_CONTATO =
 <?= json_encode($camposContato, JSON_UNESCAPED_UNICODE); ?>;
