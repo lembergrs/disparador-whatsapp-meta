@@ -73,7 +73,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
         '@type' => 'Organization',
         'name' => 'Disparador.net',
         'url' => 'https://disparador.net/',
-        'logo' => 'https://disparador.net/public/assets/img/logo-disparador.png'
+        'logo' => 'https://disparador.net/public/assets/img/logo-disparador.png',
+        'sameAs' => ['https://www.facebook.com/disparador.net', 'https://www.instagram.com/disparadornet/']
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); ?></script>
     <script type="application/ld+json"><?= json_encode([
         '@context' => 'https://schema.org',
@@ -584,7 +585,7 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 [
                     'icon' => 'fas fa-list',
                     'titulo' => 'Organize seus contatos',
-                    'texto' => 'Importe contatos, organize públicos e segmente campanhas por listas.'
+                    'texto' => 'Importe contatos e organize sua base em listas para encontrar o público certo.'
                 ],
                 [
                     'icon' => 'fas fa-comments',
@@ -593,8 +594,8 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 ],
                 [
                     'icon' => 'fas fa-tags',
-                    'titulo' => 'Etiquetas e filtros',
-                    'texto' => 'Classifique conversas por status, prioridade, assunto ou etapa do atendimento.'
+                    'titulo' => 'Segmentação por listas e etiquetas',
+                    'texto' => 'Classifique conversas por interesse ou etapa do atendimento e envie campanhas por listas, etiquetas ou pela combinação das duas.'
                 ],
                 [
                     'icon' => 'fab fa-whatsapp',
@@ -638,7 +639,29 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
 
 </section>
 
-<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Seu WhatsApp Business continua. Sua operação ganha novas ferramentas.</h2><p class="text-muted">Compare a rotina pelo aplicativo com as ferramentas adicionais disponíveis no Disparador.net.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
+<section id="segmentacao" class="py-4 bg-white" aria-labelledby="titulo-segmentacao">
+    <div class="container">
+        <div class="card site-card-feature border-success">
+            <div class="card-body p-4">
+                <div class="row align-items-center">
+                    <div class="col-lg-7 mb-3 mb-lg-0">
+                        <p class="text-success font-weight-bold mb-2">NOVIDADE NO DISPARADOR.NET</p>
+                        <h2 id="titulo-segmentacao" class="h3 font-weight-bold">A mensagem certa para o público certo</h2>
+                        <p class="text-muted mb-0">Transforme as etiquetas do atendimento em públicos para disparos e campanhas agendadas. Combine listas e etiquetas, confira a quantidade de destinatários antes de enviar e evite números duplicados, sem precisar exportar planilhas.</p>
+                    </div>
+                    <div class="col-lg-5">
+                        <p class="mb-2"><i class="fas fa-list text-success mr-2" aria-hidden="true"></i> Somente lista de contatos</p>
+                        <p class="mb-2"><i class="fas fa-tags text-success mr-2" aria-hidden="true"></i> Somente etiquetas</p>
+                        <p class="mb-3"><i class="fas fa-filter text-success mr-2" aria-hidden="true"></i> Lista + etiquetas</p>
+                        <a class="btn btn-outline-success" href="<?= BASE_URL; ?>/index.php?url=site/cadastro" data-analytics-event="select_trial" data-analytics-location="segmentation" data-analytics-destination="registration">Experimente grátis</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="comparacao" class="py-5 bg-light"><div class="container"><div class="text-center mb-5"><h2 class="site-section-title">Seu WhatsApp Business continua. Sua operação ganha novas ferramentas.</h2><p class="text-muted">Compare a rotina pelo aplicativo com as ferramentas adicionais disponíveis no Disparador.net.</p></div><div class="row justify-content-center"><div class="col-md-5 mb-4"><div class="card h-100"><div class="card-body"><h3 class="h4"><i class="fab fa-whatsapp text-success mr-2"></i>WhatsApp Business</h3><ul class="site-check-list"><li>Atendimento individual</li><li>Contatos no celular</li><li>Comunicação manual</li><li>Mensagens comuns</li><li>Gestão pelo aplicativo</li></ul></div></div></div><div class="col-md-5 mb-4"><div class="card h-100 border-success"><div class="card-body"><h3 class="h4"><i class="fas fa-layer-group text-success mr-2"></i>Com Disparador.net</h3><ul class="site-check-list"><li>Atendimento em equipe</li><li>Listas organizadas</li><li>Campanhas segmentadas por listas e etiquetas</li><li>Templates oficiais</li><li>Gestão pelo navegador</li><li>Mesmo número + Disparador.net, quando elegível</li></ul></div></div></div></div></div></section>
 
 <section id="integracao-oficial" class="py-5 bg-white border-top border-bottom"><div class="container"><div class="row align-items-center"><div class="col-lg-7"><span class="badge badge-success mb-3">Confiança para sua operação</span><h2 class="site-section-title">Integrado à plataforma oficial da Meta</h2><p class="lead text-muted">Campanhas, atendimento e templates funcionam pela infraestrutura oficial do WhatsApp Business.</p><p class="text-muted">A conexão passa pelos processos apresentados pela Meta e respeita as políticas aplicáveis à conta, ao número e às mensagens.</p></div><div class="col-lg-5"><div class="card site-card-feature"><div class="card-body p-4"><p><i class="fas fa-shield-alt text-success mr-2"></i> Integração oficial</p><p><i class="fas fa-cloud text-success mr-2"></i> Operação em nuvem</p><p class="mb-0"><i class="fas fa-file-alt text-success mr-2"></i> Templates aprovados pela Meta</p></div></div></div></div></div></section>
 
@@ -1171,6 +1194,11 @@ foreach($perguntasFrequentes as $pergunta => $resposta){
                 © 2026 RL2 Net - Todos os direitos reservados.<br>
                 Disparador.net é uma plataforma da RL2 Net.<br>
                 Contato: contato@disparador.net<br>
+                <div class="my-2" aria-label="Redes sociais do Disparador.net">
+                    <span class="mr-2">Siga-nos:</span>
+                    <a class="text-white d-inline-block p-2" href="https://www.facebook.com/disparador.net" target="_blank" rel="noopener noreferrer" aria-label="Facebook do Disparador.net (abre em nova aba)" title="Facebook"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a>
+                    <a class="text-white d-inline-block p-2" href="https://www.instagram.com/disparadornet/" target="_blank" rel="noopener noreferrer" aria-label="Instagram do Disparador.net (abre em nova aba)" title="Instagram"><i class="fab fa-instagram fa-lg" aria-hidden="true"></i></a>
+                </div>
                 <small>WhatsApp e Meta são marcas comerciais de seus respectivos proprietários. O Disparador.net é uma plataforma independente que utiliza a API oficial do WhatsApp Business.</small>
 
             </div>
