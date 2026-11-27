@@ -82,6 +82,7 @@ class CampanhaController extends Controller
                 'templates' => $templates,
                 'camposContato' => $camposContato,
                 'listas' => $listas,
+                'etiquetas' => (new \Models\Conversa())->listarEtiquetas($usuario['CLI_ID']),
                 'clientePlano' => $clientePlano,
                 'consumoMes' => $consumoMes,
                 'contasMeta' => $contasMeta,
@@ -90,111 +91,123 @@ class CampanhaController extends Controller
         );
     }
 
+    private function resolverPublicoCampanha(array $usuario, array $template): array
+    {
+        $listaId = (int) ($_POST['lista'] ?? 0);
+        $etiquetas = $_POST['etiquetas'] ?? [];
+        $operador = $_POST['operador_etiquetas'] ?? 'OR';
+        if (!is_array($etiquetas) || $listaId < 0) {
+            throw new \InvalidArgumentException('Segmentação inválida.');
+        }
+        $publico = (new \Services\SegmentacaoDestinatariosService())->resolver(
+            $usuario, (int) $template['MTA_ID'], $listaId ?: null, $etiquetas, $operador
+        );
+        return [$publico, $listaId ?: null, array_values(array_unique(array_map('intval', $etiquetas))), $operador];
+    }
+
+    public function contarDestinatariosAjax()
+    {
+        $this->validarCsrfPost();
+        header('Content-Type: application/json; charset=utf-8');
+        try {
+            $usuario = Auth::usuario();
+            $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
+            if (!$template) throw new \InvalidArgumentException('Template inválido.');
+            [$publico] = $this->resolverPublicoCampanha($usuario, $template);
+            echo json_encode(['sucesso'=>true, 'total'=>count($publico)]);
+        } catch (\Throwable $e) {
+            echo json_encode(['sucesso'=>false, 'erro'=>'Confira o template e os filtros selecionados.']);
+        }
+    }
+
     public function criar()
     {
         $this->validarCsrfPost();
-
-        $usuario =
-            Auth::usuario();
-
-        $listaModel = new ListaContato();
-        $lista = $listaModel->buscar($_POST['lista'] ?? 0, $usuario['CLI_ID']);
-
+        $usuario = Auth::usuario();
         $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
-
-        if(!$lista || !$template){
-            Session::flash('error', 'Lista ou template inválido.');
+        if (!$template) {
+            Session::flash('error', 'Template inválido.');
             $this->redirect('campanha');
+            return;
         }
-
-
         $this->validarContaMetaParaEnvio((int) $template['MTA_ID'], (int) $usuario['CLI_ID']);
-
-        $campanhaId =
-            $this->campanhaModel->salvar([
-
-                'cliente_id' => $usuario['CLI_ID'],
-                'template_id' => $_POST['template'],
-                'lista_id' => $_POST['lista'],
-                'nome' => trim($_POST['nome']),
-                'descricao' => trim($_POST['descricao']),
-                'data_agendamento' =>
-                    !empty($_POST['data_agendamento'])
-                        ? $_POST['data_agendamento']
-                        : date('Y-m-d H:i:s')
-
-            ]);
-
-        $variavelModel = new CampanhaVariavel();
-
-        if(!empty($_POST['variaveis'])){
-
-            foreach($_POST['variaveis'] as $variavel => $campo){
-
-                $variavelModel->salvar(
-                    $campanhaId,
-                    $variavel,
-                    $campo
-                );
-
+        $db = \Core\Database::getInstance();
+        try {
+            $db->beginTransaction();
+            [$publico, $listaId, $etiquetas, $operador] = $this->resolverPublicoCampanha($usuario, $template);
+            if (!$publico) throw new \InvalidArgumentException('Nenhum destinatário encontrado.');
+            if (!isset($_POST['total_confirmado']) || (int) $_POST['total_confirmado'] !== count($publico)) {
+                throw new \InvalidArgumentException('O público mudou. Confira a quantidade e tente novamente.');
             }
 
-        }
+            $mapeamento = $_POST['variaveis'] ?? [];
+            $componentes = json_decode($template['TMP_Componentes'], true);
+            if (!is_array($componentes) || !is_array($mapeamento)) throw new \InvalidArgumentException('Variáveis inválidas.');
+            $necessarias = [];
+            foreach ($componentes as $comp) {
+                $textos = [$comp['text'] ?? ''];
+                foreach ($comp['buttons'] ?? [] as $btn) $textos[] = $btn['url'] ?? '';
+                foreach ($textos as $texto) {
+                    preg_match_all('/{{\s*([^{}]+?)\s*}}/', $texto, $matches);
+                    foreach ($matches[1] as $v) $necessarias[trim($v)] = true;
+                }
+            }
+            if (array_diff_key($necessarias, $mapeamento) || array_diff_key($mapeamento, $necessarias)) {
+                throw new \InvalidArgumentException('Mapeie todas as variáveis do template.');
+            }
+            foreach ($publico as $item) {
+                $dados = json_decode($item['dados_json'] ?? '{}', true);
+                foreach ($mapeamento as $campo) {
+                    if (!is_string($campo) || $campo === '' || !isset($dados[$campo]) || !is_scalar($dados[$campo]) || trim((string) $dados[$campo]) === '') {
+                        throw new \InvalidArgumentException('Existem destinatários sem os dados necessários para as variáveis. Revise o público ou escolha outro template.');
+                    }
+                }
+            }
 
-        $contatoModel = new Contato();
-
-        $filaModel = new FilaEnvio();
-
-        $listaItemModel =
-            new ListaContatoItem();
-
-        $contatos =
-            $listaItemModel
-            ->listarIdsDaLista(
-                $_POST['lista']
-            );
-
-        foreach($contatos as $contato){
-
-            $filaModel->adicionar(
-
-                $campanhaId,
-                $contato['CON_ID']
-
-            );
-
-        }
-
-        $this->campanhaModel
-            ->atualizarTotalContatos(
-
-                $campanhaId,
-
-                count($contatos)
-
-            );
-
-        if($this->campanhaModel->contarPorCliente($usuario['CLI_ID']) === 1){
-            AnalyticsService::registrar('first_campaign_created', [
-                'campaign_type'=>'scheduled', 'first_campaign'=>true
+            $contatoModel = new Contato();
+            $ids = [];
+            foreach ($publico as $item) {
+                $id = $item['contato_id'] ?? $contatoModel->salvar([
+                    'cliente_id'=>$usuario['CLI_ID'], 'nome'=>mb_substr($item['nome'] ?? '', 0, 150),
+                    'telefone'=>$item['numero'], 'dados_json'=>'{}'
+                ]);
+                if (!$contatoModel->buscarPorClienteId($usuario['CLI_ID'], $id)) {
+                    throw new \InvalidArgumentException('Existe um contato indisponível no público.');
+                }
+                $ids[(int) $id] = (int) $id;
+            }
+            if (count($ids) !== count($publico)) throw new \InvalidArgumentException('O público mudou. Confira os contatos.');
+            $lista = $listaId ? (new ListaContato())->buscar($listaId, $usuario['CLI_ID']) : null;
+            $nomes = [];
+            foreach ((new \Models\Conversa())->listarEtiquetas($usuario['CLI_ID']) as $tag) {
+                if (in_array((int) $tag['ETQ_ID'], $etiquetas, true)) $nomes[] = $tag['ETQ_Nome'];
+            }
+            $campanhaId = $this->campanhaModel->salvar([
+                'cliente_id'=>$usuario['CLI_ID'], 'template_id'=>$template['TMP_ID'], 'lista_id'=>$listaId,
+                'segmentacao_json'=>json_encode(['lista_id'=>$listaId, 'lista_nome'=>$lista['LST_Nome'] ?? null, 'etiquetas_ids'=>$etiquetas, 'etiquetas_nomes'=>$nomes, 'operador'=>$operador], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                'nome'=>trim($_POST['nome'] ?? ''), 'descricao'=>trim($_POST['descricao'] ?? ''),
+                'data_agendamento'=>!empty($_POST['data_agendamento']) ? $_POST['data_agendamento'] : date('Y-m-d H:i:s')
             ]);
+            $variavelModel = new CampanhaVariavel();
+            foreach ($mapeamento as $variavel => $campo) $variavelModel->salvar($campanhaId, $variavel, $campo);
+            $fila = new FilaEnvio();
+            foreach ($ids as $id) $fila->adicionar($campanhaId, $id);
+            $this->campanhaModel->atualizarTotalContatos($campanhaId, count($ids));
+            $db->commit();
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            error_log('Campanha criação: ' . get_class($e));
+            Session::flash('error', $e instanceof \InvalidArgumentException ? $e->getMessage() : 'Não foi possível criar a campanha.');
+            $this->redirect('campanha');
+            return;
         }
-
-        \Core\Session::flash(
-
-            'success',
-
-            'Campanha criada com '
-            . count($contatos)
-            . ' contatos.'
-
-        );
-
-        $this->redirect(
-            'campanha'
-        );
+        if ($this->campanhaModel->contarPorCliente($usuario['CLI_ID']) === 1) {
+            AnalyticsService::registrar('first_campaign_created', ['campaign_type'=>'scheduled', 'first_campaign'=>true]);
+        }
+        Session::flash('success', 'Campanha criada com ' . count($ids) . ' contatos.');
+        $this->redirect('campanha');
     }
-    
+
     public function detalhes()
     {
         $id = $_GET['id'] ?? null;
