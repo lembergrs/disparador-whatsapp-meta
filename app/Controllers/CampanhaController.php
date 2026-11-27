@@ -114,7 +114,7 @@ class CampanhaController extends Controller
             $template = $this->templateModel->buscarAprovadoParaEnvioPorCliente((int) ($_POST['template'] ?? 0), $usuario['CLI_ID']);
             if (!$template) throw new \InvalidArgumentException('Template inválido.');
             [$publico] = $this->resolverPublicoCampanha($usuario, $template);
-            echo json_encode(['sucesso'=>true, 'total'=>count($publico)]);
+            echo json_encode(['sucesso'=>true, 'total'=>count($publico), 'assinatura'=>\Services\SegmentacaoDestinatariosService::assinatura(array_column($publico, 'numero'))]);
         } catch (\Throwable $e) {
             echo json_encode(['sucesso'=>false, 'erro'=>'Confira o template e os filtros selecionados.']);
         }
@@ -136,7 +136,7 @@ class CampanhaController extends Controller
             $db->beginTransaction();
             [$publico, $listaId, $etiquetas, $operador] = $this->resolverPublicoCampanha($usuario, $template);
             if (!$publico) throw new \InvalidArgumentException('Nenhum destinatário encontrado.');
-            if (!isset($_POST['total_confirmado']) || (int) $_POST['total_confirmado'] !== count($publico)) {
+            if (!isset($_POST['total_confirmado'], $_POST['assinatura_publico']) || (int) $_POST['total_confirmado'] !== count($publico) || !is_string($_POST['assinatura_publico']) || !hash_equals(\Services\SegmentacaoDestinatariosService::assinatura(array_column($publico, 'numero')), $_POST['assinatura_publico'])) {
                 throw new \InvalidArgumentException('O público mudou. Confira a quantidade e tente novamente.');
             }
 
