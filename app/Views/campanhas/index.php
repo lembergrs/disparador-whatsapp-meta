@@ -344,6 +344,7 @@ Nenhuma lista
 </div>
 <small id="contagemCampanha" class="text-muted">Selecione uma lista ou etiqueta.</small>
 <input type="hidden" name="total_confirmado" value="">
+<input type="hidden" name="assinatura_publico" value="">
 </div>
 
 <div
@@ -439,6 +440,7 @@ document.addEventListener('DOMContentLoaded', function(){
     async function contar(){
         const atual = ++versao;
         total.value = '';
+        form.elements.assinatura_publico.value = '';
         botao.disabled = true;
         form.querySelector('#operadorCampanhaArea').style.display = tags.selectedOptions.length > 1 ? '' : 'none';
         if (!form.template.value || (!form.lista.value && !tags.selectedOptions.length)) {
@@ -453,6 +455,7 @@ document.addEventListener('DOMContentLoaded', function(){
             if (atual !== versao) return;
             if (!r.sucesso) throw new Error(r.erro);
             total.value = r.total;
+            form.elements.assinatura_publico.value = r.assinatura;
             status.textContent = 'Destinatários únicos: ' + r.total;
             botao.disabled = r.total <= 0;
         } catch(e) {
