@@ -111,7 +111,7 @@ class DashboardAdmin
             EXISTS(SELECT 1 FROM meta_contas m WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND m.MTA_PagamentoMetaStatus='confirmado_cliente') pagamento_meta,
             EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND COALESCE(t.TMP_MetaId,'')<>'') template_criado,
             EXISTS(SELECT 1 FROM templates_meta t INNER JOIN meta_contas m ON m.MTA_ID=t.MTA_ID WHERE m.CLI_ID=c.CLI_ID AND m.MTA_Ativo='S' AND t.TMP_Ativo='S' AND t.TMP_Status='APPROVED' AND COALESCE(t.TMP_MetaId,'')<>'') template_aprovado,
-            " . $this->sqlEnvioEntregue('c.CLI_ID', true) . " primeiro_envio,
+            " . $this->sqlTemplateEntregue('c.CLI_ID', true) . " primeiro_envio,
             EXISTS(SELECT 1 FROM assinaturas a WHERE a.CLI_ID=c.CLI_ID) contratacao,
             EXISTS(SELECT 1 FROM cobrancas co WHERE co.CLI_ID=c.CLI_ID AND co.COB_Status='pago' AND co.COB_Tipo='mensalidade' AND co.COB_DataPagamento IS NOT NULL) pagamento
             FROM clientes c
@@ -128,9 +128,9 @@ class DashboardAdmin
                 $cliente['acao_sugerida'] = 'Verificar cobrança pendente e orientar o cliente.';
             }elseif(!empty($cliente['primeiro_envio'])){
                 $cliente['proxima_etapa'] = 'Escolher plano';
-                $cliente['acao_sugerida'] = 'Cliente já comprovou o uso; abordar conversão para um plano.';
+                $cliente['acao_sugerida'] = 'Cliente já entregou um template; abordar conversão para um plano.';
             }elseif(!empty($cliente['template_aprovado'])){
-                $cliente['proxima_etapa'] = 'Fazer o primeiro envio';
+                $cliente['proxima_etapa'] = 'Enviar o primeiro template';
                 $cliente['acao_sugerida'] = 'Orientar o primeiro disparo com o template já aprovado.';
             }elseif(!empty($cliente['template_criado'])){
                 $cliente['proxima_etapa'] = 'Aguardar/aprovar template';
@@ -154,11 +154,11 @@ class DashboardAdmin
         return $clientes;
     }
 
-    private function sqlEnvioEntregue($clienteExpr, $comoExpressao = false)
+    private function sqlTemplateEntregue($clienteExpr, $comoExpressao = false)
     {
-        $exists = "(EXISTS(SELECT 1 FROM conversa_mensagens cm INNER JOIN conversas cv ON cv.CVS_ID=cm.CVS_ID WHERE cv.CLI_ID={$clienteExpr} AND cm.MSG_Direcao='enviada' AND (cm.MSG_Origem IS NULL OR cm.MSG_Origem='api') AND COALESCE(cm.MSG_MetaMessageId,'')<>'' AND cm.MSG_Status IN ('delivered','entregue','read','lido'))
-            OR EXISTS(SELECT 1 FROM disparos d WHERE d.CLI_ID={$clienteExpr} AND COALESCE(d.DSP_MessageId,'')<>'' AND d.DSP_Status IN ('delivered','entregue','read','lido'))
-            OR EXISTS(SELECT 1 FROM disparo_manual_itens i INNER JOIN disparo_manual_lotes l ON l.DML_ID=i.DML_ID WHERE l.CLI_ID={$clienteExpr} AND i.CLI_ID={$clienteExpr} AND COALESCE(i.DMI_MessageId,'')<>'' AND i.DMI_Status IN ('delivered','entregue','read','lido')))";
+        $exists = "(EXISTS(SELECT 1 FROM conversa_mensagens cm INNER JOIN conversas cv ON cv.CVS_ID=cm.CVS_ID WHERE cv.CLI_ID={$clienteExpr} AND cm.MSG_Direcao='enviada' AND cm.MSG_Tipo='template' AND (cm.MSG_Origem IS NULL OR cm.MSG_Origem='api') AND COALESCE(cm.MSG_MetaMessageId,'')<>'' AND cm.MSG_Status IN ('delivered','entregue','read','lido'))
+            OR EXISTS(SELECT 1 FROM disparos d WHERE d.CLI_ID={$clienteExpr} AND d.TMP_ID IS NOT NULL AND d.TMP_ID>0 AND COALESCE(d.DSP_MessageId,'')<>'' AND d.DSP_Status IN ('delivered','entregue','read','lido'))
+            OR EXISTS(SELECT 1 FROM disparo_manual_itens i INNER JOIN disparo_manual_lotes l ON l.DML_ID=i.DML_ID WHERE l.CLI_ID={$clienteExpr} AND l.TMP_ID IS NOT NULL AND l.TMP_ID>0 AND i.CLI_ID={$clienteExpr} AND COALESCE(i.DMI_MessageId,'')<>'' AND i.DMI_Status IN ('delivered','entregue','read','lido')))";
 
         return $comoExpressao ? "CASE WHEN {$exists} THEN 1 ELSE 0 END" : $exists;
     }
