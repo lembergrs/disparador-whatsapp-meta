@@ -1291,7 +1291,7 @@ $(document).ready(function(){
                 $('#contadorNumerosDestino').text(r.erro || 'Não foi possível calcular destinatários.');
                 return;
             }
-            contagemPublicoDisparo = {publico: r.publico, total: r.total, chave: chave};
+            contagemPublicoDisparo = {publico: r.publico, total: r.total, assinatura: r.assinatura, chave: chave};
             $('#contadorNumerosDestino').text('Destinatários únicos: ' + r.total);
         }).fail(function(){
             if (versao === versaoContagemDisparo) $('#contadorNumerosDestino').text('Não foi possível calcular destinatários.');
@@ -2398,6 +2398,7 @@ $(document).ready(function(){
         formDataLote.append('etiquetas_json', JSON.stringify(etiquetasSelecionadasDisparo()));
         formDataLote.append('operador_etiquetas', $('#operadorEtiquetasDisparo').val() || 'OR');
         formDataLote.append('total_confirmado', totalConfirmado);
+        formDataLote.append('assinatura_publico', contagemPublicoDisparo.assinatura);
         formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
 
 
