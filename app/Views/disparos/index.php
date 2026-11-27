@@ -145,7 +145,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                                 <option value="<?= (int) $etiqueta['ETQ_ID']; ?>"><?= htmlspecialchars($etiqueta['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?></option>
                             <?php } ?>
                         </select>
-                        <small class="text-muted">Sem lista, utiliza apenas as etiquetas.</small>
+                        <small id="ajudaSegmentacaoDisparo" class="text-muted">Selecione uma lista ou etiquetas.</small>
                         <div id="areaOperadorEtiquetasDisparo" style="display:none" class="mt-2">
                             <select id="operadorEtiquetasDisparo" class="form-control form-control-sm" aria-label="Correspondência das etiquetas">
                                 <option value="OR">Qualquer etiqueta selecionada</option>
@@ -390,5 +390,21 @@ document.addEventListener('DOMContentLoaded', function(){
 
     seletorConta.addEventListener('change', atualizarAlertaMetaDisparo);
     atualizarAlertaMetaDisparo();
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const lista = document.getElementById('listaContatosDisparo');
+    const etiquetas = document.getElementById('etiquetasDisparo');
+    const ajuda = document.getElementById('ajudaSegmentacaoDisparo');
+    if (!lista || !etiquetas || !ajuda) return;
+    function atualizarAjuda() {
+        const temLista = !!lista.value;
+        const temEtiquetas = etiquetas.selectedOptions.length > 0;
+        ajuda.textContent = temLista ? (temEtiquetas ? 'Apenas contatos da lista com as etiquetas selecionadas.' : 'Todos os contatos ativos da lista.') : (temEtiquetas ? 'Contatos com as etiquetas selecionadas.' : 'Selecione uma lista ou etiquetas.');
+    }
+    $(lista).add(etiquetas).on('change', atualizarAjuda);
+    atualizarAjuda();
 });
 </script>
