@@ -241,6 +241,7 @@ action="<?= BASE_URL; ?>/index.php?url=listaContato/removerContatosSelecionados"
                 </td>
 
                 <td>
+                    <button type="button" class="btn btn-outline-info btn-sm js-etiquetas-contato" title="Consultar etiquetas" aria-label="Consultar etiquetas" data-contato="<?= (int) $contato['CON_ID']; ?>"><i class="fas fa-tags"></i></button>
 
                     <a
                     href="#"
@@ -435,7 +436,43 @@ Salvar
 
 </div>
 
+<div class="modal fade" id="modalEtiquetasContato" tabindex="-1" role="dialog" aria-label="Etiquetas do contato">
+<div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h4 class="modal-title">Etiquetas do contato</h4><button type="button" class="close" data-dismiss="modal" aria-label="Fechar">&times;</button></div>
+<div class="modal-body"><div id="resultadoEtiquetasContato" aria-live="polite"></div><small class="text-muted">Consulta por conta Meta. As etiquetas são gerenciadas na Central de Conversas.</small></div>
+</div></div></div>
 <script>
+let versaoEtiquetasContato = 0;
+document.addEventListener('click', async function(e){
+    const botao = e.target.closest('.js-etiquetas-contato');
+    if (!botao) return;
+    const versao = ++versaoEtiquetasContato;
+    const alvo = document.getElementById('resultadoEtiquetasContato');
+    alvo.textContent = 'Carregando...';
+    $('#modalEtiquetasContato').modal('show');
+    try {
+        const url = <?= json_encode(BASE_URL . '/index.php?url=listaContato/etiquetasContatoAjax&lista=' . (int) $lista['LST_ID'] . '&contato='); ?> + encodeURIComponent(botao.dataset.contato);
+        const r = await fetch(url, {cache:'no-store'}).then(r=>r.json());
+        if (versao !== versaoEtiquetasContato) return;
+        if (!r.sucesso) throw new Error();
+        alvo.textContent = '';
+        if (!r.etiquetas.length) alvo.textContent = 'Nenhuma etiqueta disponível.';
+        const grupos = new Map();
+        r.etiquetas.forEach(t=>{
+            if (!grupos.has(t.MTA_ID)) grupos.set(t.MTA_ID, {nome:t.MTA_Nome, etiquetas:[]});
+            grupos.get(t.MTA_ID).etiquetas.push(t.ETQ_Nome);
+        });
+        grupos.forEach(g=>{
+            const titulo = document.createElement('strong');
+            titulo.textContent = g.nome;
+            const linha = document.createElement('p');
+            linha.textContent = g.etiquetas.join(', ');
+            alvo.append(titulo, linha);
+        });
+    } catch(e) {
+        if (versao === versaoEtiquetasContato) alvo.textContent = 'Consulta indisponível.';
+    }
+});
 
 function limparModalAdicionarContato()
 {
