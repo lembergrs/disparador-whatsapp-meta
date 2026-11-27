@@ -1249,23 +1249,53 @@ $(document).ready(function(){
         return total;
     }
 
-    function obterTotalListaContatosDisparo()
-    {
-        let option = $('#listaContatosDisparo').find(':selected');
-        return parseInt(option.attr('data-total') || '0', 10) || 0;
+    let contagemPublicoDisparo = null;
+    let versaoContagemDisparo = 0;
+
+    function etiquetasSelecionadasDisparo(){
+        return $('#etiquetasDisparo').val() || [];
     }
 
-    function atualizarContadorNumerosDestinoDisparo()
-    {
-        let manuais = contarNumerosDestinoDisparo();
-        let lista = obterTotalListaContatosDisparo();
-        let estimado = manuais + lista;
+    function dadosSegmentacaoDisparo(){
+        return {
+            csrf_token: typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '',
+            meta: $('#meta').val(),
+            lista_id: $('#listaContatosDisparo').val() || '',
+            etiquetas_json: JSON.stringify(etiquetasSelecionadasDisparo()),
+            operador_etiquetas: $('#operadorEtiquetasDisparo').val() || 'OR',
+            destinos_json: JSON.stringify(parseDestinosDisparo().destinos.map(d => ({numero: d.numero})))
+        };
+    }
 
-        $('#contadorNumerosDestino').text(
-            'Números digitados: ' + manuais +
-            ' | Contatos da lista: ' + lista +
-            ' | Total final estimado: ' + estimado
-        );
+    function obterTotalListaContatosDisparo(){
+        return contagemPublicoDisparo ? contagemPublicoDisparo.publico : 0;
+    }
+
+    function atualizarContadorNumerosDestinoDisparo(){
+        const versao = ++versaoContagemDisparo;
+        contagemPublicoDisparo = null;
+        $('#areaOperadorEtiquetasDisparo').toggle(etiquetasSelecionadasDisparo().length > 1);
+        if (!$('#meta').val()) {
+            $('#contadorNumerosDestino').text('Selecione a conta Meta.');
+            return;
+        }
+        const dados = dadosSegmentacaoDisparo();
+        const chave = JSON.stringify(dados);
+        $('#contadorNumerosDestino').text('Calculando destinatários...');
+        $.ajax({
+            url: BASE_URL + '/index.php?url=disparo/contarDestinatariosAjax',
+            method: 'POST', data: dados, dataType: 'json'
+        }).done(function(r){
+            if (versao !== versaoContagemDisparo || chave !== JSON.stringify(dadosSegmentacaoDisparo())) return;
+            if (!r.sucesso) {
+                $('#contadorNumerosDestino').text(r.erro || 'Não foi possível calcular destinatários.');
+                return;
+            }
+            contagemPublicoDisparo = {publico: r.publico, total: r.total, chave: chave};
+            $('#contadorNumerosDestino').text('Destinatários únicos: ' + r.total);
+        }).fail(function(){
+            if (versao === versaoContagemDisparo) $('#contadorNumerosDestino').text('Não foi possível calcular destinatários.');
+        });
     }
 
     let timeoutContadorNumerosDestinoDisparo = null;
@@ -1611,7 +1641,7 @@ $(document).ready(function(){
         agendarAtualizacaoContadorNumerosDestinoDisparo();
     });
 
-    $(document).on('change', '#listaContatosDisparo', function(){
+    $(document).on('change', '#listaContatosDisparo, #etiquetasDisparo, #operadorEtiquetasDisparo, #meta, #template', function(){
         atualizarContadorNumerosDestinoDisparo();
     });
 
@@ -1808,18 +1838,25 @@ $(document).ready(function(){
 
         let listaSelecionadaId = $('#listaContatosDisparo').val() || '';
         let totalListaSelecionada = obterTotalListaContatosDisparo();
+        let temPublico = listaSelecionadaId !== '' || etiquetasSelecionadasDisparo().length > 0;
+        if (!contagemPublicoDisparo || contagemPublicoDisparo.chave !== JSON.stringify(dadosSegmentacaoDisparo())) {
+            atualizarContadorNumerosDestinoDisparo();
+            alert('Aguarde o cálculo dos destinatários e confirme novamente.');
+            return;
+        }
+        let totalConfirmado = contagemPublicoDisparo.total;
 
-        if(listaSelecionadaId === '' && parse.destinos.length == 0){
+        if(!temPublico && parse.destinos.length == 0){
             alert('Informe pelo menos um número válido ou selecione uma lista de contatos.');
             return;
         }
 
-        if(listaSelecionadaId !== '' && parse.variaveis.length > 0){
+        if(temPublico && parse.variaveis.length > 0){
             alert('Este template possui variáveis. Nesta etapa, use listas apenas com templates sem variáveis ou informe os números manualmente com as variáveis necessárias.');
             return;
         }
 
-        if(listaSelecionadaId !== '' && totalListaSelecionada == 0 && parse.destinos.length == 0){
+        if(totalConfirmado === 0){
             alert('A lista selecionada não possui contatos ativos. Informe números manualmente ou escolha outra lista.');
             return;
         }
@@ -1836,7 +1873,7 @@ $(document).ready(function(){
 
         if(!confirm(
             'Confira a prévia dos destinos e confirme o envio estimado de ' +
-            (parse.destinos.length + totalListaSelecionada) + ' mensagem(ns). Deseja iniciar agora?'
+            totalConfirmado + ' mensagem(ns). Deseja iniciar agora?'
         )){
             return;
         }
@@ -1869,7 +1906,7 @@ $(document).ready(function(){
         for(let i = 0; i < totalListaSelecionada; i++){
             $('#listaStatusNumeros').append(`
                 <tr id="linha_numero_${i}">
-                    <td>Contato da lista selecionada</td>
+                    <td>Contato do público selecionado</td>
                     <td><span class="badge badge-secondary">Na fila</span></td>
                     <td class="small text-muted">-</td>
                     <td>-</td>
@@ -2358,6 +2395,9 @@ $(document).ready(function(){
         formDataLote.append('meta', $('#meta').val());
         formDataLote.append('template', $('#template').val());
         formDataLote.append('lista_id', listaSelecionadaId);
+        formDataLote.append('etiquetas_json', JSON.stringify(etiquetasSelecionadasDisparo()));
+        formDataLote.append('operador_etiquetas', $('#operadorEtiquetasDisparo').val() || 'OR');
+        formDataLote.append('total_confirmado', totalConfirmado);
         formDataLote.append('destinos_json', JSON.stringify(parse.destinos.map(montarDestinoFila)));
 
 
