@@ -1460,7 +1460,7 @@ class DisparoController extends Controller
                 $numero = $this->normalizarTelefoneDisparoManual($item['numero'] ?? '');
                 if ($numero !== '') $numeros[] = $numero;
             }
-            echo json_encode(['sucesso'=>true, 'publico'=>count($publico['numeros']), 'total'=>count(array_unique($numeros))]);
+            echo json_encode(['sucesso'=>true, 'publico'=>count($publico['numeros']), 'total'=>count(array_unique($numeros)), 'assinatura'=>\Services\SegmentacaoDestinatariosService::assinatura($numeros)]);
         } catch (\Throwable $e) {
             echo json_encode(['sucesso'=>false, 'erro'=>'Não foi possível calcular os destinatários. Confira a seleção.']);
         }
@@ -1553,7 +1553,7 @@ class DisparoController extends Controller
                 throw new \Exception('Informe pelo menos um destino válido.');
             }
 
-            if (isset($_POST['total_confirmado']) && (int) $_POST['total_confirmado'] !== count($itens)) {
+            if (!isset($_POST['total_confirmado'], $_POST['assinatura_publico']) || (int) $_POST['total_confirmado'] !== count($itens) || !is_string($_POST['assinatura_publico']) || !hash_equals(\Services\SegmentacaoDestinatariosService::assinatura(array_column($itens, 'numero')), $_POST['assinatura_publico'])) {
                 throw new \Exception('O público mudou. Confira a quantidade e confirme novamente.');
             }
 
