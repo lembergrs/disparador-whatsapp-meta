@@ -26,7 +26,12 @@ class SegmentacaoDestinatariosService
         if ($clienteId <= 0 || $metaId <= 0 || !in_array($metaId, Auth::idsContasMetaPermitidas($usuario), true)) {
             throw new InvalidArgumentException('Conta Meta não permitida.');
         }
-        return $this->resolverEscopo($clienteId, $metaId, $listaId, $etiquetas, $operador);
+        $responsavel = null;
+        if (($usuario['nivel'] ?? '') === 'cliente_usuario') {
+            $responsavel = (int) ($usuario['id'] ?? 0);
+            if ($responsavel <= 0) throw new InvalidArgumentException('Usuário inválido.');
+        }
+        return $this->resolverEscopo($clienteId, $metaId, $listaId, $etiquetas, $operador, $responsavel);
     }
 
     private function consultar(string $sql, array $params): array
@@ -36,7 +41,7 @@ class SegmentacaoDestinatariosService
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    private function resolverEscopo(int $clienteId, int $metaId, ?int $listaId, array $etiquetas, string $operador): array
+    private function resolverEscopo(int $clienteId, int $metaId, ?int $listaId, array $etiquetas, string $operador, ?int $responsavel): array
     {
         if (!in_array($operador, ['OR', 'AND'], true) || ($listaId !== null && $listaId <= 0)) {
             throw new InvalidArgumentException('Critérios de segmentação inválidos.');
@@ -67,7 +72,9 @@ class SegmentacaoDestinatariosService
             if (count($validas) !== count($etiquetas)) {
                 throw new InvalidArgumentException('Etiqueta não disponível.');
             }
-            $conversas = $this->consultar("SELECT c.CVS_ID, c.CVS_Numero, c.CVS_Nome, e.ETQ_ID FROM conversas c INNER JOIN conversa_etiqueta_vinculos v ON v.CVS_ID = c.CVS_ID INNER JOIN conversa_etiquetas e ON e.ETQ_ID = v.ETQ_ID AND e.CLI_ID = c.CLI_ID WHERE c.CLI_ID = ? AND c.MTA_ID = ? AND c.CVS_Ativo = 'S' AND e.ETQ_Ativo = 'S' AND e.ETQ_ID IN ($in) ORDER BY c.CVS_ID, e.ETQ_ID", array_merge([$clienteId, $metaId], $etiquetas));
+            $filtroResponsavel = $responsavel === null ? "" : " AND c.CON_Responsavel_USU_ID = ?";
+            $paramsConversas = array_merge([$clienteId, $metaId], $etiquetas, $responsavel === null ? [] : [$responsavel]);
+            $conversas = $this->consultar("SELECT c.CVS_ID, c.CVS_Numero, c.CVS_Nome, e.ETQ_ID FROM conversas c INNER JOIN conversa_etiqueta_vinculos v ON v.CVS_ID = c.CVS_ID INNER JOIN conversa_etiquetas e ON e.ETQ_ID = v.ETQ_ID AND e.CLI_ID = c.CLI_ID WHERE c.CLI_ID = ? AND c.MTA_ID = ? AND c.CVS_Ativo = 'S' AND e.ETQ_Ativo = 'S' AND e.ETQ_ID IN ($in) $filtroResponsavel ORDER BY c.CVS_ID, e.ETQ_ID", $paramsConversas);
             if ($lista === null) {
                 $contatos = $this->consultar("SELECT * FROM contatos WHERE CLI_ID = ? ORDER BY CON_ID", [$clienteId]);
             }
