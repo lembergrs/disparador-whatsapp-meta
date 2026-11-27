@@ -1227,6 +1227,17 @@ class ConversaController extends Controller
         ]);
     }
 
+    public function listasContatoAjax()
+    {
+        $usuario = Auth::usuario();
+        if (!$this->usuarioPodeAcessarConversas($usuario)) {
+            $this->jsonResponse(['sucesso'=>false], 403);
+            return;
+        }
+        $listas = (new \Services\ContatoClassificacaoService())->listasDaConversa($usuario, (int) ($_GET['id'] ?? 0));
+        $this->jsonResponse(['sucesso'=>true, 'listas'=>$listas]);
+    }
+
     public function ajaxConversa()
     {
         $usuario = Auth::usuario();
