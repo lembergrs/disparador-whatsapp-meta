@@ -141,6 +141,22 @@ function dataBR($data)
 
         </div>
 
+        <?php $segmentacao = json_decode($campanha['CAM_SegmentacaoJson'] ?? '{}', true); ?>
+        <?php if (!empty($segmentacao)) { ?>
+            <div class="alert alert-light border">
+                <strong>Público selecionado:</strong>
+                <?php if (!empty($segmentacao['lista_nome'])) { ?>
+                    <span>Lista: <?= htmlspecialchars($segmentacao['lista_nome'], ENT_QUOTES, 'UTF-8'); ?></span>
+                <?php } ?>
+                <?php if (!empty($segmentacao['etiquetas_nomes'])) { ?>
+                    <span>Etiquetas: <?= htmlspecialchars(implode(', ', $segmentacao['etiquetas_nomes']), ENT_QUOTES, 'UTF-8'); ?></span>
+                    <?php if (count($segmentacao['etiquetas_nomes']) > 1) { ?>
+                        <small>(<?= $segmentacao['operador'] === 'AND' ? 'Todas' : 'Qualquer uma'; ?>)</small>
+                    <?php } ?>
+                <?php } ?>
+            </div>
+        <?php } ?>
+
         <?php if(!empty($campanha['CAM_Descricao'])){ ?>
 
             <div class="alert alert-light border">
