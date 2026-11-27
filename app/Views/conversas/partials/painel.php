@@ -57,6 +57,11 @@ if(!function_exists('formatarNumeroBR')){
                     <?= formatarNumeroBR($conversaSelecionada['CVS_Numero']); ?>
                 </small>
 
+                <details class="small mt-1" data-url="<?= htmlspecialchars(BASE_URL . '/index.php?url=conversa/listasContatoAjax&id=' . (int) $conversaSelecionada['CVS_ID'], ENT_QUOTES, 'UTF-8'); ?>" ontoggle="if(this.open){const alvo=this.querySelector('span'); alvo.textContent='Carregando...'; fetch(this.dataset.url,{cache:'no-store'}).then(r=>r.json()).then(r=>{alvo.textContent=r.sucesso?(r.listas.map(l=>l.LST_Nome).join(', ') || 'Nenhuma lista'):'Consulta indisponível';}).catch(()=>{alvo.textContent='Consulta indisponível';});}">
+                    <summary class="text-muted">Listas do contato</summary>
+                    <span data-listas-contato></span>
+                </details>
+
             </div>
 
             <div class="text-right conversa-painel-responsavel">
