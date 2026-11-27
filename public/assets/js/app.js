@@ -1272,6 +1272,7 @@ $(document).ready(function(){
     }
 
     function atualizarContadorNumerosDestinoDisparo(){
+        if (!$('#formDisparo').length) return;
         const versao = ++versaoContagemDisparo;
         contagemPublicoDisparo = null;
         $('#areaOperadorEtiquetasDisparo').toggle(etiquetasSelecionadasDisparo().length > 1);
@@ -1308,7 +1309,7 @@ $(document).ready(function(){
 
         timeoutContadorNumerosDestinoDisparo = setTimeout(function(){
             atualizarContadorNumerosDestinoDisparo();
-        }, 150);
+        }, 350);
     }
 
     function escapeHtmlDisparo(texto)
