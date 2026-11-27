@@ -41,9 +41,13 @@ if($usuario && (($usuario['nivel'] ?? null) === 'admin' || Auth::nivelCliente($u
 
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap4.min.css">
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
 <link rel="stylesheet" href="<?= ASSET_URL; ?>/css/style.css">
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/i18n/pt-BR.js"></script>
 
 
 <style>
@@ -764,6 +768,18 @@ document.addEventListener('DOMContentLoaded', function(){
 <script src="<?= ASSET_URL; ?>/js/password-strength.js"></script>
 
 <script src="<?= ASSET_URL; ?>/js/app.js"></script>
+<script>
+$(function () {
+    if (!$.fn.select2) return;
+    $("#etiquetasDisparo, #etiquetasCampanha").each(function () {
+        var campo = $(this), modal = campo.closest(".modal");
+        campo.select2({theme: "bootstrap4", width: "100%", language: "pt-BR", placeholder: "Selecione etiquetas", closeOnSelect: false, dropdownParent: modal.length ? modal : $(document.body)});
+        campo.on("select2:select select2:unselect", function () {
+            if (this.id === "etiquetasCampanha") this.dispatchEvent(new Event("change", {bubbles: true}));
+        });
+    });
+});
+</script>
 
 <script async defer crossorigin="anonymous" src="https://connect.facebook.net/pt_BR/sdk.js"></script>
 

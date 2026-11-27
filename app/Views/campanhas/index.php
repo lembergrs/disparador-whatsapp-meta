@@ -297,9 +297,10 @@ data-header-documento-nome="<?= htmlspecialchars($template['TMP_HeaderDocumentoN
 <?php } ?>
 
 </select>
+</div>
 
-
-<div class="form-group">
+<div class="row">
+<div class="form-group col-md-6">
 
 <label>Lista de Contatos</label>
 
@@ -329,7 +330,7 @@ Nenhuma lista
 
 </div>
 
-<div class="form-group">
+<div class="form-group col-md-6">
 <label>Etiquetas (opcional)</label>
 <select name="etiquetas[]" id="etiquetasCampanha" class="form-control" multiple size="3">
 <?php foreach (($etiquetas ?? []) as $tag) { ?>
@@ -342,6 +343,9 @@ Nenhuma lista
 <option value="AND">Todas as etiquetas selecionadas</option>
 </select>
 </div>
+</div>
+</div>
+<div class="form-group">
 <small id="contagemCampanha" class="text-muted">Selecione uma lista ou etiqueta.</small>
 <input type="hidden" name="total_confirmado" value="">
 <input type="hidden" name="assinatura_publico" value="">
