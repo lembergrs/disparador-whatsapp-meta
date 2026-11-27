@@ -1408,19 +1408,12 @@ class DisparoController extends Controller
 
     private function normalizarTelefoneDisparoManual($telefone)
     {
-        $numero = preg_replace('/\D/', '', (string) $telefone);
-
-        if($numero === ''){
-            return '';
-        }
-
-        if(substr($numero, 0, 2) !== '55'){
-            $numero = '55' . $numero;
-        }
-
-        return preg_match('/^55\d{10,11}$/', $numero) ? $numero : '';
+        $digitos = preg_replace('/\D/', '', (string) $telefone);
+        if (!preg_match('/^(?:55)?[0-9]{10,11}$/D', $digitos)) return '';
+        if (strlen($digitos) <= 11) $digitos = '55' . $digitos;
+        $numero = \Services\TelefoneService::normalizar($digitos);
+        return preg_match('/^55[0-9]{10,11}$/D', $numero) ? $numero : '';
     }
-
 
     private function resolverPublicoDisparo(array $usuario, int $metaId): array
     {
