@@ -32,4 +32,6 @@ segmentacaoAssert(count($tags) === 3, 'Etiquetas devem excluir inativos e inclui
 segmentacaoAssert($tags[2]['contato_id'] === null, 'Conversa sem contato deve ser identificada.');
 segmentacaoAssert(Segmentacao::consolidar([], $conversas, [], [8], 'OR') === [], 'Lista vazia não pode ampliar público.');
 segmentacaoAssert(Segmentacao::consolidar(null, [], [], [8], 'OR') === [], 'Etiqueta sem conversas não pode ampliar público.');
+segmentacaoAssert(Segmentacao::assinatura(['5541999990000','5541988880000']) === Segmentacao::assinatura(['5541988880000','5541999990000','5541999990000']), 'Assinatura independente da ordem e duplicidade.');
+segmentacaoAssert(Segmentacao::assinatura(['5541999990000','5541988880000']) !== Segmentacao::assinatura(['5541999990000','5541977770000']), 'Substituição com mesmo total deve mudar assinatura.');
 echo "Segmentacao destinatarios tests passed\n";
