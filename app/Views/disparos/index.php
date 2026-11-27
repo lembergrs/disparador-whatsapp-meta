@@ -124,7 +124,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                             id="listaContatosDisparo"
                             class="form-control"
                         >
-                            <option value="" data-total="0">Nenhuma lista - informar números manualmente</option>
+                            <option value="" data-total="0">Nenhuma lista</option>
 
                             <?php foreach(($listasContatos ?? []) as $lista){ ?>
                                 <option
@@ -135,6 +135,23 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                                 </option>
                             <?php } ?>
                         </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Etiquetas (opcional)</label>
+                        <select id="etiquetasDisparo" class="form-control" multiple size="3">
+                            <?php foreach (($etiquetasDisparo ?? []) as $etiqueta) { ?>
+                                <option value="<?= (int) $etiqueta['ETQ_ID']; ?>"><?= htmlspecialchars($etiqueta['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?></option>
+                            <?php } ?>
+                        </select>
+                        <small class="text-muted">Selecione uma ou mais etiquetas para filtrar o público.</small>
+                        <div id="areaOperadorEtiquetasDisparo" style="display:none" class="mt-2">
+                            <select id="operadorEtiquetasDisparo" class="form-control form-control-sm" aria-label="Correspondência das etiquetas">
+                                <option value="OR">Qualquer etiqueta selecionada</option>
+                                <option value="AND">Todas as etiquetas selecionadas</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <?php } ?>
@@ -202,7 +219,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                                 id="dicaFormatosNumerosDestino"
                                 class="text-muted d-block mt-1"
                             >
-                                Você pode selecionar uma lista, informar números manualmente ou combinar as duas opções. Ex.: 41999990000, (41) 99999-0000 ou +55 41 99999-0000.
+                                Você pode selecionar uma lista, etiquetas ou informar números manualmente. Ex.: 41999990000, (41) 99999-0000 ou +55 41 99999-0000.
                             </small>
 
                             <small
