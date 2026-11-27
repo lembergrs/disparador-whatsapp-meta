@@ -70,7 +70,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
             <?= \Core\Csrf::input(); ?>
 
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-md-6 <?= $adminMode ? 'col-xl-6' : 'col-xl-3'; ?>">
                     <div class="form-group">
                         <label>Conta Meta</label>
 
@@ -98,7 +98,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-6 <?= $adminMode ? 'col-xl-6' : 'col-xl-3'; ?>">
                     <div class="form-group">
                         <label>Template</label>
 
@@ -115,7 +115,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                 </div>
 
                 <?php if(!$adminMode){ ?>
-                <div class="col-md-4">
+                <div class="col-md-6 col-xl-3">
                     <div class="form-group">
                         <label>Lista de Contatos</label>
 
@@ -137,7 +137,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                         </select>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6 col-xl-3">
                     <div class="form-group">
                         <label>Etiquetas (opcional)</label>
                         <select id="etiquetasDisparo" class="form-control" multiple size="3">
@@ -145,7 +145,7 @@ $metaAlertaContainerId = 'metaSendHealthAlertDisparo';
                                 <option value="<?= (int) $etiqueta['ETQ_ID']; ?>"><?= htmlspecialchars($etiqueta['ETQ_Nome'], ENT_QUOTES, 'UTF-8'); ?></option>
                             <?php } ?>
                         </select>
-                        <small class="text-muted">Selecione uma ou mais etiquetas para filtrar o público.</small>
+                        <small class="text-muted">Sem lista, utiliza apenas as etiquetas.</small>
                         <div id="areaOperadorEtiquetasDisparo" style="display:none" class="mt-2">
                             <select id="operadorEtiquetasDisparo" class="form-control form-control-sm" aria-label="Correspondência das etiquetas">
                                 <option value="OR">Qualquer etiqueta selecionada</option>
