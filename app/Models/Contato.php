@@ -116,44 +116,18 @@ class Contato
 
     public function camposJsonPorCliente($clienteId)
     {
-        $sql = $this->db->prepare("
-
-            SELECT CON_DadosJson
-
-            FROM contatos
-
-            WHERE CLI_ID = ?
-            AND CON_Ativo = 'S'
-            AND CON_DadosJson IS NOT NULL
-
-            ORDER BY CON_ID DESC
-
-            LIMIT 1
-
-        ");
-
-        $sql->execute([
-            $clienteId
-        ]);
-
-        $contato =
-            $sql->fetch(PDO::FETCH_ASSOC);
-
-        if(!$contato){
-            return [];
+        $sql = $this->db->prepare("SELECT DISTINCT CON_DadosJson FROM contatos
+            WHERE CLI_ID = ? AND CON_Ativo = 'S' AND CON_DadosJson IS NOT NULL
+            AND CON_DadosJson NOT IN ('', '{}', '[]')");
+        $sql->execute([$clienteId]);
+        $campos = [];
+        while (($json = $sql->fetchColumn()) !== false) {
+            $dados = json_decode($json, true);
+            if (is_array($dados)) {
+                foreach (array_keys($dados) as $campo) $campos[$campo] = true;
+            }
         }
-
-        $dados =
-            json_decode(
-                $contato['CON_DadosJson'],
-                true
-            );
-
-        if(!is_array($dados)){
-            return [];
-        }
-
-        return array_keys($dados);
+        return array_keys($campos);
     }
 
     public function buscarPorTelefone($clienteId, $telefone)
