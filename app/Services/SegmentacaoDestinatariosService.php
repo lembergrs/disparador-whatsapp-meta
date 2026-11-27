@@ -34,6 +34,13 @@ class SegmentacaoDestinatariosService
         return $this->resolverEscopo($clienteId, $metaId, $listaId, $etiquetas, $operador, $responsavel);
     }
 
+    public static function assinatura(array $numeros): string
+    {
+        $numeros = array_values(array_unique(array_map('strval', $numeros)));
+        sort($numeros, SORT_STRING);
+        return hash('sha256', json_encode($numeros, JSON_THROW_ON_ERROR));
+    }
+
     private function consultar(string $sql, array $params): array
     {
         $stmt = $this->db->prepare($sql);
