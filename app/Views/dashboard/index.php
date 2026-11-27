@@ -120,7 +120,7 @@ foreach($cardsAdmin as $i=>$card){ ?>
   <div class="funil-admin funil-ativacao">
   <?php foreach([
    'cadastros'=>'Cadastro','metaConectada'=>'WhatsApp conectado','pagamentoMeta'=>'Pagamento Meta OK','templateCriado'=>'Template criado',
-   'templateAprovado'=>'Template aprovado','primeiroEnvio'=>'1º envio entregue','contratacao'=>'Iniciou contratação','pagamento'=>'1º pagamento'
+   'templateAprovado'=>'Template aprovado','primeiroEnvio'=>'1º template entregue','contratacao'=>'Iniciou contratação','pagamento'=>'1º pagamento'
   ] as $chave=>$rotulo){ $v=(int)($funilAtivacao30[$chave]??0); ?>
    <div class="funil-etapa"><strong><?= number_format($v,0,',','.'); ?></strong><span><?= $rotulo; ?></span><small><?= round(($v/$totalFunilAtivacao30)*100); ?>% dos cadastros</small></div>
   <?php } ?>
@@ -133,7 +133,7 @@ foreach($cardsAdmin as $i=>$card){ ?>
  <div class="card-body p-0">
   <div class="ativacao-scroll">
   <table class="table table-hover table-admin table-ativacao">
-   <thead><tr><th>Cliente</th><th>Cadastro</th><th title="WhatsApp conectado">WhatsApp</th><th title="Pagamento da Meta confirmado pelo cliente">Pgto. Meta</th><th>Template</th><th>Aprovado</th><th>1º envio</th><th>Contratação</th><th>Pagamento</th></tr></thead>
+   <thead><tr><th>Cliente</th><th>Cadastro</th><th title="WhatsApp conectado">WhatsApp</th><th title="Pagamento da Meta confirmado pelo cliente">Pgto. Meta</th><th>Template</th><th>Aprovado</th><th title="Primeiro template entregue ou lido">1º template enviado</th><th>Contratação</th><th>Pagamento</th></tr></thead>
    <tbody>
    <?php if(empty($clientesAtivacao30)){ ?>
     <tr><td colspan="9" class="text-center text-muted py-4">Nenhum cliente cadastrado nos últimos 30 dias.</td></tr>

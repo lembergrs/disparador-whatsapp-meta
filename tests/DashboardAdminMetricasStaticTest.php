@@ -25,6 +25,12 @@ $assert(strpos($model, "COB_Tipo='mensalidade'") !== false, 'Conversão deve con
 $assert(strpos($model, "ASS_Status='ativa'") !== false, 'Assinaturas ativas devem vir da assinatura.');
 $assert(strpos($model, "ASS_Valor/12") !== false, 'MRR deve mensalizar ciclos anuais.');
 
+$assert(strpos($model, "cm.MSG_Tipo='template'") !== false, 'Primeiro envio deve excluir texto livre e mídia avulsa.');
+$assert(strpos($model, "cm.MSG_Origem='api'") !== false, 'Primeiro template deve excluir histórico e aplicativo.');
+$assert(strpos($model, "d.TMP_ID>0") !== false && strpos($model, "l.TMP_ID>0") !== false, 'Disparos devem estar vinculados a templates.');
+$assert(strpos($model, "('delivered','entregue','read','lido')") !== false, 'Primeiro template exige entrega ou leitura.');
+$assert(strpos($view, '1º template enviado') !== false && strpos($view, '1º template entregue') !== false, 'Tabela e funil devem identificar envio de template.');
+
 $adminPos = strpos($view, "<?php if(\$usuario['nivel'] == 'admin'){ ?>");
 $clientePos = strpos($view, "<?php }else{ ?>", $adminPos);
 $assert($adminPos !== false && $clientePos !== false && $clientePos > $adminPos, 'Dashboard do cliente deve permanecer em ramo separado do admin.');
